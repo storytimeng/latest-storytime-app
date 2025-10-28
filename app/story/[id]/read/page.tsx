@@ -7,5 +7,5 @@ export default function ReadStoryPage() {
   const params = useParams();
   const id = params.id as string;
 
-  return <StoryPremium />;   
+  return <StoryPremium  />;   
 }
