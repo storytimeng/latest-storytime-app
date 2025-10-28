@@ -26,11 +26,11 @@ export const formatDate = (dateString: string): string => {
 
 export const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1).toLowerCase();
 
-export const sortData = <T extends Record<string, any>>(data: T[], key: keyof T) => {
+export const sortData = <T extends Record<string, unknown>>(data: T[], key: keyof T) => {
 	return data.sort((a, b) => String(a[key]).localeCompare(String(b[key])));
 };
 
-export const filterData = <T extends Record<string, any>>(data: T[], search: string, keys: (keyof T)[]) => {
+export const filterData = <T extends Record<string, unknown>>(data: T[], search: string, keys: (keyof T)[]) => {
 	return data.filter((item) => keys.some((key) => String(item[key] || '').toLowerCase().includes(search.toLowerCase())));
 };
 
