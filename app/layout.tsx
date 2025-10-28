@@ -6,7 +6,6 @@ import "./globals.css";
 import NextTopLoader from "nextjs-toploader";
 import { Header } from "@/components/reusables/customUI";
 import { APP_CONFIG } from "@/config/app";
-import Providers from "@/components/providers";
 
 export const metadata: Metadata = {
 	metadataBase: new URL(APP_CONFIG.url),
