@@ -1,5 +1,5 @@
 import React from 'react'
-import AllGenres from '@/view/all-genres/allGenres'
+import AllGenres from '@/views/all-genres/allGenres'
 
 const Page = () => {        
   return (
