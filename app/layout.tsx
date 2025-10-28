@@ -4,7 +4,7 @@ import { GoogleTagManager, GoogleAnalytics } from "@next/third-parties/google";
 import { Toaster } from "sonner";
 import "./globals.css";
 import NextTopLoader from "nextjs-toploader";
-import { Header } from "@/components/reusables";
+import { Header } from "@/components/reusables/customUI";
 
 export const metadata: Metadata = {
 	title: "Storytime",
