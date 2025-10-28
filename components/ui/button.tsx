@@ -69,33 +69,26 @@ export const Button = forwardRef<HTMLButtonElement, Props>(function Button(
   const [isInternalLoading, setIsInternalLoading] = useState(false);
   const vClass = variantClasses[variant] ?? variantClasses.primary;
 
-  const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+  const handleClick = async (e: React.MouseEvent<HTMLButtonElement>) => {
     if (!onClick) return;
 
-    const executeClick = async () => {
-      try {
-        setIsInternalLoading(true);
-        const result = onClick(e);
+    try {
+      setIsInternalLoading(true);
+      const result = onClick(e);
 
-        // Check if the result is a Promise
-        if (result && typeof result.then === "function") {
-          await result;
-        }
-      } catch (error) {
-        console.error("Button onClick error:", error);
-      } finally {
-        setIsInternalLoading(false);
+      // Check if the result is a Promise
+      if (result && typeof result.then === "function") {
+        await result;
       }
-    };
-
-    executeClick();
+    } catch (error) {
+      console.error("Button onClick error:", error);
+    } finally {
+      setIsInternalLoading(false);
+    }
   };
 
   // Use external isLoading prop if provided, otherwise use internal loading state
   const shouldShowLoading = rest.isLoading || isInternalLoading;
-
-  // Destructure onClick from rest to avoid conflicts
-  const { onPress: _, ...buttonProps } = rest as BaseProps;
 
   return (
     <BaseButton
@@ -103,10 +96,9 @@ export const Button = forwardRef<HTMLButtonElement, Props>(function Button(
       className={cn(vClass, className)}
       startContent={startContent}
       endContent={endContent}
-      // @ts-expect-error - HeroUI Button onClick type is incompatible with our handler
-      onPress={handleClick}
+      onClick={handleClick}
       isLoading={shouldShowLoading}
-      {...buttonProps}
+      {...(rest as any)}
     >
       {children}
     </BaseButton>
