@@ -1,6 +1,6 @@
 "use client";
 import React, { ChangeEvent, ReactElement } from "react";
-import { cn, GeneralSans_Meduim } from "@/lib";
+import { cn, Magnetik_Medium } from "@/lib";
 import { Label } from "@/components/ui/label";
 import { Input } from "@heroui/react";
 
@@ -29,7 +29,7 @@ const FormField: React.FC<FormFieldProps> = ({ label, htmlFor, type, id, isInval
 		<div className="flex flex-col space-y-1.5">
 			<Label
 				htmlFor={htmlFor}
-				className={cn("mb-2 text-sm text-black", GeneralSans_Meduim.className)}>
+				className={cn("mb-2 text-sm text-black", Magnetik_Medium.className)}>
 				{label} <sup className="text-danger">{reqValue}</sup>
 			</Label>
 			<Input
