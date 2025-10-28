@@ -367,24 +367,9 @@
 	.safe-area-right {
 	  padding-right: env(safe-area-inset-right);
 	}
-  
-	/* PWA Install Button Styles */
-	.pwa-install-button {
-	  @apply bg-primary-colour text-white px-4 py-2 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105;
-	}
-  
-	/* Offline Indicators */
-	.offline-indicator {
-	  @apply fixed top-4 right-4 bg-amber-500 text-white px-3 py-1 rounded-full text-xs font-medium shadow-lg;
-	}
-  
-	.online-indicator {
-	  @apply fixed top-4 right-4 bg-green-500 text-white px-3 py-1 rounded-full text-xs font-medium shadow-lg;
-	}
   }
   
-
-  /* === PWA DISPLAY MODES === */
+/* === PWA DISPLAY MODES === */
 /* Standalone mode (PWA) styles */
 @media (display-mode: standalone) {
 	body {
@@ -402,9 +387,9 @@
 	  scrollbar-width: none;
 	}
   }
-
+  
   /* Minimal UI mode styles */
-@media (display-mode: minimal-ui) {
+  @media (display-mode: minimal-ui) {
 	.header {
 	  padding-top: calc(env(safe-area-inset-top) + 1rem);
 	}
@@ -433,4 +418,6 @@
   .animate-marquee:hover {
 	animation-play-state: paused;
   }
+  
+  
   
