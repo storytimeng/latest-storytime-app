@@ -25,6 +25,7 @@ import { Magnetik_Bold, Magnetik_Medium, Magnetik_Regular } from "@/lib/font";
 import Link from "next/link";
 
 interface StoryPremiumProps {
+  storyId?: string;
   title?: string;
   authorName?: string;
   content?: string;
@@ -32,6 +33,7 @@ interface StoryPremiumProps {
 }
 
 export const StoryPremium = ({
+  storyId,
   title = "The Lost Ship",
   authorName = "Jane Moore",
   content = `The sons of the morning ascended to the heavenly court, having been summoned by Elohim Himself.
