@@ -5,14 +5,42 @@ import { Toaster } from "sonner";
 import "./globals.css";
 import NextTopLoader from "nextjs-toploader";
 import { Header } from "@/components/reusables/customUI";
+import { APP_CONFIG } from "@/config/app";
 
 export const metadata: Metadata = {
-	title: "Storytime",
-	description: "Storytime is a platform for creating and sharing stories",
-};
+	metadataBase: new URL(APP_CONFIG.url),
+	title: APP_CONFIG.name,
+	description: APP_CONFIG.description,
+	applicationName: APP_CONFIG.name,
+	authors: [{ name: APP_CONFIG.siteName }],
+	creator: APP_CONFIG.siteName,
+	publisher: APP_CONFIG.siteName,
+	openGraph: {
+	  title: APP_CONFIG.name,
+	  description: APP_CONFIG.description,
+	  url: APP_CONFIG.url,
+	  siteName: APP_CONFIG.siteName,
+	  images: [
+		{
+		  url: APP_CONFIG.images.banner,
+		  width: 1200,
+		  height: 630,
+		  alt: APP_CONFIG.name,
+		},
+	  ],
+	  type: "website",
+	},
+	twitter: {
+	  card: APP_CONFIG.socialMeta.twitterCard,
+	  site: APP_CONFIG.socialMeta.twitterSite,
+	  title: APP_CONFIG.name,
+	  description: APP_CONFIG.description,
+	  images: [APP_CONFIG.images.banner],
+	},
+  };
 
 export const viewport: Viewport = {
-	themeColor: "#000000",
+	themeColor: APP_CONFIG.theme.color,
 	width: "device-width",
 	initialScale: 1,
 	maximumScale: 1,
