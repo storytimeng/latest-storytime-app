@@ -1,7 +1,7 @@
-import HomeView from "@/views/homeView";
+import { TestView } from "@/views";
 
 export default function Home() {
   return (
-   <HomeView />
+   <TestView />
   );
 }

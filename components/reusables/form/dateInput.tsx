@@ -89,8 +89,7 @@ const DateFormField: React.FC<FormFieldProps> = ({
       color={color}
       size={size}
       isInvalid={isInvalid}
-      errorMessage={errorMessage}
-      // @ts-expect-error - Version mismatch between @internationalized/date packages
+      errorMessage={errorMessage}      
       placeholderValue={new CalendarDate(1995, 11, 6)} // Default date, can be dynamic
       // @ts-expect-error - Version mismatch between @internationalized/date packages
       value={getCalendarDate(value)} // Convert string to CalendarDate

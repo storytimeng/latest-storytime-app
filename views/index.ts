@@ -11,6 +11,7 @@ import StoryPreviewView from "./storyPreviewView";
 import EditStoryView from "./pen/editStoryView";
 import PremiumView from "./premiumView";
 import NotificationView from "./notificationView";
+import TestView from "./testView";
 
 // Auth Views
 import AuthLayoutView from "./auth/authLayoutView";
@@ -46,4 +47,5 @@ export {
   EmailSentView,
   UpdatePasswordView,
   PasswordUpdatedView,
+  TestView,
 };
