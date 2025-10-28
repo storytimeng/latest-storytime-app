@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, forwardRef } from "react";
-import { Button as BaseButton } from "@heroui/react";
+import { Button as BaseButton, PressEvent } from "@heroui/react";
 
 type Variant =
   | "primary"
@@ -17,14 +17,14 @@ type Variant =
 
 type BaseProps = React.ComponentProps<typeof BaseButton>;
 
-interface Props extends Omit<BaseProps, "className" | "variant" | "onClick"> {
+interface Props extends Omit<BaseProps, "className" | "variant" | "onPress"> {
   variant?: Variant;
   className?: string;
   startContent?: React.ReactNode;
   endContent?: React.ReactNode;
-  onClick?:
+  onPress?:
     | (() => void | Promise<void>)
-    | ((e: React.MouseEvent) => void | Promise<void>);
+    | ((e: PressEvent) => void | Promise<void>);
 }
 
 /** tiny className combiner */
@@ -61,7 +61,7 @@ export const Button = forwardRef<HTMLButtonElement, Props>(function Button(
     children,
     startContent,
     endContent,
-    onClick,
+    onPress,
     ...rest
   },
   ref
@@ -69,12 +69,12 @@ export const Button = forwardRef<HTMLButtonElement, Props>(function Button(
   const [isInternalLoading, setIsInternalLoading] = useState(false);
   const vClass = variantClasses[variant] ?? variantClasses.primary;
 
-  const handleClick = async (e: React.MouseEvent<HTMLButtonElement>) => {
-    if (!onClick) return;
+  const handleClick = async (e: PressEvent) => {
+    if (!onPress) return;
 
     try {
       setIsInternalLoading(true);
-      const result = onClick(e);
+      const result = onPress(e);
 
       // Check if the result is a Promise
       if (result && typeof result.then === "function") {
@@ -96,9 +96,9 @@ export const Button = forwardRef<HTMLButtonElement, Props>(function Button(
       className={cn(vClass, className)}
       startContent={startContent}
       endContent={endContent}
-      onClick={handleClick}
+      onPress={handleClick}
       isLoading={shouldShowLoading}
-      {...(rest as any)}
+      {...rest}
     >
       {children}
     </BaseButton>
