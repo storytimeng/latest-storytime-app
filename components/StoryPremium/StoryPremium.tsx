@@ -4,19 +4,15 @@ import React, { useState, useEffect, useRef } from "react";
 import {
   Button,
   Avatar,
-  Dropdown,
-  DropdownTrigger,
-  DropdownMenu,
-  DropdownItem,
   Select,
   SelectItem,
   Slider,
+  SharedSelection,
 } from "@heroui/react";
 import {
   ThumbsUp,
   MessageCircle,
   MoreVertical,
-  ChevronDown,
   ArrowLeft,
   ChevronLeft,
   ChevronRight,
@@ -30,7 +26,6 @@ import { Magnetik_Bold, Magnetik_Medium, Magnetik_Regular } from "@/lib/font";
 import Link from "next/link";
 
 interface StoryPremiumProps {
-  storyId?: string;
   title?: string;
   authorName?: string;
   content?: string;
@@ -38,7 +33,6 @@ interface StoryPremiumProps {
 }
 
 export const StoryPremium = ({
-  storyId = "1",
   title = "The Lost Ship",
   authorName = "Jane Moore",
   content = `The sons of the morning ascended to the heavenly court, having been summoned by Elohim Himself.
@@ -304,8 +298,9 @@ The archangels rode their horses—Lucifer on his silver stallion, Michael on hi
             },
           }}
           selectedKeys={[selectedChapter]}
-          onSelectionChange={(keys: any) => {
-            const value = Array.from(keys)[0] as string;
+          onSelectionChange={(keys) => {
+            const keyArray = Array.from(keys as Set<string>);
+            const value = keyArray[0] as string;
             setSelectedChapter(value);
           }}
         >
