@@ -50,52 +50,35 @@ export const viewport: Viewport = {
 
 export default function RootLayout({
 	children,
-  }: {
+}: Readonly<{
 	children: React.ReactNode;
-  }) {
+}>) {
 	return (
-	  <html
-		lang="en"
-		suppressHydrationWarning
-	  >
-		<body className="font-magnetik">
-		  <Providers>{children}</Providers>	
-		</body>
-	  </html>
+		<html
+			lang="en"
+			suppressHydrationWarning>
+			<body className={cn("m-auto min-h-screen bg-background bg-center bg-no-repeat scroll-smooth antialiased", Magnetik_Medium.className)}>
+				<ThemeProvider
+					attribute="class"
+					defaultTheme="light"
+					enableSystem
+					disableTransitionOnChange>
+					<NextTopLoader
+						color="#000000"
+						showSpinner={false}
+						easing="ease"
+					/>
+					<Header />
+					<MaxWidthWrapper>{children}</MaxWidthWrapper>
+
+					<Toaster
+						position="top-right"
+						expand={false}
+					/>
+					<GoogleAnalytics gaId="" />
+					<GoogleTagManager gtmId="" />
+				</ThemeProvider>
+			</body>
+		</html>
 	);
-  }
-
-// export default function RootLayout({
-// 	children,
-// }: Readonly<{
-// 	children: React.ReactNode;
-// }>) {
-// 	return (
-// 		<html
-// 			lang="en"
-// 			suppressHydrationWarning>
-// 			<body className={cn("m-auto min-h-screen bg-background bg-center bg-no-repeat scroll-smooth antialiased", Magnetik_Medium.className)}>
-// 				<ThemeProvider
-// 					attribute="class"
-// 					defaultTheme="light"
-// 					enableSystem
-// 					disableTransitionOnChange>
-// 					<NextTopLoader
-// 						color="#000000"
-// 						showSpinner={false}
-// 						easing="ease"
-// 					/>
-// 					<Header />
-// 					<MaxWidthWrapper>{children}</MaxWidthWrapper>
-
-// 					<Toaster
-// 						position="top-right"
-// 						expand={false}
-// 					/>
-// 					<GoogleAnalytics gaId="" />
-// 					<GoogleTagManager gtmId="" />
-// 				</ThemeProvider>
-// 			</body>
-// 		</html>
-// 	);
-// }
+}
