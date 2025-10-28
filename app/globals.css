@@ -297,3 +297,140 @@
 	  }
 	
 }
+
+@layer utilities {
+	.scrollbar-hide {
+	  -ms-overflow-style: none;
+	  scrollbar-width: none;
+	}
+	.scrollbar-hide::-webkit-scrollbar {
+	  display: none;
+	}
+  }
+
+  @layer components {
+	.story-card {
+	  @apply bg-card text-card-foreground border border-border rounded-lg shadow-sm;
+	}
+  
+	.story-card-image {
+	  @apply w-full h-24 object-cover rounded-t-lg;
+	}
+  
+	.story-card-content {
+	  @apply p-3;
+	}
+  
+	.story-card-title {
+	  @apply font-semibold text-sm mb-1 truncate;
+	}
+  
+	.story-card-meta {
+	  @apply flex items-center gap-1 mb-2;
+	}
+  
+	.story-card-author {
+	  @apply flex items-center gap-2;
+	}
+  }
+
+  /* === PWA SPECIFIC STYLES === */
+@layer utilities {
+	.animate-slide-up {
+	  animation: slideUp 0.3s ease-out forwards;
+	}
+  
+	@keyframes slideUp {
+	  from {
+		opacity: 0;
+		transform: translateY(100%);
+	  }
+	  to {
+		opacity: 1;
+		transform: translateY(0);
+	  }
+	}
+  
+	/* PWA Safe Area Support */
+	.safe-area-top {
+	  padding-top: env(safe-area-inset-top);
+	}
+  
+	.safe-area-bottom {
+	  padding-bottom: env(safe-area-inset-bottom);
+	}
+  
+	.safe-area-left {
+	  padding-left: env(safe-area-inset-left);
+	}
+  
+	.safe-area-right {
+	  padding-right: env(safe-area-inset-right);
+	}
+  
+	/* PWA Install Button Styles */
+	.pwa-install-button {
+	  @apply bg-primary-colour text-white px-4 py-2 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105;
+	}
+  
+	/* Offline Indicators */
+	.offline-indicator {
+	  @apply fixed top-4 right-4 bg-amber-500 text-white px-3 py-1 rounded-full text-xs font-medium shadow-lg;
+	}
+  
+	.online-indicator {
+	  @apply fixed top-4 right-4 bg-green-500 text-white px-3 py-1 rounded-full text-xs font-medium shadow-lg;
+	}
+  }
+  
+
+  /* === PWA DISPLAY MODES === */
+/* Standalone mode (PWA) styles */
+@media (display-mode: standalone) {
+	body {
+	  /* Add extra padding for PWA mode if needed */
+	  user-select: none; /* Disable text selection in PWA mode */
+	}
+  
+	/* Hide scroll bars in PWA mode for native app feel */
+	::-webkit-scrollbar {
+	  display: none;
+	}
+  
+	* {
+	  -ms-overflow-style: none;
+	  scrollbar-width: none;
+	}
+  }
+
+  /* Minimal UI mode styles */
+@media (display-mode: minimal-ui) {
+	.header {
+	  padding-top: calc(env(safe-area-inset-top) + 1rem);
+	}
+  }
+  
+  /* Browser mode styles */
+  @media (display-mode: browser) {
+	/* Regular browser styles */
+  }
+  
+  /* Marquee Animation */
+  @keyframes marquee {
+	0% {
+	  transform: translateX(100%);
+	}
+	100% {
+	  transform: translateX(-100%);
+	}
+  }
+  
+  .animate-marquee {
+	animation: marquee linear infinite;
+	animation-delay: 2s; /* Wait 2 seconds before starting */
+  }
+  
+  .animate-marquee:hover {
+	animation-play-state: paused;
+  }
+  
