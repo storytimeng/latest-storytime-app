@@ -8,7 +8,7 @@ const Navbar = () => {
   return (
     <>
       {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-[#f8f7f7] border-t border-border max-w-sm mx-auto rounded-t-xl border-t-[#AFAFAF]">
+      <div className="fixed bottom-0 left-0 right-0 bg-[#f8f7f7] border-t border-gray-300 max-w-sm mx-auto rounded-t-xl border-t-[#AFAFAF]">
         <div className="flex items-center justify-around py-3 px-2">
           <Link href="/app/">
             <Button
