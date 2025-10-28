@@ -39,9 +39,7 @@ They knew this was the general assembly where Elohim would finally share his upc
 };
 
 const mockSaveStory = async (
-  data: StoryFormData,
-  chapters?: Chapter[],
-  parts?: Part[]
+  data: StoryFormData
 ): Promise<{ id: string; success: boolean }> => {
   // Simulate API call
   await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -86,11 +84,11 @@ const StoryView: React.FC<StoryViewProps> = ({ mode, storyId }) => {
 
   // Handle form submission
   const handleSubmit = useCallback(
-    async (formData: StoryFormData, chapters?: Chapter[], parts?: Part[]) => {
+    async (formData: StoryFormData, _chapters?: Chapter[], _parts?: Part[]) => {
       try {
         setIsLoading(true);
 
-        const result = await mockSaveStory(formData, chapters, parts);
+        const result = await mockSaveStory(formData);
 
         if (result.success) {
           // Show success message

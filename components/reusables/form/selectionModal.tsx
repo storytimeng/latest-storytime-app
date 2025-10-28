@@ -1,6 +1,6 @@
 "use client";
 
-import React, { JSX } from "react";
+import React from "react";
 import {
   Modal,
   ModalContent,
@@ -87,7 +87,7 @@ const SelectionModal: React.FC<SelectionModalProps> = ({
                   <Input
                     placeholder={placeholder}
                     value={searchQuery}
-                    onChange={(e: any) => onSearchChange(e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => onSearchChange(e.target.value)}
                     disabled={openToAll}
                     startContent={<Search className=" text-gray-500 h-4 w-4" />}
                   />

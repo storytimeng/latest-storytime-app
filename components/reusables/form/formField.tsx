@@ -18,10 +18,10 @@ interface FormFieldProps {
   isRequired?: boolean;
   minLen?: number;
   maxLen?: number;
-  value?: any;
+  value?: string | number;
   disabled?: boolean;
   color?: "danger" | "success" | "default";
-  className?: any;
+  className?: string;
   classNames?: InputProps["classNames"] | undefined;
 }
 
@@ -122,7 +122,7 @@ const FormField: React.FC<FormFieldProps> = (props) => {
         minLength={minLen}
         maxLength={maxLen}
         disabled={disabled}
-        value={value}
+        value={value ? String(value) : undefined}
       />
       {/* Custom error message with icon */}
       {isInvalid && errorMessage && getErrorMessage()}

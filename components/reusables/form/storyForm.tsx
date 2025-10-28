@@ -294,7 +294,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
 
   // Handle form field changes
   const handleFieldChange = useCallback(
-    (field: keyof StoryFormData, value: any) => {
+    (field: keyof StoryFormData, value: string | number | boolean | string[]) => {
       setFormData((prev) => ({ ...prev, [field]: value }));
       // Clear error when user starts typing
       if (formErrors[field]) {

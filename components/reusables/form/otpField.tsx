@@ -17,7 +17,7 @@ interface OtpFieldProps {
   required?: boolean;
   minLen?: number;
   maxLen?: number;
-  value?: any;
+  value?: string;
   disabled?: boolean;
   length?: number;
 }

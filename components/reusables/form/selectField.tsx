@@ -32,7 +32,7 @@ const SelectField: React.FC<SelectFieldProps> = ({
   options,
   selectionMode = "single",
 }) => {
-  const handleChange = (keys: any) => {
+  const handleChange = (keys: unknown) => {
     const value =
       selectionMode === "multiple"
         ? Array.from(keys as Set<string>)

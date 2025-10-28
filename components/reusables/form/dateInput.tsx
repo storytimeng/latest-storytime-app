@@ -22,7 +22,6 @@ const DateFormField: React.FC<FormFieldProps> = ({
   label,
   isInvalid,
   errorMessage,
-  placeholder,
   onChange,
   isRequired,
   value,
