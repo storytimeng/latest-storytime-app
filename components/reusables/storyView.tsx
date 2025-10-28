@@ -84,6 +84,7 @@ const StoryView: React.FC<StoryViewProps> = ({ mode, storyId }) => {
 
   // Handle form submission
   const handleSubmit = useCallback(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     async (formData: StoryFormData, _chapters?: Chapter[], _parts?: Part[]) => {
       try {
         setIsLoading(true);

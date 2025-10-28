@@ -1,7 +1,7 @@
 "use client";
 import React from "react";
 import { DateInput } from "@heroui/react";
-import { CalendarDate } from "@internationalized/date";
+import { CalendarDate, DateValue } from "@internationalized/date";
 
 interface FormFieldProps {
   label: string;
@@ -31,7 +31,7 @@ const DateFormField: React.FC<FormFieldProps> = ({
   variant = "bordered",
 }) => {
   // Handle conversion of value string (MM-DD-YYYY) to CalendarDate
-  const getCalendarDate = (dateString?: string): unknown => {
+  const getCalendarDate = (dateString?: string): DateValue | undefined => {
     if (dateString && dateString.length === 10) {
       // Ensure it's in MM-DD-YYYY format
       const [month, day, year] = dateString.split("-").map(Number);
@@ -54,7 +54,7 @@ const DateFormField: React.FC<FormFieldProps> = ({
     return undefined;
   };
 
-  const handleDateChange = (newValue: unknown) => {
+  const handleDateChange = (newValue: DateValue | null) => {
     // If the value is null (e.g., after backspace), just return and do nothing
     if (!newValue) {
       //console.log("Date cleared"); // Log if date is cleared
@@ -89,11 +89,10 @@ const DateFormField: React.FC<FormFieldProps> = ({
       color={color}
       size={size}
       isInvalid={isInvalid}
-      errorMessage={errorMessage}      
-      placeholderValue={new CalendarDate(1995, 11, 6)} // Default date, can be dynamic
-      // @ts-expect-error - Version mismatch between @internationalized/date packages
-      value={getCalendarDate(value)} // Convert string to CalendarDate
-      onChange={handleDateChange}
+      errorMessage={errorMessage}
+      placeholderValue={new CalendarDate(1995, 11, 6) as unknown as DateValue}
+      value={getCalendarDate(value) as unknown as DateValue | undefined}
+      onChange={handleDateChange as unknown as (value: DateValue | null) => void}
       isDisabled={disabled}
       isRequired={isRequired}
       className="w-full"

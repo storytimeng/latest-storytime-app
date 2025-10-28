@@ -33,7 +33,7 @@ interface StoryPremiumProps {
 }
 
 export const StoryPremium = ({
-  storyId,
+  storyId: _storyId,
   title = "The Lost Ship",
   authorName = "Jane Moore",
   content = `The sons of the morning ascended to the heavenly court, having been summoned by Elohim Himself.
