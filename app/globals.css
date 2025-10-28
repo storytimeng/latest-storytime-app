@@ -1,433 +1,127 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 
+@import "tailwindcss";
+@plugin '../lib/hero';
 
-@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@200;300;400;500;600;700;800&display=swap");
+@source '../node_modules/@heroui/theme/dist/**/*.{js,ts,jsx,tsx}';
 
-/* === FONTS NOW LOADED VIA NEXT.JS ===
- * MagnetikFont and TimelessTouristFont are loaded in layout.tsx
- * This creates CSS variables: --font-magnetik and --font-timeless-tourist
- * Available font weights for Magnetik: 100, 300, 400, 500, 600, 700, 800, 900
- */
+@custom-variant dark (&:is(.dark *));
 
-body {
-  font-family: var(--font-magnetik), sans-serif;
-  font-feature-settings: "liga" 1, "kern" 1;
-  text-rendering: optimizeLegibility;
+@theme inline {
+	--color-background: var(--background);
+	--color-foreground: var(--foreground);
+	--font-sans: var(--font-geist-sans);
+	--font-mono: var(--font-geist-mono);
+	--color-sidebar-ring: var(--sidebar-ring);
+	--color-sidebar-border: var(--sidebar-border);
+	--color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+	--color-sidebar-accent: var(--sidebar-accent);
+	--color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+	--color-sidebar-primary: var(--sidebar-primary);
+	--color-sidebar-foreground: var(--sidebar-foreground);
+	--color-sidebar: var(--sidebar);
+	--color-chart-5: var(--chart-5);
+	--color-chart-4: var(--chart-4);
+	--color-chart-3: var(--chart-3);
+	--color-chart-2: var(--chart-2);
+	--color-chart-1: var(--chart-1);
+	--color-ring: var(--ring);
+	--color-input: var(--input);
+	--color-border: var(--border);
+	--color-destructive: var(--destructive);
+	--color-accent-foreground: var(--accent-foreground);
+	--color-accent: var(--accent);
+	--color-muted-foreground: var(--muted-foreground);
+	--color-muted: var(--muted);
+	--color-secondary-foreground: var(--secondary-foreground);
+	--color-secondary: var(--secondary);
+	--color-primary-foreground: var(--primary-foreground);
+	--color-primary: var(--primary);
+	--color-popover-foreground: var(--popover-foreground);
+	--color-popover: var(--popover);
+	--color-card-foreground: var(--card-foreground);
+	--color-card: var(--card);
+	--radius-sm: calc(var(--radius) - 4px);
+	--radius-md: calc(var(--radius) - 2px);
+	--radius-lg: var(--radius);
+	--radius-xl: calc(var(--radius) + 4px);
+}
+
+:root {
+	--radius: 0.65rem;
+	--background: oklch(1 0 0);
+	--foreground: oklch(0.141 0.005 285.823);
+	--card: oklch(1 0 0);
+	--card-foreground: oklch(0.141 0.005 285.823);
+	--popover: oklch(1 0 0);
+	--popover-foreground: oklch(0.141 0.005 285.823);
+	--primary: oklch(0.623 0.214 259.815);
+	--primary-foreground: oklch(0.97 0.014 254.604);
+	--secondary: oklch(0.967 0.001 286.375);
+	--secondary-foreground: oklch(0.21 0.006 285.885);
+	--muted: oklch(0.967 0.001 286.375);
+	--muted-foreground: oklch(0.552 0.016 285.938);
+	--accent: oklch(0.967 0.001 286.375);
+	--accent-foreground: oklch(0.21 0.006 285.885);
+	--destructive: oklch(0.577 0.245 27.325);
+	--border: oklch(0.92 0.004 286.32);
+	--input: oklch(0.92 0.004 286.32);
+	--ring: oklch(0.623 0.214 259.815);
+	--chart-1: oklch(0.646 0.222 41.116);
+	--chart-2: oklch(0.6 0.118 184.704);
+	--chart-3: oklch(0.398 0.07 227.392);
+	--chart-4: oklch(0.828 0.189 84.429);
+	--chart-5: oklch(0.769 0.188 70.08);
+	--sidebar: oklch(0.985 0 0);
+	--sidebar-foreground: oklch(0.141 0.005 285.823);
+	--sidebar-primary: oklch(0.623 0.214 259.815);
+	--sidebar-primary-foreground: oklch(0.97 0.014 254.604);
+	--sidebar-accent: oklch(0.967 0.001 286.375);
+	--sidebar-accent-foreground: oklch(0.21 0.006 285.885);
+	--sidebar-border: oklch(0.92 0.004 286.32);
+	--sidebar-ring: oklch(0.623 0.214 259.815);
+}
+
+.dark {
+	--background: oklch(0.141 0.005 285.823);
+	--foreground: oklch(0.985 0 0);
+	--card: oklch(0.21 0.006 285.885);
+	--card-foreground: oklch(0.985 0 0);
+	--popover: oklch(0.21 0.006 285.885);
+	--popover-foreground: oklch(0.985 0 0);
+	--primary: oklch(0.546 0.245 262.881);
+	--primary-foreground: oklch(0.379 0.146 265.522);
+	--secondary: oklch(0.274 0.006 286.033);
+	--secondary-foreground: oklch(0.985 0 0);
+	--muted: oklch(0.274 0.006 286.033);
+	--muted-foreground: oklch(0.705 0.015 286.067);
+	--accent: oklch(0.274 0.006 286.033);
+	--accent-foreground: oklch(0.985 0 0);
+	--destructive: oklch(0.704 0.191 22.216);
+	--border: oklch(1 0 0 / 10%);
+	--input: oklch(1 0 0 / 15%);
+	--ring: oklch(0.488 0.243 264.376);
+	--chart-1: oklch(0.488 0.243 264.376);
+	--chart-2: oklch(0.696 0.17 162.48);
+	--chart-3: oklch(0.769 0.188 70.08);
+	--chart-4: oklch(0.627 0.265 303.9);
+	--chart-5: oklch(0.645 0.246 16.439);
+	--sidebar: oklch(0.21 0.006 285.885);
+	--sidebar-foreground: oklch(0.985 0 0);
+	--sidebar-primary: oklch(0.546 0.245 262.881);
+	--sidebar-primary-foreground: oklch(0.379 0.146 265.522);
+	--sidebar-accent: oklch(0.274 0.006 286.033);
+	--sidebar-accent-foreground: oklch(0.985 0 0);
+	--sidebar-border: oklch(1 0 0 / 10%);
+	--sidebar-ring: oklch(0.488 0.243 264.376);
 }
 
 @layer base {
-  :root {
-    /* === FONT VARIABLES ARE AUTO-GENERATED BY NEXT.JS ===
-     * --font-magnetik: Created by MagnetikFont from font.ts
-     * --font-timeless-tourist: Created by TimelessTouristFont from font.ts
-     * These support all font weights defined in the font files
-     */
-
-    /* === DESIGN TOKEN COLORS === */
-
-    /* Primary Colors */
-    --primary-shade-1: #c3bfbb;
-    --primary-shade-2: #9a918b;
-    --primary-shade-3: #867871;
-    --primary-shade-4: #726058;
-    --primary-shade-5: #604740;
-    --primary-shade-6: #4c3029;
-    --primary-colour: #361b17;
-    --dark-primary-colour: #211312;
-
-    /* Universal & Grey Colors */
-    --universal-white: #ffffff;
-    --lightest-grey: #fcfcfc;
-    --light-grey-1: #f5f5f5;
-    --light-grey-2: #e8e8e8;
-    --light-grey-3: #dcdcdc;
-    --grey-1: #afafaf;
-    --grey-2: #6d6d6d;
-
-    /* Black & Dark Greys */
-    --pure-black: #080808;
-    --black-1: #010101;
-    --black-2: #131313;
-    --black-3: #030305;
-    --dark-grey-1: #282828;
-    --dark-grey-2: #505050;
-    --dark-grey-3: #707070;
-
-    /* Accent Colors */
-    --accent-shade-1: #fffaf1;
-    --accent-shade-2: #fff3e1;
-    --accent-shade-3: #ffeed6;
-    --accent-colour: #ffebd0;
-    --accent-dark: #cdbea5;
-
-    /* Complimentary Colors */
-    --complimentary-shade-1: #ffe0be;
-    --complimentary-shade-2: #ffb362;
-    --complimentary-shade-3: #ff9e3c;
-    --complimentary-colour: #f8951d;
-    --complimentary-dark-1: #d27527;
-    --complimentary-dark-2: #9b5621;
-
-    /* Utility Colors */
-    --red: #dd2a2a;
-    --green: #1caf22;
-    --yellow: #f9da3a;
-
-    /* === DESIGN TOKEN TYPOGRAPHY === */
-    --font-size-2xs: 0.625rem; /* 10px */
-    --font-size-xs: 0.75rem; /* 12px */
-    --font-size-sm: 0.875rem; /* 14px */
-    --font-size-base: 1rem; /* 16px */
-    --font-size-lg: 1.125rem; /* 18px */
-    --font-size-xl: 1.25rem; /* 20px */
-    --font-size-2xl: 1.5rem; /* 24px */
-
-    /* === DESIGN TOKEN EFFECTS === */
-    --shadow: 1px 1px 6px 0px rgba(0, 0, 0, 0.12);
-
-    /* === SHADCN/UI MAPPED COLORS === */
-    --background: var(--universal-white);
-    --foreground: var(--grey-2);
-    --card: var(--accent-shade-1);
-    --card-foreground: var(--grey-2);
-    --popover: var(--universal-white);
-    --popover-foreground: var(--grey-2);
-    --primary: var(--primary-colour);
-    --primary-foreground: var(--universal-white);
-    --secondary: var(--complimentary-colour);
-    --secondary-foreground: var(--universal-white);
-    --muted: var(--light-grey-1);
-    --muted-foreground: var(--grey-2);
-    --accent: var(--accent-colour);
-    --accent-foreground: var(--primary-colour);
-    --destructive: var(--red);
-    --destructive-foreground: var(--universal-white);
-    --border: var(--light-grey-2);
-    --input: var(--universal-white);
-    --ring: var(--primary-colour);
-    --chart-1: var(--complimentary-colour);
-    --chart-2: var(--primary-colour);
-    --chart-3: var(--accent-shade-1);
-    --chart-4: var(--accent-shade-2);
-    --chart-5: var(--grey-2);
-    --radius: 0.5rem;
-    --sidebar: var(--universal-white);
-    --sidebar-foreground: var(--grey-2);
-    --sidebar-primary: var(--accent-shade-1);
-    --sidebar-primary-foreground: var(--grey-2);
-    --sidebar-accent: var(--complimentary-colour);
-    --sidebar-accent-foreground: var(--universal-white);
-    --sidebar-border: var(--light-grey-2);
-    --sidebar-ring: var(--primary-colour);
-  }
-
-  .dark {
-    /* === DESIGN TOKEN COLORS - DARK MODE === */
-
-    /* Primary Colors - Adjusted for Dark Mode */
-    --primary-shade-1: #4c3029;
-    --primary-shade-2: #867871;
-    --primary-shade-3: #9a918b;
-    --primary-shade-4: #c3bfbb;
-    --primary-shade-5: #e8e8e8;
-    --primary-shade-6: #f5f5f5;
-    --primary-colour: #604740;
-    --dark-primary-colour: #361b17;
-
-    /* Universal & Grey Colors - Dark Mode */
-    --universal-white: #fcfcfc;
-    --lightest-grey: #030305;
-    --light-grey-1: #131313;
-    --light-grey-2: #282828;
-    --light-grey-3: #505050;
-    --grey-1: #707070;
-    --grey-2: #afafaf;
-
-    /* Black & Dark Greys - Inverted */
-    --pure-black: #ffffff;
-    --black-1: #fcfcfc;
-    --black-2: #f5f5f5;
-    --black-3: #e8e8e8;
-    --dark-grey-1: #dcdcdc;
-    --dark-grey-2: #afafaf;
-    --dark-grey-3: #6d6d6d;
-
-    /* Accent Colors - Dark Mode */
-    --accent-shade-1: #4c3029;
-    --accent-shade-2: #604740;
-    --accent-shade-3: #726058;
-    --accent-colour: #867871;
-    --accent-dark: #361b17;
-
-    /* Complimentary Colors - Dark Mode */
-    --complimentary-shade-1: #9b5621;
-    --complimentary-shade-2: #d27527;
-    --complimentary-shade-3: #f8951d;
-    --complimentary-colour: #ff9e3c;
-    --complimentary-dark-1: #ffb362;
-    --complimentary-dark-2: #ffe0be;
-
-    /* Utility Colors - Enhanced for Dark Mode */
-    --red: #ff4444;
-    --green: #22dd28;
-    --yellow: #ffeb5a;
-
-    /* === DESIGN TOKEN EFFECTS - DARK MODE === */
-    --shadow: 1px 1px 6px 0px rgba(255, 255, 255, 0.08);
-
-    /* === SHADCN/UI MAPPED COLORS - DARK MODE === */
-    --background: var(--black-2);
-    --foreground: var(--lightest-grey);
-    --card: var(--black-2);
-    --card-foreground: var(--lightest-grey);
-    --popover: var(--black-2);
-    --popover-foreground: var(--lightest-grey);
-    --primary: var(--lightest-grey);
-    --primary-foreground: var(--dark-grey-1);
-    --secondary: var(--dark-grey-2);
-    --secondary-foreground: var(--lightest-grey);
-    --muted: var(--dark-grey-2);
-    --muted-foreground: var(--grey-1);
-    --accent: var(--dark-grey-2);
-    --accent-foreground: var(--lightest-grey);
-    --destructive: var(--red);
-    --destructive-foreground: var(--lightest-grey);
-    --border: var(--dark-grey-2);
-    --input: var(--dark-grey-2);
-    --ring: var(--dark-grey-3);
-    --chart-1: var(--complimentary-shade-3);
-    --chart-2: var(--green);
-    --chart-3: var(--yellow);
-    --chart-4: var(--red);
-    --chart-5: var(--grey-1);
-    --sidebar: var(--dark-grey-1);
-    --sidebar-foreground: var(--lightest-grey);
-    --sidebar-primary: var(--complimentary-shade-3);
-    --sidebar-primary-foreground: var(--lightest-grey);
-    --sidebar-accent: var(--dark-grey-2);
-    --sidebar-accent-foreground: var(--lightest-grey);
-    --sidebar-border: var(--dark-grey-2);
-    --sidebar-ring: var(--dark-grey-3);
-  }
-}
-
-@layer base {
-  * {
-    @apply border-border;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
-
-  /* Magnetik Font Family - Default Styles */
-  h1,
-  h2,
-  h3,
-  h4,
-  h5,
-  h6 {
-    font-family: "Magnetik-Bold", "Magnetik", sans-serif;
-    font-weight: 700;
-  }
-
-  /* Magnetik Font Utility Classes */
-  .font-magnetik-thin {
-    font-family: "Magnetik-Thin", "Magnetik", sans-serif;
-    font-weight: 100;
-  }
-
-  .font-magnetik-light {
-    font-family: "Magnetik-Light", "Magnetik", sans-serif;
-    font-weight: 300;
-  }
-
-  .font-magnetik-regular {
-    font-family: "Magnetik-Regular", "Magnetik", sans-serif;
-    font-weight: 400;
-  }
-
-  .font-magnetik-medium {
-    font-family: "Magnetik-Medium", "Magnetik", sans-serif;
-    font-weight: 500;
-  }
-
-  .font-magnetik-semibold {
-    font-family: "Magnetik-SemiBold", "Magnetik", sans-serif;
-    font-weight: 600;
-  }
-
-  .font-magnetik-bold {
-    font-family: "Magnetik-Bold", "Magnetik", sans-serif;
-    font-weight: 700;
-  }
-
-  .font-magnetik-extrabold {
-    font-family: "Magnetik-ExtraBold", "Magnetik", sans-serif;
-    font-weight: 800;
-  }
-
-  .font-magnetik-heavy {
-    font-family: "Magnetik-Heavy", "Magnetik", sans-serif;
-    font-weight: 900;
-  }
-
-  /* Typography Scale with Magnetik */
-  .text-display {
-    @apply text-4xl font-magnetik-heavy leading-tight;
-  }
-
-  .text-heading {
-    @apply text-2xl font-magnetik-bold leading-tight;
-  }
-
-  .text-subheading {
-    @apply text-xl font-magnetik-semibold leading-snug;
-  }
-
-  .text-body {
-    @apply text-base font-magnetik-regular leading-relaxed;
-  }
-
-  .text-caption {
-    @apply text-sm font-magnetik-medium leading-relaxed;
-  }
-
-  .text-small {
-    @apply text-xs font-magnetik-medium leading-relaxed;
-  }
-}
-
-@layer utilities {
-  .scrollbar-hide {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
-  .scrollbar-hide::-webkit-scrollbar {
-    display: none;
-  }
-}
-
-@layer components {
-  .story-card {
-    @apply bg-card text-card-foreground border border-border rounded-lg shadow-sm;
-  }
-
-  .story-card-image {
-    @apply w-full h-24 object-cover rounded-t-lg;
-  }
-
-  .story-card-content {
-    @apply p-3;
-  }
-
-  .story-card-title {
-    @apply font-semibold text-sm mb-1 truncate;
-  }
-
-  .story-card-meta {
-    @apply flex items-center gap-1 mb-2;
-  }
-
-  .story-card-author {
-    @apply flex items-center gap-2;
-  }
-}
-
-/* === PWA SPECIFIC STYLES === */
-@layer utilities {
-  .animate-slide-up {
-    animation: slideUp 0.3s ease-out forwards;
-  }
-
-  @keyframes slideUp {
-    from {
-      opacity: 0;
-      transform: translateY(100%);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  /* PWA Safe Area Support */
-  .safe-area-top {
-    padding-top: env(safe-area-inset-top);
-  }
-
-  .safe-area-bottom {
-    padding-bottom: env(safe-area-inset-bottom);
-  }
-
-  .safe-area-left {
-    padding-left: env(safe-area-inset-left);
-  }
-
-  .safe-area-right {
-    padding-right: env(safe-area-inset-right);
-  }
-
-  /* PWA Install Button Styles */
-  .pwa-install-button {
-    @apply bg-primary-colour text-white px-4 py-2 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105;
-  }
-
-  /* Offline Indicators */
-  .offline-indicator {
-    @apply fixed top-4 right-4 bg-amber-500 text-white px-3 py-1 rounded-full text-xs font-medium shadow-lg;
-  }
-
-  .online-indicator {
-    @apply fixed top-4 right-4 bg-green-500 text-white px-3 py-1 rounded-full text-xs font-medium shadow-lg;
-  }
-}
-
-/* === PWA DISPLAY MODES === */
-/* Standalone mode (PWA) styles */
-@media (display-mode: standalone) {
-  body {
-    /* Add extra padding for PWA mode if needed */
-    user-select: none; /* Disable text selection in PWA mode */
-  }
-
-  /* Hide scroll bars in PWA mode for native app feel */
-  ::-webkit-scrollbar {
-    display: none;
-  }
-
-  * {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
-}
-
-/* Minimal UI mode styles */
-@media (display-mode: minimal-ui) {
-  .header {
-    padding-top: calc(env(safe-area-inset-top) + 1rem);
-  }
-}
-
-/* Browser mode styles */
-@media (display-mode: browser) {
-  /* Regular browser styles */
-}
-
-/* Marquee Animation */
-@keyframes marquee {
-  0% {
-    transform: translateX(100%);
-  }
-  100% {
-    transform: translateX(-100%);
-  }
-}
-
-.animate-marquee {
-  animation: marquee linear infinite;
-  animation-delay: 2s; /* Wait 2 seconds before starting */
-}
-
-.animate-marquee:hover {
-  animation-play-state: paused;
+	* {
+		@apply border-border outline-ring/50;
+	}
+	body {
+		@apply bg-background text-foreground;
+	}
 }
