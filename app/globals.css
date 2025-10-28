@@ -254,5 +254,46 @@
 	  font-family: "Magnetik-Bold", "Magnetik", sans-serif;
 	  font-weight: 700;
 	}
+
+	/* Magnetik Font Utility Classes */
+	.font-magnetik-thin {
+		font-family: "Magnetik-Thin", "Magnetik", sans-serif;
+		font-weight: 100;
+	  }
+	
+	  .font-magnetik-light {
+		font-family: "Magnetik-Light", "Magnetik", sans-serif;
+		font-weight: 300;
+	  }
+	
+	  .font-magnetik-regular {
+		font-family: "Magnetik-Regular", "Magnetik", sans-serif;
+		font-weight: 400;
+	  }
+	
+	  .font-magnetik-medium {
+		font-family: "Magnetik-Medium", "Magnetik", sans-serif;
+		font-weight: 500;
+	  }
+	
+	  .font-magnetik-semibold {
+		font-family: "Magnetik-SemiBold", "Magnetik", sans-serif;
+		font-weight: 600;
+	  }
+	
+	  .font-magnetik-bold {
+		font-family: "Magnetik-Bold", "Magnetik", sans-serif;
+		font-weight: 700;
+	  }
+	
+	  .font-magnetik-extrabold {
+		font-family: "Magnetik-ExtraBold", "Magnetik", sans-serif;
+		font-weight: 800;
+	  }
+	
+	  .font-magnetik-heavy {
+		font-family: "Magnetik-Heavy", "Magnetik", sans-serif;
+		font-weight: 900;
+	  }
 	
 }
