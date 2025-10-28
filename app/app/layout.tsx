@@ -6,7 +6,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <section className=" bg-accent-shade-1">
+    <section className="">
       {children}
       <Navbar />
     </section>
