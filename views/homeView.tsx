@@ -100,8 +100,8 @@ const HomeView = () => {
   const filteredHotStories = filterStoriesByGenre(hotStories);
 
   return (
-    <div className="bg-accent-shade-1 min-h-screen space-y-4 px-4 pt-4">
-      <div className="flex items-center justify-between sticky top-0 z-50 bg-accent-shade-1 py-2">
+    <div className="min-h-screen space-y-4 px-4 pt-4">
+      <div className="flex items-center justify-between sticky top-0 z-50 py-2 pb-3 mb-2 -mx-4 px-4">
         <div className="flex items-center gap-3">
           <button
             onClick={() => router.push("/app/profile")}
@@ -129,7 +129,7 @@ const HomeView = () => {
           className=" rounded-full p-2"
           onPress={() => router.push("/app/search")}
         >
-          <Search className="w-8 h-8 text-complimentary-colour" />
+          <Search className="w-8 h-8 text-[#F8951D]" />
         </Button>
       </div>
       <PremiumBanner />
