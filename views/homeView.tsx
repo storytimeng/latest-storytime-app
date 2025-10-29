@@ -168,7 +168,7 @@ const HomeView = () => {
                 Maria&apos;s Best
               </h3>
               <p
-                className={`text-white/90 text-[10px] leading-relaxed ${Magnetik_Medium.className}`}
+                className={`text-white/90 text-[12px] leading-relaxed ${Magnetik_Medium.className}`}
               >
                 Maria Kim, a beautiful young lady that every man wanted, but her
                 price was too high. The beautiful lady wanted more than what
@@ -200,7 +200,7 @@ const HomeView = () => {
         </div>
 
         <div className="relative">
-          <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide scroll-smooth snap-x snap-mandatory">
+          <div className="flex gap-3 overflow-x-auto scrollbar-hide scroll-smooth snap-x snap-mandatory">
             {sortedGenres.map((genre: string) => (
               <GenreButton
                 key={genre}

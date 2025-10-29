@@ -62,13 +62,13 @@ const StoryCard = ({
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
       case "ongoing":
-        return "text-orange-600 bg-orange-50";
+        return "text-orange-600";
       case "completed":
-        return "text-green-600 bg-green-50";
+        return "text-green-600";
       case "draft":
-        return "text-gray-600 bg-gray-50";
+        return "text-red-500";
       default:
-        return "text-primary-colour";
+        return "text-black";
     }
   };
 
@@ -146,8 +146,7 @@ const StoryCard = ({
         <div className="flex items-center gap-2">
           <h3
             className={cn(
-              "truncate text-sm font-medium text-primary-colour flex-1",
-              "font-magnetik-medium"
+              "truncate text-sm font-semibold text-[#361B17] flex-1",
             )}
           >
             {story.title}
@@ -169,7 +168,7 @@ const StoryCard = ({
             {story.writingDate && (
               <p
                 className={cn(
-                  "text-gray-500 text-xs",
+                  "text-[#361B17] text-xs",
                   Magnetik_Regular.className
                 )}
               >
@@ -181,9 +180,9 @@ const StoryCard = ({
           <>
             {/* Likes + Comments */}
             {story.rating !== undefined && story.comments !== undefined && (
-              <div className="flex items-center gap-3 text-xs text-primary-shade-4">
+              <div className="flex items-center gap-3 text-xs text-[#361B17]">
                 <div className="flex items-center gap-1">
-                  <ThumbsUp className="w-3 h-3 fill-complimentary-colour text-complimentary-colour" />
+                  <ThumbsUp className="w-3 h-3 fill-[#F8951D] text-[#F8951D]" />
                   <span className={Magnetik_Regular.className}>
                     ({story.rating})
                   </span>
@@ -197,14 +196,14 @@ const StoryCard = ({
             {/* Author */}
             {story.author && (
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 bg-complimentary-shade-2 rounded-full flex items-center justify-center">
-                  <span className="text-[8px] text-primary-colour font-medium">
+                <div className="w-4 h-4 bg-[#FFEBD0] rounded-full flex items-center justify-center">
+                  <span className="text-[8px] text-[#361B17] font-bold">
                     {getInitials(story.author)}
                   </span>
                 </div>
                 <span
                   className={cn(
-                    "text-primary-shade-4 text-xs",
+                    "text-[#361B17] text-xs",
                     Magnetik_Regular.className
                   )}
                 >
