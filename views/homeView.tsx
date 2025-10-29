@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
 import Image from "next/image";
 import React, { useState } from "react";
@@ -42,6 +42,7 @@ interface Story {
 }
 
 const HomeView = () => {
+  const router = useRouter();
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
 
   // Extract data from imported JSON
@@ -102,11 +103,13 @@ const HomeView = () => {
     <div className="bg-accent-shade-1 min-h-screen space-y-4 px-4 pt-4">
       <div className="flex items-center justify-between sticky top-0 z-50 bg-accent-shade-1 py-2">
         <div className="flex items-center gap-3">
-          <Link href="/app/profile" aria-label="Go to profile">
-            <div className="w-10 h-10 bg-complimentary-shade-1 cursor-pointer rounded-full flex items-center justify-center">
-              <h1 className={Magnetik_Bold.className}>T</h1>
-            </div>
-          </Link>
+          <button
+            onClick={() => router.push("/app/profile")}
+            aria-label="Go to profile"
+            className="w-10 h-10 bg-complimentary-shade-1 cursor-pointer rounded-full flex items-center justify-center"
+          >
+            <h1 className={Magnetik_Bold.className}>T</h1>
+          </button>
           <div className="flex items-center gap-1">
             <span
               className={`text-lg font-medium ${Magnetik_Medium.className}`}
@@ -121,14 +124,13 @@ const HomeView = () => {
             <span className="text-xl">👋</span>
           </div>
         </div>
-        <Link href="/app/search">
-          <Button
-            variant="ghost"
-            className="text-secondary bg-accent-shade-2 rounded-full p-2"
-          >
-            <Search className="w-8 h-8 text-complimentary-colour" />
-          </Button>
-        </Link>
+        <Button
+          variant="ghost"
+          className="text-secondary bg-accent-shade-2 rounded-full p-2"
+          onPress={() => router.push("/app/search")}
+        >
+          <Search className="w-8 h-8 text-complimentary-colour" />
+        </Button>
       </div>
       <PremiumBanner />
       {/* Only on Storytime */}
@@ -137,14 +139,13 @@ const HomeView = () => {
           <h2 className={`body-text-small-medium-auto primary-colour`}>
             Only on Storytime
           </h2>
-          <Link href={`/app/all-genres`}>
-            <Button
-              variant="ghost"
-              className={`text-grey-2 body-text-smallest-medium-auto`}
-            >
-              See more
-            </Button>
-          </Link>
+          <Button
+            variant="ghost"
+            className={`text-grey-2 body-text-smallest-medium-auto`}
+            onPress={() => router.push("/app/all-genres")}
+          >
+            See more
+          </Button>
         </div>
         <div className="relative overflow-hidden border-none rounded-xl">
           <div className="relative h-52 rounded-xl">
@@ -189,14 +190,13 @@ const HomeView = () => {
             Genre Pick
           </h2>
 
-          <Link href={`/app/all-genres`}>
-            <Button
-              variant="ghost"
-              className={`text-grey-2 body-text-smallest-medium-auto`}
-            >
-              See all
-            </Button>
-          </Link>
+          <Button
+            variant="ghost"
+            className={`text-grey-2 body-text-smallest-medium-auto`}
+            onPress={() => router.push("/app/all-genres")}
+          >
+            See all
+          </Button>
         </div>
 
         <div className="relative">
