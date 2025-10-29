@@ -106,7 +106,7 @@ const HomeView = () => {
           <button
             onClick={() => router.push("/app/profile")}
             aria-label="Go to profile"
-            className="w-10 h-10 bg-complimentary-shade-1 cursor-pointer rounded-full flex items-center justify-center"
+            className="w-10 h-10 bg-secondary text-primary cursor-pointer rounded-full flex items-center justify-center"
           >
             <h1 className={Magnetik_Bold.className}>T</h1>
           </button>
