@@ -157,7 +157,7 @@ const HomeView = () => {
               height={500}
             />
             <div className="absolute top-2 right-2">
-              <div className="bg-accent-colour body-text-smallest-medium-auto px-3 py-[3px] rounded-[2px] text-primary-colour">
+              <div className="bg-[#FFEBD0] body-text-smallest-medium-auto px-3 py-[3px] rounded-[2px] text-black">
                 Romance
               </div>
             </div>
@@ -174,7 +174,7 @@ const HomeView = () => {
                 price was too high. The beautiful lady wanted more than what
                 they were offering...
                 <span
-                  className={`text-[10px] font-bold text-complimentary-colour ${Magnetik_Bold.className}`}
+                  className={`text-[10px] font-bold text-[#F8951D] ${Magnetik_Bold.className}`}
                 >
                   by Jane Moore
                 </span>
@@ -186,7 +186,7 @@ const HomeView = () => {
       {/* Genre Pick */}
       <div className=" mb-6">
         <div className="flex items-center justify-between">
-          <h2 className={`body-text-small-medium-auto primary-colour`}>
+          <h2 className={`body-text-small-medium-auto text-black`}>
             Genre Pick
           </h2>
 
