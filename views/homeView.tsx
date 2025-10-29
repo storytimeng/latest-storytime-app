@@ -126,10 +126,10 @@ const HomeView = () => {
         </div>
         <Button
           variant="ghost"
-          className=" rounded-full p-2 bg-[#FFFAF1]"
+          className=" rounded-full p-2 bg-accent-shade-1"
           onPress={() => router.push("/app/search")}
         >
-          <Search className="w-8 h-8 text-[#F8951D]" />
+          <Search className="w-8 h-8 text-complimentary-colour" />
         </Button>
       </div>
       <PremiumBanner />
@@ -157,7 +157,7 @@ const HomeView = () => {
               height={500}
             />
             <div className="absolute top-2 right-2">
-              <div className="bg-[#FFEBD0] text-[10px] px-3 py-[3px] rounded-[2px] text-[#361B17]">
+              <div className="bg-accent-colour text-[10px] px-3 py-[3px] rounded-[2px] text-primary-colour">
                 Romance
               </div>
             </div>
@@ -174,7 +174,7 @@ const HomeView = () => {
                 price was too high. The beautiful lady wanted more than what
                 they were offering...
                 <span
-                  className={`text-[10px] font-bold text-[#F8951D] ${Magnetik_Bold.className}`}
+                  className={`text-[10px] font-bold text-complimentary-colour ${Magnetik_Bold.className}`}
                 >
                   by Jane Moore
                 </span>
