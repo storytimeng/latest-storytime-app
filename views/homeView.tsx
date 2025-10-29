@@ -172,7 +172,7 @@ const HomeView = () => {
               >
                 Maria Kim, a beautiful young lady that every man wanted, but her
                 price was too high. The beautiful lady wanted more than what
-                they were offering...
+                they were offering... 
                 <span
                   className={`text-[10px] font-bold text-[#F8951D] ${Magnetik_Bold.className}`}
                 >
