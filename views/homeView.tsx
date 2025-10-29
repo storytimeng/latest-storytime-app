@@ -126,7 +126,7 @@ const HomeView = () => {
         </div>
         <Button
           variant="ghost"
-          className=" rounded-full p-2"
+          className=" rounded-full p-2 bg-[#FFFAF1]"
           onPress={() => router.push("/app/search")}
         >
           <Search className="w-8 h-8 text-[#F8951D]" />
