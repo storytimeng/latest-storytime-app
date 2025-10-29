@@ -20,7 +20,7 @@ const PremiumBanner: React.FC<PremiumBannerProps> = ({
 }) => {
   return (
     <div className={`mb-4 bg-[#FFEBD0] rounded-lg shadow-xl ${className}`}>
-      <Card className="bg-[#FFEBD0] border-none p-4 relative overflow-hidden">
+      <Card className="bg-[#FFEBD0] border-none p-4 relative overflow-hidden rounded-lg">
         <div className="flex items-center justify-between">
           <div>
             <div className="flex items-center gap-2">
