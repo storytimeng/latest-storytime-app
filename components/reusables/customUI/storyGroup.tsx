@@ -2,7 +2,7 @@
 
 import { ScrollShadow } from "@heroui/react";
 import { Button } from "@/components/ui/button";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import React from "react";
 import { Magnetik_Bold } from "@/lib/font";
 import { cn } from "@/lib/utils";
@@ -42,6 +42,8 @@ const StoryGroup = ({
   cardClassName,
   layout = "horizontal",
 }: StoryGroupProps) => {
+  const router = useRouter();
+
   if (!stories || stories.length === 0) {
     return (
       <div className={cn("px-4", className)}>
@@ -75,14 +77,13 @@ const StoryGroup = ({
             {title}
           </h2>
           {showSeeAll && categorySlug && (
-            <Link href={`/app/category/${categorySlug}`}>
-              <Button
-                variant="ghost"
-                className={`text-grey-2 body-text-smallest-medium-auto`}
-              >
-                See all
-              </Button>
-            </Link>
+            <Button
+              variant="ghost"
+              className={`text-grey-2 body-text-smallest-medium-auto`}
+              onPress={() => router.push(`/app/category/${categorySlug}`)}
+            >
+              See all
+            </Button>
           )}
         </div>
       )}
@@ -90,7 +91,7 @@ const StoryGroup = ({
       {layout === "horizontal" ? (
         <ScrollShadow
           orientation="horizontal"
-          size={40}
+          size={10}
           hideScrollBar={false}
           isEnabled={true}
           visibility="auto"
