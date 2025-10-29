@@ -91,7 +91,7 @@ const StoryGroup = ({
       {layout === "horizontal" ? (
         <ScrollShadow
           orientation="horizontal"
-          size={10}
+          size={2}
           hideScrollBar={false}
           isEnabled={true}
           visibility="auto"
