@@ -112,11 +112,11 @@ const HomeView = () => {
           </button>
           <div className="flex items-center gap-1">
             <span
-              className={`text-lg font-medium ${Magnetik_Medium.className}`}
+              className={`text-lg text-black font-medium ${Magnetik_Medium.className}`}
             >
               Hi{" "}
               <span
-                className={`text-secondary font-bold ${Magnetik_Bold.className}`}
+                className={`text-black font-bold ${Magnetik_Bold.className}`}
               >
                 Rubystar
               </span>
@@ -126,7 +126,7 @@ const HomeView = () => {
         </div>
         <Button
           variant="ghost"
-          className="text-secondary bg-accent-shade-2 rounded-full p-2"
+          className=" rounded-full p-2"
           onPress={() => router.push("/app/search")}
         >
           <Search className="w-8 h-8 text-complimentary-colour" />

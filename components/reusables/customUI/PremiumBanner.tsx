@@ -19,7 +19,7 @@ const PremiumBanner: React.FC<PremiumBannerProps> = ({
   className = "",
 }) => {
   return (
-    <div className={`mb-6 bg-accent-colour rounded-lg shadow-xl ${className}`}>
+    <div className={`mb-6 bg-[#FFEBD0] rounded-lg shadow-xl ${className}`}>
       <Card className="bg-accent-colour border-none p-4 relative overflow-hidden">
         <div className="flex items-center justify-between">
           <div>
@@ -31,7 +31,7 @@ const PremiumBanner: React.FC<PremiumBannerProps> = ({
               </p>
             </div>
             <span
-              className={`text-[14px] font-bold text-complimentary-colour ${Magnetik_Bold.className}`}
+              className={`text-[14px] font-bold text-[#F8951D] ${Magnetik_Bold.className}`}
             >
               {title}
             </span>
