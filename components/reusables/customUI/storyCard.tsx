@@ -109,7 +109,7 @@ const StoryCard = ({
         {/* Badge (genre) - same for both modes but different placement */}
         <div
           className={cn(
-            "absolute rounded-md px-2 py-1 text-[10px] text-primary-colour bg-[#F5E6D3]/90 backdrop-blur-sm",
+            "absolute rounded-md px-2 py-1 text-[10px] text-[#361B17] bg-[#FFEBD0]",
             Magnetik_Regular.className,
             isPenMode ? "top-3 left-3" : "top-2 right-2"
           )}

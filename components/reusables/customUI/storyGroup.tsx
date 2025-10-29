@@ -48,7 +48,7 @@ const StoryGroup = ({
         {title && (
           <div className="flex items-center justify-between mb-4">
             <h2
-              className={`text-xl font-bold text-primary-colour ${Magnetik_Bold.className}`}
+              className={`text-xl font-bold text-black ${Magnetik_Bold.className}`}
             >
               {title}
             </h2>
@@ -71,7 +71,7 @@ const StoryGroup = ({
     <div className={cn("", className)}>
       {title && (
         <div className="flex items-center justify-between mb-2">
-          <h2 className={`body-text-small-medium-auto primary-colour`}>
+          <h2 className={`body-text-small-medium-auto text-black`}>
             {title}
           </h2>
           {showSeeAll && categorySlug && (
