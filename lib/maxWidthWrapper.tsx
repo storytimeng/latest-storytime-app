@@ -6,7 +6,7 @@ import { HeroUIProvider } from "@heroui/react";
 
 export function MaxWidthWrapper({ className, children }: { className?: string; children: ReactNode }) {
 	return (
-		<main className={cn("w-full min-h-screen max-w-md mx-auto", className)}>
+		<main className={cn("w-full min-h-screen max-w-md mx-auto bg-[#FFF4E8]", className)}>
 			<HeroUIProvider>{children}</HeroUIProvider>
 		</main>
 	);
