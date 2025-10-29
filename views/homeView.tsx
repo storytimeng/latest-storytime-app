@@ -157,7 +157,7 @@ const HomeView = () => {
               height={500}
             />
             <div className="absolute top-2 right-2">
-              <div className="bg-[#FFEBD0] body-text-smallest-medium-auto px-3 py-[3px] rounded-[2px] text-black">
+              <div className="bg-[#FFEBD0] text-[10px] px-3 py-[3px] rounded-[2px] text-[#361B17]">
                 Romance
               </div>
             </div>
