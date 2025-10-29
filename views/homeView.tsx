@@ -136,7 +136,7 @@ const HomeView = () => {
       {/* Only on Storytime */}
       <div className="">
         <div className="flex h-fit items-center justify-between mb-2">
-          <h2 className={`body-text-small-medium-auto primary-colour`}>
+          <h2 className={`body-text-small-medium-auto text-black`}>
             Only on Storytime
           </h2>
           <Button
