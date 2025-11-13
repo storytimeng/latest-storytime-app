@@ -1,6 +1,6 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
+import { Button } from "@heroui/react";
 import { Home, BookOpen, PenTool, Bell } from "lucide-react";
 import React from "react";
 import { Magnetik_Medium } from "@/lib/font";
@@ -15,61 +15,52 @@ const Navbar = () => {
     return pathname.startsWith(path);
   };
 
+  const navItems = [
+    { path: "/app", icon: Home, label: "Home" },
+    { path: "/app/library", icon: BookOpen, label: "Library" },
+    { path: "/app/pen", icon: PenTool, label: "Pen" },
+    { path: "/app/notification", icon: Bell, label: "Notification" },
+  ];
+
   return (
-    <>
-      {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-[#f8f7f7] border-t border-[#AFAFAF] max-w-sm mx-auto rounded-t-xl z-50">
-        <div className="flex items-center justify-around py-3 px-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="flex flex-col items-center gap-1 min-w-0 flex-1"
-            onPress={() => router.push("/app")}
-          >
-            <Home className={`w-5 h-5 ${isActive("/app") ? "fill-[#361B17]" : "text-[#361B17]"}`} />
-            <span className={`text-xs ${Magnetik_Medium.className} ${isActive("/app") ? "text-primary-colour" : "text-[#361B17]"}`}>
-              Home
-            </span>
-          </Button>
-          
-          <Button
-            variant="ghost"
-            size="sm"
-            className="flex flex-col items-center gap-1 min-w-0 flex-1"
-            onPress={() => router.push("/app/library")}
-          >
-            <BookOpen className="w-5 h-5 text-[#361B17]" />
-            <span className={`text-xs ${Magnetik_Medium.className} ${isActive("/app/library") ? "text-primary-colour" : "text-[#361B17]"}`}>
-              Library
-            </span>
-          </Button>
-          
-          <Button
-            variant="ghost"
-            size="sm"
-            className="flex flex-col items-center gap-1 min-w-0 flex-1"
-            onPress={() => router.push("/app/pen")}
-          >
-            <PenTool className="w-5 h-5 text-[#361B17]" />
-            <span className={`text-xs ${Magnetik_Medium.className} ${isActive("/app/pen") ? "text-primary-colour" : "text-[#361B17]"}`}>
-              Pen
-            </span>
-          </Button>
-          
-          <Button
-            variant="ghost"
-            size="sm"
-            className="flex flex-col items-center gap-1 min-w-0 flex-1"
-            onPress={() => router.push("/app/notification")}
-          >
-            <Bell className="w-5 h-5 text-[#361B17]" />
-            <span className={`text-xs ${Magnetik_Medium.className} ${isActive("/app/notification") ? "text-primary-colour" : "text-[#361B17]"}`}>
-              Notification
-            </span>
-          </Button>
-        </div>
-      </div>
-    </>
+    <div className="fixed bottom-0 left-0 right-0 bg-[#f8f7f7] border-t border-[#AFAFAF] w-full sm:max-w-md sm:mx-auto rounded-t-xl z-50 safe-area-bottom">
+      <nav
+        className="flex items-center justify-around py-2 sm:py-3 px-1 sm:px-2"
+        aria-label="Main navigation"
+      >
+        {navItems.map(({ path, icon: Icon, label }) => {
+          const active = isActive(path);
+          return (
+            <Button
+              key={path}
+              variant="ghost"
+              size="sm"
+              className="flex flex-col items-center border-0 gap-0.5 sm:gap-1 min-w-0 flex-1 px-1 sm:px-2"
+              onPress={() => router.push(path)}
+              aria-label={label}
+              aria-current={active ? "page" : undefined}
+            >
+              <Icon
+                className={`w-4 h-4 sm:w-5 sm:h-5 transition-colors ${
+                  active ? "fill-[#361B17]" : "text-[#361B17]"
+                }`}
+              />
+              <span
+                className={`text-[10px] sm:text-xs ${
+                  Magnetik_Medium.className
+                } transition-colors truncate max-w-full ${
+                  active
+                    ? "text-primary-colour font-semibold"
+                    : "text-[#361B17]"
+                }`}
+              >
+                {label}
+              </span>
+            </Button>
+          );
+        })}
+      </nav>
+    </div>
   );
 };
 
