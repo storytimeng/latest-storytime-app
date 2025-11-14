@@ -92,11 +92,10 @@ const SearchView = () => {
   const clearSearch = () => {
     setSearch("");
   };
-
   return (
-    <div className="bg-accent-shade-1 min-h-screen">
-      {/* Sticky Header Section */}
-      <div className="sticky top-0 z-10 bg-accent-shade-1 pt-4 pb-2 px-4">
+    <div className="h-screen flex flex-col bg-accent-shade-1">
+      {/* Fixed Header Section */}
+      <div className="flex-shrink-0 bg-accent-shade-1 pt-4 pb-2 px-4">
         <div className="space-y-4">
           {/* Search Bar and Back Button */}
           <div className="flex items-center gap-4">
@@ -175,7 +174,7 @@ const SearchView = () => {
       </div>
 
       {/* Scrollable Content Section */}
-      <div className="px-4 pb-4">
+      <div className="flex-1 overflow-y-auto px-4 pb-4">
         {/* Search Results Section */}
         <div className="space-y-4">
           {/* Search Results */}
@@ -188,7 +187,7 @@ const SearchView = () => {
                   genre={story.genre}
                   author={story.author}
                   image={story.image}
-                  hasWarning={story.status === "Ongoing"} // You can customize this logic
+                  hasWarning={story.status === "Ongoing"}
                   onClick={() => handleStoryClick(story)}
                 />
               ))}

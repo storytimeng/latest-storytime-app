@@ -590,6 +590,7 @@
 @media (display-mode: standalone) {
   body {
     /* Add extra padding for PWA mode if needed */
+    -webkit-user-select: none; /* Disable text selection in PWA mode - Safari */
     user-select: none; /* Disable text selection in PWA mode */
   }
 
@@ -601,6 +602,9 @@
   * {
     -ms-overflow-style: none;
     scrollbar-width: none;
+  }
+  *::-webkit-scrollbar {
+    display: none;
   }
 }
 
