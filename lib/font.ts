@@ -33,7 +33,8 @@ export const Magnetik_RegularItalic = localFont({
 });
 
 export const Magnetik_Medium = localFont({
-	src: "../public/fonts/GeneralSans/Magnetik-Medium.otf",
+    src: "../public/fonts/GeneralSans/Magnetik-Medium.otf",
+    variable: "--font-magnetik",
 });
 
 export const Magnetik_MediumItalic = localFont({

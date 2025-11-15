@@ -56,7 +56,7 @@ export default function RootLayout({
 		<html
 			lang="en"
 			suppressHydrationWarning>
-			<body className={cn("m-auto min-h-screen bg-background bg-center bg-no-repeat scroll-smooth antialiased", Magnetik_Medium.className)}>
+			<body className={cn("m-auto min-h-screen bg-background bg-center bg-no-repeat scroll-smooth antialiased", Magnetik_Medium.className, Magnetik_Medium.variable)}>
 				<ThemeProvider
 					attribute="class"
 					defaultTheme="light"

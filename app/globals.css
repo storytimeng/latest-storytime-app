@@ -2,7 +2,8 @@
 @import "tw-animate-css";
 
 @import "tailwindcss";
-@plugin '../lib/hero';
+/* Heroui plugin is registered via tailwind.config.ts. Avoid CSS-level TS plugin import. */
+/* @plugin '../lib/hero'; */
 
 @source '../node_modules/@heroui/theme/dist/**/*.{js,ts,jsx,tsx}';
 
