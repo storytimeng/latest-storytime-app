@@ -7,7 +7,7 @@ export default {
     "./pages/**/*.{ts,tsx}",
     "./components/**/*.{ts,tsx}",
     "./app/**/*.{ts,tsx}",
-    "./view/**/*.{ts,tsx}",
+    "./views/**/*.{ts,tsx}",
     "./json/**/*.{ts,tsx}",
     "./utils/**/*.{ts,tsx}",
     "./lib/**/*.{ts,tsx}",
