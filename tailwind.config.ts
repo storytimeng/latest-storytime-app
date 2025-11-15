@@ -12,6 +12,7 @@ export default {
     "./utils/**/*.{ts,tsx}",
     "./lib/**/*.{ts,tsx}",
     "./src/**/*.{ts,tsx}",
+    "./.next/**/*.{ts,tsx}",
     "./node_modules/@heroui/theme/dist/**/*.{js,ts,jsx,tsx}",
   ],
 
