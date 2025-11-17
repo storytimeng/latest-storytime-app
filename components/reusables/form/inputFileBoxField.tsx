@@ -1,10 +1,8 @@
 "use client";
 import React, { useCallback, useState } from "react";
 import { cn } from "@/lib";
-import { useDropzone } from "react-dropzone";
 import Image from "next/image";
-import { IoClose } from "react-icons/io5";
-import { Camera } from "lucide-react";
+import { Camera, X } from "lucide-react";
 
 interface InputFileBoxFieldProps {
 	label: string;
@@ -19,36 +17,48 @@ interface InputFileBoxFieldProps {
 
 const InputFileBoxField: React.FC<InputFileBoxFieldProps> = ({ id, isInvalid, errorMessage, onChange, required }) => {
 	const [preview, setPreview] = useState<string | null>(null);
+	const [isDragActive, setIsDragActive] = useState(false);
 
-	const onDrop = useCallback(
-		(acceptedFiles: File[]) => {
-			const file = acceptedFiles[0];
-			if (file) {
-				onChange(file);
-				const reader = new FileReader();
-				reader.onload = () => {
-					setPreview(reader.result as string);
-				};
-				reader.readAsDataURL(file);
-			}
-		},
-		[onChange]
-	);
+	const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const file = e.target.files?.[0];
+		if (file) {
+			onChange(file);
+			const reader = new FileReader();
+			reader.onload = () => {
+				setPreview(reader.result as string);
+			};
+			reader.readAsDataURL(file);
+		}
+	};
+
+	const handleDragOver = (e: React.DragEvent) => {
+		e.preventDefault();
+		setIsDragActive(true);
+	};
+
+	const handleDragLeave = () => {
+		setIsDragActive(false);
+	};
+
+	const handleDrop = (e: React.DragEvent) => {
+		e.preventDefault();
+		setIsDragActive(false);
+		const file = e.dataTransfer.files[0];
+		if (file && file.type.startsWith("image/")) {
+			onChange(file);
+			const reader = new FileReader();
+			reader.onload = () => {
+				setPreview(reader.result as string);
+			};
+			reader.readAsDataURL(file);
+		}
+	};
 
 	const handleRemove = (e: React.MouseEvent) => {
 		e.stopPropagation();
 		setPreview(null);
 		onChange(null);
 	};
-
-	const { getRootProps, getInputProps, isDragActive } = useDropzone({
-		onDrop,
-		accept: {
-			"image/*": [".jpeg", ".jpg", ".png"],
-		},
-		multiple: false,
-		noClick: false,
-	});
 
 	return (
 		<div className="flex flex-col space-y-1.5">
@@ -61,12 +71,18 @@ const InputFileBoxField: React.FC<InputFileBoxFieldProps> = ({ id, isInvalid, er
 				<p className="text-xs text-gray-400 mb-2">Please provide a clear photo of yourself with good lighting</p>
 			</div>*/}
 			<div
-				{...getRootProps()}
+				onDragOver={handleDragOver}
+				onDragLeave={handleDragLeave}
+				onDrop={handleDrop}
+				onClick={() => document.getElementById(id)?.click()}
 				className={cn("border-2 border-dashed rounded-lg p-6 cursor-pointer min-h-[200px] relative", "flex flex-col items-center justify-center text-center", "hover:border-primary transition-colors", isDragActive ? "border-primary bg-primary/5" : "border-gray-300")}>
 				<input
-					{...getInputProps()}
+					type="file"
 					id={id}
 					required={required}
+					accept="image/jpeg,image/jpg,image/png"
+					onChange={handleFileChange}
+					className="hidden"
 				/>
 
 				{preview ? (
@@ -82,7 +98,7 @@ const InputFileBoxField: React.FC<InputFileBoxFieldProps> = ({ id, isInvalid, er
 								onClick={handleRemove}
 								className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 z-10"
 								type="button">
-								<IoClose className="w-4 h-4" />
+								<X className="w-4 h-4" />
 							</button>
 						</div>
 					</div>
