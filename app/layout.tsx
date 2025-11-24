@@ -1,16 +1,11 @@
-import "@/styles/globals.css";
-import { Metadata, Viewport } from "next";
-import { Link } from "@heroui/link";
-import clsx from "clsx";
 import { APP_CONFIG } from "@/config/app";
 import { MaxWidthWrapper } from "@/lib/maxWidthWrapper";
+import "@/styles/globals.css";
+import { Metadata, Viewport } from "next";
 import { Providers } from "./providers";
 
-import { siteConfig } from "@/config/site";
-import { fontSans } from "@/config/fonts";
-import { Navbar } from "@/components/navbar";
-import { cn } from "@/lib/utils";
 import { Magnetik_Medium } from "@/lib/font";
+import { cn } from "@/lib/utils";
 export const metadata: Metadata = {
   metadataBase: new URL(APP_CONFIG.url),
   title: APP_CONFIG.name,
