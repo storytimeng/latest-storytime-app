@@ -60,7 +60,7 @@ const ProfileCard = ({
         </div>
 
         {showSettings && (
-          <Link href="/app/settings">
+          <Link href="/settings">
             <Button isIconOnly variant="ghost" className="text-universal-white">
               <Settings size={24} />
             </Button>

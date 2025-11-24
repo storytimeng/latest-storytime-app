@@ -78,7 +78,7 @@ const StoryGroup = ({
             <Button
               variant="ghost"
               className={`text-grey-2 body-text-smallest-medium-auto`}
-              onPress={() => router.push(`/app/category/${categorySlug}`)}
+              onPress={() => router.push(`/category/${categorySlug}`)}
             >
               See all
             </Button>

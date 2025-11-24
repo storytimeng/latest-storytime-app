@@ -98,7 +98,7 @@ const HomeView = () => {
     <div className="min-h-screen px-4 pt-4 space-y-4 bg-accent-shade-1">
       <div className="sticky top-0 z-50 flex items-center justify-between py-2 bg-accent-shade-1">
         <div className="flex items-center gap-3">
-          <Link href="/app/profile" aria-label="Go to profile">
+          <Link href="/profile" aria-label="Go to profile">
             <div className="flex items-center justify-center w-10 h-10 rounded-full cursor-pointer bg-complimentary-shade-1">
               <h1 className={Magnetik_Bold.className}>T</h1>
             </div>
@@ -117,7 +117,7 @@ const HomeView = () => {
             <span className="text-xl">👋</span>
           </div>
         </div>
-        <Link href="/app/search">
+        <Link href="/search">
           <Button
             variant="ghost"
             className="p-2 rounded-full text-secondary bg-accent-shade-2"
@@ -133,7 +133,7 @@ const HomeView = () => {
           <h2 className={`body-text-small-medium-auto primary-colour`}>
             Only on Storytime
           </h2>
-          <Link href={`/app/all-genres`}>
+          <Link href={`/all-genres`}>
             <Button
               variant="ghost"
               className={`text-grey-2 body-text-smallest-medium-auto`}
@@ -185,7 +185,7 @@ const HomeView = () => {
             Genre Pick
           </h2>
 
-          <Link href={`/app/all-genres`}>
+          <Link href={`/all-genres`}>
             <Button
               variant="ghost"
               className={`text-grey-2 body-text-smallest-medium-auto`}

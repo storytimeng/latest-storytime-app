@@ -82,7 +82,7 @@ const LibraryView = () => {
           >
             📚 Library
           </h1>
-          <Link href="/app/pen">
+          <Link href="/pen">
             <Button
               className={`bg-primary-shade-6 text-universal-white px-6 py-2 rounded-full ${Magnetik_Medium.className}`}
               size="sm"
@@ -208,8 +208,8 @@ const LibraryView = () => {
                           item.status === "Reading"
                             ? "bg-success-colour/10 text-success-colour"
                             : item.status === "Completed"
-                            ? "bg-complimentary-colour/10 text-complimentary-colour"
-                            : "bg-primary-shade-2/10 text-primary-shade-4"
+                              ? "bg-complimentary-colour/10 text-complimentary-colour"
+                              : "bg-primary-shade-2/10 text-primary-shade-4"
                         } ${Magnetik_Regular.className}`}
                       >
                         {item.status}

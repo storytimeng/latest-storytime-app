@@ -17,9 +17,9 @@ const Navbar = () => {
 
   const navItems = [
     { path: "/app", icon: Home, label: "Home" },
-    { path: "/app/library", icon: BookOpen, label: "Library" },
-    { path: "/app/pen", icon: PenTool, label: "Pen" },
-    { path: "/app/notification", icon: Bell, label: "Notification" },
+    { path: "/library", icon: BookOpen, label: "Library" },
+    { path: "/pen", icon: PenTool, label: "Pen" },
+    { path: "/notification", icon: Bell, label: "Notification" },
   ];
 
   return (

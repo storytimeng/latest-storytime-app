@@ -118,7 +118,7 @@ const GenresView = ({ genre }: GenresViewProps) => {
   return (
     <div className="bg-accent-shade-1 min-h-screen px-4 pt-4">
       {/* Header */}
-      <PageHeader title={displayGenre} backLink="/app/all-genres" />
+      <PageHeader title={displayGenre} backLink="/all-genres" />
 
       {/* Story Grid */}
       <StoryGroup

@@ -134,7 +134,7 @@ const PenView = () => {
         <Button
           className={`bg-primary-shade-6 text-universal-white px-4 rounded-full text-[10px] ${Magnetik_Regular.className}`}
           size="sm"
-          onPress={() => router.push("/app/library")}
+          onPress={() => router.push("/library")}
         >
           <Library className="w-3 h-3" />
           Library
@@ -197,7 +197,7 @@ const PenView = () => {
         <Button
           className={`bg-primary-shade-6 text-universal-white px-4 rounded-full text-[10px] ${Magnetik_Regular.className}`}
           size="sm"
-          onPress={() => router.push("/app/library")}
+          onPress={() => router.push("/library")}
         >
           <Library className="w-3 h-3" />
           Library

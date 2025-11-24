@@ -64,7 +64,7 @@ const SettingsView = () => {
       label: "Change password",
       icon: <Key size={20} />,
       hasToggle: false,
-      route: "/app/settings/change-password", // This navigates to a page
+      route: "/settings/change-password", // This navigates to a page
     },
     {
       id: "faqs",
@@ -78,7 +78,7 @@ const SettingsView = () => {
       label: "Terms & Policy",
       icon: <Phone size={20} />,
       hasToggle: false,
-      route: "/app/settings/terms-policy", // This navigates to a page
+      route: "/settings/terms-policy", // This navigates to a page
     },
     {
       id: "support",
@@ -180,7 +180,7 @@ const SettingsView = () => {
       <div className="px-4 pt-4 pb-6 ">
         <PageHeader
           title="Settings"
-          backLink="/app/profile"
+          backLink="/profile"
           titleClassName="text-lg font-medium text-grey-1"
           backButtonClassName="text-grey-1"
           showBackButton={true}

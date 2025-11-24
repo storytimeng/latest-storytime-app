@@ -30,7 +30,7 @@ const AllGenres = () => {
 
   const handleGenreClick = (genre: string) => {
     // Navigate to the genre-specific page
-    router.push(`/app/all-genres/${encodeURIComponent(genre.toLowerCase())}`);
+    router.push(`/all-genres/${encodeURIComponent(genre.toLowerCase())}`);
   };
 
   return (
