@@ -24,8 +24,9 @@ import SetupView from "./auth/setupView";
 import EmailSentView from "./auth/emailSentView";
 import UpdatePasswordView from "./auth/updatePasswordView";
 import PasswordUpdatedView from "./auth/passwordUpdatedView";
-/*
+
 export * from "./auth";
+/*
 export * from "./app";
 export * from "./profile";
 import StoryPreviewView from "./storyPreviewView";
