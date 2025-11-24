@@ -1,7 +1,7 @@
 const { execSync } = require("child_process");
 
 try {
-  execSync('pnpx "@hey-api/openapi-ts" -c "@hey-api/client-next"', {
+  execSync('npx "@hey-api/openapi-ts" -c "@hey-api/client-next"', {
     stdio: "inherit",
   });
   console.log("✅ Hey-API client generated successfully!");
