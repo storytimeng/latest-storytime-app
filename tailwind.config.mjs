@@ -11,6 +11,12 @@ const config = {
   ],
   darkMode: "class",
   plugins: [heroui()],
+  safelist: [
+    {
+      pattern:
+        /^(bg|text|border|ring|hover|focus|md|lg|xl|p|px|py|gap|mx|my|m|flex).*/,
+    },
+  ],
 };
 
-module.exports = config;
+export default config;

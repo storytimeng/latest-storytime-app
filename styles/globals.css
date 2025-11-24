@@ -1,5 +1,7 @@
 @import "tailwindcss";
+@import "tailwindcss/preflight";
 
+@tailwind utilities;
 @config "../tailwind.config.js";
 :root {
   /* === Primary / Secondary / Accent === */
