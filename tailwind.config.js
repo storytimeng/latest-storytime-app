@@ -6,6 +6,7 @@ const config = {
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
     "./views/**/*.{js,ts,jsx,tsx,mdx}",
+    "./**/*.{js,ts,jsx,tsx,html}",
     "./node_modules/@heroui/theme/dist/**/*.{js,ts,jsx,tsx}",
   ],
   darkMode: "class",
