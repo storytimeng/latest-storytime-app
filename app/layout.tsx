@@ -1,40 +1,22 @@
-import { APP_CONFIG } from "@/config/app";
-import { MaxWidthWrapper } from "@/lib/maxWidthWrapper";
 import "@/styles/globals.css";
 import { Metadata, Viewport } from "next";
+import { Link } from "@heroui/link";
+import clsx from "clsx";
+
 import { Providers } from "./providers";
 
-import { Magnetik_Medium } from "@/lib/font";
-import { cn } from "@/lib/utils";
+import { siteConfig } from "@/config/site";
+import { fontSans } from "@/config/fonts";
+import { Navbar } from "@/components/navbar";
+
 export const metadata: Metadata = {
-  metadataBase: new URL(APP_CONFIG.url),
-  title: APP_CONFIG.name,
-  description: APP_CONFIG.description,
-  applicationName: APP_CONFIG.name,
-  authors: [{ name: APP_CONFIG.siteName }],
-  creator: APP_CONFIG.siteName,
-  publisher: APP_CONFIG.siteName,
-  openGraph: {
-    title: APP_CONFIG.name,
-    description: APP_CONFIG.description,
-    url: APP_CONFIG.url,
-    siteName: APP_CONFIG.siteName,
-    images: [
-      {
-        url: APP_CONFIG.images.banner,
-        width: 1200,
-        height: 630,
-        alt: APP_CONFIG.name,
-      },
-    ],
-    type: "website",
+  title: {
+    default: siteConfig.name,
+    template: `%s - ${siteConfig.name}`,
   },
-  twitter: {
-    card: APP_CONFIG.socialMeta.twitterCard,
-    site: APP_CONFIG.socialMeta.twitterSite,
-    title: APP_CONFIG.name,
-    description: APP_CONFIG.description,
-    images: [APP_CONFIG.images.banner],
+  description: siteConfig.description,
+  icons: {
+    icon: "/favicon.ico",
   },
 };
 
@@ -54,14 +36,29 @@ export default function RootLayout({
     <html suppressHydrationWarning lang="en">
       <head />
       <body
-        className={cn(
-          "m-auto min-h-screen bg-background bg-center bg-no-repeat scroll-smooth antialiased",
-          Magnetik_Medium.className,
-          Magnetik_Medium.variable
+        className={clsx(
+          "min-h-screen text-foreground bg-background font-sans antialiased",
+          fontSans.variable
         )}
       >
-        <Providers themeProps={{ attribute: "class", defaultTheme: "light" }}>
-          <MaxWidthWrapper>{children}</MaxWidthWrapper>
+        <Providers themeProps={{ attribute: "class", defaultTheme: "dark" }}>
+          <div className="relative flex flex-col h-screen">
+            <Navbar />
+            <main className="container mx-auto max-w-7xl pt-16 px-6 flex-grow">
+              {children}
+            </main>
+            <footer className="w-full flex items-center justify-center py-3">
+              <Link
+                isExternal
+                className="flex items-center gap-1 text-current"
+                href="https://heroui.com?utm_source=next-app-template"
+                title="heroui.com homepage"
+              >
+                <span className="text-default-600">Powered by</span>
+                <p className="text-primary">HeroUI</p>
+              </Link>
+            </footer>
+          </div>
         </Providers>
       </body>
     </html>

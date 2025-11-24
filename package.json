@@ -4,8 +4,8 @@
   "private": true,
   "scripts": {
     "generate:client": "node scripts/generate-client.js",
-    "dev": "npm run generate:client && next dev",
-    "build": "npm run generate:client &&next build",
+    "dev": "npm next dev",
+    "build": "npm next build",
     "start": "next start",
     "lint": "eslint --fix"
   },
