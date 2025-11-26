@@ -3,6 +3,9 @@
 import { useState, useRef, useEffect, KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { useVerifyEmail, useResendOtp } from "@/src/hooks/useAuth";
+import { useAuthStore } from "@/src/stores/useAuthStore";
+import { showToast } from "@/lib/showNotification";
 
 interface OtpViewProps {
   email?: string;
@@ -14,6 +17,8 @@ export default function OtpView({
   type = "signup",
 }: OtpViewProps) {
   const router = useRouter();
+  const { trigger: verifyTrigger, isMutating: isVerifying } = useVerifyEmail();
+  const { trigger: resendTrigger, isMutating: isResending } = useResendOtp();
   const [otpValues, setOtpValues] = useState(["", "", "", ""]);
   const [error, setError] = useState("");
   const [resendTimer, setResendTimer] = useState(30);
@@ -64,19 +69,35 @@ export default function OtpView({
     }
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      if (type === "reset-password") {
+        // For password-reset flow, store the email+otp transiently and navigate
+        useAuthStore.getState().setReset(email, otpCode);
+        router.push("/auth/update-password");
+        return;
+      }
 
-      // Navigate based on type
-      switch (type) {
-        case "reset-password":
-          router.push("/auth/update-password");
-          break;
-        case "phone-verification":
-          router.push("/auth/setup");
-          break;
-        default:
-          router.push("/auth/setup");
+      try {
+        await verifyTrigger({ email, otp: otpCode });
+        showToast({
+          type: "success",
+          message: "Email verified",
+          duration: 1500,
+        });
+        switch (type) {
+          case "phone-verification":
+            router.push("/auth/setup");
+            break;
+          default:
+            router.push("/auth/setup");
+        }
+      } catch (err: any) {
+        setError("Invalid verification code. Please try again.");
+        showToast({
+          type: "error",
+          message: err?.message || "Invalid verification code",
+          duration: 3000,
+        });
+        return;
       }
     } catch (error) {
       console.error("OTP verification error:", error);
@@ -88,11 +109,15 @@ export default function OtpView({
     setError("");
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await resendTrigger({ email });
       setResendTimer(30);
-    } catch (error) {
-      console.error("Resend error:", error);
+      showToast({
+        type: "success",
+        message: "Verification code sent",
+        duration: 2000,
+      });
+    } catch (err) {
+      console.error("Resend error:", err);
       setError("Failed to resend code. Please try again.");
     }
   };
@@ -111,14 +136,14 @@ export default function OtpView({
 
   return (
     <div className="flex flex-col h-full px-6">
-      <div className="flex-1 flex flex-col items-center ">
+      <div className="flex flex-col items-center flex-1 ">
         {/* Title */}
         <h1 className="body-text-big-bold-auto">
           Verify your email to continue
         </h1>
 
         {/* Subtitle / description */}
-        <p className="text-center text-sm text-grey-2 max-w-md mb-6">
+        <p className="max-w-md mb-6 text-sm text-center text-grey-2">
           Enter the code sent to your email
         </p>
 
@@ -138,7 +163,7 @@ export default function OtpView({
                 value={value}
                 onChange={(e) => handleInputChange(index, e.target.value)}
                 onKeyDown={(e) => handleKeyDown(index, e)}
-                className="w-14 h-14 sm:w-16 sm:h-16 text-center text-xl font-semibold rounded-lg border-2 border-grey-4 bg-white shadow-sm focus:border-primary-colour focus:outline-none focus:ring-2 focus:ring-primary-colour/20"
+                className="text-xl font-semibold text-center bg-white border-2 rounded-lg shadow-sm w-14 h-14 sm:w-16 sm:h-16 border-grey-4 focus:border-primary-colour focus:outline-none focus:ring-2 focus:ring-primary-colour/20"
                 aria-label={`Verification code digit ${index + 1} of 4`}
                 aria-describedby={error ? "otp-error" : undefined}
                 autoComplete="one-time-code"
@@ -148,17 +173,17 @@ export default function OtpView({
           </div>
 
           {/* Masked email text */}
-          <div className="text-center mb-6">
+          <div className="mb-6 text-center">
             <p className="text-sm text-grey-2">
               We just sent an email to the address:
             </p>
-            <p className="text-sm font-medium text-grey-1 mt-2">
+            <p className="mt-2 text-sm font-medium text-grey-1">
               {maskEmail(email)}
             </p>
           </div>
 
           {/* Primary full-width buttons */}
-          <div className="space-y-3 mt-24">
+          <div className="mt-24 space-y-3">
             <Button variant="large" onClick={handleVerify}>
               Verify Code
             </Button>
@@ -183,7 +208,7 @@ export default function OtpView({
               </Button>
             </p>
             {resendTimer > 0 && (
-              <p className="text-xs text-grey-3 mt-2">
+              <p className="mt-2 text-xs text-grey-3">
                 Resend available in {resendTimer}s
               </p>
             )}
@@ -191,7 +216,7 @@ export default function OtpView({
 
           {/* Error message below */}
           {error && (
-            <div className="text-center mt-4" role="alert" aria-live="polite">
+            <div className="mt-4 text-center" role="alert" aria-live="polite">
               <p className="text-sm text-red-500" id="otp-error">
                 {error}
               </p>

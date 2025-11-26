@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { FormField } from "@/components/reusables/form";
 import { Button } from "@/components/ui/button";
+import { useForgotPassword } from "@/src/hooks/useAuth";
+import { showToast } from "@/lib/showNotification";
 import { ArrowLeft } from "lucide-react";
 import Image from "next/image";
 import LoadingOverlay from "@/components/reusables/customUI/loadingOverlay";
@@ -20,6 +22,8 @@ export default function ForgotPasswordView() {
 
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const { trigger: forgotTrigger, isMutating: isSubmitting } =
+    useForgotPassword();
 
   const handleInputChange = (
     field: keyof ForgotPasswordFormData,
@@ -50,11 +54,20 @@ export default function ForgotPasswordView() {
     setError("");
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      await forgotTrigger({ email: formData.email });
+      showToast({
+        type: "success",
+        message: "Reset email sent",
+        duration: 2000,
+      });
       router.push("/auth/email-sent");
-    } catch (error) {
-      console.error("Password reset error:", error);
+    } catch (err: any) {
+      console.error("Password reset error:", err);
+      showToast({
+        type: "error",
+        message: err?.message || "Something went wrong",
+        duration: 3000,
+      });
       setError("Something went wrong. Please try again.");
     } finally {
       setIsLoading(false);

@@ -6,6 +6,8 @@ import { PasswordField } from "@/components/reusables/form";
 import { Button } from "@/components/ui/button";
 import { z } from "zod";
 import { showToast } from "@/lib/showNotification";
+import { useResetPassword } from "@/src/hooks/useAuth";
+import { useAuthStore } from "@/src/stores/useAuthStore";
 import PasswordTipsModal from "@/components/reusables/customUI/passwordTipsModal";
 import LoadingOverlay from "@/components/reusables/customUI/loadingOverlay";
 import { Check, X } from "lucide-react";
@@ -158,17 +160,30 @@ export default function UpdatePasswordView() {
     }
   };
 
+  const { trigger: resetTrigger } = useResetPassword();
+
   const handleSubmit = async () => {
     setIsLoading(true);
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      const { resetEmail: email = "", resetOtp: otp = "" } =
+        useAuthStore.getState();
 
-      // Navigate to success page
+      await resetTrigger({ email, otp, newPassword: formData.newPassword });
+
+      showToast({
+        type: "success",
+        message: "Password updated",
+        duration: 2000,
+      });
       router.push("/auth/password-updated");
-    } catch (error) {
-      console.error("Update password error:", error);
+    } catch (err: any) {
+      console.error("Update password error:", err);
+      showToast({
+        type: "error",
+        message: err?.message || "Password reset failed",
+        duration: 3000,
+      });
       setErrors({ newPassword: "Password update failed" });
     } finally {
       setIsLoading(false);

@@ -7,6 +7,7 @@ import { FormField, PasswordField } from "@/components/reusables/form";
 import { Button } from "@/components/ui/button";
 import { z } from "zod";
 import { showToast } from "@/lib/showNotification";
+import { useLogin } from "@/src/hooks/useAuth";
 import LoadingOverlay from "@/components/reusables/customUI/loadingOverlay";
 
 interface LoginFormData {
@@ -88,18 +89,33 @@ export default function LoginView() {
     }
   };
 
+  const {
+    trigger: loginTrigger,
+    isMutating: isLoggingIn,
+    error: loginError,
+  } = useLogin();
+
   const handleSubmit = async () => {
+    const isValid = validateForm();
+    if (!isValid) return;
+
     setIsLoading(true);
-
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-
-      // Navigate to onboarding or dashboard
+      const data = await loginTrigger({
+        emailOrPenName: formData.email,
+        password: formData.password,
+        remember: formData.rememberMe,
+      });
+      showToast({ type: "success", message: "Signed in", duration: 1500 });
       router.push("/app");
-    } catch (error) {
-      console.error("Login error:", error);
+    } catch (err: any) {
+      console.error("Login error:", err);
       setErrors({ email: "Invalid email or password" });
+      showToast({
+        type: "error",
+        message: err?.message || "Login failed",
+        duration: 3000,
+      });
     } finally {
       setIsLoading(false);
     }
@@ -153,7 +169,7 @@ export default function LoginView() {
               onChange={(e) =>
                 handleInputChange("rememberMe", e.target.checked)
               }
-              className="w-4 h-4 text-primary-colour checked:bg-primary-colour bg-universal-white border-light-grey-2 rounded focus:ring-primary-colour focus:ring-2"
+              className="w-4 h-4 rounded text-primary-colour checked:bg-primary-colour bg-universal-white border-light-grey-2 focus:ring-primary-colour focus:ring-2"
             />
             <label
               htmlFor="rememberMe"
@@ -164,7 +180,7 @@ export default function LoginView() {
           </div>
           <Link
             href="/auth/forgot-password"
-            className="text-sm hover:text-grey-1 body-text-small-medium-auto  transition-transform-colors text-primary-colour hover:underline"
+            className="text-sm hover:text-grey-1 body-text-small-medium-auto transition-transform-colors text-primary-colour hover:underline"
           >
             Forgot password?
           </Link>
@@ -184,7 +200,7 @@ export default function LoginView() {
       <div className="space-y-3">
         <Button
           variant="google"
-          startContent={<div className="w-5 h-5 bg-grey-1 rounded"></div>}
+          startContent={<div className="w-5 h-5 rounded bg-grey-1"></div>}
         >
           Continue with Google
         </Button>
@@ -204,12 +220,12 @@ export default function LoginView() {
       </Button>
 
       {/* Signup Link */}
-      <div className="text-center mt-4">
+      <div className="mt-4 text-center">
         <p className="body-text-small-medium-auto ">
           Have an account?{" "}
           <Link
             href="/auth/signup"
-            className="text-primary-colour  hover:underline font-medium body-text-small-regular-auto"
+            className="font-medium text-primary-colour hover:underline body-text-small-regular-auto"
           >
             Sign Up
           </Link>

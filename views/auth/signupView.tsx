@@ -7,6 +7,7 @@ import { FormField, PasswordField } from "@/components/reusables/form";
 import { Button } from "@/components/ui/button";
 import { z } from "zod";
 import { showToast } from "@/lib/showNotification";
+import { useRegister } from "@/src/hooks/useAuth";
 import { Check, X } from "lucide-react";
 import LoadingOverlay from "@/components/reusables/customUI/loadingOverlay";
 import { Select, SelectItem } from "@heroui/select";
@@ -196,17 +197,36 @@ export default function SignupView() {
     }
   };
 
+  const { trigger: registerTrigger } = useRegister();
+
   const handleSubmit = async () => {
     setIsLoading(true);
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      const body = {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        dateOfBirth: `${formData.birthYear}-${formData.birthMonth}-${formData.birthDay}`,
+        password: formData.password,
+        agreement: formData.agreeToTerms,
+      };
 
-      // Navigate to OTP verification
+      await registerTrigger(body);
+
+      showToast({
+        type: "success",
+        message: "Account created — check your email",
+        duration: 3000,
+      });
       router.push("/auth/otp");
-    } catch (error) {
-      console.error("Signup error:", error);
+    } catch (err: any) {
+      console.error("Signup error:", err);
+      showToast({
+        type: "error",
+        message: err?.message || "Signup failed",
+        duration: 3000,
+      });
       setErrors({ email: "Email already exists or signup failed" });
     } finally {
       setIsLoading(false);
