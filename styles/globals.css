@@ -1,9 +1,10 @@
 @import "tailwindcss";
+@import "./tailwind-theme.css";
 
 @config "../tailwind.config.js";
 :root {
   /* === Primary / Secondary / Accent === */
-  --color-primary-color: var(--primary-colour);
+  --color-primary: var(--primary-colour);
   --color-primary-foreground: var(--universal-white);
   --color-secondary: var(--complimentary-colour);
   --color-secondary-foreground: var(--universal-white);
@@ -46,51 +47,52 @@
 
   --radius: 0.5rem;
   /* Primary Colors */
-  --color-primary-shade-1: #c3bfbb;
-  --color-primary-shade-2: #9a918b;
-  --color-primary-shade-3: #867871;
-  --color-primary-shade-4: #726058;
-  --color-primary-shade-5: #604740;
-  --color-primary-shade-6: #4c3029;
-  --color-primary-colour: #361b17;
-  --color-dark-primary-colour: #211312;
+  --primary-shade-1: #c3bfbb;
+  --primary-shade-2: #9a918b;
+  --primary-shade-3: #867871;
+  --primary-shade-4: #726058;
+  --primary-shade-5: #604740;
+  --primary-shade-6: #4c3029;
+  --primary-colour: #361b17;
+  --dark-primary-colour: #211312;
 
   /* Universal & Grey Colors */
-  --color-universal-white: #ffffff;
-  --color-lightest-grey: #fcfcfc;
-  --color-light-grey-1: #f5f5f5;
-  --color-light-grey-2: #e8e8e8;
-  --color-light-grey-3: #dcdcdc;
-  --color-grey-1: #afafaf;
-  --color-grey-2: #6d6d6d;
+  --universal-white: #ffffff;
+  --lightest-grey: #fcfcfc;
+  --light-grey-1: #f5f5f5;
+  --light-grey-2: #e8e8e8;
+  --light-grey-3: #dcdcdc;
+  --grey-1: #afafaf;
+  --grey-2: #6d6d6d;
 
   /* Black & Dark Greys */
-  --color-pure-black: #080808;
-  --color-black-1: #010101;
-  --color-black-2: #131313;
-  --color-black-3: #030305;
-  --color-dark-grey-1: #282828;
-  --color-dark-grey-2: #505050;
-  --color-dark-grey-3: #707070;
+  --pure-black: #080808;
+  --black-1: #010101;
+  --black-2: #131313;
+  --black-3: #030305;
+  --dark-grey-1: #282828;
+  --dark-grey-2: #505050;
+  --dark-grey-3: #707070;
 
   /* Accent Colors */
-  --color-accent-shade-1: #fffaf1;
-  --color-accent-shade-2: #fff3e1;
-  --color-accent-shade-3: #ffeed6;
-  --color-accent-colour: #ffebd0;
-  --color-accent-dark: #cdbea5;
+  --accent-shade-1: #fffaf1;
+  --accent-shade-2: #fff3e1;
+  --accent-shade-3: #ffeed6;
+  --accent-colour: #ffebd0;
+  --accent-dark: #cdbea5;
 
   /* Complimentary Colors */
-  --color-complimentary-shade-1: #ffe0be;
-  --color-complimentary-shade-2: #ffb362;
-  --color-complimentary-shade-3: #ff9e3c;
-  --color-complimentary-colour: #f8951d;
-  --color-complimentary-dark-1: #d27527;
-  --color-complimentary-dark-2: #9b5621;
+  --complimentary-shade-1: #ffe0be;
+  --complimentary-shade-2: #ffb362;
+  --complimentary-shade-3: #ff9e3c;
+  --complimentary-colour: #f8951d;
+  --complimentary-dark-1: #d27527;
+  --complimentary-dark-2: #9b5621;
+
   /* Utility Colors */
-  --color-red: #dd2a2a;
-  --color-green: #1caf22;
-  --color-yellow: #f9da3a;
+  --red: #dd2a2a;
+  --green: #1caf22;
+  --yellow: #f9da3a;
 
   /* === DESIGN TOKEN TYPOGRAPHY === */
   --font-size-2xs: 0.625rem; /* 10px */
