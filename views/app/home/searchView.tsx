@@ -150,7 +150,7 @@ const SearchView = () => {
                   onClick={() => handleFilterClick(genre)}
                   className={`rounded-lg px-6 py-2 min-w-fit shrink-0 transition-all duration-200 font-medium ${
                     activeFilter === genre
-                      ? "bg-primary-colour text-white hover:bg-primary-shade-1"
+                      ? "bg-primary text-white hover:bg-primary-1"
                       : "bg-transparent text-primary-shade-2 border border-primary-shade-2 hover:bg-primary-shade-2 hover:text-white"
                   }`}
                 >

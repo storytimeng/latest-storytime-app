@@ -34,11 +34,11 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
 
       {/* Content below image */}
       <div className="px-4 py-6 space-y-2">
-        <div className="pb-4 border-b border-primary-shade-1">
+        <div className="pb-4 border-b border-primary-1">
           <div className="flex items-center gap-2">
             <h2
               className={cn(
-                "text-primary-colour text-[20px]",
+                "text-primary text-[20px]",
                 Magnetik_Bold.className
               )}
             >
@@ -64,16 +64,16 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
           <div className="flex items-center">
             <p
               className={cn(
-                "text-primary-colour text-[10px]",
+                "text-primary text-[10px]",
                 Magnetik_Regular.className
               )}
             >
               Only on Storytime
             </p>
-            <Dot size={20} className="text-primary-colour" />
+            <Dot size={20} className="text-primary" />
             <p
               className={cn(
-                "text-primary-colour text-[10px]",
+                "text-primary text-[10px]",
                 Magnetik_Regular.className
               )}
             >
@@ -88,14 +88,14 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
               />
               <p
                 className={cn(
-                  "text-primary-colour text-[10px]",
+                  "text-primary text-[10px]",
                   Magnetik_Regular.className
                 )}
               >
                 26 views
               </p>
             </div>
-            <Dot className="text-primary-colour w-6 h-6" />
+            <Dot className="text-primary w-6 h-6" />
             <div className="flex items-center gap-2">
               <MessageSquare
                 size={20}
@@ -103,14 +103,14 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
               />
               <p
                 className={cn(
-                  "text-primary-colour text-[10px]",
+                  "text-primary text-[10px]",
                   Magnetik_Regular.className
                 )}
               >
                 26 comments
               </p>
             </div>
-            <Dot className="text-primary-colour w-6 h-6" />
+            <Dot className="text-primary w-6 h-6" />
             <div className="flex items-center gap-2">
               <ThumbsUp
                 size={20}
@@ -118,7 +118,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
               />
               <p
                 className={cn(
-                  "text-primary-colour text-[10px]",
+                  "text-primary text-[10px]",
                   Magnetik_Regular.className
                 )}
               >
@@ -140,7 +140,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
           <div className="flex items-center justify-center gap-2 bg-accent-shade-2 rounded-full mt-4 py-2">
             <p
               className={cn(
-                "text-primary-colour text-[14px] text-center",
+                "text-primary text-[14px] text-center",
                 Magnetik_Regular.className
               )}
             >
@@ -148,9 +148,9 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
             </p>
           </div>
 
-          <Link 
-            href={`/story/${storyId || '1'}/read`} 
-            className="flex items-center justify-center gap-2 bg-primary-colour rounded-full mt-8 py-4 cursor-pointer"
+          <Link
+            href={`/story/${storyId || "1"}/read`}
+            className="flex items-center justify-center gap-2 bg-primary rounded-full mt-8 py-4 cursor-pointer"
           >
             <p
               className={cn(
