@@ -31,32 +31,32 @@
   --font-manrope: var(--font-manrope, Manrope, sans-serif);
 
   /* Colors (brand + accents) - map to your CSS tokens defined in globals.css */
-  --color-primary: var(--primary-colour);
-  --color-primary-1: var(--primary-shade-1);
-  --color-primary-2: var(--primary-shade-2);
-  --color-primary-3: var(--primary-shade-3);
-  --color-primary-4: var(--primary-shade-4);
-  --color-primary-5: var(--primary-shade-5);
-  --color-primary-6: var(--primary-shade-6);
+  --color-primary-colour: var(--primary-colour);
+  --color-primary-shade-1: var(--primary-shade-1);
+  --color-primary-shade-2: var(--primary-shade-2);
+  --color-primary-shade-3: var(--primary-shade-3);
+  --color-primary-shade-4: var(--primary-shade-4);
+  --color-primary-shade-5: var(--primary-shade-5);
+  --color-primary-shade-6: var(--primary-shade-6);
 
-  --color-accent: var(--accent-colour);
-  --color-accent-1: var(--accent-shade-1);
-  --color-accent-2: var(--accent-shade-2);
-  --color-accent-3: var(--accent-shade-3);
+  --color-accent-colour: var(--accent-colour);
+  --color-accent-shade-1: var(--accent-shade-1);
+  --color-accent-shade-2: var(--accent-shade-2);
+  --color-accent-shade-3: var(--accent-shade-3);
 
-  --color-complimentary: var(--complimentary-colour);
-  --color-complimentary-1: var(--complimentary-shade-1);
-  --color-complimentary-2: var(--complimentary-shade-2);
-  --color-complimentary-3: var(--complimentary-shade-3);
+  --color-complimentary-colour: var(--complimentary-colour);
+  --color-complimentary-shade-1: var(--complimentary-shade-1);
+  --color-complimentary-shade-2: var(--complimentary-shade-2);
+  --color-complimentary-shade-3: var(--complimentary-shade-3);
 
-  --color-white: var(--universal-white);
-  --color-lightest: var(--lightest-grey);
-  --color-light-1: var(--light-grey-1);
-  --color-light-2: var(--light-grey-2);
+  --color-universal-white: var(--universal-white);
+  --color-lightest-grey: var(--lightest-grey);
+  --color-light-grey-1: var(--light-grey-1);
+  --color-light-grey-2: var(--light-grey-2);
   --color-grey-1: var(--grey-1);
   --color-grey-2: var(--grey-2);
 
-  --color-black: var(--pure-black);
+  --color-pure-black: var(--pure-black);
   --color-black-1: var(--black-1);
   --color-black-2: var(--black-2);
   --color-black-3: var(--black-3);
