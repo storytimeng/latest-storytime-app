@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { AdminControllerCreateData, AdminControllerCreateErrors, AdminControllerCreateResponses, AdminControllerDeleteAdminData, AdminControllerDeleteAdminErrors, AdminControllerDeleteAdminResponses, AdminControllerDeleteStoryData, AdminControllerDeleteStoryErrors, AdminControllerDeleteStoryResponses, AdminControllerDeleteUserData, AdminControllerDeleteUserErrors, AdminControllerDeleteUserResponses, AdminControllerFindAllData, AdminControllerFindAllErrors, AdminControllerFindAllResponses, AdminControllerFindOneData, AdminControllerFindOneErrors, AdminControllerFindOneResponses, AdminControllerGetAllStoriesData, AdminControllerGetAllStoriesErrors, AdminControllerGetAllStoriesResponses, AdminControllerGetAllUsersData, AdminControllerGetAllUsersErrors, AdminControllerGetAllUsersResponses, AdminControllerGetProfileData, AdminControllerGetProfileErrors, AdminControllerGetProfileResponses, AdminControllerLoginData, AdminControllerLoginErrors, AdminControllerLoginResponses, AdminControllerSendBulkNotificationData, AdminControllerSendBulkNotificationErrors, AdminControllerSendBulkNotificationResponses, AdminControllerSendNotificationData, AdminControllerSendNotificationErrors, AdminControllerSendNotificationResponses, AdminControllerSuspendAdminData, AdminControllerSuspendAdminErrors, AdminControllerSuspendAdminResponses, AdminControllerSuspendStoryData, AdminControllerSuspendStoryErrors, AdminControllerSuspendStoryResponses, AdminControllerSuspendUserData, AdminControllerSuspendUserErrors, AdminControllerSuspendUserResponses, AdminControllerUnsuspendAdminData, AdminControllerUnsuspendAdminErrors, AdminControllerUnsuspendAdminResponses, AdminControllerUnsuspendStoryData, AdminControllerUnsuspendStoryErrors, AdminControllerUnsuspendStoryResponses, AdminControllerUnsuspendUserData, AdminControllerUnsuspendUserErrors, AdminControllerUnsuspendUserResponses, AdminControllerUpdateData, AdminControllerUpdateErrors, AdminControllerUpdateResponses, AdminControllerUpdateStoryData, AdminControllerUpdateStoryErrors, AdminControllerUpdateStoryResponses, AuthControllerForgotPasswordData, AuthControllerForgotPasswordErrors, AuthControllerForgotPasswordResponses, AuthControllerLoginData, AuthControllerLoginErrors, AuthControllerLoginResponses, AuthControllerLogoutData, AuthControllerLogoutErrors, AuthControllerLogoutResponses, AuthControllerRefreshData, AuthControllerRefreshErrors, AuthControllerRefreshResponses, AuthControllerRegisterData, AuthControllerRegisterErrors, AuthControllerRegisterResponses, AuthControllerResendOtpData, AuthControllerResendOtpErrors, AuthControllerResendOtpResponses, AuthControllerResetPasswordData, AuthControllerResetPasswordErrors, AuthControllerResetPasswordResponses, AuthControllerVerifyEmailData, AuthControllerVerifyEmailErrors, AuthControllerVerifyEmailResponses, NotificationsControllerDeleteAllNotificationsData, NotificationsControllerDeleteAllNotificationsErrors, NotificationsControllerDeleteAllNotificationsResponses, NotificationsControllerDeleteNotificationData, NotificationsControllerDeleteNotificationErrors, NotificationsControllerDeleteNotificationResponses, NotificationsControllerGetUnreadCountData, NotificationsControllerGetUnreadCountErrors, NotificationsControllerGetUnreadCountResponses, NotificationsControllerGetUserNotificationsData, NotificationsControllerGetUserNotificationsErrors, NotificationsControllerGetUserNotificationsResponses, NotificationsControllerMarkAllAsReadData, NotificationsControllerMarkAllAsReadErrors, NotificationsControllerMarkAllAsReadResponses, NotificationsControllerMarkAsReadData, NotificationsControllerMarkAsReadErrors, NotificationsControllerMarkAsReadResponses, StoriesControllerCheckUserLikeData, StoriesControllerCheckUserLikeErrors, StoriesControllerCheckUserLikeResponses, StoriesControllerCreateChapterData, StoriesControllerCreateChapterErrors, StoriesControllerCreateChapterResponses, StoriesControllerCreateCommentData, StoriesControllerCreateCommentErrors, StoriesControllerCreateCommentResponses, StoriesControllerCreateData, StoriesControllerCreateEpisodeData, StoriesControllerCreateEpisodeErrors, StoriesControllerCreateEpisodeResponses, StoriesControllerCreateErrors, StoriesControllerCreateMultipleChaptersData, StoriesControllerCreateMultipleChaptersErrors, StoriesControllerCreateMultipleChaptersResponses, StoriesControllerCreateMultipleEpisodesData, StoriesControllerCreateMultipleEpisodesErrors, StoriesControllerCreateMultipleEpisodesResponses, StoriesControllerCreateResponses, StoriesControllerDeleteCommentData, StoriesControllerDeleteCommentErrors, StoriesControllerDeleteCommentResponses, StoriesControllerFindAllData, StoriesControllerFindAllResponses, StoriesControllerFindOneData, StoriesControllerFindOneErrors, StoriesControllerFindOneResponses, StoriesControllerGetMyLibraryData, StoriesControllerGetMyLibraryErrors, StoriesControllerGetMyLibraryResponses, StoriesControllerGetStoryChaptersData, StoriesControllerGetStoryChaptersErrors, StoriesControllerGetStoryChaptersResponses, StoriesControllerGetStoryCommentsData, StoriesControllerGetStoryCommentsErrors, StoriesControllerGetStoryCommentsResponses, StoriesControllerGetStoryEpisodesData, StoriesControllerGetStoryEpisodesErrors, StoriesControllerGetStoryEpisodesResponses, StoriesControllerGetStoryLikeCountData, StoriesControllerGetStoryLikeCountErrors, StoriesControllerGetStoryLikeCountResponses, StoriesControllerGetStoryLikesData, StoriesControllerGetStoryLikesErrors, StoriesControllerGetStoryLikesResponses, StoriesControllerLikeStoryData, StoriesControllerLikeStoryErrors, StoriesControllerLikeStoryResponses, StoriesControllerRemoveData, StoriesControllerRemoveErrors, StoriesControllerRemoveResponses, StoriesControllerUnlikeStoryData, StoriesControllerUnlikeStoryErrors, StoriesControllerUnlikeStoryResponses, StoriesControllerUpdateCommentData, StoriesControllerUpdateCommentErrors, StoriesControllerUpdateCommentResponses, StoriesControllerUpdateData, StoriesControllerUpdateErrors, StoriesControllerUpdateResponses, UsersControllerCheckPenNameAvailabilityData, UsersControllerCheckPenNameAvailabilityErrors, UsersControllerCheckPenNameAvailabilityResponses, UsersControllerDeleteUserData, UsersControllerDeleteUserErrors, UsersControllerDeleteUserResponses, UsersControllerFindAllData, UsersControllerFindAllResponses, UsersControllerFindOneData, UsersControllerFindOneErrors, UsersControllerFindOneResponses, UsersControllerGetProfileData, UsersControllerGetProfileErrors, UsersControllerGetProfileResponses, UsersControllerMarkStoryAsReadData, UsersControllerMarkStoryAsReadErrors, UsersControllerMarkStoryAsReadResponses, UsersControllerSetupProfileData, UsersControllerSetupProfileErrors, UsersControllerSetupProfileResponses, UsersControllerSuspendUserData, UsersControllerSuspendUserErrors, UsersControllerSuspendUserResponses, UsersControllerUnsuspendUserData, UsersControllerUnsuspendUserErrors, UsersControllerUnsuspendUserResponses } from './types.gen';
+import type { AdminControllerCreateData, AdminControllerCreateErrors, AdminControllerCreateResponses, AdminControllerDeleteAdminData, AdminControllerDeleteAdminErrors, AdminControllerDeleteAdminResponses, AdminControllerDeleteStoryData, AdminControllerDeleteStoryErrors, AdminControllerDeleteStoryResponses, AdminControllerDeleteUserData, AdminControllerDeleteUserErrors, AdminControllerDeleteUserResponses, AdminControllerFindAllData, AdminControllerFindAllErrors, AdminControllerFindAllResponses, AdminControllerFindOneData, AdminControllerFindOneErrors, AdminControllerFindOneResponses, AdminControllerGetAllStoriesData, AdminControllerGetAllStoriesErrors, AdminControllerGetAllStoriesResponses, AdminControllerGetAllUsersData, AdminControllerGetAllUsersErrors, AdminControllerGetAllUsersResponses, AdminControllerGetProfileData, AdminControllerGetProfileErrors, AdminControllerGetProfileResponses, AdminControllerLoginData, AdminControllerLoginErrors, AdminControllerLoginResponses, AdminControllerSendBulkNotificationData, AdminControllerSendBulkNotificationErrors, AdminControllerSendBulkNotificationResponses, AdminControllerSendNotificationData, AdminControllerSendNotificationErrors, AdminControllerSendNotificationResponses, AdminControllerSuspendAdminData, AdminControllerSuspendAdminErrors, AdminControllerSuspendAdminResponses, AdminControllerSuspendStoryData, AdminControllerSuspendStoryErrors, AdminControllerSuspendStoryResponses, AdminControllerSuspendUserData, AdminControllerSuspendUserErrors, AdminControllerSuspendUserResponses, AdminControllerUnsuspendAdminData, AdminControllerUnsuspendAdminErrors, AdminControllerUnsuspendAdminResponses, AdminControllerUnsuspendStoryData, AdminControllerUnsuspendStoryErrors, AdminControllerUnsuspendStoryResponses, AdminControllerUnsuspendUserData, AdminControllerUnsuspendUserErrors, AdminControllerUnsuspendUserResponses, AdminControllerUpdateData, AdminControllerUpdateErrors, AdminControllerUpdateResponses, AdminControllerUpdateStoryData, AdminControllerUpdateStoryErrors, AdminControllerUpdateStoryResponses, AuthControllerForgotPasswordData, AuthControllerForgotPasswordErrors, AuthControllerForgotPasswordResponses, AuthControllerLoginData, AuthControllerLoginErrors, AuthControllerLoginResponses, AuthControllerLogoutData, AuthControllerLogoutErrors, AuthControllerLogoutResponses, AuthControllerRefreshData, AuthControllerRefreshErrors, AuthControllerRefreshResponses, AuthControllerRegisterData, AuthControllerRegisterErrors, AuthControllerRegisterResponses, AuthControllerResendOtpData, AuthControllerResendOtpErrors, AuthControllerResendOtpResponses, AuthControllerResetPasswordData, AuthControllerResetPasswordErrors, AuthControllerResetPasswordResponses, AuthControllerVerifyEmailData, AuthControllerVerifyEmailErrors, AuthControllerVerifyEmailResponses, NotificationsControllerDeleteAllNotificationsData, NotificationsControllerDeleteAllNotificationsErrors, NotificationsControllerDeleteAllNotificationsResponses, NotificationsControllerDeleteNotificationData, NotificationsControllerDeleteNotificationErrors, NotificationsControllerDeleteNotificationResponses, NotificationsControllerGetUnreadCountData, NotificationsControllerGetUnreadCountErrors, NotificationsControllerGetUnreadCountResponses, NotificationsControllerGetUserNotificationsData, NotificationsControllerGetUserNotificationsErrors, NotificationsControllerGetUserNotificationsResponses, NotificationsControllerMarkAllAsReadData, NotificationsControllerMarkAllAsReadErrors, NotificationsControllerMarkAllAsReadResponses, NotificationsControllerMarkAsReadData, NotificationsControllerMarkAsReadErrors, NotificationsControllerMarkAsReadResponses, StoriesControllerCheckUserLikeData, StoriesControllerCheckUserLikeErrors, StoriesControllerCheckUserLikeResponses, StoriesControllerCreateChapterData, StoriesControllerCreateChapterErrors, StoriesControllerCreateChapterResponses, StoriesControllerCreateCommentData, StoriesControllerCreateCommentErrors, StoriesControllerCreateCommentResponses, StoriesControllerCreateData, StoriesControllerCreateEpisodeData, StoriesControllerCreateEpisodeErrors, StoriesControllerCreateEpisodeResponses, StoriesControllerCreateErrors, StoriesControllerCreateMultipleChaptersData, StoriesControllerCreateMultipleChaptersErrors, StoriesControllerCreateMultipleChaptersResponses, StoriesControllerCreateMultipleEpisodesData, StoriesControllerCreateMultipleEpisodesErrors, StoriesControllerCreateMultipleEpisodesResponses, StoriesControllerCreateResponses, StoriesControllerDeleteCommentData, StoriesControllerDeleteCommentErrors, StoriesControllerDeleteCommentResponses, StoriesControllerFindAllData, StoriesControllerFindAllResponses, StoriesControllerFindOneData, StoriesControllerFindOneErrors, StoriesControllerFindOneResponses, StoriesControllerGetGenresData, StoriesControllerGetGenresResponses, StoriesControllerGetMyLibraryData, StoriesControllerGetMyLibraryErrors, StoriesControllerGetMyLibraryResponses, StoriesControllerGetStoryChaptersData, StoriesControllerGetStoryChaptersErrors, StoriesControllerGetStoryChaptersResponses, StoriesControllerGetStoryCommentCountData, StoriesControllerGetStoryCommentCountErrors, StoriesControllerGetStoryCommentCountResponses, StoriesControllerGetStoryCommentsData, StoriesControllerGetStoryCommentsErrors, StoriesControllerGetStoryCommentsResponses, StoriesControllerGetStoryEpisodesData, StoriesControllerGetStoryEpisodesErrors, StoriesControllerGetStoryEpisodesResponses, StoriesControllerGetStoryLikeCountData, StoriesControllerGetStoryLikeCountErrors, StoriesControllerGetStoryLikeCountResponses, StoriesControllerGetStoryLikesData, StoriesControllerGetStoryLikesErrors, StoriesControllerGetStoryLikesResponses, StoriesControllerLikeStoryData, StoriesControllerLikeStoryErrors, StoriesControllerLikeStoryResponses, StoriesControllerRemoveData, StoriesControllerRemoveErrors, StoriesControllerRemoveResponses, StoriesControllerUnlikeStoryData, StoriesControllerUnlikeStoryErrors, StoriesControllerUnlikeStoryResponses, StoriesControllerUpdateCommentData, StoriesControllerUpdateCommentErrors, StoriesControllerUpdateCommentResponses, StoriesControllerUpdateData, StoriesControllerUpdateErrors, StoriesControllerUpdateResponses, UsersControllerCheckPenNameAvailabilityData, UsersControllerCheckPenNameAvailabilityErrors, UsersControllerCheckPenNameAvailabilityResponses, UsersControllerDeleteUserData, UsersControllerDeleteUserErrors, UsersControllerDeleteUserResponses, UsersControllerFindAllData, UsersControllerFindAllResponses, UsersControllerFindOneData, UsersControllerFindOneErrors, UsersControllerFindOneResponses, UsersControllerGetAllReadingProgressData, UsersControllerGetAllReadingProgressErrors, UsersControllerGetAllReadingProgressResponses, UsersControllerGetProfileData, UsersControllerGetProfileErrors, UsersControllerGetProfileResponses, UsersControllerGetReadingHistoryData, UsersControllerGetReadingHistoryErrors, UsersControllerGetReadingHistoryResponses, UsersControllerGetReadingProgressData, UsersControllerGetReadingProgressErrors, UsersControllerGetReadingProgressResponses, UsersControllerGetShareableAchievementsData, UsersControllerGetShareableAchievementsErrors, UsersControllerGetShareableAchievementsResponses, UsersControllerGetStatsData, UsersControllerGetStatsErrors, UsersControllerGetStatsResponses, UsersControllerGetTopAuthorsData, UsersControllerGetTopAuthorsResponses, UsersControllerGetTopBadgeHoldersData, UsersControllerGetTopBadgeHoldersResponses, UsersControllerGetTopCertificateHoldersData, UsersControllerGetTopCertificateHoldersResponses, UsersControllerGetTopReadersByTimeData, UsersControllerGetTopReadersByTimeResponses, UsersControllerGetTopReadersData, UsersControllerGetTopReadersResponses, UsersControllerMarkStoryAsReadData, UsersControllerMarkStoryAsReadErrors, UsersControllerMarkStoryAsReadResponses, UsersControllerSetupProfileData, UsersControllerSetupProfileErrors, UsersControllerSetupProfileResponses, UsersControllerSuspendUserData, UsersControllerSuspendUserErrors, UsersControllerSuspendUserResponses, UsersControllerUnsuspendUserData, UsersControllerUnsuspendUserErrors, UsersControllerUnsuspendUserResponses, UsersControllerUpdateProfileData, UsersControllerUpdateProfileErrors, UsersControllerUpdateProfileResponses, UsersControllerUpdateReadingProgressData, UsersControllerUpdateReadingProgressErrors, UsersControllerUpdateReadingProgressResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -37,15 +37,135 @@ export const usersControllerGetProfile = <ThrowOnError extends boolean = false>(
 });
 
 /**
+ * Update current user profile
+ *
+ * Allows the authenticated user to update their profile details such as pen name, bio, avatar, genres, and reminders.
+ */
+export const usersControllerUpdateProfile = <ThrowOnError extends boolean = false>(options: Options<UsersControllerUpdateProfileData, ThrowOnError>) => (options.client ?? client).patch<UsersControllerUpdateProfileResponses, UsersControllerUpdateProfileErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/users/profile',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
  * Mark a story as read
  *
- * Marks a story as read by the authenticated user. This is used to track reading milestones and award badges.
+ * Marks a story as read by the authenticated user. This is used to track reading milestones and award badges. Note: Stories are automatically tracked when viewed via GET /stories/:id, but you can use this endpoint to manually mark as read.
  */
 export const usersControllerMarkStoryAsRead = <ThrowOnError extends boolean = false>(options: Options<UsersControllerMarkStoryAsReadData, ThrowOnError>) => (options.client ?? client).post<UsersControllerMarkStoryAsReadResponses, UsersControllerMarkStoryAsReadErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/users/stories/{id}/read',
     ...options
 });
+
+/**
+ * Get reading history
+ *
+ * Returns all stories the user has read, ordered by most recently read first.
+ */
+export const usersControllerGetReadingHistory = <ThrowOnError extends boolean = false>(options?: Options<UsersControllerGetReadingHistoryData, ThrowOnError>) => (options?.client ?? client).get<UsersControllerGetReadingHistoryResponses, UsersControllerGetReadingHistoryErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/users/reading-history',
+    ...options
+});
+
+/**
+ * Get user statistics
+ *
+ * Returns comprehensive statistics including stories read/written counts, badges, certificates, and milestone progress.
+ */
+export const usersControllerGetStats = <ThrowOnError extends boolean = false>(options?: Options<UsersControllerGetStatsData, ThrowOnError>) => (options?.client ?? client).get<UsersControllerGetStatsResponses, UsersControllerGetStatsErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/users/stats',
+    ...options
+});
+
+/**
+ * Get reading progress for a story
+ *
+ * Returns the reading progress for the authenticated user and specified story.
+ */
+export const usersControllerGetReadingProgress = <ThrowOnError extends boolean = false>(options: Options<UsersControllerGetReadingProgressData, ThrowOnError>) => (options.client ?? client).get<UsersControllerGetReadingProgressResponses, UsersControllerGetReadingProgressErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/users/stories/{id}/progress',
+    ...options
+});
+
+/**
+ * Update reading progress for a story
+ *
+ * Updates or creates reading progress for the authenticated user. Tracks percentage read, words read, chapters/episodes, and reading time.
+ */
+export const usersControllerUpdateReadingProgress = <ThrowOnError extends boolean = false>(options: Options<UsersControllerUpdateReadingProgressData, ThrowOnError>) => (options.client ?? client).post<UsersControllerUpdateReadingProgressResponses, UsersControllerUpdateReadingProgressErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/users/stories/{id}/progress',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Get all reading progress
+ *
+ * Returns paginated list of all stories the user has reading progress for.
+ */
+export const usersControllerGetAllReadingProgress = <ThrowOnError extends boolean = false>(options?: Options<UsersControllerGetAllReadingProgressData, ThrowOnError>) => (options?.client ?? client).get<UsersControllerGetAllReadingProgressResponses, UsersControllerGetAllReadingProgressErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/users/reading-progress',
+    ...options
+});
+
+/**
+ * Get shareable achievement data
+ *
+ * Returns user achievements (badges and certificates) in a format suitable for sharing on social media.
+ */
+export const usersControllerGetShareableAchievements = <ThrowOnError extends boolean = false>(options?: Options<UsersControllerGetShareableAchievementsData, ThrowOnError>) => (options?.client ?? client).get<UsersControllerGetShareableAchievementsResponses, UsersControllerGetShareableAchievementsErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/users/achievements/share',
+    ...options
+});
+
+/**
+ * Get top readers leaderboard
+ *
+ * Returns the top readers ranked by number of stories read. No authentication required.
+ */
+export const usersControllerGetTopReaders = <ThrowOnError extends boolean = false>(options?: Options<UsersControllerGetTopReadersData, ThrowOnError>) => (options?.client ?? client).get<UsersControllerGetTopReadersResponses, unknown, ThrowOnError>({ url: '/users/leaderboard/readers', ...options });
+
+/**
+ * Get top authors leaderboard
+ *
+ * Returns the top authors ranked by number of stories written. No authentication required.
+ */
+export const usersControllerGetTopAuthors = <ThrowOnError extends boolean = false>(options?: Options<UsersControllerGetTopAuthorsData, ThrowOnError>) => (options?.client ?? client).get<UsersControllerGetTopAuthorsResponses, unknown, ThrowOnError>({ url: '/users/leaderboard/authors', ...options });
+
+/**
+ * Get top readers by reading time leaderboard
+ *
+ * Returns the top readers ranked by total reading time. No authentication required.
+ */
+export const usersControllerGetTopReadersByTime = <ThrowOnError extends boolean = false>(options?: Options<UsersControllerGetTopReadersByTimeData, ThrowOnError>) => (options?.client ?? client).get<UsersControllerGetTopReadersByTimeResponses, unknown, ThrowOnError>({ url: '/users/leaderboard/reading-time', ...options });
+
+/**
+ * Get top badge holders leaderboard
+ *
+ * Returns users with the most badges. No authentication required.
+ */
+export const usersControllerGetTopBadgeHolders = <ThrowOnError extends boolean = false>(options?: Options<UsersControllerGetTopBadgeHoldersData, ThrowOnError>) => (options?.client ?? client).get<UsersControllerGetTopBadgeHoldersResponses, unknown, ThrowOnError>({ url: '/users/leaderboard/badges', ...options });
+
+/**
+ * Get top certificate holders leaderboard
+ *
+ * Returns users with the most certificates. No authentication required.
+ */
+export const usersControllerGetTopCertificateHolders = <ThrowOnError extends boolean = false>(options?: Options<UsersControllerGetTopCertificateHoldersData, ThrowOnError>) => (options?.client ?? client).get<UsersControllerGetTopCertificateHoldersResponses, unknown, ThrowOnError>({ url: '/users/leaderboard/certificates', ...options });
 
 /**
  * Setup user profile (onboarding)
@@ -267,6 +387,13 @@ export const notificationsControllerDeleteAllNotifications = <ThrowOnError exten
 });
 
 /**
+ * Get available story genres
+ *
+ * Returns the curated list of genres that can be used when creating or filtering stories.
+ */
+export const storiesControllerGetGenres = <ThrowOnError extends boolean = false>(options?: Options<StoriesControllerGetGenresData, ThrowOnError>) => (options?.client ?? client).get<StoriesControllerGetGenresResponses, unknown, ThrowOnError>({ url: '/stories/genres', ...options });
+
+/**
  * Get all stories with pagination
  *
  * Retrieve a paginated list of stories (excludes drafts unless you are the author or admin)
@@ -276,7 +403,7 @@ export const storiesControllerFindAll = <ThrowOnError extends boolean = false>(o
 /**
  * Get user library (all my stories)
  *
- * Retrieve all stories created by the authenticated user, including ongoing, completed (one-time), and drafts. This is your personal library.
+ * Retrieve all stories created by the authenticated user, including ongoing, completed, and drafts. This is your personal library.
  */
 export const storiesControllerGetMyLibrary = <ThrowOnError extends boolean = false>(options?: Options<StoriesControllerGetMyLibraryData, ThrowOnError>) => (options?.client ?? client).get<StoriesControllerGetMyLibraryResponses, StoriesControllerGetMyLibraryErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
@@ -291,6 +418,8 @@ export const storiesControllerRemove = <ThrowOnError extends boolean = false>(op
 
 /**
  * Get a story by ID
+ *
+ * Retrieves a story by ID. If authenticated, automatically tracks the story view for reading milestones.
  */
 export const storiesControllerFindOne = <ThrowOnError extends boolean = false>(options: Options<StoriesControllerFindOneData, ThrowOnError>) => (options.client ?? client).get<StoriesControllerFindOneResponses, StoriesControllerFindOneErrors, ThrowOnError>({ url: '/stories/{id}', ...options });
 
@@ -309,7 +438,7 @@ export const storiesControllerUpdate = <ThrowOnError extends boolean = false>(op
 /**
  * Create a new story
  *
- * Create a new story with all required fields including description, tags, language, story status, and optional fields like collaborators, anonymous mode, etc. Note: chapter and episodes cannot both be true.
+ * Create a new story with all required fields including description, genres, language, story status, and optional fields like collaborators, anonymous mode, etc. Note: chapter and episodes cannot both be true.
  */
 export const storiesControllerCreate = <ThrowOnError extends boolean = false>(options: Options<StoriesControllerCreateData, ThrowOnError>) => (options.client ?? client).post<StoriesControllerCreateResponses, StoriesControllerCreateErrors, ThrowOnError>({
     url: '/stories/create',
@@ -462,6 +591,13 @@ export const storiesControllerCreateComment = <ThrowOnError extends boolean = fa
  * Retrieves all comments for a story with user information, ordered by creation date (newest first). Note: Users can comment multiple times on the same story, so you may see multiple comments from the same user.
  */
 export const storiesControllerGetStoryComments = <ThrowOnError extends boolean = false>(options: Options<StoriesControllerGetStoryCommentsData, ThrowOnError>) => (options.client ?? client).get<StoriesControllerGetStoryCommentsResponses, StoriesControllerGetStoryCommentsErrors, ThrowOnError>({ url: '/stories/{id}/comments', ...options });
+
+/**
+ * Get comment count for a story
+ *
+ * Returns the total number of comments for a story.
+ */
+export const storiesControllerGetStoryCommentCount = <ThrowOnError extends boolean = false>(options: Options<StoriesControllerGetStoryCommentCountData, ThrowOnError>) => (options.client ?? client).get<StoriesControllerGetStoryCommentCountResponses, StoriesControllerGetStoryCommentCountErrors, ThrowOnError>({ url: '/stories/{id}/comments/count', ...options });
 
 /**
  * Delete a comment

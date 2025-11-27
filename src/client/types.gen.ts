@@ -4,6 +4,76 @@ export type ClientOptions = {
     baseUrl: string;
 };
 
+export type UpdateProfileDto = {
+    /**
+     * First name
+     */
+    firstName?: string;
+    /**
+     * Last name
+     */
+    lastName?: string;
+    /**
+     * Pen name or author name
+     */
+    penName?: string;
+    /**
+     * Avatar URL
+     */
+    avatar?: string;
+    /**
+     * Profile picture URL
+     */
+    profilePicture?: string;
+    /**
+     * Short biography
+     */
+    bio?: string;
+    /**
+     * Preferred genres
+     */
+    genres?: Array<string>;
+    /**
+     * Preferred time to read
+     */
+    timeToRead?: string;
+    /**
+     * Preferred time to write
+     */
+    timeToWrite?: string;
+    /**
+     * Reminder schedule
+     */
+    reminder?: string;
+};
+
+export type UpdateReadingProgressDto = {
+    /**
+     * Percentage of story read (0-100)
+     */
+    percentageRead?: number;
+    /**
+     * Number of words read
+     */
+    wordsRead?: number;
+    /**
+     * Total words in the story
+     */
+    totalWords?: number;
+    /**
+     * Last chapter number read (for stories with chapters)
+     */
+    lastReadChapter?: number;
+    /**
+     * Last episode number read (for stories with episodes)
+     */
+    lastReadEpisode?: number;
+    /**
+     * Additional reading time in seconds
+     */
+    readingTimeSeconds?: number;
+};
+
 export type SetupProfileDto = {
     /**
      * Pen name or author name
@@ -203,9 +273,9 @@ export type StoryResponseDto = {
      */
     content: string;
     /**
-     * Story tags
+     * Story genres
      */
-    tags?: Array<string>;
+    genres?: Array<string>;
     /**
      * Story author
      */
@@ -265,9 +335,9 @@ export type CreateStoryDto = {
      */
     content: string;
     /**
-     * Array of tags/genres to categorize the story
+     * Array of genres to categorize the story
      */
-    tags: Array<string>;
+    genres: Array<string>;
     /**
      * Array of pen names of collaborators (optional)
      */
@@ -293,9 +363,9 @@ export type CreateStoryDto = {
      */
     copyright: boolean;
     /**
-     * Status of the story: one-time (completed/published), ongoing (chapters/episodes), or drafts (not visible to others except admin and owner)
+     * Status of the story: complete (completed/published), ongoing (chapters/episodes), or drafts (not visible to others except admin and owner)
      */
-    storyStatus: 'one-time' | 'ongoing' | 'drafts';
+    storyStatus: 'complete' | 'ongoing' | 'drafts';
     /**
      * If true, the story has chapters
      */
@@ -320,9 +390,9 @@ export type UpdateStoryDto = {
      */
     content?: string;
     /**
-     * Story tags
+     * Story genres
      */
-    tags?: Array<string>;
+    genres?: Array<string>;
     /**
      * Story image URL
      */
@@ -618,6 +688,31 @@ export type UsersControllerGetProfileResponses = {
     200: unknown;
 };
 
+export type UsersControllerUpdateProfileData = {
+    body: UpdateProfileDto;
+    path?: never;
+    query?: never;
+    url: '/users/profile';
+};
+
+export type UsersControllerUpdateProfileErrors = {
+    /**
+     * Validation error or pen name already taken
+     */
+    400: unknown;
+    /**
+     * Unauthorized - Invalid or missing token
+     */
+    401: unknown;
+};
+
+export type UsersControllerUpdateProfileResponses = {
+    /**
+     * Profile updated successfully
+     */
+    200: unknown;
+};
+
 export type UsersControllerMarkStoryAsReadData = {
     body?: never;
     path: {
@@ -655,6 +750,259 @@ export type UsersControllerMarkStoryAsReadResponses = {
 };
 
 export type UsersControllerMarkStoryAsReadResponse = UsersControllerMarkStoryAsReadResponses[keyof UsersControllerMarkStoryAsReadResponses];
+
+export type UsersControllerGetReadingHistoryData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Page number (default: 1)
+         */
+        page?: number;
+        /**
+         * Items per page (default: 20, max: 100)
+         */
+        limit?: number;
+    };
+    url: '/users/reading-history';
+};
+
+export type UsersControllerGetReadingHistoryErrors = {
+    /**
+     * Unauthorized - Invalid or missing token
+     */
+    401: unknown;
+};
+
+export type UsersControllerGetReadingHistoryResponses = {
+    /**
+     * Reading history retrieved successfully
+     */
+    200: unknown;
+};
+
+export type UsersControllerGetStatsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/users/stats';
+};
+
+export type UsersControllerGetStatsErrors = {
+    /**
+     * Unauthorized - Invalid or missing token
+     */
+    401: unknown;
+};
+
+export type UsersControllerGetStatsResponses = {
+    /**
+     * User statistics retrieved successfully
+     */
+    200: unknown;
+};
+
+export type UsersControllerGetReadingProgressData = {
+    body?: never;
+    path: {
+        /**
+         * Story UUID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/users/stories/{id}/progress';
+};
+
+export type UsersControllerGetReadingProgressErrors = {
+    /**
+     * Unauthorized - Invalid or missing token
+     */
+    401: unknown;
+};
+
+export type UsersControllerGetReadingProgressResponses = {
+    /**
+     * Reading progress retrieved successfully
+     */
+    200: unknown;
+};
+
+export type UsersControllerUpdateReadingProgressData = {
+    body: UpdateReadingProgressDto;
+    path: {
+        /**
+         * Story UUID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/users/stories/{id}/progress';
+};
+
+export type UsersControllerUpdateReadingProgressErrors = {
+    /**
+     * Unauthorized - Invalid or missing token
+     */
+    401: unknown;
+    /**
+     * Story not found
+     */
+    404: unknown;
+};
+
+export type UsersControllerUpdateReadingProgressResponses = {
+    /**
+     * Reading progress updated successfully
+     */
+    200: unknown;
+};
+
+export type UsersControllerGetAllReadingProgressData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Page number (default: 1)
+         */
+        page?: number;
+        /**
+         * Items per page (default: 20, max: 100)
+         */
+        limit?: number;
+    };
+    url: '/users/reading-progress';
+};
+
+export type UsersControllerGetAllReadingProgressErrors = {
+    /**
+     * Unauthorized - Invalid or missing token
+     */
+    401: unknown;
+};
+
+export type UsersControllerGetAllReadingProgressResponses = {
+    /**
+     * Reading progress list retrieved successfully
+     */
+    200: unknown;
+};
+
+export type UsersControllerGetShareableAchievementsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/users/achievements/share';
+};
+
+export type UsersControllerGetShareableAchievementsErrors = {
+    /**
+     * Unauthorized - Invalid or missing token
+     */
+    401: unknown;
+};
+
+export type UsersControllerGetShareableAchievementsResponses = {
+    /**
+     * Achievement data retrieved successfully
+     */
+    200: unknown;
+};
+
+export type UsersControllerGetTopReadersData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Number of top readers to return (default: 10, max: 100)
+         */
+        limit?: number;
+    };
+    url: '/users/leaderboard/readers';
+};
+
+export type UsersControllerGetTopReadersResponses = {
+    /**
+     * Leaderboard retrieved successfully
+     */
+    200: unknown;
+};
+
+export type UsersControllerGetTopAuthorsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Number of top authors to return (default: 10, max: 100)
+         */
+        limit?: number;
+    };
+    url: '/users/leaderboard/authors';
+};
+
+export type UsersControllerGetTopAuthorsResponses = {
+    /**
+     * Leaderboard retrieved successfully
+     */
+    200: unknown;
+};
+
+export type UsersControllerGetTopReadersByTimeData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Number of top readers to return (default: 10, max: 100)
+         */
+        limit?: number;
+    };
+    url: '/users/leaderboard/reading-time';
+};
+
+export type UsersControllerGetTopReadersByTimeResponses = {
+    /**
+     * Leaderboard retrieved successfully
+     */
+    200: unknown;
+};
+
+export type UsersControllerGetTopBadgeHoldersData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Number of top users to return (default: 10, max: 100)
+         */
+        limit?: number;
+    };
+    url: '/users/leaderboard/badges';
+};
+
+export type UsersControllerGetTopBadgeHoldersResponses = {
+    /**
+     * Leaderboard retrieved successfully
+     */
+    200: unknown;
+};
+
+export type UsersControllerGetTopCertificateHoldersData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Number of top users to return (default: 10, max: 100)
+         */
+        limit?: number;
+    };
+    url: '/users/leaderboard/certificates';
+};
+
+export type UsersControllerGetTopCertificateHoldersResponses = {
+    /**
+     * Leaderboard retrieved successfully
+     */
+    200: unknown;
+};
 
 export type UsersControllerSetupProfileData = {
     body: SetupProfileDto;
@@ -1276,6 +1624,24 @@ export type NotificationsControllerDeleteAllNotificationsResponses = {
 
 export type NotificationsControllerDeleteAllNotificationsResponse = NotificationsControllerDeleteAllNotificationsResponses[keyof NotificationsControllerDeleteAllNotificationsResponses];
 
+export type StoriesControllerGetGenresData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/stories/genres';
+};
+
+export type StoriesControllerGetGenresResponses = {
+    /**
+     * Genres retrieved successfully
+     */
+    200: {
+        genres?: Array<string>;
+    };
+};
+
+export type StoriesControllerGetGenresResponse = StoriesControllerGetGenresResponses[keyof StoriesControllerGetGenresResponses];
+
 export type StoriesControllerFindAllData = {
     body?: never;
     path?: never;
@@ -1288,6 +1654,14 @@ export type StoriesControllerFindAllData = {
          * Items per page (default: 10, max: 100)
          */
         limit?: number;
+        /**
+         * Filter stories by one or more genres (e.g., genres=Romance&genres=Drama)
+         */
+        genres?: Array<string>;
+        /**
+         * Set to true to fetch stories available exclusively on Storytime
+         */
+        onlyOnStorytime?: boolean;
     };
     url: '/stories';
 };
@@ -1314,9 +1688,17 @@ export type StoriesControllerGetMyLibraryData = {
          */
         limit?: number;
         /**
+         * Filter your library by one or more genres
+         */
+        genres?: Array<string>;
+        /**
+         * Set to true to fetch only Storytime-exclusive stories from your library
+         */
+        onlyOnStorytime?: boolean;
+        /**
          * Filter by story status (optional). If not provided, returns all statuses.
          */
-        status?: 'one-time' | 'ongoing' | 'drafts';
+        status?: 'complete' | 'ongoing' | 'drafts';
     };
     url: '/stories/library';
 };
@@ -1847,6 +2229,37 @@ export type StoriesControllerGetStoryCommentsResponses = {
     200: unknown;
 };
 
+export type StoriesControllerGetStoryCommentCountData = {
+    body?: never;
+    path: {
+        /**
+         * Story UUID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/stories/{id}/comments/count';
+};
+
+export type StoriesControllerGetStoryCommentCountErrors = {
+    /**
+     * Story not found
+     */
+    404: unknown;
+};
+
+export type StoriesControllerGetStoryCommentCountResponses = {
+    /**
+     * Comment count retrieved successfully
+     */
+    200: {
+        storyId?: string;
+        commentCount?: number;
+    };
+};
+
+export type StoriesControllerGetStoryCommentCountResponse = StoriesControllerGetStoryCommentCountResponses[keyof StoriesControllerGetStoryCommentCountResponses];
+
 export type StoriesControllerDeleteCommentData = {
     body?: never;
     path: {
@@ -2052,6 +2465,14 @@ export type AdminControllerGetAllStoriesData = {
          * Items per page (default: 10, max: 100)
          */
         limit?: number;
+        /**
+         * Filter stories by one or more genres
+         */
+        genres?: Array<string>;
+        /**
+         * Filter stories that are exclusively available on Storytime
+         */
+        onlyOnStorytime?: boolean;
     };
     url: '/admin/stories';
 };
