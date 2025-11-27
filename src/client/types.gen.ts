@@ -152,7 +152,18 @@ export type AuthResponseDto = {
     /**
      * JWT access token
      */
-    access_token: string;
+    accessToken: string;
+    /**
+     * JWT refresh token
+     */
+    refreshToken: string;
+};
+
+export type RefreshTokenDto = {
+    /**
+     * Refresh token to validate and exchange for new access token
+     */
+    refreshToken: string;
 };
 
 export type AuthorDto = {
@@ -1025,6 +1036,33 @@ export type AuthControllerLoginResponses = {
 };
 
 export type AuthControllerLoginResponse = AuthControllerLoginResponses[keyof AuthControllerLoginResponses];
+
+export type AuthControllerRefreshData = {
+    body: RefreshTokenDto;
+    path?: never;
+    query?: never;
+    url: '/auth/refresh';
+};
+
+export type AuthControllerRefreshErrors = {
+    /**
+     * Validation error
+     */
+    400: unknown;
+    /**
+     * Invalid or expired refresh token
+     */
+    401: unknown;
+};
+
+export type AuthControllerRefreshResponses = {
+    /**
+     * Access token refreshed successfully
+     */
+    200: AuthResponseDto;
+};
+
+export type AuthControllerRefreshResponse = AuthControllerRefreshResponses[keyof AuthControllerRefreshResponses];
 
 export type AuthControllerLogoutData = {
     body?: never;

@@ -88,11 +88,11 @@ export function useLogin() {
       const response = await authControllerLogin({ body });
 
       // Handle token persistence
-      if (response.data?.access_token) {
-        setAuthToken(response.data.access_token);
+      if (response.data?.accessToken) {
+        setAuthToken(response.data.accessToken);
         
         if (remember) {
-          Cookies.set("authToken", response.data.access_token, {
+          Cookies.set("authToken", response.data.accessToken, {
             expires: 30,
             secure: true,
             sameSite: "strict",
