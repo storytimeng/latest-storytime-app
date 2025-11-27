@@ -13,6 +13,7 @@ interface FormFieldProps {
   errorMessage?: string;
   size?: "sm" | "md" | "lg";
   startContent?: string | ReactElement;
+  endContent?: string | ReactElement;
   placeholder?: string;
   onValueChange?: (value: string) => void;
   isRequired?: boolean;
@@ -34,6 +35,7 @@ const FormField: React.FC<FormFieldProps> = (props) => {
     errorMessage,
     placeholder,
     startContent,
+    endContent,
     onValueChange,
     isRequired,
     minLen,
@@ -118,6 +120,7 @@ const FormField: React.FC<FormFieldProps> = (props) => {
         isRequired={isRequired}
         placeholder={placeholder}
         startContent={getStartContent()}
+        endContent={endContent}
         onValueChange={onValueChange}
         minLength={minLen}
         maxLength={maxLen}

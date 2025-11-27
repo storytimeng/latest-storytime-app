@@ -219,7 +219,9 @@ export default function SignupView() {
         message: "Account created — check your email",
         duration: 3000,
       });
-      router.push("/auth/otp");
+      router.push(
+        `/auth/otp?email=${encodeURIComponent(formData.email)}&type=signup`
+      );
     } catch (err: any) {
       console.error("Signup error:", err);
       showToast({

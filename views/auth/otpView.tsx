@@ -1,29 +1,46 @@
 "use client";
 
-import { useState, useRef, useEffect, KeyboardEvent } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useRef, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useVerifyEmail, useResendOtp } from "@/src/hooks/useAuth";
 import { useAuthStore } from "@/src/stores/useAuthStore";
 import { showToast } from "@/lib/showNotification";
+import { FormField } from "@/components/reusables/form";
+import OtpField from "@/components/reusables/form/otpField";
+import { AnimatePresence, motion } from "framer-motion";
+import { Check, Pencil } from "lucide-react";
 
 interface OtpViewProps {
   email?: string;
   type?: "signup" | "reset-password" | "phone-verification";
 }
 
-export default function OtpView({
-  email = "user@example.com",
-  type = "signup",
+function OtpContent({
+  email: defaultEmail = "",
+  type: defaultType = "signup",
 }: OtpViewProps) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  
+  const emailParam = searchParams.get("email");
+  const typeParam = searchParams.get("type") as OtpViewProps["type"];
+  
+  const [emailInput, setEmailInput] = useState("");
+  
+  // Use URL param if available, otherwise fallback to input or default prop
+  const effectiveEmail = emailParam || emailInput || defaultEmail;
+  const effectiveType = typeParam || defaultType;
+
   const { trigger: verifyTrigger, isMutating: isVerifying } = useVerifyEmail();
   const { trigger: resendTrigger, isMutating: isResending } = useResendOtp();
-  const [otpValues, setOtpValues] = useState(["", "", "", ""]);
+  
+  // State for OTP value (single string now, handled by OtpField)
+  const [otpValue, setOtpValue] = useState("");
   const [error, setError] = useState("");
-  const [resendTimer, setResendTimer] = useState(30);
+  const [resendTimer, setResendTimer] = useState(120);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   useEffect(() => {
     if (resendTimer > 0) {
@@ -39,51 +56,60 @@ export default function OtpView({
     };
   }, [resendTimer]);
 
-  const handleInputChange = (index: number, value: string) => {
-    if (value.length > 1) return; // Only allow single digits
-
-    const newOtpValues = [...otpValues];
-    newOtpValues[index] = value;
-    setOtpValues(newOtpValues);
-
+  const handleOtpChange = (value: string) => {
+    setOtpValue(value);
     if (error) setError("");
-
-    // Auto-focus next input
-    if (value && index < 3) {
-      inputRefs.current[index + 1]?.focus();
-    }
   };
 
-  const handleKeyDown = (index: number, e: KeyboardEvent<HTMLInputElement>) => {
-    // Handle backspace to go to previous input
-    if (e.key === "Backspace" && !otpValues[index] && index > 0) {
-      inputRefs.current[index - 1]?.focus();
+  const handleConfirmEmail = () => {
+    if (!emailInput) return;
+    
+    // Update URL with email param to switch to display mode
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("email", emailInput);
+    if (!params.has("type")) {
+      params.set("type", effectiveType || "signup");
     }
+    router.push(`${pathname}?${params.toString()}`);
+  };
+
+  const handleEditEmail = () => {
+    // Remove email param to switch to input mode
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("email");
+    // Pre-fill input with current email so user doesn't have to re-type everything
+    if (emailParam) setEmailInput(emailParam);
+    router.push(`${pathname}?${params.toString()}`);
   };
 
   const handleVerify = async () => {
-    const otpCode = otpValues.join("");
-    if (otpCode.length !== 4) {
-      setError("Please enter all 4 digits");
+    if (!effectiveEmail) {
+      setError("Please enter your email address");
+      return;
+    }
+
+    if (otpValue.length !== 6) {
+      setError("Please enter all 6 digits");
       return;
     }
 
     try {
-      if (type === "reset-password") {
+      if (effectiveType === "reset-password") {
         // For password-reset flow, store the email+otp transiently and navigate
-        useAuthStore.getState().setReset(email, otpCode);
+        // Note: Actual reset happens in update-password view which requires new password
+        useAuthStore.getState().setReset(effectiveEmail, otpValue);
         router.push("/auth/update-password");
         return;
       }
 
       try {
-        await verifyTrigger({ email, otp: otpCode });
+        await verifyTrigger({ email: effectiveEmail, otp: otpValue });
         showToast({
           type: "success",
           message: "Email verified",
           duration: 1500,
         });
-        switch (type) {
+        switch (effectiveType) {
           case "phone-verification":
             router.push("/auth/setup");
             break;
@@ -106,11 +132,16 @@ export default function OtpView({
   };
 
   const handleResendCode = async () => {
+    if (!effectiveEmail) {
+      setError("Please enter your email address to resend code");
+      return;
+    }
+    
     setError("");
 
     try {
-      await resendTrigger({ email });
-      setResendTimer(30);
+      await resendTrigger({ email: effectiveEmail });
+      setResendTimer(120);
       showToast({
         type: "success",
         message: "Verification code sent",
@@ -122,7 +153,66 @@ export default function OtpView({
     }
   };
 
+type MailProviderResponse = {
+  providerName?: string;
+  loginUrl?: string;
+};
+
+const localMailMap: Record<string, string> = {
+  "gmail.com": "https://mail.google.com",
+  "googlemail.com": "https://mail.google.com",
+  "outlook.com": "https://outlook.live.com",
+  "hotmail.com": "https://outlook.live.com",
+  "live.com": "https://outlook.live.com",
+  "msn.com": "https://outlook.live.com",
+  "yahoo.com": "https://mail.yahoo.com",
+  "ymail.com": "https://mail.yahoo.com",
+  "proton.me": "https://mail.proton.me",
+  "protonmail.com": "https://mail.proton.me",
+  "icloud.com": "https://www.icloud.com/mail",
+  "me.com": "https://www.icloud.com/mail",
+};
+
+/**
+ * Opens the correct mail URL for the given email.
+ * Tries API detection, then local map, then mailto fallback.
+ */
+async function handleOpenMailApp(effectiveEmail?: string) {
+  const defaultMailto = "mailto:";
+
+  if (!effectiveEmail) {
+    window.open(defaultMailto, "_blank");
+    return;
+  }
+
+  // Ensure it's a string
+  const domain = (effectiveEmail || "").toString().split("@")[1]?.toLowerCase() ?? "";
+
+  try {
+    const apiRes = await fetch(
+      `https://api.emailproviderlookup.com/v1/lookup?email=${effectiveEmail}`
+    ).then((res) => res.json() as Promise<MailProviderResponse>);
+
+    if (apiRes?.loginUrl) {
+      window.open(apiRes.loginUrl, "_blank");
+      return;
+    }
+  } catch (error) {
+    console.warn("API lookup failed, falling back to local map", error);
+  }
+
+  if (localMailMap[domain]) {
+    window.open(localMailMap[domain], "_blank");
+    return;
+  }
+
+  window.open(`${defaultMailto}${effectiveEmail}`, "_blank");
+}
+
+
+
   const maskEmail = (email: string) => {
+    if (!email) return "";
     const [username, domain] = email.split("@");
     if (!username || !domain) return email;
 
@@ -148,71 +238,127 @@ export default function OtpView({
         </p>
 
         {/* OTP Boxes */}
-        <form onSubmit={handleVerify} className="w-full max-w-sm">
-          <div className="flex justify-center gap-4 mb-6">
-            {otpValues.map((value, index) => (
-              <input
-                key={index}
-                ref={(el) => {
-                  inputRefs.current[index] = el;
-                }}
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                maxLength={1}
-                value={value}
-                onChange={(e) => handleInputChange(index, e.target.value)}
-                onKeyDown={(e) => handleKeyDown(index, e)}
-                className="text-xl font-semibold text-center bg-white border-2 rounded-lg shadow-sm w-14 h-14 sm:w-16 sm:h-16 border-grey-4 focus:border-primary-colour focus:outline-none focus:ring-2 focus:ring-primary-colour/20"
-                aria-label={`Verification code digit ${index + 1} of 4`}
-                aria-describedby={error ? "otp-error" : undefined}
-                autoComplete="one-time-code"
-                required
-              />
-            ))}
+        <div className="w-full max-w-sm">
+          <div className="flex justify-center mb-6">
+            <OtpField
+              label=""
+              id="otp-input"
+              value={otpValue}
+              onChange={handleOtpChange}
+              length={6}
+              size="lg"
+              placeholder=""
+              isInvalid={!!error}
+              errorMessage=""
+            />
           </div>
 
-          {/* Masked email text */}
-          <div className="mb-6 text-center">
-            <p className="text-sm text-grey-2">
-              We just sent an email to the address:
-            </p>
-            <p className="mt-2 text-sm font-medium text-grey-1">
-              {maskEmail(email)}
-            </p>
+          {/* Email Display or Input */}
+          <div className="mb-6 text-center min-h-[80px]">
+            <AnimatePresence mode="wait">
+              {emailParam ? (
+                <motion.div
+                  key="display"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.2 }}
+                  className="flex flex-col items-center"
+                >
+                  <p className="text-sm text-grey-2">
+                    We just sent an email to the address:
+                  </p>
+                  <div className="flex items-center gap-2 mt-2">
+                    <p className="text-sm font-medium text-grey-1">
+                      {maskEmail(effectiveEmail)}
+                    </p>
+                    <button
+                      onClick={handleEditEmail}
+                      className="p-1 transition-colors rounded-full hover:bg-grey-1/10 text-grey-2 hover:text-primary-colour"
+                      aria-label="Edit email"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="input"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.2 }}
+                  className="w-full pt-3"
+                >
+                   <FormField
+                    label="Email Address"
+                    type="email"
+                    id="email-otp"
+                    size="lg"
+                    value={emailInput}
+                    onValueChange={setEmailInput}
+                    placeholder="Enter your email"
+                    isRequired={true}
+                    endContent={
+                      emailInput && (
+                        <Button
+                          size="sm"
+                          onPress={handleConfirmEmail}
+                          className="h-7 px-3 text-xs font-medium"
+                        >
+                          Confirm
+                        </Button>
+                      )
+                    }
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
-          {/* Primary full-width buttons */}
-          <div className="mt-24 space-y-3">
-            <Button variant="large" onClick={handleVerify}>
-              Verify Code
-            </Button>
-            <Button
-              variant="bordered"
-              onClick={() => router.push("/auth/login")}
-            >
-              Go to email inbox
-            </Button>
-          </div>
-
-          {/* Send again / resend link */}
-          <div className="text-center">
-            <p className="text-sm text-grey-2">
-              Didn&apos;t get email?{" "}
-              <Button
-                variant="ghost"
-                onClick={handleResendCode}
-                disabled={resendTimer > 0}
+          {/* Primary full-width buttons & Resend Link - Conditionally Rendered */}
+          <AnimatePresence>
+            {emailParam && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.3 }}
+                className="w-full overflow-hidden"
               >
-                Send again
-              </Button>
-            </p>
-            {resendTimer > 0 && (
-              <p className="mt-2 text-xs text-grey-3">
-                Resend available in {resendTimer}s
-              </p>
+                <div className="mt-6 space-y-3">
+                  <Button variant="large" onClick={handleVerify} disabled={isVerifying}>
+                    {isVerifying ? "Verifying..." : "Verify Code"}
+                  </Button>
+                  <Button
+                    variant="bordered"
+                    onPress={async() => await handleOpenMailApp(effectiveEmail)}
+                  >
+                    Go to email inbox
+                  </Button>
+                </div>
+
+                {/* Send again / resend link */}
+                <div className="text-center mt-4 mb-4">
+                  <p className="text-sm text-grey-2">
+                    Didn&apos;t get email?{" "}
+                    <Button
+                      variant="ghost"
+                      onClick={handleResendCode}
+                      disabled={resendTimer > 0 || isResending}
+                    >
+                      {isResending ? "Sending..." : "Send again"}
+                    </Button>
+                  </p>
+                  {resendTimer > 0 && (
+                    <p className="mt-2 text-xs text-grey-3">
+                      Resend available in {resendTimer}s
+                    </p>
+                  )}
+                </div>
+              </motion.div>
             )}
-          </div>
+          </AnimatePresence>
 
           {/* Error message below */}
           {error && (
@@ -222,8 +368,44 @@ export default function OtpView({
               </p>
             </div>
           )}
-        </form>
+        </div>
       </div>
     </div>
+  );
+}
+
+function LoadingSkeleton() {
+  return (
+    <div className="flex flex-col h-full px-6">
+      <div className="flex flex-col items-center flex-1 ">
+        {/* Title Skeleton */}
+        <div className="h-8 w-64 bg-gray-200 rounded animate-pulse mb-2"></div>
+        
+        {/* Subtitle Skeleton */}
+        <div className="h-4 w-48 bg-gray-200 rounded animate-pulse mb-6"></div>
+
+        {/* OTP Boxes Skeleton */}
+        <div className="w-full max-w-sm">
+          <div className="flex justify-center gap-2 mb-6">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-200 rounded-lg animate-pulse"></div>
+            ))}
+          </div>
+
+          {/* Email Input Skeleton */}
+          <div className="w-full pt-3">
+            <div className="h-12 w-full bg-gray-200 rounded-lg animate-pulse"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function OtpView(props: OtpViewProps) {
+  return (
+    <Suspense fallback={<LoadingSkeleton />}>
+      <OtpContent {...props} />
+    </Suspense>
   );
 }
