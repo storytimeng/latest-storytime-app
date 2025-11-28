@@ -1,65 +1,74 @@
 "use client";
 
-import React from "react";
-import { Magnetik_Regular } from "@/lib/font";
-import data from "@/data/data.json";
-import { PageHeader, StoryGroup } from "@/components/reusables/customUI";
+import { useParams } from "next/navigation";
+import { PageHeader, StoryGroup, StoriesCarousel } from "@/components/reusables";
+import { useStories } from "@/src/hooks/useStories";
 
-interface CategoryViewProps {
-  category: string;
-}
+const CategoryView = () => {
+  const params = useParams();
+  const categorySlug = params?.slug as string;
+  
+  // Convert slug to readable genre name
+  const genreName = categorySlug
+    ?.split("-")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
 
-interface Story {
-  id: number;
-  title: string;
-  author: string;
-  rating: number;
-  comments: number;
-  genre: string;
-  image: string;
-  sample: string;
-  status: string;
-}
+  // Fetch stories for this genre
+  const { stories, isLoading } = useStories({
+    genre: genreName,
+    limit: 50,
+  });
 
-const CategoryView = ({ category }: CategoryViewProps) => {
-  // Map category slugs to data and display names
-  const categoryMap: Record<string, { data: Story[]; displayName: string }> = {
-    "recently-added": {
-      data: data.stories,
-      displayName: "Recently Added Stories",
-    },
-    "old-stories": { data: data.oldStories, displayName: "Old Stories" },
-    anonymous: { data: data.anonymousStories, displayName: "Anonymous" },
-    "hot-stories": { data: data.hotStories, displayName: "As E Dey Hot" },
-  };
-
-  const categoryData = categoryMap[category] || {
-    data: [],
-    displayName: "Stories",
-  };
-  const { data: stories, displayName } = categoryData;
+  // Featured stories for carousel
+  const featuredStories = stories.slice(0, 5);
+  const remainingStories = stories.slice(5);
 
   return (
-    <div className="min-h-screen px-4 pt-4">
-      {/* Header */}
-      <PageHeader title={displayName} backLink="/home" />
+    <div className="min-h-screen px-4 pt-4 pb-20 bg-accent-shade-1">
+      <PageHeader title={genreName || "Category"} showBackButton />
 
-      {/* Story Grid */}
-      <StoryGroup
-        stories={stories}
-        layout="grid"
-        containerClassName="grid-cols-2 gap-4"
-        cardClassName="w-full"
-        className="pb-8"
-      />
+      <div className="mt-6 space-y-6">
+        {/* Featured Carousel */}
+        {isLoading ? (
+          <div className="h-52 bg-accent-colour animate-pulse rounded-xl" />
+        ) : featuredStories.length > 0 ? (
+          <>
+            <div>
+              <h2 className="body-text-small-medium-auto text-black mb-2">
+                Featured {genreName} Stories
+              </h2>
+              <StoriesCarousel
+                stories={featuredStories}
+                autoPlay={true}
+                autoPlayInterval={4000}
+                showControls={true}
+                showDots={true}
+              />
+            </div>
 
-      {stories.length === 0 && (
-        <div className="text-center py-12">
-          <p className={`text-grey-3 ${Magnetik_Regular.className}`}>
-            No stories found in this category.
-          </p>
-        </div>
-      )}
+            {/* All Stories */}
+            {remainingStories.length > 0 && (
+              <StoryGroup
+                title={`All ${genreName} Stories`}
+                stories={remainingStories}
+                showSeeAll={false}
+                layout="grid"
+              />
+            )}
+          </>
+        ) : (
+          <div className="text-center py-12">
+            <div className="mb-4 text-6xl">📚</div>
+            <h3 className="text-lg font-bold text-grey-3 mb-2">
+              No stories found
+            </h3>
+            <p className="text-sm text-grey-2">
+              No {genreName} stories available at the moment.
+            </p>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

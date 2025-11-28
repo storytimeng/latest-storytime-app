@@ -2,75 +2,29 @@
 
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { Search } from "lucide-react";
-import Image from "next/image";
-import React, { useState } from "react";
-import { GenreButton, StoryGroup, PremiumBanner } from "@/components/reusables";
+import { useState } from "react";
+import { GenreButton, StoryGroup, PremiumBanner, StoriesCarousel } from "@/components/reusables";
 import { Magnetik_Medium, Magnetik_Bold, Magnetik_Regular } from "@/lib/font";
-import data from "@/data/data.json";
-
-// Define Story interface for type safety
-interface Story {
-  id: number;
-  newId: number;
-  title: string;
-  author: string;
-  rating: number;
-  comments: number;
-  status: string;
-  triggerWarning?: boolean;
-  exclusive?: boolean;
-  isAnonymous?: boolean;
-  isChaptered: boolean;
-  genre: string;
-  image: string;
-  sample: string;
-  analytics: {
-    views: number;
-    likes: number;
-    comments: number;
-  };
-  chapters?: Array<{
-    id: number;
-    title: string;
-    content: string;
-  }>;
-}
+import { Search } from "lucide-react";
+import { useStories } from "@/src/hooks/useStories";
+import { useGenres } from "@/src/hooks/useGenres";
+import { useStoriesFilterStore } from "@/src/stores/useStoriesFilterStore";
+import { useUserStore } from "@/src/stores/useUserStore";
+import { Avatar } from "@heroui/avatar";
 
 const HomeView = () => {
-  const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
+  const { user } = useUserStore();
+  const { selectedGenres, toggleGenre } = useStoriesFilterStore();
+  const { genres: apiGenres, isLoading: genresLoading } = useGenres();
+  
+  // Fetch stories with selected genre filter
+  const { stories, isLoading: storiesLoading } = useStories({
+    limit: 50,
+    genre: selectedGenres.length > 0 ? selectedGenres[0] : undefined,
+  });
 
-  // Extract data from imported JSON
-  const { stories, oldStories, anonymousStories, hotStories } = data;
-
-  // Define genres array
-  const genres = [
-    "Romance",
-    "Drama",
-    "Adventure",
-    "Mystery",
-    "Fantasy",
-    "Sci-Fi",
-    "Thriller",
-    "Comedy",
-    "Horror",
-    "Historical",
-    "Contemporary",
-    "Young Adult",
-  ];
-
-  // Handle genre selection/deselection
-  const handleGenreToggle = (genre: string) => {
-    setSelectedGenres((prev) => {
-      if (prev.includes(genre)) {
-        // Remove genre if already selected
-        return prev.filter((g) => g !== genre);
-      } else {
-        // Add genre if not selected
-        return [...prev, genre];
-      }
-    });
-  };
+  // Use API genres or fallback to empty array
+  const genres = apiGenres || [];
 
   // Sort genres: selected ones first, then alphabetical
   const sortedGenres = [...genres].sort((a, b) => {
@@ -82,26 +36,26 @@ const HomeView = () => {
     return a.localeCompare(b);
   });
 
-  // Filter stories based on selected genres
-  const filterStoriesByGenre = (storyArray: Story[]) => {
-    if (selectedGenres.length === 0) return storyArray;
-    return storyArray.filter((story) => selectedGenres.includes(story.genre));
-  };
-
-  // Get filtered story arrays
-  const filteredStories = filterStoriesByGenre(stories);
-  const filteredOldStories = filterStoriesByGenre(oldStories);
-  const filteredAnonymousStories = filterStoriesByGenre(anonymousStories);
-  const filteredHotStories = filterStoriesByGenre(hotStories);
+  // Group stories by category (you can customize this logic based on your API)
+  const recentStories = stories.slice(0, 10);
+  const featuredStories = stories.slice(0, 5); // For carousel
 
   return (
     <div className="min-h-screen px-4 pt-4 space-y-4 bg-accent-shade-1">
       <div className="sticky top-0 z-50 flex items-center justify-between py-2 bg-accent-shade-1">
         <div className="flex items-center gap-3">
           <Link href="/profile" aria-label="Go to profile">
-            <div className="flex items-center justify-center w-10 h-10 rounded-full cursor-pointer bg-complimentary-shade-1">
-              <h1 className={Magnetik_Bold.className}>T</h1>
-            </div>
+            <Avatar
+              src={user?.profilePicture}
+              name={user?.penName || "User"}
+              size="md"
+              className="cursor-pointer"
+              classNames={{
+                base: "bg-complimentary-shade-1",
+                name: `${Magnetik_Bold.className} text-white`,
+              }}
+              showFallback
+            />
           </Link>
           <div className="flex items-center gap-1">
             <span
@@ -111,7 +65,7 @@ const HomeView = () => {
               <span
                 className={`text-secondary font-bold ${Magnetik_Bold.className}`}
               >
-                Rubystar
+                {user?.penName || "Reader"}
               </span>
             </span>
             <span className="text-xl">👋</span>
@@ -126,8 +80,10 @@ const HomeView = () => {
           </Button>
         </Link>
       </div>
+
       <PremiumBanner />
-      {/* Only on Storytime */}
+
+      {/* Only on Storytime - Carousel */}
       <div className="">
         <div className="flex items-center justify-between mb-2 h-fit">
           <h2 className={`body-text-small-medium-auto primary-colour`}>
@@ -142,42 +98,20 @@ const HomeView = () => {
             </Button>
           </Link>
         </div>
-        <div className="relative overflow-hidden border-none rounded-xl">
-          <div className="relative h-52 rounded-xl">
-            <Image
-              src="/images/nature.jpg"
-              alt="Maria's Best"
-              className="w-full h-full object-fit rounded-xl"
-              width={100}
-              height={500}
-            />
-            <div className="absolute top-2 right-2">
-              <div className="bg-accent-colour body-text-smallest-medium-auto px-3 py-[3px] rounded-[2px] text-primary-colour">
-                Romance
-              </div>
-            </div>
-            <div className="absolute bottom-0 left-0 right-0 p-4 text-center bg-gradient-to-t from-black/100 to-transparent">
-              <h3
-                className={`text-white text-lg font-bold mb-1 ${Magnetik_Bold.className}`}
-              >
-                Maria&apos;s Best
-              </h3>
-              <p
-                className={`text-white/90 text-[10px] leading-relaxed ${Magnetik_Medium.className}`}
-              >
-                Maria Kim, a beautiful young lady that every man wanted, but her
-                price was too high. The beautiful lady wanted more than what
-                they were offering...
-                <span
-                  className={`text-[10px] font-bold text-complimentary-colour ${Magnetik_Bold.className}`}
-                >
-                  by Jane Moore
-                </span>
-              </p>
-            </div>
-          </div>
-        </div>
+
+        {storiesLoading ? (
+          <div className="relative h-52 rounded-xl bg-accent-colour animate-pulse" />
+        ) : (
+          <StoriesCarousel
+            stories={featuredStories}
+            autoPlay={true}
+            autoPlayInterval={5000}
+            showControls={true}
+            showDots={true}
+          />
+        )}
       </div>
+
       {/* Genre Pick */}
       <div className="mb-6 ">
         <div className="flex items-center justify-between">
@@ -196,108 +130,100 @@ const HomeView = () => {
         </div>
 
         <div className="relative">
-          <div className="flex gap-3 pb-2 overflow-x-auto scrollbar-hide scroll-smooth snap-x snap-mandatory">
-            {sortedGenres.map((genre: string) => (
-              <GenreButton
-                key={genre}
-                genre={genre}
-                isSelected={selectedGenres.includes(genre)}
-                onClick={() => handleGenreToggle(genre)}
-              />
-            ))}
-          </div>
+          {genresLoading ? (
+            <div className="flex gap-3 pb-2">
+              {[...Array(6)].map((_, i) => (
+                <div
+                  key={i}
+                  className="h-10 w-24 rounded-lg bg-accent-colour animate-pulse"
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="flex gap-3 pb-2 overflow-x-auto scrollbar-hide scroll-smooth snap-x snap-mandatory">
+              {sortedGenres.map((genre: string) => (
+                <GenreButton
+                  key={genre}
+                  genre={genre}
+                  isSelected={selectedGenres.includes(genre)}
+                  onClick={() => toggleGenre(genre)}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
       {/* Story Sections */}
       <div className="pb-20 space-y-4">
-        {selectedGenres.length > 0 ? (
+        {storiesLoading ? (
+          <div className="space-y-4">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="space-y-2">
+                <div className="h-6 w-48 bg-accent-colour animate-pulse rounded" />
+                <div className="flex gap-3 overflow-x-auto">
+                  {[...Array(3)].map((_, j) => (
+                    <div
+                      key={j}
+                      className="h-48 w-32 bg-accent-colour animate-pulse rounded-lg flex-shrink-0"
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : selectedGenres.length > 0 ? (
           <>
             {/* Show filtered results */}
-            {filteredStories.length > 0 && (
+            {stories.length > 0 ? (
               <StoryGroup
-                title={`Recently Added Stories (${filteredStories.length})`}
-                stories={filteredStories}
-                categorySlug="recently-added"
+                title={`${selectedGenres.join(", ")} Stories (${stories.length})`}
+                stories={stories}
+                categorySlug="filtered"
               />
+            ) : (
+              <div className="py-12 text-center">
+                <div className="mb-4 text-6xl">📚</div>
+                <h3
+                  className={`text-lg font-bold text-grey-3 mb-2 ${Magnetik_Bold.className}`}
+                >
+                  No stories found
+                </h3>
+                <p
+                  className={`text-sm text-grey-2 mb-4 ${Magnetik_Regular.className}`}
+                >
+                  No stories match the selected genres:{" "}
+                  <span className="font-semibold">
+                    {selectedGenres.join(", ")}
+                  </span>
+                </p>
+                <Button
+                  variant="secondary"
+                  onClick={() => useStoriesFilterStore.getState().clearGenres()}
+                  className={`${Magnetik_Medium.className}`}
+                >
+                  Clear filters
+                </Button>
+              </div>
             )}
-
-            {filteredOldStories.length > 0 && (
-              <StoryGroup
-                title={`Old Stories (${filteredOldStories.length})`}
-                stories={filteredOldStories}
-                categorySlug="old-stories"
-              />
-            )}
-
-            {filteredAnonymousStories.length > 0 && (
-              <StoryGroup
-                title={`Anonymous (${filteredAnonymousStories.length})`}
-                stories={filteredAnonymousStories}
-                categorySlug="anonymous"
-              />
-            )}
-
-            {filteredHotStories.length > 0 && (
-              <StoryGroup
-                title={`As e de hot (${filteredHotStories.length})`}
-                stories={filteredHotStories}
-                categorySlug="hot-stories"
-              />
-            )}
-
-            {/* No results message */}
-            {filteredStories.length === 0 &&
-              filteredOldStories.length === 0 &&
-              filteredAnonymousStories.length === 0 &&
-              filteredHotStories.length === 0 && (
-                <div className="py-12 text-center">
-                  <div className="mb-4 text-6xl">📚</div>
-                  <h3
-                    className={`text-lg font-bold text-grey-3 mb-2 ${Magnetik_Bold.className}`}
-                  >
-                    No stories found
-                  </h3>
-                  <p
-                    className={`text-sm text-grey-2 mb-4 ${Magnetik_Regular.className}`}
-                  >
-                    No stories match the selected genres:{" "}
-                    <span className="font-semibold">
-                      {selectedGenres.join(", ")}
-                    </span>
-                  </p>
-                  <Button
-                    variant="secondary"
-                    onClick={() => setSelectedGenres([])}
-                    className={`${Magnetik_Medium.className}`}
-                  >
-                    Clear filters
-                  </Button>
-                </div>
-              )}
           </>
         ) : (
           <>
             {/* Show all stories when no filters */}
             <StoryGroup
               title="Recently Added Stories"
-              stories={stories}
+              stories={recentStories}
               categorySlug="recently-added"
             />
             <StoryGroup
-              title="Old Stories"
-              stories={oldStories}
-              categorySlug="old-stories"
+              title="Trending Now"
+              stories={stories.slice(10, 20)}
+              categorySlug="trending"
             />
             <StoryGroup
-              title="Anonymous"
-              stories={anonymousStories}
-              categorySlug="anonymous"
-            />
-            <StoryGroup
-              title="As e de hot"
-              stories={hotStories}
-              categorySlug="hot-stories"
+              title="Popular This Week"
+              stories={stories.slice(20, 30)}
+              categorySlug="popular"
             />
           </>
         )}

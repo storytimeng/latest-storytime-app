@@ -1599,6 +1599,58 @@ export type NotificationsControllerDeleteNotificationResponses = {
 
 export type NotificationsControllerDeleteNotificationResponse = NotificationsControllerDeleteNotificationResponses[keyof NotificationsControllerDeleteNotificationResponses];
 
+export type NotificationsControllerGetNotificationByIdData = {
+    body?: never;
+    path: {
+        /**
+         * Notification UUID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/notifications/{id}';
+};
+
+export type NotificationsControllerGetNotificationByIdErrors = {
+    /**
+     * Unauthorized - Invalid or missing token
+     */
+    401: unknown;
+    /**
+     * Notification not found
+     */
+    404: unknown;
+};
+
+export type NotificationsControllerGetNotificationByIdResponses = {
+    /**
+     * Notification retrieved successfully
+     */
+    200: {
+        id?: string;
+        title?: string;
+        message?: string;
+        type?: 'achievement' | 'milestone' | 'admin_message' | 'reminder_read' | 'reminder_write' | 'story_like' | 'story_comment' | 'system';
+        isRead?: boolean;
+        readAt?: string | null;
+        emailSent?: boolean;
+        emailSentAt?: string | null;
+        metadata?: {
+            [key: string]: unknown;
+        } | null;
+        createdAt?: string;
+        updatedAt?: string;
+        sentBy?: {
+            id?: string;
+            firstName?: string;
+            lastName?: string;
+            email?: string;
+        } | null;
+    };
+};
+
+export type NotificationsControllerGetNotificationByIdResponse = NotificationsControllerGetNotificationByIdResponses[keyof NotificationsControllerGetNotificationByIdResponses];
+
 export type NotificationsControllerDeleteAllNotificationsData = {
     body?: never;
     path?: never;
@@ -1642,6 +1694,33 @@ export type StoriesControllerGetGenresResponses = {
 
 export type StoriesControllerGetGenresResponse = StoriesControllerGetGenresResponses[keyof StoriesControllerGetGenresResponses];
 
+export type StoriesControllerTestByGenresData = {
+    body?: never;
+    path?: never;
+    query: {
+        /**
+         * Page number (default: 1)
+         */
+        page?: number;
+        /**
+         * Items per page (default: 10)
+         */
+        limit?: number;
+        /**
+         * One or more genres to filter by (e.g., genres=Romance&genres=Drama)
+         */
+        genres: Array<string>;
+    };
+    url: '/stories/test-by-genres';
+};
+
+export type StoriesControllerTestByGenresResponses = {
+    /**
+     * Stories filtered by genres
+     */
+    200: unknown;
+};
+
 export type StoriesControllerFindAllData = {
     body?: never;
     path?: never;
@@ -1658,10 +1737,6 @@ export type StoriesControllerFindAllData = {
          * Filter stories by one or more genres (e.g., genres=Romance&genres=Drama)
          */
         genres?: Array<string>;
-        /**
-         * Set to true to fetch stories available exclusively on Storytime
-         */
-        onlyOnStorytime?: boolean;
     };
     url: '/stories';
 };
@@ -1688,17 +1763,13 @@ export type StoriesControllerGetMyLibraryData = {
          */
         limit?: number;
         /**
-         * Filter your library by one or more genres
-         */
-        genres?: Array<string>;
-        /**
-         * Set to true to fetch only Storytime-exclusive stories from your library
-         */
-        onlyOnStorytime?: boolean;
-        /**
          * Filter by story status (optional). If not provided, returns all statuses.
          */
         status?: 'complete' | 'ongoing' | 'drafts';
+        /**
+         * Filter your library by one or more genres
+         */
+        genres?: Array<string>;
     };
     url: '/stories/library';
 };
@@ -2469,10 +2540,6 @@ export type AdminControllerGetAllStoriesData = {
          * Filter stories by one or more genres
          */
         genres?: Array<string>;
-        /**
-         * Filter stories that are exclusively available on Storytime
-         */
-        onlyOnStorytime?: boolean;
     };
     url: '/admin/stories';
 };

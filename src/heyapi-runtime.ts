@@ -7,7 +7,7 @@ export const createClientConfig: CreateClientConfig = (config) => ({
   baseUrl:
     process.env.NEXT_PUBLIC_PROXY === "true"
       ? "/api/proxy"
-      : process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api",
+      : process.env.NEXT_PUBLIC_API_URL || "http://end.digitalcoresystem.com/api",
   fetch: async (input, init) => {
     // Prefer token from in-memory store, fallback to cookie
     const token =

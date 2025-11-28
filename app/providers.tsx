@@ -33,7 +33,9 @@ export function Providers({ children, themeProps }: ProvidersProps) {
   // Initialize HeyAPI client config once on client-side
   React.useEffect(() => {
     try {
-      client.setConfig(createClientConfig());
+      const config = createClientConfig();
+      console.log("🔧 Initializing HeyAPI client with config:", config);
+      client.setConfig(config);
 
       // Set auth callback so generated client can resolve auth tokens
       client.setConfig({
@@ -60,9 +62,10 @@ export function Providers({ children, themeProps }: ProvidersProps) {
         }
         return error;
       });
+
+      console.log("✅ HeyAPI client initialized successfully");
     } catch (e) {
-      // ignore during SSR or early runs
-      // console.warn('Failed to initialize API client', e);
+      console.error("❌ Failed to initialize API client:", e);
     }
   }, []);
 

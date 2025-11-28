@@ -5,93 +5,50 @@ import { SearchField } from "@/components/reusables/form";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Search } from "lucide-react";
 import Link from "next/link";
-import React, { useState, useMemo } from "react";
-import data from "@/data/data.json";
-
-interface Story {
-  id: number;
-  title: string;
-  author: string;
-  rating: number;
-  comments: number;
-  genre: string;
-  image: string;
-  sample: string;
-  status: string;
-}
+import React, { useState } from "react";
+import { useStories } from "@/src/hooks/useStories";
+import { useGenres } from "@/src/hooks/useGenres";
+import { useDebounce } from "@/src/hooks/useDebounce";
 
 const SearchView = () => {
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState("All");
   const [hasSearched, setHasSearched] = useState(false);
 
-  // Combine all stories from different categories
-  const allStories = useMemo(
-    () => [
-      ...data.stories,
-      ...data.oldStories,
-      ...data.anonymousStories,
-      ...data.hotStories,
-      ...(data.popularStories || []),
-    ],
-    []
-  );
+  // Debounce search query
+  const debouncedSearch = useDebounce(search, 300);
 
-  // Filter stories based on search query and genre
-  const filteredStories = useMemo(() => {
-    let stories = allStories;
+  // Fetch genres
+  const { genres: apiGenres, isLoading: genresLoading } = useGenres();
+  const genres = ["All", ...(apiGenres || [])];
 
-    // Filter by genre if not "All"
-    if (activeFilter !== "All") {
-      stories = stories.filter(
-        (story) => story.genre.toLowerCase() === activeFilter.toLowerCase()
-      );
-    }
-
-    // Filter by search query
-    if (search.trim()) {
-      const searchLower = search.toLowerCase();
-      stories = stories.filter(
-        (story) =>
-          story.title.toLowerCase().includes(searchLower) ||
-          story.author.toLowerCase().includes(searchLower) ||
-          story.genre.toLowerCase().includes(searchLower) ||
-          story.sample.toLowerCase().includes(searchLower)
-      );
-    }
-
-    return stories;
-  }, [allStories, search, activeFilter]);
-
-  const genres = [
-    "All",
-    "Adventure",
-    "Fantasy",
-    "Romance",
-    "Mystery",
-    "Sci-fi",
-    "Horror",
-    "Historical",
-    "Thriller",
-  ];
+  // Fetch stories with search and filter
+  const { stories, isLoading } = useStories({
+    search: debouncedSearch || undefined,
+    genre: activeFilter !== "All" ? activeFilter : undefined,
+    limit: 50,
+  });
 
   const handleFilterClick = (genre: string) => {
     setActiveFilter(genre);
   };
 
-  const handleStoryClick = (story: Story) => {
-    // Navigate to story detail page or perform action
-    // TODO: Implement navigation logic
-    // You can add navigation logic here
+  const handleStoryClick = (storyId: string) => {
+    // Navigation is handled by Link in SearchResult component
   };
 
   const handleSearch = (value: string) => {
     setSearch(value);
+    if (value.trim()) {
+      setHasSearched(true);
+    }
   };
 
   const clearSearch = () => {
     setSearch("");
+    setHasSearched(false);
   };
+
   return (
     <div className="h-screen flex flex-col bg-accent-shade-1">
       {/* Fixed Header Section */}
@@ -143,21 +100,32 @@ const SearchView = () => {
 
           {/* Genre Filters */}
           <div className="w-full">
-            <div className="flex gap-3 overflow-x-auto scrollbar-hide">
-              {genres.map((genre) => (
-                <Button
-                  key={genre}
-                  onClick={() => handleFilterClick(genre)}
-                  className={`rounded-lg px-6 py-2 min-w-fit shrink-0 transition-all duration-200 font-medium ${
-                    activeFilter === genre
-                      ? "bg-primary text-white hover:bg-primary-1"
-                      : "bg-transparent text-primary-shade-2 border border-primary-shade-2 hover:bg-primary-shade-2 hover:text-white"
-                  }`}
-                >
-                  {genre}
-                </Button>
-              ))}
-            </div>
+            {genresLoading ? (
+              <div className="flex gap-3">
+                {[...Array(6)].map((_, i) => (
+                  <div
+                    key={i}
+                    className="h-10 w-24 rounded-lg bg-accent-colour animate-pulse"
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="flex gap-3 overflow-x-auto scrollbar-hide">
+                {genres.map((genre) => (
+                  <Button
+                    key={genre}
+                    onClick={() => handleFilterClick(genre)}
+                    className={`rounded-lg px-6 py-2 min-w-fit shrink-0 transition-all duration-200 font-medium ${
+                      activeFilter === genre
+                        ? "bg-primary text-white hover:bg-primary-1"
+                        : "bg-transparent text-primary-shade-2 border border-primary-shade-2 hover:bg-primary-shade-2 hover:text-white"
+                    }`}
+                  >
+                    {genre}
+                  </Button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
@@ -166,7 +134,9 @@ const SearchView = () => {
           {search && (
             <div className="text-left py-2">
               <p className="text-complimentary-colour text-[14px]">
-                Search results
+                {isLoading
+                  ? "Searching..."
+                  : `${stories.length} result${stories.length !== 1 ? "s" : ""}`}
               </p>
             </div>
           )}
@@ -177,25 +147,37 @@ const SearchView = () => {
       <div className="flex-1 overflow-y-auto px-4 pb-4">
         {/* Search Results Section */}
         <div className="space-y-4">
-          {/* Search Results */}
-          {search && filteredStories.length > 0 && (
+          {/* Loading State */}
+          {isLoading && search && (
             <div className="space-y-3">
-              {filteredStories.map((story) => (
+              {[...Array(5)].map((_, i) => (
+                <div
+                  key={i}
+                  className="h-24 bg-accent-colour animate-pulse rounded-lg"
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Search Results */}
+          {!isLoading && search && stories.length > 0 && (
+            <div className="space-y-3">
+              {stories.map((story: any) => (
                 <SearchResult
                   key={story.id}
                   title={story.title}
-                  genre={story.genre}
-                  author={story.author}
-                  image={story.image}
-                  hasWarning={story.status === "Ongoing"}
-                  onClick={() => handleStoryClick(story)}
+                  genre={story.genres?.[0] || "Unknown"}
+                  author={story.author?.penName || "Anonymous"}
+                  image={story.coverImage || "/images/placeholder.jpg"}
+                  hasWarning={story.status === "ongoing"}
+                  onClick={() => handleStoryClick(story.id)}
                 />
               ))}
             </div>
           )}
 
           {/* No Results Message */}
-          {search && filteredStories.length === 0 && (
+          {!isLoading && search && stories.length === 0 && (
             <div className="text-center py-12">
               <p className="text-primary-shade-2 text-[14px]">
                 No stories found matching your search criteria.

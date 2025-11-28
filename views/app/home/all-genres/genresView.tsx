@@ -1,133 +1,51 @@
 "use client";
 
-import React from "react";
-import data from "@/data/data.json";
-import { PageHeader, StoryGroup } from "@/components/reusables/customUI";
+import { PageHeader } from "@/components/reusables";
+import { useGenres } from "@/src/hooks/useGenres";
+import Link from "next/link";
 
-interface GenresViewProps {
-  genre: string;
-}
-
-interface Story {
-  id: number;
-  title: string;
-  author: string;
-  rating: number;
-  comments: number;
-  genre: string;
-  image: string;
-  sample: string;
-  status: string;
-}
-
-const GenresView = ({ genre }: GenresViewProps) => {
-  // Decode and capitalize genre for display
-  const decodedGenre = decodeURIComponent(genre);
-  const displayGenre =
-    decodedGenre.charAt(0).toUpperCase() + decodedGenre.slice(1);
-
-  // Combine all stories with the selected genre from all story categories
-  const allGenreStories: Story[] = [
-    ...data.stories.filter(
-      (story) => story.genre.toLowerCase() === decodedGenre.toLowerCase()
-    ),
-    ...data.oldStories.filter(
-      (story) => story.genre.toLowerCase() === decodedGenre.toLowerCase()
-    ),
-    ...data.anonymousStories.filter(
-      (story) => story.genre.toLowerCase() === decodedGenre.toLowerCase()
-    ),
-    ...data.hotStories.filter(
-      (story) => story.genre.toLowerCase() === decodedGenre.toLowerCase()
-    ),
-  ];
-
-  // If no stories found, show sample adventure stories for demonstration
-  const storiesToShow =
-    allGenreStories.length > 0
-      ? allGenreStories
-      : [
-          {
-            id: 1,
-            title: "The Journalist",
-            author: "Jane Moore",
-            rating: 20,
-            comments: 5,
-            genre: displayGenre,
-            image: "/images/nature.jpg",
-            sample: "An exciting adventure story...",
-            status: "Ongoing",
-          },
-          {
-            id: 2,
-            title: "The Journalist",
-            author: "Jane Moore",
-            rating: 20,
-            comments: 5,
-            genre: displayGenre,
-            image: "/images/nature.jpg",
-            sample: "Another thrilling adventure...",
-            status: "Ongoing",
-          },
-          {
-            id: 3,
-            title: "The Journalist",
-            author: "Jane Moore",
-            rating: 20,
-            comments: 5,
-            genre: displayGenre,
-            image: "/images/nature.jpg",
-            sample: "More adventure awaits...",
-            status: "Ongoing",
-          },
-          {
-            id: 4,
-            title: "The Journalist",
-            author: "Jane Moore",
-            rating: 20,
-            comments: 5,
-            genre: displayGenre,
-            image: "/images/nature.jpg",
-            sample: "Epic adventure continues...",
-            status: "Ongoing",
-          },
-          {
-            id: 5,
-            title: "The Journalist",
-            author: "Jane Moore",
-            rating: 20,
-            comments: 5,
-            genre: displayGenre,
-            image: "/images/nature.jpg",
-            sample: "The ultimate adventure...",
-            status: "Ongoing",
-          },
-          {
-            id: 6,
-            title: "The Journalist",
-            author: "Jane Moore",
-            rating: 20,
-            comments: 5,
-            genre: displayGenre,
-            image: "/images/nature.jpg",
-            sample: "Final adventure tale...",
-            status: "Ongoing",
-          },
-        ];
+const GenresView = () => {
+  const { genres, isLoading } = useGenres();
 
   return (
-    <div className="bg-accent-shade-1 min-h-screen px-4 pt-4">
-      {/* Header */}
-      <PageHeader title={displayGenre} backLink="/all-genres" />
+    <div className="min-h-screen px-4 pt-4 pb-20 bg-accent-shade-1">
+      <PageHeader title="All Genres" showBackButton />
 
-      {/* Story Grid */}
-      <StoryGroup
-        stories={storiesToShow}
-        layout="grid"
-        containerClassName="grid-cols-2 gap-4 mt-10"
-        cardClassName="w-full"
-        className="pb-8"
-      />
+      <div className="mt-6">
+        {isLoading ? (
+          <div className="grid grid-cols-2 gap-4">
+            {[...Array(12)].map((_, i) => (
+              <div
+                key={i}
+                className="h-32 bg-accent-colour animate-pulse rounded-lg"
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-4">
+            {genres?.map((genre: string) => (
+              <Link
+                key={genre}
+                href={`/category/${genre.toLowerCase().replace(/\s+/g, "-")}`}
+                className="relative h-32 rounded-lg overflow-hidden group cursor-pointer"
+              >
+                <div className="absolute inset-0 bg-gradient-to-br from-primary-shade-3 to-primary-shade-6 group-hover:from-primary-shade-4 group-hover:to-primary-shade-7 transition-all" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <h3 className="text-white text-xl font-bold text-center px-4">
+                    {genre}
+                  </h3>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+
+        {!isLoading && (!genres || genres.length === 0) && (
+          <div className="text-center py-12">
+            <p className="text-grey-2">No genres available</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
