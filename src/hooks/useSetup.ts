@@ -20,6 +20,7 @@ import type {
   DayPreset,
   SetupFormData,
 } from "@/components/setup/types";
+import { showToast } from "@/lib/showNotification";
 
 /**
  * Format TimeValue to API-compatible string (e.g., "06:45 AM")
@@ -100,7 +101,7 @@ export function useSetup() {
    * Check pen name availability
    * Uses SWR mutation for proper loading/error states
    */
-  const checkPenNameMutation = useSWRMutation(
+  const { trigger: triggerCheckPenName, isMutating: isCheckingPenName } = useSWRMutation(
     "check-pen-name",
     async (_key: string, { arg }: { arg: string }) => {
       const response = await usersControllerCheckPenNameAvailability({
@@ -122,9 +123,14 @@ export function useSetup() {
     setPenStatus("checking");
 
     try {
-      const data = await checkPenNameMutation.trigger(name);
+      const data = await triggerCheckPenName(name);
+      
+      // Handle potential nested data structure from API
+      // The API might return { data: { available: true } } instead of just { available: true }
+      const result = (data as any).data || data;
+      console.log("Pen name check response:", data, "Parsed result:", result);
 
-      if (data?.available) {
+      if (result?.available) {
         setPenStatus("available");
         return true;
       } else {
@@ -136,7 +142,7 @@ export function useSetup() {
       setPenStatus("idle");
       return false;
     }
-  }, [penName, checkPenNameMutation]);
+  }, [penName, triggerCheckPenName]);
 
   // Debounced pen name checking
   useEffect(() => {
@@ -232,7 +238,11 @@ export function useSetup() {
         setIsTransitioning(false);
       } catch (error) {
         console.error("Error submitting setup:", error);
-        alert("Failed to setup profile. Please try again.");
+        showToast({
+          type: "error",
+          message: "Failed to setup profile. Please try again.",
+          duration: 3000,
+        });
         setIsTransitioning(false);
       }
       return;
@@ -356,7 +366,7 @@ export function useSetup() {
     timeOptions,
     
     // Loading states
-    isCheckingPenName: checkPenNameMutation.isMutating,
+    isCheckingPenName: isCheckingPenName,
     isSubmitting: submitSetupMutation.isMutating,
   };
 }

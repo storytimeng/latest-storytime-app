@@ -85,7 +85,7 @@ const NotificationView = () => {
   return (
     <div className="min-h-screen bg-accent-shade-1 max-w-[28rem] mx-auto px-4 pb-6">
       {/* Page Header */}
-      <PageHeader title="Notifications" backLink="/app" className="pt-4 mb-6" />
+      <PageHeader title="Notifications" backLink="/home" className="pt-4 mb-6" />
 
       {/* Notifications List */}
       <div className="space-y-3">

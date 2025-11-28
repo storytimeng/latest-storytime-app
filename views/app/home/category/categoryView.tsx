@@ -42,7 +42,7 @@ const CategoryView = ({ category }: CategoryViewProps) => {
   return (
     <div className="min-h-screen px-4 pt-4">
       {/* Header */}
-      <PageHeader title={displayName} backLink="/app" />
+      <PageHeader title={displayName} backLink="/home" />
 
       {/* Story Grid */}
       <StoryGroup

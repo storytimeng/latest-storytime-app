@@ -1,14 +1,10 @@
 "use client";
 
-interface LoadingOverlayProps {
-  isVisible: boolean;
-  message?: string;
-}
+import { useLoadingStore } from "@/src/stores/useLoadingStore";
 
-export default function LoadingOverlay({
-  isVisible,
-  message = "Please wait...",
-}: LoadingOverlayProps) {
+export default function LoadingOverlay() {
+  const { isVisible, message } = useLoadingStore();
+
   if (!isVisible) return null;
 
   return (
@@ -44,3 +40,4 @@ export default function LoadingOverlay({
     </div>
   );
 }
+

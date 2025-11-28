@@ -88,16 +88,32 @@ export function useLogin() {
       const response = await authControllerLogin({ body });
 
       // Handle token persistence
-      if (response.data?.accessToken) {
-        setAuthToken(response.data.accessToken);
+      console.log("Login response:", response);
+      const responseData = response.data as any;
+      const accessToken = responseData?.accessToken || responseData?.data?.accessToken;
+      const refreshToken = responseData?.refreshToken || responseData?.data?.refreshToken;
+
+      if (accessToken) {
+        console.log("Setting auth token:", accessToken);
+        setAuthToken(accessToken, refreshToken);
         
         if (remember) {
-          Cookies.set("authToken", response.data.accessToken, {
+          console.log("Setting persistent cookie");
+          Cookies.set("authToken", accessToken, {
             expires: 30,
-            secure: true,
+            secure: process.env.NODE_ENV === "production",
             sameSite: "strict",
           });
+          if (refreshToken) {
+             Cookies.set("refreshToken", refreshToken, {
+              expires: 30,
+              secure: process.env.NODE_ENV === "production",
+              sameSite: "strict",
+            });
+          }
         }
+      } else {
+        console.warn("No access token in login response");
       }
 
       return response;

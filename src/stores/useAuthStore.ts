@@ -25,13 +25,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   resetEmail: undefined,
   resetOtp: undefined,
   setToken: (token, refreshToken) => {
+    console.log("useAuthStore.setToken called with:", token ? "Token present" : "No token");
     if (token) {
-      Cookies.set(AUTH_TOKEN_KEY, token, { secure: true });
+      Cookies.set(AUTH_TOKEN_KEY, token, { secure: process.env.NODE_ENV === "production" });
     } else {
       Cookies.remove(AUTH_TOKEN_KEY);
     }
     if (refreshToken) {
-      Cookies.set(REFRESH_TOKEN_KEY, refreshToken, { secure: true });
+      Cookies.set(REFRESH_TOKEN_KEY, refreshToken, { secure: process.env.NODE_ENV === "production" });
     }
     set(() => ({ token, refreshToken }));
   },

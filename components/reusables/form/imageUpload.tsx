@@ -12,6 +12,7 @@ import { Button } from "@heroui/button";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import FormField from "./formField";
+import { showToast } from "@/lib/showNotification";
 
 interface ImageUploadProps {
   value?: string;
@@ -79,7 +80,11 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
       if (file) {
         // Check if file is an image
         if (!file.type.startsWith("image/")) {
-          alert("Please select an image file");
+          showToast({
+            type: "error",
+            message: "Please select an image file",
+            duration: 3000,
+          });
           return;
         }
 

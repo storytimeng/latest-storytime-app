@@ -11,6 +11,9 @@ import { fontSans } from "@/config/fonts";
 import { Navbar } from "@/components/navbar";
 import { cn } from "@/lib/utils";
 import { Magnetik_Medium } from "@/lib/font";
+import LoadingOverlay from "@/components/reusables/customUI/loadingOverlay";
+import { GenresPreloader } from "@/components/preloaders/GenresPreloader";
+
 export const metadata: Metadata = {
   metadataBase: new URL(APP_CONFIG.url),
   title: APP_CONFIG.name,
@@ -66,9 +69,12 @@ export default function RootLayout({
         )}
       >
         <Providers themeProps={{ attribute: "class", defaultTheme: "light" }}>
+          <GenresPreloader />
           <MaxWidthWrapper>{children}</MaxWidthWrapper>
+          <LoadingOverlay />
         </Providers>
       </body>
     </html>
   );
 }
+

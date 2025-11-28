@@ -59,7 +59,7 @@ const PremiumView = () => {
       {/* Header */}
       <div className="px-4 pt-5 pb-4">
         <div className="flex items-center gap-4">
-          <Link href="/app">
+          <Link href="/home">
             <ArrowLeft className="w-6 h-6 text-primary-colour" />
           </Link>
         </div>

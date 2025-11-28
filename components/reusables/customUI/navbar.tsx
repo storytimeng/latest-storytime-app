@@ -11,12 +11,12 @@ const Navbar = () => {
   const pathname = usePathname();
 
   const isActive = (path: string) => {
-    if (path === "/app") return pathname === "/app";
+    if (path === "/home") return pathname === "/home";
     return pathname.startsWith(path);
   };
 
   const navItems = [
-    { path: "/app", icon: Home, label: "Home" },
+    { path: "/home", icon: Home, label: "Home" },
     { path: "/library", icon: BookOpen, label: "Library" },
     { path: "/pen", icon: PenTool, label: "Pen" },
     { path: "/notification", icon: Bell, label: "Notification" },

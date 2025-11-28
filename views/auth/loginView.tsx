@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { z } from "zod";
 import { showToast } from "@/lib/showNotification";
 import { useLogin } from "@/src/hooks/useAuth";
-import LoadingOverlay from "@/components/reusables/customUI/loadingOverlay";
+import { useLoadingStore } from "@/src/stores/useLoadingStore";
 
 interface LoginFormData {
   email: string;
@@ -28,12 +28,12 @@ const loginSchema = z.object({
 
 export default function LoginView() {
   const router = useRouter();
+  const { show: showLoading, hide: hideLoading } = useLoadingStore();
   const [formData, setFormData] = useState<LoginFormData>({
     email: "",
     password: "",
     rememberMe: false,
   });
-  const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Partial<LoginFormData>>({});
 
   const handleInputChange = (
@@ -99,15 +99,36 @@ export default function LoginView() {
     const isValid = validateForm();
     if (!isValid) return;
 
-    setIsLoading(true);
+    showLoading("Logging you in...");
     try {
       const data = await loginTrigger({
         emailOrPenName: formData.email,
         password: formData.password,
         remember: formData.rememberMe,
       });
+
+      // Fetch and store user profile
+      try {
+        const { usersControllerGetProfile } = await import("@/src/client/sdk.gen");
+        const { useUserStore } = await import("@/src/stores/useUserStore");
+        console.log("Fetching user profile...");
+        const profileResponse = await usersControllerGetProfile();
+        console.log("Profile response:", profileResponse);
+        
+        if (profileResponse.data) {
+          console.log("Setting user profile in store:", profileResponse.data);
+          useUserStore.getState().setUser(profileResponse.data as any);
+        } else {
+          console.warn("Profile response has no data");
+        }
+      } catch (profileError) {
+        console.error("Failed to fetch profile:", profileError);
+        // Continue to home even if profile fetch fails, 
+        // the useUserProfile hook will try again later
+      }
+
       showToast({ type: "success", message: "Signed in", duration: 1500 });
-      router.push("/app");
+      router.push("/home");
     } catch (err: any) {
       console.error("Login error:", err);
       setErrors({ email: "Invalid email or password" });
@@ -117,7 +138,7 @@ export default function LoginView() {
         duration: 3000,
       });
     } finally {
-      setIsLoading(false);
+      hideLoading();
     }
   };
 
@@ -214,9 +235,8 @@ export default function LoginView() {
           }
         }}
         type="button"
-        disabled={isLoading}
       >
-        {isLoading ? "Signing In..." : "Continue"}
+        Continue
       </Button>
 
       {/* Signup Link */}
@@ -231,9 +251,6 @@ export default function LoginView() {
           </Link>
         </p>
       </div>
-
-      {/* Loading Overlay */}
-      <LoadingOverlay isVisible={isLoading} message="Logging you in..." />
     </div>
   );
 }
