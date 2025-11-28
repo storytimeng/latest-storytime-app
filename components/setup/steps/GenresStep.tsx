@@ -42,7 +42,7 @@ export default function GenresStep({
         </div>
       ) : (
         <div className="grid grid-cols-3 gap-3">
-          {availableGenres.map((genre) => (
+          {availableGenres.map((genre: string) => (
             <GenreButton
               key={genre}
               genre={genre}
