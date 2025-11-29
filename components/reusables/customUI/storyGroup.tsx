@@ -8,20 +8,11 @@ import { Magnetik_Bold } from "@/lib/font";
 import { cn } from "@/lib/utils";
 import StoryCard from "./storyCard";
 
-interface Story {
-  id: number;
-  title: string;
-  author: string;
-  rating: number;
-  comments: number;
-  genre: string;
-  image: string;
-  status: string;
-}
+import { StoryResponseDto } from "@/src/client/types.gen";
 
 interface StoryGroupProps {
   title?: string;
-  stories: Story[];
+  stories: StoryResponseDto[];
   showSeeAll?: boolean;
   categorySlug?: string;
   className?: string;

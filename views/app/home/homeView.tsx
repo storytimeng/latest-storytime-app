@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { GenreButton, StoryGroup, PremiumBanner, StoriesCarousel } from "@/components/reusables";
 import { Magnetik_Medium, Magnetik_Bold, Magnetik_Regular } from "@/lib/font";
 import { Search } from "lucide-react";
@@ -27,18 +27,20 @@ const HomeView = () => {
   const genres = apiGenres || [];
 
   // Sort genres: selected ones first, then alphabetical
-  const sortedGenres = [...genres].sort((a, b) => {
-    const aSelected = selectedGenres.includes(a);
-    const bSelected = selectedGenres.includes(b);
+  const sortedGenres = useMemo(() => {
+    return [...genres].sort((a, b) => {
+      const aSelected = selectedGenres.includes(a);
+      const bSelected = selectedGenres.includes(b);
 
-    if (aSelected && !bSelected) return -1;
-    if (!aSelected && bSelected) return 1;
-    return a.localeCompare(b);
-  });
+      if (aSelected && !bSelected) return -1;
+      if (!aSelected && bSelected) return 1;
+      return a.localeCompare(b);
+    });
+  }, [genres, selectedGenres]);
 
-  // Group stories by category (you can customize this logic based on your API)
-  const recentStories = stories.slice(0, 10);
-  const featuredStories = stories.slice(0, 5); // For carousel
+  // Group stories by category
+  const recentStories = useMemo(() => stories ? stories.slice(0, 10) : [], [stories]);
+  const featuredStories = useMemo(() => stories ? stories.slice(0, 5) : [], [stories]); // For carousel
 
   return (
     <div className="min-h-screen px-4 pt-4 space-y-4 bg-accent-shade-1">

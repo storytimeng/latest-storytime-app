@@ -6,19 +6,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
-interface Story {
-  id: string;
-  title: string;
-  description?: string;
-  coverImage?: string;
-  genres?: string[];
-  author?: {
-    penName: string;
-  };
-}
+import { StoryResponseDto } from "@/src/client/types.gen";
 
 interface StoriesCarouselProps {
-  stories: Story[];
+  stories: StoryResponseDto[];
   autoPlay?: boolean;
   autoPlayInterval?: number;
   showControls?: boolean;
@@ -103,21 +94,27 @@ export function StoriesCarousel({
             setCurrentIndex(Math.max(0, Math.min(newIndex, stories.length - 1)));
           }}
         >
-          {stories.map((story) => (
+          {stories.map((story) => {
+             // Safe access to author name
+             const authorName = (story.author as any)?.penName || story.author?.name || "Anonymous";
+             const displayImage = story.imageUrl || "/placeholder-image.jpg";
+             
+             return (
             <motion.div
               key={story.id}
               className="relative h-52 rounded-xl flex-shrink-0 w-full"
             >
               <Link href={`/story/${story.id}`} className="block w-full h-full">
-                {story.coverImage ? (
-                  <Image
-                    src={story.coverImage}
-                    alt={story.title}
-                    className="w-full h-full object-cover rounded-xl"
-                    width={400}
-                    height={208}
-                    priority={story.id === currentStory.id}
-                  />
+                {displayImage ? (
+                    <Image
+                      src={displayImage}
+                      alt={story.title}
+                      className="w-full h-full object-cover rounded-xl"
+                      width={400}
+                      height={208}
+                      priority={story.id === currentStory.id}
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                    />
                 ) : (
                   <div className="w-full h-full bg-gradient-to-br from-primary-shade-3 to-primary-shade-6 rounded-xl" />
                 )}
@@ -136,20 +133,21 @@ export function StoriesCarousel({
                   <h3 className="text-white text-lg font-bold mb-1 line-clamp-1">
                     {story.title}
                   </h3>
-                  {story.description && (
+                  {/* description is not in StoryResponseDto but might be in API response. Casting to any to be safe or omitting if not needed */}
+                  {(story as any).description && (
                     <p className="text-white/90 text-[10px] leading-relaxed line-clamp-2 mb-1">
-                      {story.description}
+                      {(story as any).description}
                     </p>
                   )}
                   {story.author && (
                     <span className="text-[10px] font-bold text-complimentary-colour">
-                      by {story.author.penName}
+                      by {authorName}
                     </span>
                   )}
                 </div>
               </Link>
             </motion.div>
-          ))}
+          )})}
         </motion.div>
       </div>
 
