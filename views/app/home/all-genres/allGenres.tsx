@@ -36,7 +36,7 @@ const AllGenres = () => {
   return (
     <div className="bg-accent-shade-1 min-h-screen px-4 pt-4">
       {/* Header */}
-      <PageHeader title="Genre Pick" backLink="/" />
+      <PageHeader title="Genre Pick" backLink="/home" />
 
       {/* Genre Grid */}
       <div className="grid grid-cols-3 gap-3 pb-8 mt-10">

@@ -152,7 +152,7 @@ const LibraryView = () => {
               ? "Try adjusting your search terms or browse all stories."
               : "Start building your library by adding stories you love!"}
           </p>
-          <Link href="/">
+          <Link href="/home">
             <Button
               className={`bg-complimentary-colour text-universal-white px-6 py-2 ${Magnetik_Medium.className}`}
             >

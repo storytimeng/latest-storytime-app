@@ -1,5 +1,6 @@
 import Cookies from "js-cookie";
 import { useAuthStore } from "../stores/useAuthStore";
+import { authControllerRefresh } from "../client/sdk.gen";
 
 const AUTH_TOKEN_KEY = "authToken";
 const REFRESH_TOKEN_KEY = "refreshToken";
@@ -14,18 +15,16 @@ export async function refreshTokens(): Promise<{
 } | null> {
   try {
     // Use proxy so frontend doesn't reveal backend URL
-    const res = await fetch("/api/proxy/auth/refresh", {
-      method: "POST",
-      credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
+    const res = await authControllerRefresh({
+      body: {
+        refreshToken: useAuthStore.getState().refreshToken || "",
       },
     });
 
-    if (!res.ok) return null;
+    if (!res.data) return null;
 
-    const payload = await res.json();
-    const token = payload?.token;
+    const payload = res.data;
+    const token = payload?.accessToken;
     const refreshToken = payload?.refreshToken;
 
     if (token) {

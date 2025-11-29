@@ -84,7 +84,7 @@ export const SETUP_CONFIG = {
     penNameDebounceMs: 1000,
   },
   routes: {
-    onComplete: "/",
+    onComplete: "/home",
     onCancel: "/auth/login",
   },
   progressSteps: 5, // Show 5 segments in progress bar

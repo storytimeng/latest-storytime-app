@@ -216,7 +216,7 @@ The archangels rode their horses—Lucifer on his silver stallion, Michael on hi
         }`}
       >
         <div className="flex items-center justify-between w-full">
-          <Link href="/">
+          <Link href="/home">
             <ArrowLeft className="w-6 h-6 text-primary-colour" />
           </Link>
         </div>

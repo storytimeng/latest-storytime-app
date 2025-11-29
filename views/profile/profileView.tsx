@@ -129,7 +129,7 @@ const ProfileView = () => {
         <div className="px-4 pt-4 pb-6 text-white bg-primary-colour">
           <PageHeader
             title="Profile"
-            backLink="/"
+            backLink="/home"
             titleClassName="text-lg font-medium text-white"
             backButtonClassName="text-white"
             showBackButton={true}

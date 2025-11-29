@@ -56,7 +56,7 @@ const SearchView = () => {
         <div className="space-y-4">
           {/* Search Bar and Back Button */}
           <div className="flex items-center gap-4">
-            <Link href="/" className="flex items-center gap-2 cursor-pointer">
+            <Link href="/home" className="flex items-center gap-2 cursor-pointer">
               <ArrowLeft size={20} className="text-secondary" />
             </Link>
             <div className="flex-1">

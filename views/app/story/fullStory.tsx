@@ -25,7 +25,7 @@ const FullStory = ({ storyId }: FullStoryProps) => {
     <div>
       <div className="bg-accent-shade-1 min-h-screen pb-20 pt-4">
         <div className="flex items-center space-x-28 px-4 pb-6">
-          <Link href="/" className="flex items-center gap-2 cursor-pointer">
+          <Link href="/home" className="flex items-center gap-2 cursor-pointer">
             <ArrowLeft size={20} className="text-secondary" />
           </Link>
         </div>

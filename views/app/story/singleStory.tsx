@@ -25,7 +25,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
         {/* Header Overlay on Top of Image */}
         <div className="absolute top-0 left-0 right-0 z-20 bg-black/20 pt-10 pb-4 px-4">
           <div className="flex items-center justify-between">
-            <Link href="/" className="flex items-center gap-2 cursor-pointer">
+            <Link href="/home" className="flex items-center gap-2 cursor-pointer">
               <ArrowLeft size={20} className="text-white" />
             </Link>
           </div>
