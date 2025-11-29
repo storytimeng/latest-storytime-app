@@ -15,7 +15,7 @@ interface Story {
   comments?: number;
   genre: string;
   image: string;
-  status: string;
+  status?: string;
   writingDate?: string;
 }
 
@@ -59,7 +59,10 @@ const StoryCard = ({
           .join("")
           .toUpperCase();
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: string |
+    undefined
+  ) => {
+    if (!status) return "text-gray-500";
     switch (status.toLowerCase()) {
       case "ongoing":
         return "text-orange-600";
@@ -158,7 +161,7 @@ const StoryCard = ({
               Magnetik_Regular.className
             )}
           >
-            ({story.status})
+            ({story.status || "Unknown"})
           </span>
         </div>
 
