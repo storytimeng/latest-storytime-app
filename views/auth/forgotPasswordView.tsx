@@ -8,7 +8,7 @@ import { useForgotPassword } from "@/src/hooks/useAuth";
 import { showToast } from "@/lib/showNotification";
 import { ArrowLeft } from "lucide-react";
 import Image from "next/image";
-import LoadingOverlay from "@/components/reusables/customUI/loadingOverlay";
+import { useLoadingStore } from "@/src/stores/useLoadingStore";
 
 interface ForgotPasswordFormData {
   email: string;
@@ -16,12 +16,12 @@ interface ForgotPasswordFormData {
 
 export default function ForgotPasswordView() {
   const router = useRouter();
+  const { show: showLoading, hide: hideLoading } = useLoadingStore();
   const [formData, setFormData] = useState<ForgotPasswordFormData>({
     email: "",
   });
 
   const [error, setError] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
   const { trigger: forgotTrigger, isMutating: isSubmitting } =
     useForgotPassword();
 
@@ -50,7 +50,7 @@ export default function ForgotPasswordView() {
       return;
     }
 
-    setIsLoading(true);
+    showLoading("Sending reset email...");
     setError("");
 
     try {
@@ -70,7 +70,7 @@ export default function ForgotPasswordView() {
       });
       setError("Something went wrong. Please try again.");
     } finally {
-      setIsLoading(false);
+      hideLoading();
     }
   };
 
@@ -128,14 +128,11 @@ export default function ForgotPasswordView() {
           <Button type="button" variant="bordered" onPress={handleBackToLogin}>
             Cancel
           </Button>
-          <Button variant="small" type="submit" disabled={isLoading}>
-            {isLoading ? "Sending..." : "Send Email"}
+          <Button variant="small" type="submit">
+            Send Email
           </Button>
         </div>
       </form>
-
-      {/* Loading Overlay */}
-      <LoadingOverlay isVisible={isLoading} message="Sending reset email..." />
     </div>
   );
 }

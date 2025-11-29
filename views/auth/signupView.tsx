@@ -9,7 +9,7 @@ import { z } from "zod";
 import { showToast } from "@/lib/showNotification";
 import { useRegister } from "@/src/hooks/useAuth";
 import { Check, X } from "lucide-react";
-import LoadingOverlay from "@/components/reusables/customUI/loadingOverlay";
+import { useLoadingStore } from "@/src/stores/useLoadingStore";
 import { Select, SelectItem } from "@heroui/select";
 
 interface SignupFormData {
@@ -54,6 +54,7 @@ const signupSchema = z.object({
 
 export default function SignupView() {
   const router = useRouter();
+  const { show: showLoading, hide: hideLoading } = useLoadingStore();
   // firstErrorRef removed (not used)
   const [formData, setFormData] = useState<SignupFormData>({
     firstName: "",
@@ -65,7 +66,6 @@ export default function SignupView() {
     password: "",
     agreeToTerms: false,
   });
-  const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<
     Partial<Record<keyof SignupFormData, string>>
   >({});
@@ -200,7 +200,7 @@ export default function SignupView() {
   const { trigger: registerTrigger } = useRegister();
 
   const handleSubmit = async () => {
-    setIsLoading(true);
+    showLoading("Creating your account...");
 
     try {
       const body = {
@@ -231,7 +231,7 @@ export default function SignupView() {
       });
       setErrors({ email: "Email already exists or signup failed" });
     } finally {
-      setIsLoading(false);
+      hideLoading();
     }
   };
 
@@ -462,9 +462,8 @@ export default function SignupView() {
             }
           }}
           type="button"
-          disabled={isLoading}
         >
-          {isLoading ? "Creating Account..." : "Create Account"}
+          Create Account
         </Button>
       </form>
 
@@ -499,12 +498,6 @@ export default function SignupView() {
           </Link>
         </p>
       </div>
-
-      {/* Loading Overlay */}
-      <LoadingOverlay
-        isVisible={isLoading}
-        message="Creating your account..."
-      />
     </div>
   );
 }

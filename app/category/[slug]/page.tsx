@@ -1,13 +1,11 @@
-import { CategoryView } from "@/views";
-import React from "react";
+import CategoryView from "@/views/app/home/category/categoryView";
 
-const CategoryPage = async ({
+export default function CategoryPage({
   params,
 }: {
-  params: Promise<{ slug: string }>;
-}) => {
-  const { slug } = await params;
-  return <CategoryView category={slug} />;
-};
+  params: { slug: string };
+}) {
+  const { slug } = params;
 
-export default CategoryPage;
+  return <CategoryView />;
+}

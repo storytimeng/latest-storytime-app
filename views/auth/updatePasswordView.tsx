@@ -9,7 +9,7 @@ import { showToast } from "@/lib/showNotification";
 import { useResetPassword } from "@/src/hooks/useAuth";
 import { useAuthStore } from "@/src/stores/useAuthStore";
 import PasswordTipsModal from "@/components/reusables/customUI/passwordTipsModal";
-import LoadingOverlay from "@/components/reusables/customUI/loadingOverlay";
+import { useLoadingStore } from "@/src/stores/useLoadingStore";
 import { Check, X } from "lucide-react";
 
 interface UpdatePasswordFormData {
@@ -44,12 +44,12 @@ const updatePasswordSchema = z
 
 export default function UpdatePasswordView() {
   const router = useRouter();
+  const { show: showLoading, hide: hideLoading } = useLoadingStore();
   const [formData, setFormData] = useState<UpdatePasswordFormData>({
     newPassword: "",
     confirmPassword: "",
     rememberMe: false,
   });
-  const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<
     Partial<Record<keyof UpdatePasswordFormData, string>>
   >({});
@@ -163,7 +163,7 @@ export default function UpdatePasswordView() {
   const { trigger: resetTrigger } = useResetPassword();
 
   const handleSubmit = async () => {
-    setIsLoading(true);
+    showLoading("Updating your password...");
 
     try {
       const { resetEmail: email = "", resetOtp: otp = "" } =
@@ -186,7 +186,7 @@ export default function UpdatePasswordView() {
       });
       setErrors({ newPassword: "Password update failed" });
     } finally {
-      setIsLoading(false);
+      hideLoading();
     }
   };
 
@@ -273,9 +273,8 @@ export default function UpdatePasswordView() {
               }
             }}
             type="button"
-            disabled={isLoading}
           >
-            {isLoading ? "Updating..." : "Update Password"}
+            Update Password
           </Button>
         </div>
       </form>
@@ -284,12 +283,6 @@ export default function UpdatePasswordView() {
       <PasswordTipsModal
         isOpen={showTipsModal}
         onClose={() => setShowTipsModal(false)}
-      />
-
-      {/* Loading Overlay */}
-      <LoadingOverlay
-        isVisible={isLoading}
-        message="Updating your password..."
       />
     </div>
   );
