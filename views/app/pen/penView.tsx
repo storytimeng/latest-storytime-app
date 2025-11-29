@@ -32,6 +32,15 @@ const mockStories = [
     writingDate: "12-02-2024",
     image: "/images/nature.jpg",
     lastEdited: "2024-01-20",
+    content: "A magical forest adventure.",
+    author: {
+      id: "a1",
+      name: "Author 1",
+      email: "author1@example.com",
+      createdAt: "2024-01-01",
+    },
+    createdAt: "2024-01-01",
+    updatedAt: "2024-01-20",
   },
   {
     id: "2",
@@ -41,6 +50,15 @@ const mockStories = [
     writingDate: "12-02-2024",
     image: "/images/nature.jpg",
     lastEdited: "2024-01-18",
+    content: "An ancient city is discovered.",
+    author: {
+      id: "a2",
+      name: "Author 2",
+      email: "author2@example.com",
+      createdAt: "2024-01-02",
+    },
+    createdAt: "2024-01-02",
+    updatedAt: "2024-01-18",
   },
   {
     id: "3",
@@ -50,6 +68,15 @@ const mockStories = [
     writingDate: "12-02-2024",
     image: "/images/nature.jpg",
     lastEdited: "2024-01-15",
+    content: "A romance story set in wartime.",
+    author: {
+      id: "a3",
+      name: "Author 3",
+      email: "author3@example.com",
+      createdAt: "2024-01-03",
+    },
+    createdAt: "2024-01-03",
+    updatedAt: "2024-01-15",
   },
   {
     id: "4",
@@ -59,6 +86,15 @@ const mockStories = [
     writingDate: "12-02-2024",
     image: "/images/nature.jpg",
     lastEdited: "2024-01-22",
+    content: "A ship lost at sea.",
+    author: {
+      id: "a4",
+      name: "Author 4",
+      email: "author4@example.com",
+      createdAt: "2024-01-04",
+    },
+    createdAt: "2024-01-04",
+    updatedAt: "2024-01-22",
   },
 ];
 
