@@ -591,9 +591,13 @@ export type CreateNotificationDto = {
      */
     type: 'achievement' | 'milestone' | 'admin_message' | 'reminder_read' | 'reminder_write' | 'story_like' | 'story_comment' | 'system';
     /**
-     * The UUID of the user to send the notification to
+     * The UUID of the user to send the notification to (required if email is not provided)
      */
-    userId: string;
+    userId?: string;
+    /**
+     * The email of the user to send the notification to (required if userId is not provided)
+     */
+    email?: string;
     /**
      * Additional metadata (JSON object)
      */
@@ -629,6 +633,14 @@ export type CreateBulkNotificationDto = {
      * Whether to send email notification to all users
      */
     sendEmail?: boolean;
+    /**
+     * Optional list of user emails to send notification to (if not provided, sends to all users)
+     */
+    emails?: Array<string>;
+    /**
+     * Optional list of user IDs to send notification to (if not provided, sends to all users)
+     */
+    userIds?: Array<string>;
 };
 
 export type UsersControllerCheckPenNameAvailabilityData = {
@@ -853,10 +865,25 @@ export type UsersControllerUpdateReadingProgressErrors = {
 
 export type UsersControllerUpdateReadingProgressResponses = {
     /**
-     * Reading progress updated successfully
+     * Reading progress updated successfully. Returns progress data and whether the story was marked as read.
      */
-    200: unknown;
+    200: {
+        message?: string;
+        progress?: {
+            [key: string]: unknown;
+        };
+        /**
+         * Whether the story was marked as read
+         */
+        markedAsRead?: boolean;
+        /**
+         * Reason for marking as read (time_based_300s or progress_100_percent)
+         */
+        reason?: string;
+    };
 };
+
+export type UsersControllerUpdateReadingProgressResponse = UsersControllerUpdateReadingProgressResponses[keyof UsersControllerUpdateReadingProgressResponses];
 
 export type UsersControllerGetAllReadingProgressData = {
     body?: never;
@@ -3043,8 +3070,18 @@ export type AdminControllerSendBulkNotificationResponses = {
      */
     201: {
         message?: string;
+        /**
+         * Number of notifications created for registered users
+         */
         created?: number;
+        /**
+         * Number of failed notifications/emails
+         */
         failed?: number;
+        /**
+         * Number of emails sent to external (non-user) addresses
+         */
+        externalEmailsSent?: number;
     };
 };
 

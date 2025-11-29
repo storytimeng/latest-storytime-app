@@ -98,7 +98,7 @@ export const usersControllerGetReadingProgress = <ThrowOnError extends boolean =
 /**
  * Update reading progress for a story
  *
- * Updates or creates reading progress for the authenticated user. Tracks percentage read, words read, chapters/episodes, and reading time.
+ * Updates or creates reading progress for the authenticated user. Tracks percentage read, words read, chapters/episodes, and reading time. Story will be automatically marked as read when reading time exceeds the configured threshold (default: 5 minutes) or when progress reaches 100%.
  */
 export const usersControllerUpdateReadingProgress = <ThrowOnError extends boolean = false>(options: Options<UsersControllerUpdateReadingProgressData, ThrowOnError>) => (options.client ?? client).post<UsersControllerUpdateReadingProgressResponses, UsersControllerUpdateReadingProgressErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
@@ -843,9 +843,9 @@ export const adminControllerUnsuspendAdmin = <ThrowOnError extends boolean = fal
 });
 
 /**
- * Send notification to a single user (Admin only)
+ * Send notification to a single user or external email (Admin only)
  *
- * Sends a notification to a specific user. Can optionally send email notification as well. Requires admin authentication.
+ * Sends a notification to a specific user (by userId or email). If email is provided and the user is not found, sends email to external address. Can optionally send email notification as well. Requires admin authentication.
  */
 export const adminControllerSendNotification = <ThrowOnError extends boolean = false>(options: Options<AdminControllerSendNotificationData, ThrowOnError>) => (options.client ?? client).post<AdminControllerSendNotificationResponses, AdminControllerSendNotificationErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
@@ -858,9 +858,9 @@ export const adminControllerSendNotification = <ThrowOnError extends boolean = f
 });
 
 /**
- * Send notification to all users (Admin only)
+ * Send notification to all users or specific users (Admin only)
  *
- * Sends a notification to all active users in the system. Can optionally send email notifications as well. Requires admin authentication.
+ * Sends a notification to all active users in the system, or to specific users if emails or userIds are provided. Can optionally send email notifications as well. Requires admin authentication.
  */
 export const adminControllerSendBulkNotification = <ThrowOnError extends boolean = false>(options: Options<AdminControllerSendBulkNotificationData, ThrowOnError>) => (options.client ?? client).post<AdminControllerSendBulkNotificationResponses, AdminControllerSendBulkNotificationErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
