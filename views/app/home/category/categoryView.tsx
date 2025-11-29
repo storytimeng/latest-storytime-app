@@ -4,9 +4,13 @@ import { useParams } from "next/navigation";
 import { PageHeader, StoryGroup, StoriesCarousel } from "@/components/reusables";
 import { useStories } from "@/src/hooks/useStories";
 
-const CategoryView = () => {
+interface CategoryViewProps {
+  categorySlug?: string;
+}
+
+const CategoryView = ({ categorySlug: propSlug }: CategoryViewProps) => {
   const params = useParams();
-  const categorySlug = params?.slug as string;
+  const categorySlug = propSlug || (params?.slug as string);
   
   // Convert slug to readable genre name
   const genreName = categorySlug

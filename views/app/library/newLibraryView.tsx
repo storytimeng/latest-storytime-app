@@ -5,16 +5,7 @@ import { MessageCircle } from "lucide-react";
 import { Magnetik_Bold, Magnetik_Medium, Magnetik_Regular } from "@/lib/font";
 import { StoryCard } from "@/components/reusables";
 
-interface LibraryStory {
-  id: number;
-  title: string;
-  author: string;
-  rating: number;
-  comments: number;
-  genre: string;
-  image: string;
-  status: string;
-}
+import { StoryResponseDto } from "@/src/client/types.gen";
 
 const NewLibraryView = () => {
   const [activeTab, setActiveTab] = useState<"library" | "downloads">(
@@ -22,71 +13,95 @@ const NewLibraryView = () => {
   );
 
   // Mock data - replace with actual data (same format as existing StoryCard expects)
-  const libraryStories: LibraryStory[] = [
+  const libraryStories: StoryResponseDto[] = [
     {
-      id: 1,
+      id: "1",
       title: "The Journalist",
-      author: "Jane Moore",
+      author: { id: "a1", name: "Jane Moore", email: "jane@example.com", createdAt: "" },
+      content: "",
+      genres: ["Thriller"],
+      imageUrl: "/images/nature.jpg",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      // @ts-ignore - extra props used by StoryCard
       rating: 20,
       comments: 5,
-      genre: "Thriller",
-      image: "/images/nature.jpg",
-      status: "Ongoing",
+      storyStatus: "ongoing",
     },
     {
-      id: 2,
+      id: "2",
       title: "The Journalist",
-      author: "Jane Moore",
+      author: { id: "a1", name: "Jane Moore", email: "jane@example.com", createdAt: "" },
+      content: "",
+      genres: ["Thriller"],
+      imageUrl: "/images/nature.jpg",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      // @ts-ignore
       rating: 20,
       comments: 5,
-      genre: "Thriller",
-      image: "/images/nature.jpg",
-      status: "Ongoing",
+      storyStatus: "ongoing",
     },
     {
-      id: 3,
+      id: "3",
       title: "The Journalist",
-      author: "Jane Moore",
+      author: { id: "a1", name: "Jane Moore", email: "jane@example.com", createdAt: "" },
+      content: "",
+      genres: ["Adventure"],
+      imageUrl: "/images/nature.jpg",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      // @ts-ignore
       rating: 20,
       comments: 5,
-      genre: "Adventure",
-      image: "/images/nature.jpg",
-      status: "Ongoing",
+      storyStatus: "ongoing",
     },
     {
-      id: 4,
+      id: "4",
       title: "The Journalist",
-      author: "Jane Moore",
+      author: { id: "a1", name: "Jane Moore", email: "jane@example.com", createdAt: "" },
+      content: "",
+      genres: ["Thriller"],
+      imageUrl: "/images/nature.jpg",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      // @ts-ignore
       rating: 20,
       comments: 5,
-      genre: "Thriller",
-      image: "/images/nature.jpg",
-      status: "Ongoing",
+      storyStatus: "ongoing",
     },
     {
-      id: 5,
+      id: "5",
       title: "The Journalist",
-      author: "Jane Moore",
+      author: { id: "a1", name: "Jane Moore", email: "jane@example.com", createdAt: "" },
+      content: "",
+      genres: ["Thriller"],
+      imageUrl: "/images/nature.jpg",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      // @ts-ignore
       rating: 20,
       comments: 5,
-      genre: "Thriller",
-      image: "/images/nature.jpg",
-      status: "Ongoing",
+      storyStatus: "ongoing",
     },
     {
-      id: 6,
+      id: "6",
       title: "The Journalist",
-      author: "Jane Moore",
+      author: { id: "a1", name: "Jane Moore", email: "jane@example.com", createdAt: "" },
+      content: "",
+      genres: ["Thriller"],
+      imageUrl: "/images/nature.jpg",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      // @ts-ignore
       rating: 20,
       comments: 5,
-      genre: "Thriller",
-      image: "/images/nature.jpg",
-      status: "Ongoing",
+      storyStatus: "ongoing",
     },
   ];
 
   // For downloads, we'll show empty initially but structure is ready
-  const downloadedStories: LibraryStory[] = [];
+  const downloadedStories: StoryResponseDto[] = [];
 
   const currentStories =
     activeTab === "library" ? libraryStories : downloadedStories;

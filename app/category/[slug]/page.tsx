@@ -1,11 +1,11 @@
 import CategoryView from "@/views/app/home/category/categoryView";
 
-export default function CategoryPage({
+export default async function CategoryPage({
   params,
 }: {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }) {
-  const { slug } = params;
+  const { slug } = await params;
 
-  return <CategoryView />;
+  return <CategoryView categorySlug={slug} />;
 }
