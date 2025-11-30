@@ -37,6 +37,10 @@ export function usePopularStories(options: UseStoryCategoryOptions = {}) {
       console.log("✅ usePopularStories: Processed data:", responseData);
 
       return responseData;
+    },
+    {
+      keepPreviousData: true, // Prevent flash when loading next page
+      revalidateOnFocus: false,
     }
   );
 
@@ -58,7 +62,7 @@ export function usePopularStories(options: UseStoryCategoryOptions = {}) {
       const totalPages = data.totalPages || 0;
       setHasMore(currentPage < totalPages);
     }
-  }, [data, currentPage]);
+  }, [data?.stories, currentPage]); // Only depend on data.stories, not entire data object
 
   const loadMore = React.useCallback(() => {
     if (!isLoading && hasMore) {
@@ -106,6 +110,10 @@ export function useRecentlyAddedStories(options: UseStoryCategoryOptions = {}) {
       console.log("✅ useRecentlyAddedStories: Processed data:", responseData);
 
       return responseData;
+    },
+    {
+      keepPreviousData: true,
+      revalidateOnFocus: false,
     }
   );
 
@@ -123,7 +131,7 @@ export function useRecentlyAddedStories(options: UseStoryCategoryOptions = {}) {
       const totalPages = data.totalPages || 0;
       setHasMore(currentPage < totalPages);
     }
-  }, [data, currentPage]);
+  }, [data?.stories, currentPage]);
 
   const loadMore = React.useCallback(() => {
     if (!isLoading && hasMore) {
@@ -171,6 +179,10 @@ export function useTrendingStories(options: UseStoryCategoryOptions = {}) {
       console.log("✅ useTrendingStories: Processed data:", responseData);
 
       return responseData;
+    },
+    {
+      keepPreviousData: true,
+      revalidateOnFocus: false,
     }
   );
 
@@ -188,7 +200,7 @@ export function useTrendingStories(options: UseStoryCategoryOptions = {}) {
       const totalPages = data.totalPages || 0;
       setHasMore(currentPage < totalPages);
     }
-  }, [data, currentPage]);
+  }, [data?.stories, currentPage]);
 
   const loadMore = React.useCallback(() => {
     if (!isLoading && hasMore) {
@@ -241,6 +253,10 @@ export function useOnlyOnStorytimeStories(
       );
 
       return responseData;
+    },
+    {
+      keepPreviousData: true,
+      revalidateOnFocus: false,
     }
   );
 
@@ -258,7 +274,7 @@ export function useOnlyOnStorytimeStories(
       const totalPages = data.totalPages || 0;
       setHasMore(currentPage < totalPages);
     }
-  }, [data, currentPage]);
+  }, [data?.stories, currentPage]);
 
   const loadMore = React.useCallback(() => {
     if (!isLoading && hasMore) {

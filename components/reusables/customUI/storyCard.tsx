@@ -4,6 +4,7 @@ import { Card } from "@heroui/card";
 import { ThumbsUp, Pencil, Trash2 } from "lucide-react";
 import Image from "next/image";
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Magnetik_Regular } from "@/lib/font";
 import { cn } from "@/lib/utils";
 import { StoryResponseDto, AuthorDto } from "@/src/client/types.gen";
@@ -58,14 +59,22 @@ const StoryCard = ({
   const displayImage = story.imageUrl || "/placeholder-image.jpg"; // Fallback image
   const displayGenre = story.genres?.[0] || "Uncategorized";
 
+  const router = useRouter();
+
+  const handleStoryClick = () => {
+    if (!isPenMode) {
+      router.push(`/story/${story.id}`);
+    }
+  };
+
   return (
     <Card
       className={cn(
         "flex-shrink-0 rounded-xl border-none bg-transparent shadow-none space-y-2 relative",
-        isPenMode ? "w-full cursor-pointer" : "w-[160px]",
+        isPenMode ? "w-full cursor-pointer" : "w-[160px] cursor-pointer",
         className
       )}
-      onClick={isPenMode ? handleCardClick : undefined}
+      onClick={isPenMode ? handleCardClick : handleStoryClick}
     >
       <div className="relative group">
         {imageError ? (
