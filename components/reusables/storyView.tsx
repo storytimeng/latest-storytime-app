@@ -118,13 +118,13 @@ const StoryView: React.FC<StoryViewProps> = ({ mode, storyId }) => {
     if (mode === "edit") {
       router.push("/my-stories");
     } else {
-      router.push("/app/pen");
+      router.push("/pen");
     }
   }, [mode, router]);
 
   // Determine page title and back link
   const pageTitle = mode === "edit" ? "Edit Story" : "New Story";
-  const backLink = mode === "edit" ? "/my-stories" : "/app/pen";
+  const backLink = mode === "edit" ? "/my-stories" : "/pen";
 
   // Show loading state while fetching data
   if (mode === "edit" && !dataLoaded) {

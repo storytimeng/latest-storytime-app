@@ -1,5 +1,6 @@
+/**
 import HomeView from "./homeView";
-import OnboardingView from "./onboardingView";
+import OnboardingView from "./auth/onboardingView";
 import ProfileView from "./profileView";
 import SettingsView from "./settingsView";
 import MyStoriesView from "./myStoriesView";
@@ -12,7 +13,7 @@ import EditStoryView from "./pen/editStoryView";
 import PremiumView from "./premiumView";
 import NotificationView from "./notificationView";
 import TestView from "./testView";
-
+ */
 // Auth Views
 import AuthLayoutView from "./auth/authLayoutView";
 import SignupView from "./auth/signupView";
@@ -23,21 +24,12 @@ import SetupView from "./auth/setupView";
 import EmailSentView from "./auth/emailSentView";
 import UpdatePasswordView from "./auth/updatePasswordView";
 import PasswordUpdatedView from "./auth/passwordUpdatedView";
+export * from "./auth";
+export * from "./app";
+export * from "./profile";
+import StoryPreviewView from "./storyPreviewView";
 
 export {
-  HomeView,
-  OnboardingView,
-  ProfileView,
-  SettingsView,
-  MyStoriesView,
-  PenView,
-  NewStoryView,
-  LibraryView,
-  NewLibraryView,
-  StoryPreviewView,
-  EditStoryView,
-  PremiumView,
-  NotificationView,
   AuthLayoutView,
   SignupView,
   LoginView,
@@ -47,5 +39,22 @@ export {
   EmailSentView,
   UpdatePasswordView,
   PasswordUpdatedView,
-  TestView,
+  StoryPreviewView,
+
+  /**
+  HomeView,
+  OnboardingView,
+  ProfileView,
+  SettingsView,
+  MyStoriesView,
+  PenView,
+  NewStoryView,
+  LibraryView,
+  NewLibraryView,
+  EditStoryView,
+  PremiumView,
+  NotificationView,
+  
+  
+  TestView, */
 };

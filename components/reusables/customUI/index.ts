@@ -12,6 +12,7 @@ import PremiumBanner from "./PremiumBanner";
 import ProfileCard from "./ProfileCard";
 import PremiumButton from "./premiumButton";
 import PenStoryCard from "./penStoryCard";
+import { StoriesCarousel } from "./StoriesCarousel";
 
 export {
   Header,
@@ -27,6 +28,7 @@ export {
   ProfileCard,
   PremiumButton,
   PenStoryCard,
+  StoriesCarousel,
 };
 
 export * from "./profile-modals";

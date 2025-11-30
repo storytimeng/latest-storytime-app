@@ -7,9 +7,10 @@ import { FormField, PasswordField } from "@/components/reusables/form";
 import { Button } from "@/components/ui/button";
 import { z } from "zod";
 import { showToast } from "@/lib/showNotification";
+import { useRegister } from "@/src/hooks/useAuth";
 import { Check, X } from "lucide-react";
-import LoadingOverlay from "@/components/reusables/customUI/loadingOverlay";
-import { Select, SelectItem } from "@heroui/react";
+import { useLoadingStore } from "@/src/stores/useLoadingStore";
+import { Select, SelectItem } from "@heroui/select";
 
 interface SignupFormData {
   firstName: string;
@@ -53,6 +54,7 @@ const signupSchema = z.object({
 
 export default function SignupView() {
   const router = useRouter();
+  const { show: showLoading, hide: hideLoading } = useLoadingStore();
   // firstErrorRef removed (not used)
   const [formData, setFormData] = useState<SignupFormData>({
     firstName: "",
@@ -64,7 +66,6 @@ export default function SignupView() {
     password: "",
     agreeToTerms: false,
   });
-  const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<
     Partial<Record<keyof SignupFormData, string>>
   >({});
@@ -196,26 +197,47 @@ export default function SignupView() {
     }
   };
 
+  const { trigger: registerTrigger } = useRegister();
+
   const handleSubmit = async () => {
-    setIsLoading(true);
+    showLoading("Creating your account...");
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      const body = {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        dateOfBirth: `${formData.birthYear}-${formData.birthMonth}-${formData.birthDay}`,
+        password: formData.password,
+        agreement: formData.agreeToTerms,
+      };
 
-      // Navigate to OTP verification
-      router.push("/auth/otp");
-    } catch (error) {
-      console.error("Signup error:", error);
+      await registerTrigger(body);
+
+      showToast({
+        type: "success",
+        message: "Account created — check your email",
+        duration: 3000,
+      });
+      router.push(
+        `/auth/otp?email=${encodeURIComponent(formData.email)}&type=signup`
+      );
+    } catch (err: any) {
+      console.error("Signup error:", err);
+      showToast({
+        type: "error",
+        message: err?.message || "Signup failed",
+        duration: 3000,
+      });
       setErrors({ email: "Email already exists or signup failed" });
     } finally {
-      setIsLoading(false);
+      hideLoading();
     }
   };
 
   return (
     <div className="w-full max-w-md mx-auto">
-      <div className="text-center text-primary-colour body-text-big-bold-auto mb-10">
+      <div className="mb-10 text-center text-primary-colour body-text-big-bold-auto">
         Sign up to continue to Storytime
       </div>
 
@@ -273,8 +295,6 @@ export default function SignupView() {
           />
         </div>
 
-        
-
         {/* Password */}
         <div data-error={!!errors.password} className="pb-2">
           <PasswordField
@@ -320,7 +340,7 @@ export default function SignupView() {
 
         {/* Date of Birth */}
         <div className="space-y-2">
-          <label className="block text-sm body-text-small-medium-auto text-primary-colour mb-2">
+          <label className="block mb-2 text-sm body-text-small-medium-auto text-primary-colour">
             Date of Birth <span className="text-red">*</span>
           </label>
           <div className="grid grid-cols-3 gap-3">
@@ -330,7 +350,9 @@ export default function SignupView() {
                 placeholder="Day"
                 selectedKeys={formData.birthDay ? [formData.birthDay] : []}
                 onSelectionChange={(keys: unknown) => {
-                  const selectedKey = Array.from(keys as Set<string>)[0] as string;
+                  const selectedKey = Array.from(
+                    keys as Set<string>
+                  )[0] as string;
                   handleInputChange("birthDay", selectedKey || "");
                 }}
                 isInvalid={!!errors.birthDay}
@@ -351,7 +373,9 @@ export default function SignupView() {
                 placeholder="Month"
                 selectedKeys={formData.birthMonth ? [formData.birthMonth] : []}
                 onSelectionChange={(keys: unknown) => {
-                  const selectedKey = Array.from(keys as Set<string>)[0] as string;
+                  const selectedKey = Array.from(
+                    keys as Set<string>
+                  )[0] as string;
                   handleInputChange("birthMonth", selectedKey || "");
                 }}
                 isInvalid={!!errors.birthMonth}
@@ -359,9 +383,7 @@ export default function SignupView() {
                 size="lg"
               >
                 {months.map((month) => (
-                  <SelectItem key={month.value}>
-                    {month.label}
-                  </SelectItem>
+                  <SelectItem key={month.value}>{month.label}</SelectItem>
                 ))}
               </Select>
             </div>
@@ -372,7 +394,9 @@ export default function SignupView() {
                 placeholder="Year"
                 selectedKeys={formData.birthYear ? [formData.birthYear] : []}
                 onSelectionChange={(keys: unknown) => {
-                  const selectedKey = Array.from(keys as Set<string>)[0] as string;
+                  const selectedKey = Array.from(
+                    keys as Set<string>
+                  )[0] as string;
                   handleInputChange("birthYear", selectedKey || "");
                 }}
                 isInvalid={!!errors.birthYear}
@@ -380,9 +404,7 @@ export default function SignupView() {
                 size="lg"
               >
                 {years.map((y) => (
-                  <SelectItem key={y.toString()}>
-                    {y.toString()}
-                  </SelectItem>
+                  <SelectItem key={y.toString()}>{y.toString()}</SelectItem>
                 ))}
               </Select>
             </div>
@@ -391,7 +413,7 @@ export default function SignupView() {
 
         {/* Terms Agreement */}
         <div
-          className="flex items-start space-x-3 pt-2"
+          className="flex items-start pt-2 space-x-3"
           data-error={!!errors.agreeToTerms}
         >
           <input
@@ -401,7 +423,7 @@ export default function SignupView() {
             onChange={(e) =>
               handleInputChange("agreeToTerms", e.target.checked)
             }
-            className="w-4 h-4 text-primary-colour  border-light-grey-2 rounded focus:ring-primary-colour focus:ring-2 mt-1"
+            className="w-4 h-4 mt-1 rounded text-primary-colour border-light-grey-2 focus:ring-primary-colour focus:ring-2"
           />
           <label
             htmlFor="agreeToTerms"
@@ -410,22 +432,22 @@ export default function SignupView() {
             Yes, I understand and agree to the Storytime, including the{" "}
             <Link
               href="/terms"
-              className="text-primary-colour hover:underline font-bold"
+              className="font-bold text-primary-colour hover:underline"
             >
               User Agreement
             </Link>{" "}
             and{" "}
             <Link
               href="/privacy"
-              className="text-primary-colour hover:underline font-bold"
+              className="font-bold text-primary-colour hover:underline"
             >
               Privacy Policy
             </Link>
           </label>
           {errors.agreeToTerms && (
             <div className="flex items-center gap-1 mt-1">
-              <X className="w-4 h-4 text-red flex-shrink-0" />
-              <span className="text-red text-xs">{errors.agreeToTerms}</span>
+              <X className="flex-shrink-0 w-4 h-4 text-red" />
+              <span className="text-xs text-red">{errors.agreeToTerms}</span>
             </div>
           )}
         </div>
@@ -440,9 +462,8 @@ export default function SignupView() {
             }
           }}
           type="button"
-          disabled={isLoading}
         >
-          {isLoading ? "Creating Account..." : "Create Account"}
+          Create Account
         </Button>
       </form>
 
@@ -459,30 +480,24 @@ export default function SignupView() {
       <div className="space-y-3">
         <Button
           variant="google"
-          startContent={<div className="w-5 h-5 bg-grey-1 rounded"></div>}
+          startContent={<div className="w-5 h-5 rounded bg-grey-1"></div>}
         >
           Continue with Google
         </Button>
       </div>
 
       {/* Login Link */}
-      <div className="text-center mt-6">
+      <div className="mt-6 text-center">
         <p className="body-text-small-regular text-grey-2">
           Already have an account?{" "}
           <Link
             href="/auth/login"
-            className="text-primary-colour hover:underline font-medium"
+            className="font-medium text-primary-colour hover:underline"
           >
             Login
           </Link>
         </p>
       </div>
-
-      {/* Loading Overlay */}
-      <LoadingOverlay
-        isVisible={isLoading}
-        message="Creating your account..."
-      />
     </div>
   );
 }

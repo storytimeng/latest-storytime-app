@@ -1,7 +1,8 @@
 "use client";
 
 import React from "react";
-import { ModalHeader, ModalBody, Button } from "@heroui/react";
+import { ModalHeader, ModalBody } from "@heroui/modal";
+import { Button } from "@/components/ui/button";
 import { Mail, MessageCircle, Phone } from "lucide-react";
 import { Magnetik_Bold, Magnetik_Medium, Magnetik_Regular } from "@/lib/font";
 

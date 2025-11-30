@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { ModalHeader, ModalBody } from "@heroui/react";
+import { ModalHeader, ModalBody } from "@heroui/modal";
 import { Magnetik_Bold, Magnetik_Medium, Magnetik_Regular } from "@/lib/font";
 
 export const LibraryModal = () => {

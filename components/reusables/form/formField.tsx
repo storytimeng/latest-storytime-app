@@ -1,5 +1,5 @@
 "use client";
-import { Input, InputProps } from "@heroui/react";
+import { Input, InputProps } from "@heroui/input";
 import React, { ReactElement } from "react";
 import { User, AlertCircle } from "lucide-react";
 import { cn } from "@/lib";
@@ -13,6 +13,7 @@ interface FormFieldProps {
   errorMessage?: string;
   size?: "sm" | "md" | "lg";
   startContent?: string | ReactElement;
+  endContent?: string | ReactElement;
   placeholder?: string;
   onValueChange?: (value: string) => void;
   isRequired?: boolean;
@@ -34,6 +35,7 @@ const FormField: React.FC<FormFieldProps> = (props) => {
     errorMessage,
     placeholder,
     startContent,
+    endContent,
     onValueChange,
     isRequired,
     minLen,
@@ -56,7 +58,7 @@ const FormField: React.FC<FormFieldProps> = (props) => {
       id === "email" ||
       placeholder?.toLowerCase().includes("email")
     ) {
-      return <User className="text-grey-1 w-5 h-5" />;
+      return <User className="w-5 h-5 text-grey-1" />;
     }
 
     return null;
@@ -74,10 +76,10 @@ const FormField: React.FC<FormFieldProps> = (props) => {
         aria-live="polite"
       >
         <AlertCircle
-          className="w-4 h-4 text-red flex-shrink-0"
+          className="flex-shrink-0 w-4 h-4 text-red"
           aria-hidden="true"
         />
-        <span className="text-red text-xs">{errorMessage}</span>
+        <span className="text-xs text-red">{errorMessage}</span>
       </div>
     );
   };
@@ -118,6 +120,7 @@ const FormField: React.FC<FormFieldProps> = (props) => {
         isRequired={isRequired}
         placeholder={placeholder}
         startContent={getStartContent()}
+        endContent={endContent}
         onValueChange={onValueChange}
         minLength={minLen}
         maxLength={maxLen}

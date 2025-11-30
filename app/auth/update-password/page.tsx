@@ -1,4 +1,4 @@
-import UpdatePasswordView from "@/views/auth/updatePasswordView";
+import { UpdatePasswordView } from "@/views";
 
 export default function UpdatePasswordPage() {
   return <UpdatePasswordView />;

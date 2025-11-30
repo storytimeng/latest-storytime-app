@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Card } from "@heroui/react";
+import { Card } from "@heroui/card";
 import { Magnetik_Regular, Magnetik_Bold } from "@/lib/font";
 
 interface PremiumBannerProps {

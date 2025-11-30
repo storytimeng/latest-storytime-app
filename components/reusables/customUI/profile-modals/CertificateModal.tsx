@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { ModalHeader, ModalBody } from "@heroui/react";
+import { ModalHeader, ModalBody } from "@heroui/modal";
 import { Magnetik_Bold, Magnetik_Regular } from "@/lib/font";
 
 export const CertificateModal = () => {
@@ -11,8 +11,8 @@ export const CertificateModal = () => {
         <h2 className={`text-xl ${Magnetik_Bold.className}`}>Certificate</h2>
       </ModalHeader>
       <ModalBody className="pb-6">
-        <div className="text-center py-8">
-          <div className="text-6xl mb-4">📜</div>
+        <div className="py-8 text-center">
+          <div className="mb-4 text-6xl">📜</div>
           <p className={`text-grey-3 ${Magnetik_Regular.className}`}>
             No certificate yet
           </p>

@@ -6,4 +6,4 @@ export {
   DropdownMenu as DropdownMenuContent,
   DropdownItem as DropdownMenuItem,
   DropdownSection as DropdownMenuGroup,
-} from "@heroui/react";
+} from "@heroui/dropdown";

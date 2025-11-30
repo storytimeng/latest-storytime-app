@@ -17,7 +17,7 @@ interface PageHeaderProps {
 
 const PageHeader = ({
   title,
-  backLink = "/",
+  backLink = "/home",
   className = "my-[13px]",
   titleClassName = "body-text-small-medium-auto text-primary-colour",
   backButtonClassName = "text-primary-colour",

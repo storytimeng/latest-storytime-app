@@ -1,13 +1,10 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import {
-  Button,
-  Avatar,
-  Select,
-  SelectItem,
-  Slider,
-} from "@heroui/react";
+import { Button } from "@heroui/button";
+import { Avatar } from "@heroui/avatar";
+import { Select, SelectItem } from "@heroui/select";
+import { Slider } from "@heroui/slider";
 import {
   ThumbsUp,
   MessageCircle,
@@ -219,7 +216,7 @@ The archangels rode their horses—Lucifer on his silver stallion, Michael on hi
         }`}
       >
         <div className="flex items-center justify-between w-full">
-          <Link href="/">
+          <Link href="/home">
             <ArrowLeft className="w-6 h-6 text-primary-colour" />
           </Link>
         </div>
@@ -250,15 +247,15 @@ The archangels rode their horses—Lucifer on his silver stallion, Michael on hi
 
         {/* Dropdown Menu - Positioned absolutely */}
         {showDropdown && (
-          <div className="absolute top-full right-4 mt-1 w-40 bg-universal-white rounded-lg shadow-lg border border-light-grey-2 z-50">
+          <div className="absolute z-50 w-40 mt-1 border rounded-lg shadow-lg top-full right-4 bg-universal-white border-light-grey-2">
             <button
-              className="w-full px-4 py-3 text-left text-sm text-primary-colour hover:bg-accent-shade-1 border-b border-light-grey-2"
+              className="w-full px-4 py-3 text-sm text-left border-b text-primary-colour hover:bg-accent-shade-1 border-light-grey-2"
               onClick={() => setShowDropdown(false)}
             >
               Add to library
             </button>
             <button
-              className="w-full px-4 py-3 text-left text-sm text-primary-colour hover:bg-accent-shade-1"
+              className="w-full px-4 py-3 text-sm text-left text-primary-colour hover:bg-accent-shade-1"
               onClick={() => setShowDropdown(false)}
             >
               Save to download
@@ -332,9 +329,9 @@ The archangels rode their horses—Lucifer on his silver stallion, Michael on hi
       </div>
 
       {/* Content */}
-      <div className="px-4 py-6 pt-44 pb-24" ref={scrollContainerRef}>
+      <div className="px-4 py-6 pb-24 pt-44" ref={scrollContainerRef}>
         {/* Story Content */}
-        <div className="space-y-4 mb-6">
+        <div className="mb-6 space-y-4">
           <p
             className={`text-primary-shade-5 text-sm leading-relaxed ${Magnetik_Regular.className}`}
           >
@@ -342,7 +339,7 @@ The archangels rode their horses—Lucifer on his silver stallion, Michael on hi
           </p>
 
           {/* Divider */}
-          <div className="h-px bg-light-grey-2 w-full my-6" />
+          <div className="w-full h-px my-6 bg-light-grey-2" />
 
           {/* Author Section */}
           <div className="flex items-center gap-2 mb-3">
@@ -366,7 +363,7 @@ The archangels rode their horses—Lucifer on his silver stallion, Michael on hi
         </div>
 
         {/* Interaction Section */}
-        <div className="bg-accent-shade-2 rounded-lg p-2 space-y-2">
+        <div className="p-2 space-y-2 rounded-lg bg-accent-shade-2">
           {/* Like and Comment Stats */}
           <div>
             <div className="flex items-center justify-between">
@@ -375,7 +372,7 @@ The archangels rode their horses—Lucifer on his silver stallion, Michael on hi
                   variant="ghost"
                   size="sm"
                   onClick={handleLike}
-                  className="flex items-center gap-1 border-none text-primary-colour p-0 min-w-0"
+                  className="flex items-center min-w-0 gap-1 p-0 border-none text-primary-colour"
                 >
                   <ThumbsUp
                     className={`w-4 h-4 ${
@@ -406,7 +403,7 @@ The archangels rode their horses—Lucifer on his silver stallion, Michael on hi
                   variant="ghost"
                   size="sm"
                   onClick={() => setShowComments(!showComments)}
-                  className="flex items-center gap-1 text-primary-colour p-0 min-w-0 border-none"
+                  className="flex items-center min-w-0 gap-1 p-0 border-none text-primary-colour"
                 >
                   <MessageCircle className="w-4 h-4 text-primary-shade-1" />
                   <span className={`text-xs ${Magnetik_Regular.className}`}>
@@ -423,15 +420,15 @@ The archangels rode their horses—Lucifer on his silver stallion, Michael on hi
             </div>
           </div>
           {/* Divider */}
-          <div className="h-px bg-primary-shade-1 -mx-2" />
+          <div className="h-px -mx-2 bg-primary-shade-1" />
 
           {/* Comments */}
           {showComments && (
-            <div className="space-y-3 px-2 flex flex-col justify-center">
+            <div className="flex flex-col justify-center px-2 space-y-3">
               {comments.map((comment) => (
                 <div
                   key={comment.id}
-                  className="border-t border-light-grey-2 pt-3 first:border-t-0 first:pt-0"
+                  className="pt-3 border-t border-light-grey-2 first:border-t-0 first:pt-0"
                 >
                   <div className="flex items-center gap-2 mb-2">
                     <Avatar
@@ -456,7 +453,7 @@ The archangels rode their horses—Lucifer on his silver stallion, Michael on hi
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-primary-colour border-none text-xs mt-2 p-0"
+                className="p-0 mt-2 text-xs border-none text-primary-colour"
               >
                 Load More
               </Button>
@@ -501,7 +498,7 @@ The archangels rode their horses—Lucifer on his silver stallion, Michael on hi
                 }}
               />
 
-              <div className="flex justify-between items-center">
+              <div className="flex items-center justify-between">
                 <span
                   className={`text-xs text-primary-colour ${Magnetik_Regular.className}`}
                 >
@@ -512,7 +509,7 @@ The archangels rode their horses—Lucifer on his silver stallion, Michael on hi
                   size="sm"
                   variant="ghost"
                   onClick={handleSpeedChange}
-                  className="text-primary-colour min-w-0 px-3 border-none"
+                  className="min-w-0 px-3 border-none text-primary-colour"
                 >
                   <span className={`text-sm ${Magnetik_Medium.className}`}>
                     {playbackSpeed}x
@@ -544,12 +541,12 @@ The archangels rode their horses—Lucifer on his silver stallion, Michael on hi
                 variant="ghost"
                 size="lg"
                 onClick={togglePlayPause}
-                className="bg-complimentary-colour rounded-full flex-shrink-0"
+                className="flex-shrink-0 rounded-full bg-complimentary-colour"
               >
                 {isPlaying ? (
                   <Pause className="w-8 h-8 text-universal-white" />
                 ) : (
-                  <Play className="w-8 h-8 text-universal-white ml-1" />
+                  <Play className="w-8 h-8 ml-1 text-universal-white" />
                 )}
               </Button>
 
@@ -583,7 +580,7 @@ The archangels rode their horses—Lucifer on his silver stallion, Michael on hi
                 variant="ghost"
                 size="lg"
                 onClick={toggleAudioPlayer}
-                className="bg-complimentary-colour rounded-full flex-shrink-0"
+                className="flex-shrink-0 rounded-full bg-complimentary-colour"
               >
                 <Volume2 className="w-8 h-8 text-universal-white fill-universal-white" />
               </Button>

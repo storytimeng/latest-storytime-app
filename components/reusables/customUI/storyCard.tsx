@@ -1,26 +1,16 @@
 "use client";
 
-import { Card } from "@heroui/react";
+import { Card } from "@heroui/card";
 import { ThumbsUp, Pencil, Trash2 } from "lucide-react";
 import Image from "next/image";
 import React, { useState } from "react";
 import { Magnetik_Regular } from "@/lib/font";
 import { cn } from "@/lib/utils";
+import { StoryResponseDto, AuthorDto } from "@/src/client/types.gen";
 
-interface Story {
-  id: number | string;
-  title: string;
-  author?: string;
-  rating?: number;
-  comments?: number;
-  genre: string;
-  image: string;
-  status: string;
-  writingDate?: string;
-}
-
+// Use the generated type directly, or extend it if needed for UI-specific props
 interface StoryCardProps {
-  story: Story;
+  story: StoryResponseDto;
   className?: string;
   mode?: "default" | "pen";
   onEdit?: (storyId: string | number) => void;
@@ -50,27 +40,10 @@ const StoryCard = ({
     onDelete?.(story.id);
   };
 
-  const getInitials = (author: string) =>
-    !author || author === "Anonymous"
-      ? "A"
-      : author
-          .split(" ")
-          .map((n) => n[0])
-          .join("")
-          .toUpperCase();
-
-  const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case "ongoing":
-        return "text-orange-600";
-      case "completed":
-        return "text-green-600";
-      case "draft":
-        return "text-red-500";
-      default:
-        return "text-black";
-    }
-  };
+  // Safe access to author name - cast to any because generated AuthorDto might be missing penName
+  const authorName = (story.author as any)?.penName || story.author?.name || "Anonymous";
+  const displayImage = story.imageUrl || "/placeholder-image.jpg"; // Fallback image
+  const displayGenre = story.genres?.[0] || "Uncategorized";
 
   return (
     <Card
@@ -93,16 +66,17 @@ const StoryCard = ({
           </div>
         ) : (
           <Image
-            src={story.image}
+            src={displayImage}
             alt={story.title}
-            width={400}
-            height={300}
+            width={200}
+            height={150}
             className={cn(
               "w-full object-cover rounded-lg transition-transform group-hover:scale-[1.03]",
               isPenMode ? "aspect-[10/9]" : "h-28"
             )}
             onError={handleImageError}
             loading="lazy"
+            sizes="(max-width: 768px) 160px, 200px"
           />
         )}
 
@@ -114,12 +88,12 @@ const StoryCard = ({
             isPenMode ? "top-3 left-3" : "top-2 right-2"
           )}
         >
-          {story.genre}
+          {displayGenre}
         </div>
 
         {/* Action buttons for pen mode */}
         {isPenMode && (
-          <div className="absolute right-2 top-2 flex flex-col gap-2">
+          <div className="absolute flex flex-col gap-2 right-2 top-2">
             {onEdit && (
               <button
                 onClick={handleEdit}
@@ -146,76 +120,102 @@ const StoryCard = ({
         <div className="flex items-center gap-2">
           <h3
             className={cn(
-              "truncate text-sm font-semibold text-[#361B17] flex-1",
+              "truncate text-sm font-semibold text-[#361B17] flex-1"
             )}
           >
             {story.title}
           </h3>
+          {/* Note: storyStatus might not be available on all story objects depending on the endpoint */}
           <span
             className={cn(
               "text-xs px-2 py-0.5 rounded-full",
-              getStatusColor(story.status),
+              getStatusColor((story as any).storyStatus || (story as any).status),
               Magnetik_Regular.className
             )}
           >
-            ({story.status})
+            ({(story as any).storyStatus || (story as any).status || "Unknown"})
           </span>
         </div>
 
         {isPenMode ? (
           <>
             {/* Writing Date (Pen Mode Only) */}
-            {story.writingDate && (
+            {story.createdAt && (
               <p
                 className={cn(
                   "text-[#361B17] text-xs",
                   Magnetik_Regular.className
                 )}
               >
-                Writing date: {story.writingDate}
+                Writing date: {new Date(story.createdAt).toLocaleDateString()}
               </p>
             )}
           </>
         ) : (
           <>
             {/* Likes + Comments */}
-            {story.rating !== undefined && story.comments !== undefined && (
-              <div className="flex items-center gap-3 text-xs text-[#361B17]">
-                <div className="flex items-center gap-1">
-                  <ThumbsUp className="w-3 h-3 fill-[#F8951D] text-[#F8951D]" />
-                  <span className={Magnetik_Regular.className}>
-                    ({story.rating})
-                  </span>
-                </div>
+            {/* Note: These fields might need to be added to StoryResponseDto or handled if missing */}
+            <div className="flex items-center gap-3 text-xs text-[#361B17]">
+              <div className="flex items-center gap-1">
+                <ThumbsUp className="w-3 h-3 fill-[#F8951D] text-[#F8951D]" />
                 <span className={Magnetik_Regular.className}>
-                  {story.comments} Comments
+                  ({(story as any).rating || 0})
                 </span>
               </div>
-            )}
+              <span className={Magnetik_Regular.className}>
+                {(story as any).comments || 0} Comments
+              </span>
+            </div>
 
             {/* Author */}
-            {story.author && (
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 bg-[#FFEBD0] rounded-full flex items-center justify-center">
-                  <span className="text-[8px] text-[#361B17] font-bold">
-                    {getInitials(story.author)}
-                  </span>
-                </div>
-                <span
-                  className={cn(
-                    "text-[#361B17] text-xs",
-                    Magnetik_Regular.className
-                  )}
-                >
-                  By {story.author}
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 bg-[#FFEBD0] rounded-full flex items-center justify-center">
+                <span className="text-[8px] text-[#361B17] font-bold">
+                  {getInitials(authorName)}
                 </span>
               </div>
-            )}
+              <span
+                className={cn(
+                  "text-[#361B17] text-xs",
+                  Magnetik_Regular.className
+                )}
+              >
+                By {authorName}
+              </span>
+            </div>
           </>
         )}
       </div>
     </Card>
   );
 };
+
+// Helper functions moved outside component to prevent recreation on render
+function getInitials(name: string) {
+  if (!name || name.trim() === "" || name === "Anonymous") {
+    return "A";
+  }
+  return name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase();
+}
+
+function getStatusColor(status: string | undefined) {
+  if (!status) return "text-gray-500";
+  switch (status.toLowerCase()) {
+    case "complete":
+    case "completed":
+      return "text-green-600";
+    case "ongoing":
+      return "text-orange-600";
+    case "draft":
+    case "drafts":
+      return "text-red-500";
+    default:
+      return "text-black";
+  }
+}
 
 export default StoryCard;

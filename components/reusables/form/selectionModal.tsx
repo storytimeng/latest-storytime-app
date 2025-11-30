@@ -1,15 +1,10 @@
 "use client";
 
 import React from "react";
-import {
-  Modal,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  Button,
-  Input,
-  Switch,
-} from "@heroui/react";
+import { Modal, ModalContent, ModalHeader, ModalBody } from "@heroui/modal";
+import { Switch } from "@heroui/switch";
+import { Input } from "@heroui/input";
+import { Button } from "@heroui/button";
 import { Search, ChevronLeft } from "lucide-react";
 import { cn } from "@/lib";
 
@@ -68,9 +63,9 @@ const SelectionModal: React.FC<SelectionModalProps> = ({
         {() => (
           <>
             <div>
-              <ChevronLeft onClick={closeHandler} className="ms-2 mt-3" />
+              <ChevronLeft onClick={closeHandler} className="mt-3 ms-2" />
             </div>
-            <ModalHeader className="flex flex-col gap-1 justify-center text-center pt-4 pb-8">
+            <ModalHeader className="flex flex-col justify-center gap-1 pt-4 pb-8 text-center">
               <h1 className={cn("text-xl w-[95%] m-auto")}>{title}</h1>
             </ModalHeader>
             <ModalBody>
@@ -87,13 +82,15 @@ const SelectionModal: React.FC<SelectionModalProps> = ({
                   <Input
                     placeholder={placeholder}
                     value={searchQuery}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => onSearchChange(e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      onSearchChange(e.target.value)
+                    }
                     disabled={openToAll}
-                    startContent={<Search className=" text-gray-500 h-4 w-4" />}
+                    startContent={<Search className="w-4 h-4 text-gray-500 " />}
                   />
                 </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 pb-16">
+                <div className="grid grid-cols-2 gap-4 pb-16 md:grid-cols-3">
                   {filteredOptions.map((option) => (
                     <Button
                       key={option}
@@ -116,9 +113,9 @@ const SelectionModal: React.FC<SelectionModalProps> = ({
                   ))}
                 </div>
 
-                <div className="fixed bottom-4 left-0 right-0 mx-8">
+                <div className="fixed left-0 right-0 mx-8 bottom-4">
                   <Button
-                    className="w-full bg-primary text-white mt-8 py-6 rounded-full"
+                    className="w-full py-6 mt-8 text-white rounded-full bg-primary"
                     onPress={onNextClick}
                   >
                     Continue

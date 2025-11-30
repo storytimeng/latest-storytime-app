@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { ModalHeader, ModalBody } from "@heroui/react";
+import { ModalHeader, ModalBody } from "@heroui/modal";
 import { Magnetik_Bold, Magnetik_Regular } from "@/lib/font";
 
 interface DefaultModalProps {
@@ -19,8 +19,8 @@ export const DefaultModal: React.FC<DefaultModalProps> = ({
         <h2 className={`text-xl ${Magnetik_Bold.className}`}>{title}</h2>
       </ModalHeader>
       <ModalBody className="pb-6">
-        <div className="text-center py-8">
-          <div className="text-6xl mb-4">{icon}</div>
+        <div className="py-8 text-center">
+          <div className="mb-4 text-6xl">{icon}</div>
           <p className={`text-grey-3 ${Magnetik_Regular.className}`}>
             Coming soon...
           </p>

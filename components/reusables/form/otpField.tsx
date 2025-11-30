@@ -1,7 +1,7 @@
 "use client";
 import React, { ChangeEvent, ReactElement } from "react";
 import { cn, Magnetik_Medium } from "@/lib";
-import { InputOtp } from "@heroui/react";
+import { InputOtp } from "@heroui/input-otp";
 
 interface OtpFieldProps {
   label: string;
@@ -72,7 +72,7 @@ const OtpField: React.FC<OtpFieldProps> = ({
         }}
       />
       {isInvalid && (
-        <div className="text-red-500 text-xs text-center">{errorMessage}</div>
+        <div className="text-xs text-center text-red-500">{errorMessage}</div>
       )}
     </div>
   );

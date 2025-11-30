@@ -2,7 +2,7 @@
 import React from "react";
 import { cn, Magnetik_Medium } from "@/lib";
 import { Label } from "@/components/ui/label";
-import { Select, SelectItem } from "@heroui/react";
+import { Select, SelectItem } from "@heroui/select";
 import { ChevronDown } from "lucide-react";
 
 interface SelectFieldProps {
@@ -11,7 +11,7 @@ interface SelectFieldProps {
   id?: string;
   isInvalid?: boolean;
   errorMessage?: string;
-  placeholder: string;
+  placeholder?: string;
   reqValue?: string;
   onChange: (value: string | string[]) => void;
   required?: boolean;
@@ -61,7 +61,7 @@ const SelectField: React.FC<SelectFieldProps> = ({
         size="lg"
         variant="flat"
         endContent={
-          <div className=" rounded-md p-1 ml-4 bg-gray-100">
+          <div className="p-1 ml-4 bg-gray-100 rounded-md ">
             <ChevronDown className="w-4 h-4 text-gray-500" />
           </div>
         }
@@ -76,13 +76,13 @@ const SelectField: React.FC<SelectFieldProps> = ({
         {options.map((option) => (
           <SelectItem
             key={option.value}
-            className="bg-white rounded-md py-2 px-2 hover:bg-complimentary-shade-2"
+            className="px-2 py-2 bg-white rounded-md hover:bg-complimentary-shade-2"
           >
             {option.label}
           </SelectItem>
         ))}
       </Select>
-      {isInvalid && <div className="text-red-500 text-xs">{errorMessage}</div>}
+      {isInvalid && <div className="text-xs text-red-500">{errorMessage}</div>}
     </div>
   );
 };

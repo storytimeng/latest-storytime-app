@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Button as HeroUIButton } from "@heroui/react";
+import { Button as HeroUIButton } from "@heroui/button";
 import { Magnetik_Regular } from "@/lib/font";
 import { cn } from "@/lib/utils";
 

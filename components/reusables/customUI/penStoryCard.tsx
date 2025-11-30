@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Button } from "@heroui/react";
+import { Button } from "@heroui/button";
 import Image from "next/image";
 import { Magnetik_Medium, Magnetik_Regular } from "@/lib/font";
 import { cn } from "@/lib/utils";
@@ -79,7 +79,7 @@ const PenStoryCard: React.FC<PenStoryCardProps> = ({
         {/* Story Cover */}
         <div className="relative aspect-[3/4] rounded-lg overflow-hidden bg-light-grey-2 group">
           {imageError ? (
-            <div className="w-full h-full bg-light-grey-2 flex items-center justify-center">
+            <div className="flex items-center justify-center w-full h-full bg-light-grey-2">
               <span className="text-2xl">📖</span>
             </div>
           ) : (
@@ -94,12 +94,12 @@ const PenStoryCard: React.FC<PenStoryCardProps> = ({
           )}
 
           {/* Action buttons */}
-          <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="absolute flex gap-1 transition-opacity opacity-0 top-2 right-2 group-hover:opacity-100">
             <Button
               isIconOnly
               size="sm"
               variant="solid"
-              className="bg-orange-500 hover:bg-orange-600 text-white min-w-6 w-6 h-6"
+              className="w-6 h-6 text-white bg-orange-500 hover:bg-orange-600 min-w-6"
               onClick={handleEdit}
             >
               ✏️
@@ -108,7 +108,7 @@ const PenStoryCard: React.FC<PenStoryCardProps> = ({
               isIconOnly
               size="sm"
               variant="solid"
-              className="bg-red-500 hover:bg-red-600 text-white min-w-6 w-6 h-6"
+              className="w-6 h-6 text-white bg-red-500 hover:bg-red-600 min-w-6"
               onClick={handleDelete}
             >
               🗑️
@@ -143,7 +143,7 @@ const PenStoryCard: React.FC<PenStoryCardProps> = ({
               isIconOnly
               size="sm"
               variant="ghost"
-              className="text-orange-500 hover:bg-orange-50 min-w-6 w-6 h-6"
+              className="w-6 h-6 text-orange-500 hover:bg-orange-50 min-w-6"
               onClick={handleEdit}
             >
               ✏️
@@ -160,7 +160,7 @@ const PenStoryCard: React.FC<PenStoryCardProps> = ({
               isIconOnly
               size="sm"
               variant="ghost"
-              className="text-red-500 hover:bg-red-50 min-w-6 w-6 h-6"
+              className="w-6 h-6 text-red-500 hover:bg-red-50 min-w-6"
               onClick={handleDelete}
             >
               🗑️

@@ -2,16 +2,17 @@
 
 import React, { useState, useCallback, useRef } from "react";
 import {
-  Button,
   Modal,
   ModalContent,
   ModalHeader,
   ModalBody,
   ModalFooter,
-} from "@heroui/react";
+} from "@heroui/modal";
+import { Button } from "@heroui/button";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import FormField from "./formField";
+import { showToast } from "@/lib/showNotification";
 
 interface ImageUploadProps {
   value?: string;
@@ -79,7 +80,11 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
       if (file) {
         // Check if file is an image
         if (!file.type.startsWith("image/")) {
-          alert("Please select an image file");
+          showToast({
+            type: "error",
+            message: "Please select an image file",
+            duration: 3000,
+          });
           return;
         }
 
@@ -131,7 +136,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
       <div className={cn("relative", aspectRatioClass, className)}>
         {value ? (
           // Display selected image
-          <div className="relative w-full h-full rounded-lg overflow-hidden bg-light-grey-2 group">
+          <div className="relative w-full h-full overflow-hidden rounded-lg bg-light-grey-2 group">
             {/* Clickable image for full-screen preview */}
             <div
               className="w-full h-full cursor-pointer"
@@ -149,9 +154,9 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
             </div>
 
             {/* Hover overlay with action buttons */}
-            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-              <div className="bg-black/50 rounded-full px-3 py-1">
-                <span className="text-white text-sm font-medium">
+            <div className="absolute inset-0 flex items-center justify-center transition-colors opacity-0 bg-black/0 group-hover:bg-black/20 group-hover:opacity-100">
+              <div className="px-3 py-1 rounded-full bg-black/50">
+                <span className="text-sm font-medium text-white">
                   Tap to preview
                 </span>
               </div>
@@ -160,7 +165,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
             {/* Change cover button - positioned like in the image */}
             <Button
               variant="solid"
-              className="absolute bottom-4 right-4 bg-orange-500 hover:bg-orange-600 text-white flex items-center gap-2 shadow-lg"
+              className="absolute flex items-center gap-2 text-white bg-orange-500 shadow-lg bottom-4 right-4 hover:bg-orange-600"
               size="sm"
               onClick={(e) => {
                 e.stopPropagation(); // Prevent triggering the image click
@@ -177,7 +182,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
               isIconOnly
               variant="solid"
               size="sm"
-              className="absolute top-2 right-2 bg-red-500 hover:bg-red-600 text-white shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
+              className="absolute text-white transition-opacity bg-red-500 shadow-lg opacity-0 top-2 right-2 hover:bg-red-600 group-hover:opacity-100"
               onClick={(e) => {
                 e.stopPropagation();
                 handleRemoveImage();
@@ -188,7 +193,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
           </div>
         ) : (
           // Display upload placeholder
-          <div className="w-full h-full bg-accent-colour rounded-lg flex items-center justify-center cursor-pointer hover:bg-accent-colour/80 transition-colors">
+          <div className="flex items-center justify-center w-full h-full transition-colors rounded-lg cursor-pointer bg-accent-colour hover:bg-accent-colour/80">
             <Button
               variant="ghost"
               className="flex items-center gap-2 text-complimentary-colour"
@@ -218,13 +223,13 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
           {modalMode === "preview" ? (
             // Full-screen preview mode
             <>
-              <ModalHeader className="flex items-center justify-between bg-black text-white">
+              <ModalHeader className="flex items-center justify-between text-white bg-black">
                 <h3 className="text-lg font-semibold">Cover Image Preview</h3>
                 <div className="flex gap-2">
                   <Button
                     variant="solid"
                     size="sm"
-                    className="bg-orange-500 hover:bg-orange-600 text-white"
+                    className="text-white bg-orange-500 hover:bg-orange-600"
                     onClick={() => setModalMode("upload")}
                   >
                     🖼️ Change Image
@@ -265,7 +270,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
               <ModalBody className="space-y-6">
                 {/* File Upload Section */}
                 <div>
-                  <h4 className="font-medium text-primary-colour mb-3">
+                  <h4 className="mb-3 font-medium text-primary-colour">
                     Upload from Device
                   </h4>
                   <input
@@ -277,7 +282,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
                   />
                   <Button
                     variant="bordered"
-                    className="w-full h-20 border-dashed border-2 border-complimentary-colour/50 text-complimentary-colour hover:bg-complimentary-colour/5"
+                    className="w-full h-20 border-2 border-dashed border-complimentary-colour/50 text-complimentary-colour hover:bg-complimentary-colour/5"
                     onClick={() => fileInputRef.current?.click()}
                   >
                     <div className="flex flex-col items-center gap-2">
@@ -292,7 +297,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
 
                 {/* URL Input Section */}
                 <div>
-                  <h4 className="font-medium text-primary-colour mb-3">
+                  <h4 className="mb-3 font-medium text-primary-colour">
                     Or Add from URL
                   </h4>
                   <div className="space-y-3">
@@ -320,10 +325,10 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
                 {/* Preview Section */}
                 {previewUrl && (
                   <div>
-                    <h4 className="font-medium text-primary-colour mb-3">
+                    <h4 className="mb-3 font-medium text-primary-colour">
                       Preview
                     </h4>
-                    <div className="relative aspect-video rounded-lg overflow-hidden bg-light-grey-2 max-w-md mx-auto">
+                    <div className="relative max-w-md mx-auto overflow-hidden rounded-lg aspect-video bg-light-grey-2">
                       <Image
                         src={previewUrl}
                         alt="Preview"

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Button } from "@heroui/react";
+import { Button } from "@heroui/button";
 import { ArrowLeft, Edit } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -46,7 +46,7 @@ They knew this was the general assembly where Elohim would finally share his upc
   return (
     <div className="min-h-screen bg-accent-shade-1 max-w-[28rem] mx-auto relative">
       {/* Header with Background Image */}
-      <div className="relative h-80 overflow-hidden">
+      <div className="relative overflow-hidden h-80">
         <Image
           src={story.coverImage}
           alt={story.title}
@@ -57,7 +57,7 @@ They knew this was the general assembly where Elohim would finally share his upc
         <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/40 to-black/60" />
 
         {/* Header Controls */}
-        <div className="absolute top-5 left-4 right-4 flex items-center justify-between z-10">
+        <div className="absolute z-10 flex items-center justify-between top-5 left-4 right-4">
           <Link href="/my-stories">
             <ArrowLeft className="w-6 h-6 text-universal-white" />
           </Link>
@@ -110,7 +110,7 @@ They knew this was the general assembly where Elohim would finally share his upc
             </div>
 
             {/* Divider */}
-            <div className="h-px bg-light-grey-2 my-4" />
+            <div className="h-px my-4 bg-light-grey-2" />
 
             {/* Description */}
             <div className="space-y-4">

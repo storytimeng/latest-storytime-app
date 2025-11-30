@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, forwardRef } from "react";
-import { Button as BaseButton, PressEvent } from "@heroui/react";
+import { Button as BaseButton, PressEvent } from "@heroui/button";
 
 type Variant =
   | "primary"

@@ -1,7 +1,9 @@
 "use client";
 
 import React, { useState, useCallback } from "react";
-import { Button, Switch, Select, SelectItem } from "@heroui/react";
+import { Button } from "@heroui/button";
+import { Select, SelectItem } from "@heroui/select";
+import { Switch } from "@heroui/switch";
 // Icons will be replaced with text/emoji alternatives
 import { Magnetik_Bold, Magnetik_Medium, Magnetik_Regular } from "@/lib/font";
 import FormField from "./formField";
@@ -53,7 +55,7 @@ const StoryBriefModal: React.FC<StoryBriefModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-end justify-center z-50">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50">
       <div className="bg-universal-white rounded-t-2xl w-full max-w-[28rem] p-6 space-y-6">
         <div className="flex items-center justify-between">
           <h2
@@ -135,7 +137,7 @@ const StoryBriefModal: React.FC<StoryBriefModalProps> = ({
             </div>
           </div>
 
-          <div className="bg-complimentary-colour/10 p-4 rounded-lg">
+          <div className="p-4 rounded-lg bg-complimentary-colour/10">
             <p
               className={`text-complimentary-colour text-sm ${Magnetik_Regular.className}`}
             >
@@ -169,7 +171,7 @@ const AdditionalInfoModal: React.FC<AdditionalInfoModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-end justify-center z-50">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50">
       <div className="bg-universal-white rounded-t-2xl w-full max-w-[28rem] p-6 space-y-6">
         <div className="flex items-center justify-between">
           <h2
@@ -203,7 +205,7 @@ const AdditionalInfoModal: React.FC<AdditionalInfoModalProps> = ({
               color="warning"
               classNames={{
                 wrapper: "group-data-[selected=true]:bg-primary-shade-6",
-                thumb: "group-data-[selected=true]:bg-universal-white"
+                thumb: "group-data-[selected=true]:bg-universal-white",
               }}
             />
             <span
@@ -294,7 +296,10 @@ const StoryForm: React.FC<StoryFormProps> = ({
 
   // Handle form field changes
   const handleFieldChange = useCallback(
-    (field: keyof StoryFormData, value: string | number | boolean | string[]) => {
+    (
+      field: keyof StoryFormData,
+      value: string | number | boolean | string[]
+    ) => {
       setFormData((prev) => ({ ...prev, [field]: value }));
       // Clear error when user starts typing
       if (formErrors[field]) {
@@ -311,8 +316,8 @@ const StoryForm: React.FC<StoryFormProps> = ({
       selectedGenres: prev.selectedGenres.includes(genre)
         ? prev.selectedGenres.filter((g) => g !== genre)
         : prev.selectedGenres.length < 3
-        ? [...prev.selectedGenres, genre]
-        : prev.selectedGenres, // Limit to 3 genres
+          ? [...prev.selectedGenres, genre]
+          : prev.selectedGenres, // Limit to 3 genres
     }));
   }, []);
 
@@ -406,8 +411,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
       {/* Cover Image */}
       {renderCoverImage()}
 
-      
-        {/* Story Title */}
+      {/* Story Title */}
       <FormField
         label="Story Title"
         type="text"
@@ -463,16 +467,14 @@ const StoryForm: React.FC<StoryFormProps> = ({
               <button
                 key={genre}
                 onClick={() => handleGenreToggle(genre)}
-                disabled={
-                  !isSelected && formData.selectedGenres.length >= 3
-                }
+                disabled={!isSelected && formData.selectedGenres.length >= 3}
                 className={cn(
                   "relative whitespace-nowrap flex-shrink-0 transition-all duration-200 ease-in-out",
                   "px-2 py-1 rounded-lg min-w-[70px] text-center text-xs",
                   Magnetik_Regular.className,
                   isSelected ? "shadow-lg" : "",
-                  !isSelected && formData.selectedGenres.length >= 3 
-                    ? "opacity-50 cursor-not-allowed" 
+                  !isSelected && formData.selectedGenres.length >= 3
+                    ? "opacity-50 cursor-not-allowed"
                     : "cursor-pointer"
                 )}
                 style={{
@@ -490,7 +492,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
                 {/* check-in-circle top-right */}
                 {isSelected && (
                   <span
-                    className="absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center bg-white"
+                    className="absolute flex items-center justify-center w-4 h-4 bg-white rounded-full -top-1 -right-1"
                     style={{ border: "2px solid #f28a20" }}
                   >
                     <svg
@@ -517,7 +519,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
           })}
         </div>
         {formErrors.selectedGenres && (
-          <p className="text-red-500 text-xs mt-1">
+          <p className="mt-1 text-xs text-red-500">
             {formErrors.selectedGenres}
           </p>
         )}
@@ -567,7 +569,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
               }
               classNames={{
                 wrapper: "group-data-[selected=true]:bg-primary-shade-6",
-                thumb: "group-data-[selected=true]:bg-universal-white"
+                thumb: "group-data-[selected=true]:bg-universal-white",
               }}
             />
           </div>
@@ -614,7 +616,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
           {chapters.map((chapter, index) => (
             <div
               key={chapter.id}
-              className="space-y-4 p-4 bg-white rounded-lg shadow-sm"
+              className="p-4 space-y-4 bg-white rounded-lg shadow-sm"
             >
               <FormField
                 label={`Chapter ${chapter.id} Title`}
@@ -681,7 +683,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
               {index === chapters.length - 1 && (
                 <Button
                   variant="ghost"
-                  className="w-full flex items-center gap-2 text-complimentary-colour border border-dashed border-complimentary-colour"
+                  className="flex items-center w-full gap-2 border border-dashed text-complimentary-colour border-complimentary-colour"
                   onClick={addChapter}
                 >
                   <span className={Magnetik_Medium.className}>
@@ -697,7 +699,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
           {parts.map((part, index) => (
             <div
               key={part.id}
-              className="space-y-4 p-4 bg-white rounded-lg shadow-sm"
+              className="p-4 space-y-4 bg-white rounded-lg shadow-sm"
             >
               <FormField
                 label="Part Title"
@@ -735,7 +737,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
               {index === parts.length - 1 && (
                 <Button
                   variant="ghost"
-                  className="w-full flex items-center gap-2 text-complimentary-colour border border-dashed border-complimentary-colour"
+                  className="flex items-center w-full gap-2 border border-dashed text-complimentary-colour border-complimentary-colour"
                   onClick={addPart}
                 >
                   <span className={Magnetik_Medium.className}>+ Add Part</span>
@@ -804,7 +806,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
   };
 
   return (
-    <div className="space-y-6 pb-24">
+    <div className="pb-24 space-y-6">
       {/* Main Form Content */}
       {currentStep === "form" && renderFormFields()}
       {currentStep === "writing" && renderWritingInterface()}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import SingleStory from "@/views/story/singleStory";
+import { SingleStory } from "@/views";
 
 export default function StoryPage() {
   const params = useParams();

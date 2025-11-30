@@ -1,7 +1,9 @@
-import { HomeView } from "@/views";
+import { AuthView, AuthLayoutView } from "@/views";
 
-export default function Home() {
+export default function AuthPage() {
   return (
-   <HomeView />
+    <AuthLayoutView>
+      <AuthView />
+    </AuthLayoutView>
   );
 }

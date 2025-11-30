@@ -1,6 +1,6 @@
 "use client";
 
-import { ScrollShadow } from "@heroui/react";
+import { ScrollShadow } from "@heroui/scroll-shadow";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import React from "react";
@@ -8,20 +8,11 @@ import { Magnetik_Bold } from "@/lib/font";
 import { cn } from "@/lib/utils";
 import StoryCard from "./storyCard";
 
-interface Story {
-  id: number;
-  title: string;
-  author: string;
-  rating: number;
-  comments: number;
-  genre: string;
-  image: string;
-  status: string;
-}
+import { StoryResponseDto } from "@/src/client/types.gen";
 
 interface StoryGroupProps {
   title?: string;
-  stories: Story[];
+  stories: StoryResponseDto[];
   showSeeAll?: boolean;
   categorySlug?: string;
   className?: string;
@@ -73,14 +64,12 @@ const StoryGroup = ({
     <div className={cn("", className)}>
       {title && (
         <div className="flex items-center justify-between mb-2">
-          <h2 className={`body-text-small-medium-auto text-black`}>
-            {title}
-          </h2>
+          <h2 className={`body-text-small-medium-auto text-black`}>{title}</h2>
           {showSeeAll && categorySlug && (
             <Button
               variant="ghost"
               className={`text-grey-2 body-text-smallest-medium-auto`}
-              onPress={() => router.push(`/app/category/${categorySlug}`)}
+              onPress={() => router.push(`/category/${categorySlug}`)}
             >
               See all
             </Button>

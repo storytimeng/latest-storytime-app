@@ -1,5 +1,4 @@
-import OtpView from "@/views/auth/otpView";
-
+import { OtpView } from "@/views";
 export default function OtpPage() {
   return <OtpView />;
 }

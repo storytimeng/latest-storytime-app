@@ -1,7 +1,8 @@
 "use client";
 
 import React from "react";
-import { ModalHeader, ModalBody, Switch } from "@heroui/react";
+import { ModalHeader, ModalBody } from "@heroui/modal";
+import { Switch } from "@heroui/switch";
 import { Magnetik_Bold, Magnetik_Medium, Magnetik_Regular } from "@/lib/font";
 
 const SecurityModal = () => {

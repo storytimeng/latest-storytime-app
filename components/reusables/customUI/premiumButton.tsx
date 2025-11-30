@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Button } from "@heroui/react";
+import { Button } from "@heroui/button";
 import { Crown } from "lucide-react";
 import Link from "next/link";
 import { Magnetik_Medium } from "@/lib/font";
@@ -12,14 +12,14 @@ interface PremiumButtonProps {
   children?: React.ReactNode;
 }
 
-const PremiumButton: React.FC<PremiumButtonProps> = ({ 
-  variant = "default", 
+const PremiumButton: React.FC<PremiumButtonProps> = ({
+  variant = "default",
   className = "",
-  children 
+  children,
 }) => {
   const getButtonContent = () => {
     if (children) return children;
-    
+
     switch (variant) {
       case "small":
         return (

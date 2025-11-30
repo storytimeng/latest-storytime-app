@@ -1,6 +1,6 @@
 "use client";
 
-import { Button } from "@heroui/react";
+import { Button } from "@heroui/button";
 import { Edit, Trash2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -73,7 +73,7 @@ const MyStoriesCard = ({
         {/* Story Cover */}
         <div className="relative aspect-[3/4] rounded-lg overflow-hidden bg-light-grey-2">
           {imageError ? (
-            <div className="w-full h-full bg-light-grey-2 flex items-center justify-center">
+            <div className="flex items-center justify-center w-full h-full bg-light-grey-2">
               <span className="text-xs text-primary-shade-4">No image</span>
             </div>
           ) : (
@@ -88,12 +88,12 @@ const MyStoriesCard = ({
           )}
 
           {/* Action buttons */}
-          <div className="absolute top-2 right-2 flex gap-1">
+          <div className="absolute flex gap-1 top-2 right-2">
             <Button
               isIconOnly
               size="sm"
               variant="ghost"
-              className="bg-universal-white/80 min-w-6 w-6 h-6"
+              className="w-6 h-6 bg-universal-white/80 min-w-6"
               onClick={handleEdit}
             >
               <Edit className="w-3 h-3 text-primary-colour" />
@@ -102,7 +102,7 @@ const MyStoriesCard = ({
               isIconOnly
               size="sm"
               variant="ghost"
-              className="bg-universal-white/80 min-w-6 w-6 h-6"
+              className="w-6 h-6 bg-universal-white/80 min-w-6"
               onClick={handleDelete}
             >
               <Trash2 className="w-3 h-3 text-error-colour" />

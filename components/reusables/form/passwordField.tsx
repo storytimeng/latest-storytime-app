@@ -1,7 +1,7 @@
 "use client";
 import React, { useState } from "react";
 import { Eye, EyeOff, Lock, AlertCircle } from "lucide-react";
-import { Input } from "@heroui/react";
+import { Input } from "@heroui/input";
 import Link from "next/link";
 
 interface PasswordInputProps {
@@ -49,8 +49,8 @@ const PasswordField: React.FC<PasswordInputProps> = ({
 
     return (
       <div className="flex items-center gap-1 mt-1">
-        <AlertCircle className="w-4 h-4 text-red flex-shrink-0" />
-        <span className="text-red text-xs">{passwordError}</span>
+        <AlertCircle className="flex-shrink-0 w-4 h-4 text-red" />
+        <span className="text-xs text-red">{passwordError}</span>
       </div>
     );
   };
@@ -82,7 +82,7 @@ const PasswordField: React.FC<PasswordInputProps> = ({
             ],
             errorMessage: "hidden", // We'll handle error display ourselves
           }}
-          startContent={<Lock className="text-grey-1 w-5 h-5" />}
+          startContent={<Lock className="w-5 h-5 text-grey-1" />}
           endContent={
             <button
               className="focus:outline-none"
@@ -93,7 +93,7 @@ const PasswordField: React.FC<PasswordInputProps> = ({
               {isVisible ? (
                 <EyeOff className="text-2xl text-grey-1 pointer-events-none scale-y-[-1]" />
               ) : (
-                <Eye className="text-2xl text-grey-1 pointer-events-none " />
+                <Eye className="text-2xl pointer-events-none text-grey-1 " />
               )}
             </button>
           }
@@ -112,7 +112,7 @@ const PasswordField: React.FC<PasswordInputProps> = ({
         <div className="flex justify-end">
           <Link
             href={forgotPasswordLink || "/auth/forgot-password"}
-            className="text-sm text-grey-1 hover:text-primary-colour underline"
+            className="text-sm underline text-grey-1 hover:text-primary-colour"
           >
             Forgot password?
           </Link>

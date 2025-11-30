@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 "use client";
 import React from "react";
-import { DateInput } from "@heroui/react";
+import { DateInput } from "@heroui/date-input";
 import { CalendarDate } from "@internationalized/date";
 
 interface FormFieldProps {
@@ -65,7 +65,7 @@ const DateFormField: React.FC<FormFieldProps> = ({
 
     // Cast DateValue to CalendarDate to access properties
     const calendarDate = newValue as CalendarDate;
-    
+
     // Log the CalendarDate object to see its contents
     //console.log(`CalendarDate Object: ${calendarDate}`);
     //console.log(`Month: ${calendarDate.month}, Day: ${calendarDate.day}, Year: ${calendarDate.year}`);

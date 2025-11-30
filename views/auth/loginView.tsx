@@ -7,7 +7,8 @@ import { FormField, PasswordField } from "@/components/reusables/form";
 import { Button } from "@/components/ui/button";
 import { z } from "zod";
 import { showToast } from "@/lib/showNotification";
-import LoadingOverlay from "@/components/reusables/customUI/loadingOverlay";
+import { useLogin } from "@/src/hooks/useAuth";
+import { useLoadingStore } from "@/src/stores/useLoadingStore";
 
 interface LoginFormData {
   email: string;
@@ -27,12 +28,12 @@ const loginSchema = z.object({
 
 export default function LoginView() {
   const router = useRouter();
+  const { show: showLoading, hide: hideLoading } = useLoadingStore();
   const [formData, setFormData] = useState<LoginFormData>({
     email: "",
     password: "",
     rememberMe: false,
   });
-  const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Partial<LoginFormData>>({});
 
   const handleInputChange = (
@@ -88,20 +89,56 @@ export default function LoginView() {
     }
   };
 
+  const {
+    trigger: loginTrigger,
+    isMutating: isLoggingIn,
+    error: loginError,
+  } = useLogin();
+
   const handleSubmit = async () => {
-    setIsLoading(true);
+    const isValid = validateForm();
+    if (!isValid) return;
 
+    showLoading("Logging you in...");
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      const data = await loginTrigger({
+        emailOrPenName: formData.email,
+        password: formData.password,
+        remember: formData.rememberMe,
+      });
 
-      // Navigate to onboarding or dashboard
-      router.push("/app");
-    } catch (error) {
-      console.error("Login error:", error);
+      // Fetch and store user profile
+      try {
+        const { usersControllerGetProfile } = await import("@/src/client/sdk.gen");
+        const { useUserStore } = await import("@/src/stores/useUserStore");
+        console.log("Fetching user profile...");
+        const profileResponse = await usersControllerGetProfile();
+        console.log("Profile response:", profileResponse);
+        
+        if (profileResponse.data) {
+          console.log("Setting user profile in store:", profileResponse.data);
+          useUserStore.getState().setUser(profileResponse.data as any);
+        } else {
+          console.warn("Profile response has no data");
+        }
+      } catch (profileError) {
+        console.error("Failed to fetch profile:", profileError);
+        // Continue to home even if profile fetch fails, 
+        // the useUserProfile hook will try again later
+      }
+
+      showToast({ type: "success", message: "Signed in", duration: 1500 });
+      router.push("/home");
+    } catch (err: any) {
+      console.error("Login error:", err);
       setErrors({ email: "Invalid email or password" });
+      showToast({
+        type: "error",
+        message: err?.message || "Login failed",
+        duration: 3000,
+      });
     } finally {
-      setIsLoading(false);
+      hideLoading();
     }
   };
 
@@ -153,7 +190,7 @@ export default function LoginView() {
               onChange={(e) =>
                 handleInputChange("rememberMe", e.target.checked)
               }
-              className="w-4 h-4 text-primary-colour checked:bg-primary-colour bg-universal-white border-light-grey-2 rounded focus:ring-primary-colour focus:ring-2"
+              className="w-4 h-4 rounded text-primary-colour checked:bg-primary-colour bg-universal-white border-light-grey-2 focus:ring-primary-colour focus:ring-2"
             />
             <label
               htmlFor="rememberMe"
@@ -164,7 +201,7 @@ export default function LoginView() {
           </div>
           <Link
             href="/auth/forgot-password"
-            className="text-sm hover:text-grey-1 body-text-small-medium-auto  transition-transform-colors text-primary-colour hover:underline"
+            className="text-sm hover:text-grey-1 body-text-small-medium-auto transition-transform-colors text-primary-colour hover:underline"
           >
             Forgot password?
           </Link>
@@ -173,18 +210,18 @@ export default function LoginView() {
 
       {/* Divider */}
       <div className="flex items-center my-5">
-        <div className="flex-1 border-t border-light-grey-1"></div>
+        <div className="flex-1 border-t border-accent-color"></div>
         <div className="px-4 body-text-small-regular text-[#708090] body-text-small-auto-regular">
           or
         </div>
-        <div className="flex-1 border-t border-light-grey-1"></div>
+        <div className="flex-1 border-t border-accent-color"></div>
       </div>
 
       {/* Social Login */}
       <div className="space-y-3">
         <Button
           variant="google"
-          startContent={<div className="w-5 h-5 bg-grey-1 rounded"></div>}
+          startContent={<div className="w-5 h-5 rounded bg-grey-1"></div>}
         >
           Continue with Google
         </Button>
@@ -198,26 +235,22 @@ export default function LoginView() {
           }
         }}
         type="button"
-        disabled={isLoading}
       >
-        {isLoading ? "Signing In..." : "Continue"}
+        Continue
       </Button>
 
       {/* Signup Link */}
-      <div className="text-center mt-4">
+      <div className="mt-4 text-center">
         <p className="body-text-small-medium-auto ">
           Have an account?{" "}
           <Link
             href="/auth/signup"
-            className="text-primary-colour  hover:underline font-medium body-text-small-regular-auto"
+            className="font-medium text-primary-colour hover:underline body-text-small-regular-auto"
           >
             Sign Up
           </Link>
         </p>
       </div>
-
-      {/* Loading Overlay */}
-      <LoadingOverlay isVisible={isLoading} message="Logging you in..." />
     </div>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Button } from "@heroui/react";
+import { Button } from "@heroui/button";
 import { Camera, Settings } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -41,10 +41,10 @@ const ProfileCard = ({
                 alt="Profile"
                 width={60}
                 height={60}
-                className="w-full h-full object-cover"
+                className="object-cover w-full h-full"
               />
             </div>
-            <div className="absolute -bottom-1 -right-1 w-8 h-8 bg-universal-white rounded-full flex items-center justify-center">
+            <div className="absolute flex items-center justify-center w-8 h-8 rounded-full -bottom-1 -right-1 bg-universal-white">
               <Camera className="w-4 h-4 text-primary-colour" />
             </div>
           </div>
@@ -60,7 +60,7 @@ const ProfileCard = ({
         </div>
 
         {showSettings && (
-          <Link href="/app/settings">
+          <Link href="/settings">
             <Button isIconOnly variant="ghost" className="text-universal-white">
               <Settings size={24} />
             </Button>
