@@ -13,27 +13,27 @@
 - [x] **storyCard.tsx** - Click navigation to `/story/[id]` ✅
 
 ### 📖 Story Detail & Reading
-- [ ] **singleStory.tsx** (`/story/[id]`)
-  - [ ] Fetch story using `storiesControllerFindOne`
-  - [ ] Display like count using `storiesControllerGetStoryLikeCount`
-  - [ ] Display comment count using `storiesControllerGetStoryCommentCount`
-  - [ ] Add like button using `storiesControllerLikeStory` / `storiesControllerUnlikeStory`
-  - [ ] Check user like status using `storiesControllerCheckUserLike`
-  - [ ] Navigate to reading page on "Read More"
+- [x] **singleStory.tsx** (`/story/[id]`)
+  - [x] Fetch story using `storiesControllerFindOne`
+  - [x] Display like count using `storiesControllerGetStoryLikeCount`
+  - [x] Display comment count using `storiesControllerGetStoryCommentCount`
+  - [x] Add like button using `storiesControllerLikeStory` / `storiesControllerUnlikeStory`
+  - [x] Check user like status using `storiesControllerCheckUserLike`
+  - [x] Navigate to reading page on "Read More"
 
-- [ ] **Story Reading Page** (`/story/[id]/read`)
-  - [ ] Create new reading view component
-  - [ ] Fetch story chapters using `storiesControllerGetStoryChapters`
-  - [ ] Fetch story episodes using `storiesControllerGetStoryEpisodes`
-  - [ ] Display story content
+- [x] **Story Reading Page** (`/story/[id]/read`)
+  - [x] Create new reading view component (`ReadStoryView`)
+  - [x] Fetch story chapters using `storiesControllerGetStoryChapters`
+  - [x] Fetch story episodes using `storiesControllerGetStoryEpisodes`
+  - [x] Display story content
   - [ ] Track reading progress using `usersControllerUpdateReadingProgress`
   - [ ] Get reading progress using `usersControllerGetReadingProgress`
-  - [ ] Add comment section:
-    - [ ] Display comments using `storiesControllerGetStoryComments`
-    - [ ] Create comment using `storiesControllerCreateComment`
+  - [x] Add comment section:
+    - [x] Display comments using `storiesControllerGetStoryComments`
+    - [x] Create comment using `storiesControllerCreateComment`
     - [ ] Update own comment using `storiesControllerUpdateComment`
     - [ ] Delete own comment using `storiesControllerDeleteComment`
-  - [ ] Add like functionality at bottom
+  - [x] Add like functionality at bottom
 
 ### 📚 Library
 - [ ] **libraryView.tsx** / **newLibraryView.tsx**
@@ -45,52 +45,6 @@
   - [ ] Display progress bars for stories being read
 
 ### ✍️ Pen (Writing)
-- [ ] **penView.tsx**
-  - [ ] Fetch user's stories using `storiesControllerGetMyLibrary`
-  - [ ] Display story cards with edit/delete actions
-  - [ ] Navigate to edit story
-
-- [ ] **myStoriesView.tsx**
-  - [ ] Same as penView - consolidate if duplicate
-
-- [ ] **newStoryView.tsx**
-  - [ ] Create story form using `storiesControllerCreate`
-  - [ ] Handle chapters/episodes toggle
-  - [ ] Upload story image
-  - [ ] Set genres, language, status
-
-- [ ] **editStoryView.tsx**
-  - [ ] Fetch story by ID using `storiesControllerFindOne`
-  - [ ] Update story using `storiesControllerUpdate`
-  - [ ] Delete story using `storiesControllerRemove`
-  - [ ] Manage chapters using:
-    - [ ] `storiesControllerCreateChapter`
-    - [ ] `storiesControllerCreateMultipleChapters`
-    - [ ] `storiesControllerUpdateChapter`
-    - [ ] `storiesControllerDeleteChapter`
-  - [ ] Manage episodes using:
-    - [ ] `storiesControllerCreateEpisode`
-    - [ ] `storiesControllerCreateMultipleEpisodes`
-    - [ ] `storiesControllerUpdateEpisode`
-    - [ ] `storiesControllerDeleteEpisode`
-
-### 🔔 Notifications
-- [ ] **notificationView.tsx**
-  - [ ] Fetch notifications using `notificationsControllerGetUserNotifications`
-  - [ ] Display unread count using `notificationsControllerGetUnreadCount`
-  - [ ] Group by type (achievement, story_like, story_comment, etc.)
-  - [ ] Filter by read/unread status
-  - [ ] Mark as read using `notificationsControllerMarkAsRead`
-  - [ ] Mark all as read using `notificationsControllerMarkAllAsRead`
-  - [ ] Delete notification using `notificationsControllerDeleteNotification`
-  - [ ] Delete all using `notificationsControllerDeleteAllNotifications`
-  - [ ] Navigate to relevant story from notification
-
-### 👤 Profile
-- [ ] **profileView.tsx**
-  - [ ] Fetch user stats using `usersControllerGetStats`
-  - [ ] Display badges, certificates, milestones
-  - [ ] Show stories read/written counts
   - [ ] Display reading history
 
 - [ ] **settingsView.tsx**

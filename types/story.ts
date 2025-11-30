@@ -1,3 +1,13 @@
+// Temporary extension for AuthorDto until updated from Swagger
+export interface AuthorDto {
+  id: string;
+  firstName: string;
+  lastName: string;
+  penName: string;
+  email: string;
+  avatar?: string;
+  createdAt: string;
+}
 // Story Form Types
 export interface StoryFormData {
     id?: string;

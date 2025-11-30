@@ -1,11 +1,11 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { StoryPremium } from "@/components/StoryPremium/StoryPremium";
+import { ReadStoryView } from "@/views/app/story/readStoryView";
 
 export default function ReadStoryPage() {
   const params = useParams();
   const id = params.id as string;
 
-  return <StoryPremium  />;
+  return <ReadStoryView storyId={id} />;
 }

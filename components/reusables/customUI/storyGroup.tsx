@@ -79,6 +79,10 @@ const StoryGroup = ({
     );
   }
 
+  const handleStoryCardClick = (storyId: string | number) => {
+    router.push(`/story/${storyId}`);
+  };
+
   return (
     <div className={cn("", className)}>
       {title && (
@@ -112,6 +116,7 @@ const StoryGroup = ({
                 key={story.id}
                 story={story}
                 className={cardClassName}
+                onClick={handleStoryCardClick}
               />
             ))}
             {/* Loading indicator */}
@@ -129,6 +134,7 @@ const StoryGroup = ({
               key={story.id}
               story={story}
               className={cn("w-full", cardClassName)}
+              onClick={handleStoryCardClick}
             />
           ))}
         </div>

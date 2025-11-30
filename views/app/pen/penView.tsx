@@ -22,81 +22,18 @@ import {
 import { Magnetik_Bold, Magnetik_Medium, Magnetik_Regular } from "@/lib/font";
 import { StoryCard } from "@/components/reusables/customUI";
 import { useRouter } from "next/navigation";
-// Temporary mock data - replace with actual data fetching
-const mockStories = [
-  {
-    id: "1",
-    title: "The Enchanted Forest",
-    status: "Ongoing",
-    genre: "Fantasy",
-    writingDate: "12-02-2024",
-    image: "/images/nature.jpg",
-    lastEdited: "2024-01-20",
-    content: "A magical forest adventure.",
-    author: {
-      id: "a1",
-      name: "Author 1",
-      email: "author1@example.com",
-      createdAt: "2024-01-01",
-    },
-    createdAt: "2024-01-01",
-    updatedAt: "2024-01-20",
-  },
-  {
-    id: "2",
-    title: "Mystery of the Lost City",
-    status: "Draft",
-    genre: "Adventure",
-    writingDate: "12-02-2024",
-    image: "/images/nature.jpg",
-    lastEdited: "2024-01-18",
-    content: "An ancient city is discovered.",
-    author: {
-      id: "a2",
-      name: "Author 2",
-      email: "author2@example.com",
-      createdAt: "2024-01-02",
-    },
-    createdAt: "2024-01-02",
-    updatedAt: "2024-01-18",
-  },
-  {
-    id: "3",
-    title: "Love in the Time of War",
-    status: "Completed",
-    genre: "Romance",
-    writingDate: "12-02-2024",
-    image: "/images/nature.jpg",
-    lastEdited: "2024-01-15",
-    content: "A romance story set in wartime.",
-    author: {
-      id: "a3",
-      name: "Author 3",
-      email: "author3@example.com",
-      createdAt: "2024-01-03",
-    },
-    createdAt: "2024-01-03",
-    updatedAt: "2024-01-15",
-  },
-  {
-    id: "4",
-    title: "The Lost Ship",
-    status: "Ongoing",
-    genre: "Adventure",
-    writingDate: "12-02-2024",
-    image: "/images/nature.jpg",
-    lastEdited: "2024-01-22",
-    content: "A ship lost at sea.",
-    author: {
-      id: "a4",
-      name: "Author 4",
-      email: "author4@example.com",
-      createdAt: "2024-01-04",
-    },
-    createdAt: "2024-01-04",
-    updatedAt: "2024-01-22",
-  },
-];
+
+import { useUserProfile } from "@/src/hooks/useUserProfile";
+import { useStories } from "@/src/hooks/useStories";
+import type { StoryResponseDto } from "@/src/client/types.gen";
+
+// Locally extend StoryResponseDto for UI needs
+type ExtendedStory = StoryResponseDto & {
+  lastEdited?: string;
+  writingDate?: string;
+  updatedAt?: string;
+  status?: string;
+};
 
 type TabKey = "Recent" | "Ongoing" | "Published" | "Drafts";
 
@@ -110,36 +47,51 @@ const PenView = () => {
     title: string;
   } | null>(null);
 
-  // Check if user has any stories
-  const hasStories = mockStories.length > 0; // Filter stories based on selected tab
+  // Get current user profile
+  const { user } = useUserProfile();
+  // Fetch stories written by the current user
+  const { stories, isLoading } = useStories({
+    search: user?.penName || user?.firstName || user?.id,
+  });
+
+  // Filter stories by tab
   const filteredStories = useMemo(() => {
+    if (!stories) return [];
     switch (selectedTab) {
       case "Recent":
-        return [...mockStories].sort(
+        return [...stories].sort(
           (a, b) =>
-            new Date(b.lastEdited || b.writingDate).getTime() -
-            new Date(a.lastEdited || a.writingDate).getTime()
+            new Date(b.lastEdited || b.writingDate || b.updatedAt).getTime() -
+            new Date(a.lastEdited || a.writingDate || a.updatedAt).getTime()
         );
       case "Ongoing":
-        return mockStories.filter((story) => story.status === "Ongoing");
+        return stories.filter(
+          (story: ExtendedStory) => story.status === "Ongoing"
+        );
       case "Published":
-        return mockStories.filter((story) => story.status === "Completed");
+        return stories.filter(
+          (story: ExtendedStory) => story.status === "Completed"
+        );
       case "Drafts":
-        return mockStories.filter((story) => story.status === "Draft");
+        return stories.filter(
+          (story: ExtendedStory) => story.status === "Draft"
+        );
       default:
-        return mockStories;
+        return stories;
     }
-  }, [selectedTab]);
+  }, [selectedTab, stories]);
+
+  const hasStories = filteredStories.length > 0;
 
   const handleEditStory = (storyId: string | number) => {
     router.push(`/edit-story/${storyId}`);
   };
 
+  // Find story by id from filteredStories
   const handleDeleteStory = (storyId: string | number) => {
-    // Find the story title
-    const story = mockStories.find((s) => s.id === storyId);
+    const story = filteredStories.find((s: ExtendedStory) => s.id === storyId);
     if (story) {
-      setStoryToDelete({ id: storyId, title: story.title });
+      setStoryToDelete({ id: storyId, title: (story as ExtendedStory).title });
       setIsDeleteModalOpen(true);
     }
   };
@@ -257,16 +209,18 @@ const PenView = () => {
 
         {/* Stories Grid - Show first 4 stories */}
         <div className="grid grid-cols-2 gap-4">
-          {mockStories.slice(0, 4).map((story) => (
-            <StoryCard
-              key={story.id}
-              story={story}
-              mode="pen"
-              onEdit={handleEditStory}
-              onDelete={handleDeleteStory}
-              onClick={handleViewStory}
-            />
-          ))}
+          {filteredStories
+            .slice(0, 4)
+            .map((story: ExtendedStory, idx: number) => (
+              <StoryCard
+                key={(story as ExtendedStory).id ?? idx}
+                story={story as ExtendedStory}
+                mode="pen"
+                onEdit={handleEditStory}
+                onDelete={handleDeleteStory}
+                onClick={handleViewStory}
+              />
+            ))}
         </div>
       </div>
     </div>
@@ -298,10 +252,10 @@ const PenView = () => {
       {/* Stories Grid */}
       {filteredStories.length > 0 ? (
         <div className="grid grid-cols-2 gap-4">
-          {filteredStories.map((story) => (
+          {filteredStories.map((story: ExtendedStory, idx: number) => (
             <StoryCard
-              key={story.id}
-              story={story}
+              key={(story as ExtendedStory).id ?? idx}
+              story={story as ExtendedStory}
               mode="pen"
               onEdit={handleEditStory}
               onDelete={handleDeleteStory}

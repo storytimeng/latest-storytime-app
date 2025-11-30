@@ -20,6 +20,15 @@ export function useStory(storyId: string | undefined) {
       const response = await storiesControllerFindOne({
         path: { id: storyId },
       });
+      // Unwrap the actual story object from the response
+      if (
+        response &&
+        typeof response.data === "object" &&
+        response.data !== null &&
+        "data" in response.data
+      ) {
+        return (response.data as any).data;
+      }
       return response.data;
     },
     {
@@ -116,16 +125,18 @@ export function useStoryLikes(storyId: string | undefined) {
 
 // Hook to fetch and manage story comments
 export function useStoryComments(storyId: string | undefined) {
-  const { data: commentsData, error, isLoading, mutate } = useSWR(
-    storyId ? `/stories/${storyId}/comments` : null,
-    async () => {
-      if (!storyId) return null;
-      const response = await storiesControllerGetStoryComments({
-        path: { id: storyId },
-      });
-      return response.data;
-    }
-  );
+  const {
+    data: commentsData,
+    error,
+    isLoading,
+    mutate,
+  } = useSWR(storyId ? `/stories/${storyId}/comments` : null, async () => {
+    if (!storyId) return null;
+    const response = await storiesControllerGetStoryComments({
+      path: { id: storyId },
+    });
+    return response.data;
+  });
 
   const { data: commentCountData, mutate: mutateCommentCount } = useSWR(
     storyId ? `/stories/${storyId}/comments/count` : null,
@@ -162,7 +173,53 @@ export function useStoryComments(storyId: string | undefined) {
     commentCount: (commentCountData as any)?.count || 0,
     isLoading,
     error,
-    createComment,
     mutate,
+    createComment,
+  };
+}
+
+// Hook to fetch story chapters
+export function useStoryChapters(storyId: string | undefined) {
+  const { data, error, isLoading } = useSWR(
+    storyId ? `/stories/${storyId}/chapters` : null,
+    async () => {
+      if (!storyId) return null;
+      const { storiesControllerGetStoryChapters } = await import(
+        "@/src/client"
+      );
+      const response = await storiesControllerGetStoryChapters({
+        path: { id: storyId },
+      });
+      return response.data;
+    }
+  );
+
+  return {
+    chapters: (data as any) || [],
+    isLoading,
+    error,
+  };
+}
+
+// Hook to fetch story episodes
+export function useStoryEpisodes(storyId: string | undefined) {
+  const { data, error, isLoading } = useSWR(
+    storyId ? `/stories/${storyId}/episodes` : null,
+    async () => {
+      if (!storyId) return null;
+      const { storiesControllerGetStoryEpisodes } = await import(
+        "@/src/client"
+      );
+      const response = await storiesControllerGetStoryEpisodes({
+        path: { id: storyId },
+      });
+      return response.data;
+    }
+  );
+
+  return {
+    episodes: (data as any) || [],
+    isLoading,
+    error,
   };
 }
