@@ -10,7 +10,7 @@ import { SWRConfig } from "swr";
 import Cookies from "js-cookie";
 
 // Hey-API client setup (runs immediately)
-import "../src/client/setup";
+import "../src/setup";
 import { getAuthToken } from "../src/stores/useAuthStore";
 
 export interface ProvidersProps {

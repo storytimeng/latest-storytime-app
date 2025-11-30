@@ -2,26 +2,26 @@
 
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { useState, useMemo } from "react";
+import { useMemo } from "react";
 import { GenreButton, StoryGroup, PremiumBanner, StoriesCarousel } from "@/components/reusables";
 import { Magnetik_Medium, Magnetik_Bold, Magnetik_Regular } from "@/lib/font";
 import { Search } from "lucide-react";
-import { useStories } from "@/src/hooks/useStories";
 import { useGenres } from "@/src/hooks/useGenres";
 import { useStoriesFilterStore } from "@/src/stores/useStoriesFilterStore";
 import { useUserStore } from "@/src/stores/useUserStore";
 import { Avatar } from "@heroui/avatar";
+import {
+  useOnlyOnStorytimeStories,
+  useRecentlyAddedStories,
+  useTrendingStories,
+  usePopularStories,
+} from "@/src/hooks/useStoryCategories";
+import { useStories } from "@/src/hooks/useStories";
 
 const HomeView = () => {
   const { user } = useUserStore();
   const { selectedGenres, toggleGenre } = useStoriesFilterStore();
   const { genres: apiGenres, isLoading: genresLoading } = useGenres();
-  
-  // Fetch stories with selected genre filter
-  const { stories, isLoading: storiesLoading } = useStories({
-    limit: 50,
-    genre: selectedGenres.length > 0 ? selectedGenres[0] : undefined,
-  });
 
   // Use API genres or fallback to empty array
   const genres = apiGenres || [];
@@ -38,9 +38,61 @@ const HomeView = () => {
     });
   }, [genres, selectedGenres]);
 
-  // Group stories by category
-  const recentStories = useMemo(() => stories ? stories.slice(0, 10) : [], [stories]);
-  const featuredStories = useMemo(() => stories ? stories.slice(0, 5) : [], [stories]); // For carousel
+  // Get filtered stories when genres are selected (using existing useStories hook)
+  const { stories: filteredStories, isLoading: filteredLoading } = useStories({
+    limit: 50,
+    genre: selectedGenres.length > 0 ? selectedGenres[0] : undefined,
+  });
+
+  // Fetch stories by category using dedicated endpoints
+  const { 
+    stories: exclusiveStories, 
+    isLoading: exclusiveLoading,
+    loadMore: loadMoreExclusive,
+    hasMore: hasMoreExclusive,
+    isLoadingMore: isLoadingMoreExclusive
+  } = useOnlyOnStorytimeStories({
+    limit: 10,
+  });
+  const { 
+    stories: recentStories, 
+    isLoading: recentLoading,
+    loadMore: loadMoreRecent,
+    hasMore: hasMoreRecent,
+    isLoadingMore: isLoadingMoreRecent
+  } = useRecentlyAddedStories({
+    limit: 10,
+  });
+  const { 
+    stories: trendingStories, 
+    isLoading: trendingLoading,
+    loadMore: loadMoreTrending,
+    hasMore: hasMoreTrending,
+    isLoadingMore: isLoadingMoreTrending
+  } = useTrendingStories({
+    limit: 10,
+  });
+  const { 
+    stories: popularStoriesData, 
+    isLoading: popularLoading,
+    loadMore: loadMorePopular,
+    hasMore: hasMorePopular,
+    isLoadingMore: isLoadingMorePopular
+  } = usePopularStories({
+    limit: 10,
+  });
+
+  // Sort popular stories by popularityScore descending
+  const popularStories = useMemo(() => {
+    if (!popularStoriesData) return [];
+    return [...popularStoriesData].sort((a: any, b: any) => (b.popularityScore || 0) - (a.popularityScore || 0));
+  }, [popularStoriesData]);
+
+  // Loading state
+  const storiesLoading =
+    selectedGenres.length > 0
+      ? filteredLoading
+      : exclusiveLoading || recentLoading || trendingLoading || popularLoading;
 
   return (
     <div className="min-h-screen px-4 pt-4 space-y-4 bg-accent-shade-1">
@@ -86,33 +138,35 @@ const HomeView = () => {
       <PremiumBanner />
 
       {/* Only on Storytime - Carousel */}
-      <div className="">
-        <div className="flex items-center justify-between mb-2 h-fit">
-          <h2 className={`body-text-small-medium-auto primary-colour`}>
-            Only on Storytime
-          </h2>
-          <Link href={`/all-genres`}>
-            <Button
-              variant="ghost"
-              className={`text-grey-2 body-text-smallest-medium-auto`}
-            >
-              See more
-            </Button>
-          </Link>
-        </div>
+      {exclusiveStories.length > 0 && !selectedGenres.length && (
+        <div className="">
+          <div className="flex items-center justify-between mb-2 h-fit">
+            <h2 className={`body-text-small-medium-auto primary-colour`}>
+              Only on Storytime
+            </h2>
+            <Link href={`/all-genres`}>
+              <Button
+                variant="ghost"
+                className={`text-grey-2 body-text-smallest-medium-auto`}
+              >
+                See more
+              </Button>
+            </Link>
+          </div>
 
-        {storiesLoading ? (
-          <div className="relative h-52 rounded-xl bg-accent-colour animate-pulse" />
-        ) : (
-          <StoriesCarousel
-            stories={featuredStories}
-            autoPlay={true}
-            autoPlayInterval={5000}
-            showControls={true}
-            showDots={true}
-          />
-        )}
-      </div>
+          {exclusiveLoading ? (
+            <div className="relative h-52 rounded-xl bg-accent-colour animate-pulse" />
+          ) : (
+            <StoriesCarousel
+              stories={exclusiveStories.slice(0, 5)}
+              autoPlay={true}
+              autoPlayInterval={5000}
+              showControls={true}
+              showDots={true}
+            />
+          )}
+        </div>
+      )}
 
       {/* Genre Pick */}
       <div className="mb-6 ">
@@ -177,10 +231,10 @@ const HomeView = () => {
         ) : selectedGenres.length > 0 ? (
           <>
             {/* Show filtered results */}
-            {stories.length > 0 ? (
+            {filteredStories.length > 0 ? (
               <StoryGroup
-                title={`${selectedGenres.join(", ")} Stories (${stories.length})`}
-                stories={stories}
+                title={`${selectedGenres.join(", ")} Stories (${filteredStories.length})`}
+                stories={filteredStories}
                 categorySlug="filtered"
               />
             ) : (
@@ -212,21 +266,36 @@ const HomeView = () => {
         ) : (
           <>
             {/* Show all stories when no filters */}
-            <StoryGroup
-              title="Recently Added Stories"
-              stories={recentStories}
-              categorySlug="recently-added"
-            />
-            <StoryGroup
-              title="Trending Now"
-              stories={stories.slice(10, 20)}
-              categorySlug="trending"
-            />
-            <StoryGroup
-              title="Popular This Week"
-              stories={stories.slice(20, 30)}
-              categorySlug="popular"
-            />
+            {recentStories.length > 0 && (
+              <StoryGroup
+                title="Recently Added Stories"
+                stories={recentStories}
+                categorySlug="recently-added"
+                onLoadMore={loadMoreRecent}
+                hasMore={hasMoreRecent}
+                isLoadingMore={isLoadingMoreRecent}
+              />
+            )}
+            {trendingStories.length > 0 && (
+              <StoryGroup
+                title="Trending Now"
+                stories={trendingStories}
+                categorySlug="trending"
+                onLoadMore={loadMoreTrending}
+                hasMore={hasMoreTrending}
+                isLoadingMore={isLoadingMoreTrending}
+              />
+            )}
+            {popularStories.length > 0 && (
+              <StoryGroup
+                title="Popular This Week"
+                stories={popularStories}
+                categorySlug="popular"
+                onLoadMore={loadMorePopular}
+                hasMore={hasMorePopular}
+                isLoadingMore={isLoadingMorePopular}
+              />
+            )}
           </>
         )}
       </div>

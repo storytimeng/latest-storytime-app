@@ -62,6 +62,7 @@ export default function RootLayout({
     <html suppressHydrationWarning lang="en">
       <head />
       <body
+        suppressHydrationWarning
         className={cn(
           "m-auto min-h-screen bg-background bg-center bg-no-repeat scroll-smooth antialiased",
           Magnetik_Medium.className,

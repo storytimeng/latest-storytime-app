@@ -1,5 +1,4 @@
-"use client";
-
+"use client"
 import { ScrollShadow } from "@heroui/scroll-shadow";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
@@ -7,6 +6,7 @@ import React from "react";
 import { Magnetik_Bold } from "@/lib/font";
 import { cn } from "@/lib/utils";
 import StoryCard from "./storyCard";
+import { useInfiniteScroll } from "@/src/hooks/useInfiniteScroll";
 
 import { StoryResponseDto } from "@/src/client/types.gen";
 
@@ -20,6 +20,10 @@ interface StoryGroupProps {
   scrollClassName?: string;
   cardClassName?: string;
   layout?: "horizontal" | "grid";
+  // Infinite scroll props
+  onLoadMore?: () => void;
+  hasMore?: boolean;
+  isLoadingMore?: boolean;
 }
 
 const StoryGroup = ({
@@ -32,8 +36,23 @@ const StoryGroup = ({
   scrollClassName,
   cardClassName,
   layout = "horizontal",
+  onLoadMore,
+  hasMore = false,
+  isLoadingMore = false,
 }: StoryGroupProps) => {
   const router = useRouter();
+  const scrollRef = React.useRef<HTMLDivElement>(null);
+
+  // Trigger loadMore when user scrolls 70% through the horizontal list
+  useInfiniteScroll(
+    scrollRef,
+    () => {
+      if (onLoadMore && hasMore && !isLoadingMore) {
+        onLoadMore();
+      }
+    },
+    { threshold: 0.7, enabled: layout === "horizontal" && !!onLoadMore }
+  );
 
   if (!stories || stories.length === 0) {
     return (
@@ -79,8 +98,9 @@ const StoryGroup = ({
 
       {layout === "horizontal" ? (
         <ScrollShadow
+          ref={scrollRef}
           orientation="horizontal"
-          size={2}
+          size={20}
           hideScrollBar={false}
           isEnabled={true}
           visibility="auto"
@@ -94,6 +114,12 @@ const StoryGroup = ({
                 className={cardClassName}
               />
             ))}
+            {/* Loading indicator */}
+            {isLoadingMore && (
+              <div className="flex items-center justify-center min-w-[160px] h-[240px]">
+                <div className="w-8 h-8 border-4 border-complimentary-colour border-t-transparent rounded-full animate-spin" />
+              </div>
+            )}
           </div>
         </ScrollShadow>
       ) : (

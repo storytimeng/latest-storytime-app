@@ -6,9 +6,9 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Search } from "lucide-react";
 import Link from "next/link";
 import React, { useState } from "react";
-import { useStories } from "@/src/hooks/useStories";
 import { useGenres } from "@/src/hooks/useGenres";
 import { useDebounce } from "@/src/hooks/useDebounce";
+import { useSearchStories } from "@/src/hooks/useStoryCategories";
 
 const SearchView = () => {
   const [search, setSearch] = useState("");
@@ -22,9 +22,10 @@ const SearchView = () => {
   const { genres: apiGenres, isLoading: genresLoading } = useGenres();
   const genres = ["All", ...(apiGenres || [])];
 
-  // Fetch stories with search and filter
-  const { stories, isLoading } = useStories({
-    search: debouncedSearch || undefined,
+  // Fetch stories with search and filter using dedicated search endpoint
+  const { stories, isLoading } = useSearchStories({
+    query: debouncedSearch || "",
+    // @ts-ignore
     genre: activeFilter !== "All" ? activeFilter : undefined,
     limit: 50,
   });
@@ -167,9 +168,9 @@ const SearchView = () => {
                   key={story.id}
                   title={story.title}
                   genre={story.genres?.[0] || "Unknown"}
-                  author={story.author?.penName || "Anonymous"}
-                  image={story.coverImage || "/images/placeholder.jpg"}
-                  hasWarning={story.status === "ongoing"}
+                  author={(story.author as any)?.penName || story.author?.name || "Anonymous"}
+                  image={story.imageUrl || "/images/placeholder.jpg"}
+                  hasWarning={(story as any).storyStatus === "ongoing"}
                   onClick={() => handleStoryClick(story.id)}
                 />
               ))}

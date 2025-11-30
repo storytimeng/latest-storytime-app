@@ -397,6 +397,10 @@ export type UpdateStoryDto = {
      * Story image URL
      */
     imageUrl?: string;
+    /**
+     * Array of pen names of collaborators
+     */
+    collaborate?: Array<string>;
 };
 
 export type CreateChapterDto = {
@@ -589,7 +593,7 @@ export type CreateNotificationDto = {
     /**
      * Type of notification
      */
-    type: 'achievement' | 'milestone' | 'admin_message' | 'reminder_read' | 'reminder_write' | 'story_like' | 'story_comment' | 'system';
+    type: 'achievement' | 'milestone' | 'admin_message' | 'reminder_read' | 'reminder_write' | 'story_like' | 'story_comment' | 'story_collaboration' | 'system';
     /**
      * The UUID of the user to send the notification to (required if email is not provided)
      */
@@ -622,7 +626,7 @@ export type CreateBulkNotificationDto = {
     /**
      * Type of notification
      */
-    type: 'achievement' | 'milestone' | 'admin_message' | 'reminder_read' | 'reminder_write' | 'story_like' | 'story_comment' | 'system';
+    type: 'achievement' | 'milestone' | 'admin_message' | 'reminder_read' | 'reminder_write' | 'story_like' | 'story_comment' | 'story_collaboration' | 'system';
     /**
      * Additional metadata (JSON object)
      */
@@ -697,8 +701,34 @@ export type UsersControllerGetProfileResponses = {
     /**
      * User profile retrieved successfully
      */
-    200: unknown;
+    200: {
+        message?: string;
+        user?: {
+            id?: string;
+            email?: string;
+            firstName?: string;
+            lastName?: string;
+            penName?: string | null;
+            profilePicture?: string | null;
+            genres?: Array<string> | null;
+            timeToRead?: string | null;
+            timeToWrite?: string | null;
+            reminder?: string | null;
+            /**
+             * Indicates whether the user has completed profile setup via POST /users/profile/setup. Returns true if penName is set or at least 2 setup fields are filled.
+             */
+            isSetupComplete?: boolean;
+            stats?: {
+                storiesRead?: number;
+                storiesWritten?: number;
+                badgesCount?: number;
+                certificatesCount?: number;
+            };
+        };
+    };
 };
+
+export type UsersControllerGetProfileResponse = UsersControllerGetProfileResponses[keyof UsersControllerGetProfileResponses];
 
 export type UsersControllerUpdateProfileData = {
     body: UpdateProfileDto;
@@ -1484,7 +1514,7 @@ export type NotificationsControllerGetUserNotificationsData = {
         /**
          * Filter by notification type
          */
-        type?: 'achievement' | 'milestone' | 'admin_message' | 'reminder_read' | 'reminder_write' | 'story_like' | 'story_comment' | 'system';
+        type?: 'achievement' | 'milestone' | 'admin_message' | 'reminder_read' | 'reminder_write' | 'story_like' | 'story_comment' | 'story_collaboration' | 'system';
     };
     url: '/notifications';
 };
@@ -1703,6 +1733,94 @@ export type NotificationsControllerDeleteAllNotificationsResponses = {
 
 export type NotificationsControllerDeleteAllNotificationsResponse = NotificationsControllerDeleteAllNotificationsResponses[keyof NotificationsControllerDeleteAllNotificationsResponses];
 
+export type SearchCollaboratorsData = {
+    body?: never;
+    path?: never;
+    query: {
+        /**
+         * Pen name or partial pen name to search for (case-insensitive, supports partial matches)
+         */
+        penName: string;
+        /**
+         * Maximum number of suggestions to return (default: 10, max: 20)
+         */
+        limit?: number;
+    };
+    url: '/stories/collaborators/search';
+};
+
+export type SearchCollaboratorsErrors = {
+    /**
+     * Invalid pen name provided
+     */
+    400: unknown;
+};
+
+export type SearchCollaboratorsResponses = {
+    /**
+     * Collaborator search completed
+     */
+    200: {
+        searchTerm?: string;
+        suggestions?: Array<{
+            id?: string;
+            penName?: string;
+            firstName?: string;
+            lastName?: string;
+            avatar?: string;
+        }>;
+        count?: number;
+        message?: string;
+    };
+};
+
+export type SearchCollaboratorsResponse = SearchCollaboratorsResponses[keyof SearchCollaboratorsResponses];
+
+export type SearchStoriesData = {
+    body?: never;
+    path?: never;
+    query: {
+        /**
+         * Search query to match against story title, description, content, chapters, episodes, or genres
+         */
+        query: string;
+        /**
+         * Page number (default: 1)
+         */
+        page?: number;
+        /**
+         * Items per page (default: 10, max: 100)
+         */
+        limit?: number;
+    };
+    url: '/stories/search';
+};
+
+export type SearchStoriesErrors = {
+    /**
+     * Bad request - Search query is required or invalid
+     */
+    400: unknown;
+};
+
+export type SearchStoriesResponses = {
+    /**
+     * Search results retrieved successfully
+     */
+    200: {
+        stories?: Array<{
+            [key: string]: unknown;
+        }>;
+        total?: number;
+        page?: number;
+        limit?: number;
+        totalPages?: number;
+        query?: string;
+    };
+};
+
+export type SearchStoriesResponse = SearchStoriesResponses[keyof SearchStoriesResponses];
+
 export type StoriesControllerGetGenresData = {
     body?: never;
     path?: never;
@@ -1776,6 +1894,118 @@ export type StoriesControllerFindAllResponses = {
 };
 
 export type StoriesControllerFindAllResponse = StoriesControllerFindAllResponses[keyof StoriesControllerFindAllResponses];
+
+export type StoriesControllerFindPopularData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Page number (default: 1)
+         */
+        page?: number;
+        /**
+         * Items per page (default: 10, max: 100)
+         */
+        limit?: number;
+        /**
+         * Filter stories by one or more genres (e.g., genres=Romance&genres=Drama)
+         */
+        genres?: Array<string>;
+    };
+    url: '/stories/popular';
+};
+
+export type StoriesControllerFindPopularResponses = {
+    /**
+     * Popular stories retrieved successfully
+     */
+    200: StoriesListResponseDto;
+};
+
+export type StoriesControllerFindPopularResponse = StoriesControllerFindPopularResponses[keyof StoriesControllerFindPopularResponses];
+
+export type StoriesControllerFindRecentlyAddedData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Page number (default: 1)
+         */
+        page?: number;
+        /**
+         * Items per page (default: 10, max: 100)
+         */
+        limit?: number;
+        /**
+         * Filter stories by one or more genres (e.g., genres=Romance&genres=Drama)
+         */
+        genres?: Array<string>;
+    };
+    url: '/stories/recently-added';
+};
+
+export type StoriesControllerFindRecentlyAddedResponses = {
+    /**
+     * Recently added stories retrieved successfully
+     */
+    200: StoriesListResponseDto;
+};
+
+export type StoriesControllerFindRecentlyAddedResponse = StoriesControllerFindRecentlyAddedResponses[keyof StoriesControllerFindRecentlyAddedResponses];
+
+export type StoriesControllerFindTrendingNowData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Page number (default: 1)
+         */
+        page?: number;
+        /**
+         * Items per page (default: 10, max: 100)
+         */
+        limit?: number;
+        /**
+         * Filter stories by one or more genres (e.g., genres=Romance&genres=Drama)
+         */
+        genres?: Array<string>;
+    };
+    url: '/stories/trending-now';
+};
+
+export type StoriesControllerFindTrendingNowResponses = {
+    /**
+     * Trending stories retrieved successfully
+     */
+    200: StoriesListResponseDto;
+};
+
+export type StoriesControllerFindTrendingNowResponse = StoriesControllerFindTrendingNowResponses[keyof StoriesControllerFindTrendingNowResponses];
+
+export type StoriesControllerFindOnlyOnStorytimeData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Page number (default: 1)
+         */
+        page?: number;
+        /**
+         * Items per page (default: 10, max: 100)
+         */
+        limit?: number;
+    };
+    url: '/stories/only-on-storytime';
+};
+
+export type StoriesControllerFindOnlyOnStorytimeResponses = {
+    /**
+     * Exclusive stories retrieved successfully
+     */
+    200: StoriesListResponseDto;
+};
+
+export type StoriesControllerFindOnlyOnStorytimeResponse = StoriesControllerFindOnlyOnStorytimeResponses[keyof StoriesControllerFindOnlyOnStorytimeResponses];
 
 export type StoriesControllerGetMyLibraryData = {
     body?: never;

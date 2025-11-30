@@ -8,9 +8,22 @@ import { Magnetik_Regular } from "@/lib/font";
 import { cn } from "@/lib/utils";
 import { StoryResponseDto, AuthorDto } from "@/src/client/types.gen";
 
-// Use the generated type directly, or extend it if needed for UI-specific props
+// Extend the generated type to match the actual API response
+interface ExtendedStory extends StoryResponseDto {
+  onlyOnStorytime?: boolean;
+  storyStatus?: string;
+  likeCount?: number;
+  commentCount?: number;
+  popularityScore?: number;
+  viewCount?: number;
+  // Legacy fields that might still be used or needed for compatibility
+  status?: string;
+  rating?: number;
+  comments?: number;
+}
+
 interface StoryCardProps {
-  story: StoryResponseDto;
+  story: ExtendedStory;
   className?: string;
   mode?: "default" | "pen";
   onEdit?: (storyId: string | number) => void;
@@ -125,15 +138,14 @@ const StoryCard = ({
           >
             {story.title}
           </h3>
-          {/* Note: storyStatus might not be available on all story objects depending on the endpoint */}
           <span
             className={cn(
               "text-xs px-2 py-0.5 rounded-full",
-              getStatusColor((story as any).storyStatus || (story as any).status),
+              getStatusColor(story.storyStatus || story.status),
               Magnetik_Regular.className
             )}
           >
-            ({(story as any).storyStatus || (story as any).status || "Unknown"})
+            ({story.storyStatus || story.status || "Unknown"})
           </span>
         </div>
 
@@ -154,16 +166,15 @@ const StoryCard = ({
         ) : (
           <>
             {/* Likes + Comments */}
-            {/* Note: These fields might need to be added to StoryResponseDto or handled if missing */}
             <div className="flex items-center gap-3 text-xs text-[#361B17]">
               <div className="flex items-center gap-1">
                 <ThumbsUp className="w-3 h-3 fill-[#F8951D] text-[#F8951D]" />
                 <span className={Magnetik_Regular.className}>
-                  ({(story as any).rating || 0})
+                  ({story.likeCount ?? story.rating ?? 0})
                 </span>
               </div>
               <span className={Magnetik_Regular.className}>
-                {(story as any).comments || 0} Comments
+                {story.commentCount ?? story.comments ?? 0} Comments
               </span>
             </div>
 

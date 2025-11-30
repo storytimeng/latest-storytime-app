@@ -4,11 +4,13 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "storytime.ng",
+        hostname: "**", // Allow all HTTPS hostnames
+     //   hostname: "storytime.ng",
       },
       {
-        protocol: "https",
-        hostname: "api.dicebear.com",
+        protocol: "http",
+        hostname: "**", // Allow all HTTP hostnames (for development)
+      //  hostname: "storytime.ng",
       },
     ],
   },

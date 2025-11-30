@@ -1,8 +1,8 @@
 import Cookies from "js-cookie";
-import { client } from "./client.gen";
-import { createClientConfig } from "../heyapi-runtime";
-import { getAuthToken } from "../stores/useAuthStore";
-import { refreshTokens } from "../lib/tokenManager";
+import { client } from "./client/client.gen";
+import { createClientConfig } from "./heyapi-runtime";
+import { getAuthToken } from "./stores/useAuthStore";
+import { refreshTokens } from "./lib/tokenManager";
 
 // Initialize HeyAPI client config immediately
 try {
