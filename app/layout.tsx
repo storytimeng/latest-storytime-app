@@ -6,6 +6,7 @@ import { APP_CONFIG } from "@/config/app";
 import { MaxWidthWrapper } from "@/lib/maxWidthWrapper";
 import { Providers } from "./providers";
 import { PWAProvider } from "@/components/PWAProvider";
+import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
 
 import { siteConfig } from "@/config/site";
 import { fontSans } from "@/config/fonts";
@@ -153,6 +154,7 @@ export default function RootLayout({
             <GenresPreloader />
             <MaxWidthWrapper>{children}</MaxWidthWrapper>
             <LoadingOverlay />
+            <PWAInstallPrompt />
           </PWAProvider>
         </Providers>
       </body>

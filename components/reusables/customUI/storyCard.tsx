@@ -4,7 +4,7 @@ import { Card } from "@heroui/card";
 import { ThumbsUp, Pencil, Trash2 } from "lucide-react";
 import Image from "next/image";
 import React, { useState } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Magnetik_Regular } from "@/lib/font";
 import { cn } from "@/lib/utils";
 import { StoryResponseDto, AuthorDto } from "@/src/client/types.gen";
@@ -47,10 +47,12 @@ const StoryCard = ({
   const handleCardClick = () => onClick?.(story.id);
   const handleEdit = (e: React.MouseEvent) => {
     e.stopPropagation();
+    e.preventDefault();
     onEdit?.(story.id);
   };
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
+    e.preventDefault();
     onDelete?.(story.id);
   };
 
@@ -60,22 +62,16 @@ const StoryCard = ({
   const displayImage = story.imageUrl || "/placeholder-image.jpg"; // Fallback image
   const displayGenre = story.genres?.[0] || "Uncategorized";
 
-  const router = useRouter();
+  const storyLink = `/story/${story.id}/`;
 
-  const handleStoryClick = () => {
-    if (!isPenMode) {
-      router.push(`/story/${story.id}/read`);
-    }
-  };
-
-  return (
+  const cardContent = (
     <Card
       className={cn(
         "flex-shrink-0 rounded-xl border-none bg-transparent shadow-none space-y-2 relative",
         isPenMode ? "w-full cursor-pointer" : "w-[160px] cursor-pointer",
         className
       )}
-      onClick={isPenMode ? handleCardClick : handleStoryClick}
+      onClick={isPenMode ? handleCardClick : undefined}
     >
       <div className="relative group">
         {imageError ? (
@@ -208,6 +204,17 @@ const StoryCard = ({
         )}
       </div>
     </Card>
+  );
+
+  // Wrap in Link for default mode, return as-is for pen mode
+  if (isPenMode) {
+    return cardContent;
+  }
+
+  return (
+    <Link href={storyLink} className="block">
+      {cardContent}
+    </Link>
   );
 };
 
