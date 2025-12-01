@@ -8,5 +8,10 @@ export default defineConfig({
       name: "@hey-api/client-next",
       runtimeConfigPath: "../heyapi-runtime",
     },
+    "zod",
+    {
+      name: "@hey-api/sdk",
+      validator: "zod",
+    },
   ],
 });

@@ -135,6 +135,15 @@ export function useStoryComments(storyId: string | undefined) {
     const response = await storiesControllerGetStoryComments({
       path: { id: storyId },
     });
+    // Unwrap the data array from the response
+    if (
+      response &&
+      typeof response.data === "object" &&
+      response.data !== null &&
+      "data" in response.data
+    ) {
+      return (response.data as any).data;
+    }
     return response.data;
   });
 
@@ -169,7 +178,7 @@ export function useStoryComments(storyId: string | undefined) {
   };
 
   return {
-    comments: (commentsData as any) || [],
+    comments: Array.isArray(commentsData) ? commentsData : [],
     commentCount: (commentCountData as any)?.count || 0,
     isLoading,
     error,

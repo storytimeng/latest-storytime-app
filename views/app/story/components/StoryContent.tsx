@@ -7,17 +7,24 @@ interface StoryContentProps {
   authorName: string;
   authorAvatar?: string;
   hasNavigation: boolean;
+  description?: string;
 }
 
 export const StoryContent = React.memo(
-  ({ content, authorName, authorAvatar, hasNavigation }: StoryContentProps) => {
+  ({
+    content,
+    authorName,
+    authorAvatar,
+    hasNavigation,
+    description,
+  }: StoryContentProps) => {
     return (
-      <div className={`px-4 py-6 pb-24 ${hasNavigation ? "pt-44" : "pt-32"}`}>
+      <div className={`px-4 py-6 pb-9 ${hasNavigation ? "pt-44" : "pt-32"}`}>
         <div className="mb-6 space-y-4">
           <div
             className={`text-primary-shade-5 text-sm leading-relaxed whitespace-pre-wrap ${Magnetik_Regular.className}`}
           >
-            {content}
+            {content}...
           </div>
 
           {/* Divider */}
@@ -37,6 +44,15 @@ export const StoryContent = React.memo(
               By {authorName}
             </span>
           </div>
+
+          {/* Description */}
+          {description && (
+            <div
+              className={`text-primary-shade-4 text-sm leading-relaxed ${Magnetik_Regular.className}`}
+            >
+              {description}
+            </div>
+          )}
         </div>
       </div>
     );

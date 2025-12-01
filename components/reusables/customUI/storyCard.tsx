@@ -9,8 +9,17 @@ import { Magnetik_Regular } from "@/lib/font";
 import { cn } from "@/lib/utils";
 import { StoryResponseDto, AuthorDto } from "@/src/client/types.gen";
 
+// Extend AuthorDto to include fields that may be in the API response
+interface ExtendedAuthor extends AuthorDto {
+  firstName?: string;
+  lastName?: string;
+  penName?: string;
+}
+
 // Extend the generated type to match the actual API response
 interface ExtendedStory extends StoryResponseDto {
+  author: ExtendedAuthor;
+  anonymous?: boolean;
   onlyOnStorytime?: boolean;
   storyStatus?: string;
   likeCount?: number;
@@ -56,9 +65,15 @@ const StoryCard = ({
     onDelete?.(story.id);
   };
 
-  // Safe access to author name - cast to any because generated AuthorDto might be missing penName
-  const authorName =
-    (story.author as any)?.penName || story.author?.name || "Anonymous";
+  // Safe access to author name - if story is anonymous, show "Anonymous"
+  const authorName = story.anonymous
+    ? "Anonymous"
+    : story.author?.penName ||
+      (story.author?.firstName && story.author?.lastName
+        ? `${story.author.firstName} ${story.author.lastName}`.trim()
+        : story.author?.firstName || story.author?.lastName) ||
+      story.author?.name ||
+      "Unknown Author";
   const displayImage = story.imageUrl || "/placeholder-image.jpg"; // Fallback image
   const displayGenre = story.genres?.[0] || "Uncategorized";
 

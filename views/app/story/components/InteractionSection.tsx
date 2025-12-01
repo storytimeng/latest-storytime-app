@@ -7,9 +7,9 @@ interface InteractionSectionProps {
   likeCount: number;
   commentCount: number;
   isLiked: boolean;
-  showComments: boolean;
+  showComments?: boolean; // Optional, not used anymore
   onToggleLike: () => void;
-  onToggleComments: () => void;
+  onToggleComments?: () => void; // Optional, not used anymore
 }
 
 export const InteractionSection = React.memo(
@@ -17,65 +17,51 @@ export const InteractionSection = React.memo(
     likeCount,
     commentCount,
     isLiked,
-    showComments,
     onToggleLike,
-    onToggleComments,
   }: InteractionSectionProps) => {
     return (
-      <div className="p-2 space-y-2 rounded-lg bg-accent-shade-2">
-        <div>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onToggleLike}
-                className="flex items-center min-w-0 gap-1 p-0 border-none text-primary-colour"
-              >
-                <ThumbsUp
-                  className={`w-4 h-4 ${
-                    isLiked
-                      ? "fill-complimentary-colour text-complimentary-colour"
-                      : "text-primary-shade-1"
-                  }`}
-                />
-                <span className={`text-xs ${Magnetik_Regular.className}`}>
-                  Like
-                </span>
-              </Button>
-            </div>
-            <div className="flex items-center gap-4 text-xs text-primary-colour">
-              <span className={`${Magnetik_Regular.className} flex flex-row`}>
-                <ThumbsUp
-                  className={`w-4 h-4 text-complimentary-colour mr-[1.5px]`}
-                />
-                {likeCount} Likes
-              </span>
-            </div>
-          </div>
-          <div className="h-px bg-primary-shade-1" />
+      <div className="p-3 space-y-2 rounded-lg bg-accent-shade-2">
+        <div className="flex items-center justify-between pb-2 border-b border-primary-shade-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onToggleLike}
+            className="flex items-center min-w-0 gap-1 p-0 border-none text-primary-colour"
+          >
+            <ThumbsUp
+              className={`w-4 h-4 ${
+                isLiked
+                  ? "fill-complimentary-colour text-complimentary-colour"
+                  : "text-primary-shade-1"
+              }`}
+            />
+            <span className={`text-xs ${Magnetik_Regular.className}`}>
+              Like
+            </span>
+          </Button>
+          <span
+            className={`${Magnetik_Regular.className} flex items-center gap-1 text-xs text-primary-colour`}
+          >
+            <ThumbsUp className="w-4 h-4 text-complimentary-colour" />
+            {likeCount} Likes
+          </span>
+        </div>
 
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onToggleComments}
-                className="flex items-center min-w-0 gap-1 p-0 border-none text-primary-colour"
-              >
-                <MessageCircle className="w-4 h-4 text-primary-shade-1" />
-                <span className={`text-xs ${Magnetik_Regular.className}`}>
-                  Comment
-                </span>
-              </Button>
-            </div>
-            <div className="flex items-center gap-4 text-xs text-primary-colour">
-              <span className={`${Magnetik_Regular.className} flex flex-row`}>
-                <MessageCircle className="w-4 h-4 text-complimentary-colour mr-[1.5px]" />
-                {commentCount} comments
-              </span>
-            </div>
+        <div className="flex items-center justify-between pt-1">
+          <div className="flex items-center gap-1">
+            <MessageCircle className="w-4 h-4 text-primary-shade-1" />
+            <span
+              className={`text-xs ${Magnetik_Regular.className} text-primary-colour`}
+            >
+              Comment
+            </span>
           </div>
+          <span
+            className={`${Magnetik_Regular.className} flex items-center gap-1 text-xs text-primary-colour`}
+          >
+            <MessageCircle className="w-4 h-4 text-complimentary-colour" />
+            {commentCount} comments
+          </span>
         </div>
       </div>
     );

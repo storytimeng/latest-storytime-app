@@ -33,6 +33,10 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
   const { likeCount, isLiked, toggleLike } = useStoryLikes(storyId);
   const { commentCount } = useStoryComments(storyId);
 
+  // Use counts from story data if available, otherwise use hook counts
+  const displayLikeCount = (story as any)?.likeCount ?? likeCount ?? 0;
+  const displayCommentCount = (story as any)?.commentCount ?? commentCount ?? 0;
+
   // Determine story structure and fetch appropriate content
   const structure = (story as any)?.structure || "chapters";
   const shouldFetchChapters = structure === "chapters" && !isLoading;
@@ -297,7 +301,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
                   Magnetik_Regular.className
                 )}
               >
-                {commentCount} comments
+                {displayCommentCount} comments
               </p>
             </div>
 
@@ -320,7 +324,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
                   Magnetik_Regular.className
                 )}
               >
-                {likeCount} likes
+                {displayLikeCount} likes
               </p>
             </button>
           </div>

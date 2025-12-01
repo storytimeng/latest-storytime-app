@@ -21,7 +21,7 @@ export const NavigationBar = React.memo(
   }: NavigationBarProps) => {
     return (
       <div
-        className={`fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[28rem] bg-[#FFEBD0CC] backdrop-blur-sm z-40 transition-all duration-300 ${
+        className={`fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[28rem] bg-[#FFEBD0]/80 backdrop-blur-sm z-40 transition-all duration-300 ${
           isVisible ? "translate-y-0" : "translate-y-full"
         }`}
       >

@@ -24,13 +24,8 @@ import { NavigationBar } from "./components/NavigationBar";
 import { useScrollVisibility } from "./hooks/useScrollVisibility";
 import { useOfflineContent } from "./hooks/useOfflineContent";
 import { useStoryContent } from "./hooks/useStoryContent";
-
+import { CommentsSection } from "./components";
 // Lazy load comments section (code splitting)
-const CommentsSection = lazy(() =>
-  import("./components/CommentsSection").then((mod) => ({
-    default: mod.CommentsSection,
-  }))
-);
 
 interface ReadStoryViewProps {
   storyId: string;
@@ -64,8 +59,15 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
     isOnline ? storyId : undefined
   );
 
+  // Use counts from story data if available, otherwise use hook counts
+  const displayLikeCount = (story as any)?.likeCount ?? likeCount ?? 0;
+  const displayCommentCount = (story as any)?.commentCount ?? commentCount ?? 0;
+
+  // Use episodesList from story if episodes endpoint returns empty
+  const effectiveEpisodes = episodes?.length > 0 ? episodes : (story as any)?.episodesList || [];
+  const effectiveChapters = chapters?.length > 0 ? chapters : [];
+
   // UI State
-  const [showComments, setShowComments] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
 
   // Custom hooks for derived state
@@ -83,8 +85,8 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
     handleNext,
   } = useStoryContent({
     story,
-    chapters,
-    episodes,
+    chapters: effectiveChapters,
+    episodes: effectiveEpisodes,
     offlineStory,
     offlineContent,
     isUsingOfflineData,
@@ -118,6 +120,11 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
     );
   }
 
+  console.log("Rendering CommentsSection with", {
+    comments,
+    isCommentsLoading,
+  });
+
   return (
     <div className="min-h-screen bg-accent-shade-1 relative overflow-hidden max-w-[28rem] mx-auto">
       {/* Offline Mode Banner */}
@@ -147,38 +154,41 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
       {/* Story Content */}
       <StoryContent
         content={currentContent}
-        authorName={activeStory.author?.name || "Unknown Author"}
+        authorName={
+          activeStory.anonymous
+            ? "Anonymous"
+            : activeStory.author?.penName || "Unknown Author"
+        }
         authorAvatar={activeStory.author?.avatar}
         hasNavigation={hasNavigation}
+        description={activeStory.description}
       />
 
       {/* Interaction Section (only when online) */}
       {isOnline && (
         <div className="px-4 pb-6">
           <InteractionSection
-            likeCount={likeCount || 0}
-            commentCount={commentCount || 0}
+            likeCount={displayLikeCount}
+            commentCount={displayCommentCount}
             isLiked={isLiked || false}
-            showComments={showComments}
+            showComments={true}
             onToggleLike={toggleLike}
-            onToggleComments={() => setShowComments(!showComments)}
+            onToggleComments={() => {}}
           />
 
-          {/* Comments Section (Lazy Loaded) */}
-          {showComments && (
-            <Suspense
-              fallback={
-                <div className="py-4">
-                  <Skeleton className="w-full h-20 rounded-lg" />
-                </div>
-              }
-            >
-              <CommentsSection
-                comments={comments || []}
-                onSubmitComment={handleCommentSubmit}
-              />
-            </Suspense>
-          )}
+          {/* Comments Section - Always shown */}
+          <Suspense
+            fallback={
+              <div className="py-4">
+                <Skeleton className="w-full h-20 rounded-lg" />
+              </div>
+            }
+          >
+            <CommentsSection
+              comments={comments || []}
+              onSubmitComment={handleCommentSubmit}
+            />
+          </Suspense>
         </div>
       )}
 

@@ -155,9 +155,10 @@ export function useStoryContent({
     (activeEpisodes && activeEpisodes.length > 1);
   const navigationList = activeChapters?.length
     ? activeChapters
-    : activeEpisodes;
-  const currentIndex =
-    navigationList?.findIndex((i: any) => i.id === selectedChapterId) ?? -1;
+    : activeEpisodes || [];
+  const currentIndex = Array.isArray(navigationList)
+    ? navigationList.findIndex((i: any) => i.id === selectedChapterId)
+    : -1;
 
   return {
     selectedChapterId,
