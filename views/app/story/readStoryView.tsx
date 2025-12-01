@@ -64,7 +64,8 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
   const displayCommentCount = (story as any)?.commentCount ?? commentCount ?? 0;
 
   // Use episodesList from story if episodes endpoint returns empty
-  const effectiveEpisodes = episodes?.length > 0 ? episodes : (story as any)?.episodesList || [];
+  const effectiveEpisodes =
+    episodes?.length > 0 ? episodes : (story as any)?.episodesList || [];
   const effectiveChapters = chapters?.length > 0 ? chapters : [];
 
   // UI State
