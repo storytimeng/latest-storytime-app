@@ -149,11 +149,7 @@ const withPWA = require("next-pwa")({
 const nextConfig = {
   // Production optimizations
   reactStrictMode: true,
-  swcMinify: true,
   compress: true,
-
-  // Performance optimizations
-  optimizeFonts: true,
 
   // Image optimization
   images: {

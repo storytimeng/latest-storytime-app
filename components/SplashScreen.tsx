@@ -28,9 +28,9 @@ export const SplashScreen = ({
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-accent-shade-1 animate-fade-in">
-      <div className="flex flex-col items-center justify-center space-y-6">
-        {/* Pulsating Logo */}
-        <div className="relative w-48 h-48 animate-pulse-scale">
+      <div className="flex flex-col items-center justify-center px-8 space-y-6">
+        {/* Pulsating Banner Logo */}
+        <div className="relative w-full max-w-md aspect-[1200/630] animate-pulse-scale">
           <Image
             src="/images/banner.png"
             alt="Storytime"
@@ -43,15 +43,15 @@ export const SplashScreen = ({
         {/* Loading Indicator */}
         <div className="flex space-x-2">
           <div
-            className="w-3 h-3 bg-complimentary-colour rounded-full animate-bounce"
+            className="w-3 h-3 rounded-full bg-complimentary-colour animate-bounce"
             style={{ animationDelay: "0ms" }}
           />
           <div
-            className="w-3 h-3 bg-complimentary-colour rounded-full animate-bounce"
+            className="w-3 h-3 rounded-full bg-complimentary-colour animate-bounce"
             style={{ animationDelay: "150ms" }}
           />
           <div
-            className="w-3 h-3 bg-complimentary-colour rounded-full animate-bounce"
+            className="w-3 h-3 rounded-full bg-complimentary-colour animate-bounce"
             style={{ animationDelay: "300ms" }}
           />
         </div>

@@ -55,6 +55,20 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
+    },
+    {
+      "src": "/images/banner.png",
+      "sizes": "1200x630",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/images/banner.png",
+      "sizes": "1200x630",
+      "type": "image/png",
+      "form_factor": "wide"
     }
   ]
 }
