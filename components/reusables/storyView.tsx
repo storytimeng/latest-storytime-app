@@ -4,113 +4,122 @@ import React, { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import PageHeader from "@/components/reusables/customUI/pageHeader";
 import StoryForm from "@/components/reusables/form/storyForm";
+import {
+  useCreateStory,
+  useUpdateStory,
+  useFetchStory,
+} from "@/src/hooks/useStoryMutations";
+import { useUserProfile } from "@/src/hooks/useUserProfile";
 import type {
   StoryFormData,
   Chapter,
   Part,
   StoryViewProps,
 } from "@/types/story";
-
-// Mock API functions - replace with actual API calls
-const mockFetchStory = async (id: string): Promise<StoryFormData> => {
-  // Simulate API call
-  await new Promise((resolve) => setTimeout(resolve, 1000));
-
-  return {
-    id,
-    title: "The Lost Ship",
-    collaborate: "@penname",
-    description: `The sons of the morning ascended to the heavenly court, having been summoned by Elohim Himself.
-
-The archangels rode their horses—Lucifer on his silver stallion, Michael on his chestnut stallion, and Gabriel on his golden stallion. Behind them, their winged hosts followed.
-
-A disgruntled look was etched on Lucifer's face. Only curiosity and wonder filled Gabriel's and Michael's.
-
-They knew this was the general assembly where Elohim would finally share his upcoming plans for the cosmos.`,
-    selectedGenres: ["Fantasy", "Adventure"],
-    language: "English",
-    goAnonymous: true,
-    onlyOnStorytime: true,
-    trigger: true,
-    copyright: false,
-    storyStatus: "In Progress",
-    coverImage: "/images/nature.jpg",
-  };
-};
-
-const mockSaveStory = async (
-  data: StoryFormData
-): Promise<{ id: string; success: boolean }> => {
-  // Simulate API call
-  await new Promise((resolve) => setTimeout(resolve, 2000));
-
-  // TODO: Replace with actual API call
-  // console.log("Saving story:", { data, chapters, parts });
-
-  return {
-    id: data.id || `story_${Date.now()}`,
-    success: true,
-  };
-};
+import type { CreateStoryDto, UpdateStoryDto } from "@/src/client/types.gen";
 
 const StoryView: React.FC<StoryViewProps> = ({ mode, storyId }) => {
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(false);
+  const { user } = useUserProfile();
   const [initialData, setInitialData] = useState<
     Partial<StoryFormData> | undefined
   >();
-  const [dataLoaded, setDataLoaded] = useState(mode === "create");
 
-  // Load existing story data for edit mode
+  // Hooks for mutations
+  const { createStory, isCreating } = useCreateStory();
+  const { updateStory, isUpdating } = useUpdateStory();
+
+  // Fetch story data for edit mode
+  const { story, isLoading: isFetchingStory } = useFetchStory(
+    mode === "edit" ? storyId : undefined
+  );
+
+  // Transform API story data to form data
   React.useEffect(() => {
-    if (mode === "edit" && storyId && !dataLoaded) {
-      const loadStory = async () => {
-        try {
-          setIsLoading(true);
-          const storyData = await mockFetchStory(storyId);
-          setInitialData(storyData);
-          setDataLoaded(true);
-        } catch (error) {
-          console.error("Failed to load story:", error);
-          // Handle error - maybe show toast or redirect
-        } finally {
-          setIsLoading(false);
-        }
-      };
-
-      loadStory();
+    if (mode === "edit" && story) {
+      setInitialData({
+        id: story.id,
+        title: story.title || "",
+        collaborate: story.collaborate?.join(", ") || "",
+        description: story.description || "",
+        selectedGenres: story.genres || [],
+        language: story.language || "English",
+        goAnonymous: story.anonymous || false,
+        onlyOnStorytime: story.onlyOnStorytime || false,
+        trigger: story.trigger || false,
+        copyright: story.copyright || false,
+        storyStatus:
+          story.storyStatus === "complete"
+            ? "Completed"
+            : story.storyStatus === "ongoing"
+              ? "In Progress"
+              : story.storyStatus === "drafts"
+                ? "Draft"
+                : "Draft",
+        coverImage: story.coverImage || story.cover || undefined,
+      });
     }
-  }, [mode, storyId, dataLoaded]);
+  }, [mode, story]);
 
   // Handle form submission
   const handleSubmit = useCallback(
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     async (formData: StoryFormData, _chapters?: Chapter[], _parts?: Part[]) => {
       try {
-        setIsLoading(true);
+        if (!user?.id) {
+          console.error("User not authenticated");
+          return;
+        }
 
-        const result = await mockSaveStory(formData);
+        // Transform form data to API format
+        const apiData = {
+          authorId: user.id,
+          title: formData.title,
+          description: formData.description,
+          content: formData.description, // TODO: Add separate content field in form
+          genres: formData.selectedGenres,
+          collaborate: formData.collaborate
+            ? formData.collaborate.split(",").map((c) => c.trim())
+            : [],
+          language: formData.language.toLowerCase() as any,
+          anonymous: formData.goAnonymous,
+          onlyOnStorytime: formData.onlyOnStorytime,
+          trigger: formData.trigger,
+          copyright: formData.copyright,
+          storyStatus:
+            formData.storyStatus === "Completed"
+              ? "complete"
+              : formData.storyStatus === "In Progress"
+                ? "ongoing"
+                : ("drafts" as any),
+        };
 
-        if (result.success) {
-          // Show success message
-          // TODO: Replace with proper success notification
-          // console.log("Story saved successfully!");
+        if (mode === "edit" && storyId) {
+          // Update existing story
+          const success = await updateStory(storyId, apiData as UpdateStoryDto);
 
-          // Navigate based on action
-          if (formData.storyStatus === "Draft") {
-            router.push("/my-stories?tab=drafts");
-          } else {
-            router.push(`/story/${result.id}`);
+          if (success) {
+            console.log("Story updated successfully!");
+            router.push(`/story/${storyId}`);
+          }
+        } else {
+          // Create new story
+          const result = await createStory(apiData as CreateStoryDto);
+
+          if (result.success && result.id) {
+            console.log("Story created successfully!");
+
+            if (formData.storyStatus === "Draft") {
+              router.push("/my-stories?tab=drafts");
+            } else {
+              router.push(`/story/${result.id}`);
+            }
           }
         }
       } catch (error) {
         console.error("Failed to save story:", error);
-        // Handle error - show toast notification
-      } finally {
-        setIsLoading(false);
       }
     },
-    [router]
+    [mode, storyId, user, createStory, updateStory, router]
   );
 
   // Handle cancel action
@@ -127,7 +136,7 @@ const StoryView: React.FC<StoryViewProps> = ({ mode, storyId }) => {
   const backLink = mode === "edit" ? "/my-stories" : "/pen";
 
   // Show loading state while fetching data
-  if (mode === "edit" && !dataLoaded) {
+  if (mode === "edit" && isFetchingStory) {
     return (
       <div className="min-h-screen bg-accent-shade-1 max-w-[28rem] mx-auto">
         <PageHeader
@@ -159,7 +168,7 @@ const StoryView: React.FC<StoryViewProps> = ({ mode, storyId }) => {
           initialData={initialData}
           onSubmit={handleSubmit}
           onCancel={handleCancel}
-          isLoading={isLoading}
+          isLoading={isCreating || isUpdating}
         />
       </div>
     </div>

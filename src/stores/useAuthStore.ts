@@ -1,4 +1,4 @@
-import {create} from "zustand";
+import { create } from "zustand";
 import Cookies from "js-cookie";
 
 export interface AuthState {
@@ -25,16 +25,26 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   resetEmail: undefined,
   resetOtp: undefined,
   setToken: (token, refreshToken) => {
-    console.log("useAuthStore.setToken called with:", token ? "Token present" : "No token");
+    console.log("useAuthStore.setToken called with:", {
+      hasToken: !!token,
+      hasRefreshToken: !!refreshToken,
+    });
     if (token) {
-      Cookies.set(AUTH_TOKEN_KEY, token, { secure: process.env.NODE_ENV === "production" });
+      Cookies.set(AUTH_TOKEN_KEY, token, {
+        secure: process.env.NODE_ENV === "production",
+      });
     } else {
       Cookies.remove(AUTH_TOKEN_KEY);
     }
     if (refreshToken) {
-      Cookies.set(REFRESH_TOKEN_KEY, refreshToken, { secure: process.env.NODE_ENV === "production" });
+      Cookies.set(REFRESH_TOKEN_KEY, refreshToken, {
+        secure: process.env.NODE_ENV === "production",
+      });
+    } else {
+      // Don't remove if not provided - keep existing refresh token
+      // This handles cases where API only returns accessToken
     }
-    set(() => ({ token, refreshToken }));
+    set(() => ({ token, refreshToken: refreshToken || get().refreshToken }));
   },
   setReset: (email?: string, otp?: string) => {
     set(() => ({ resetEmail: email, resetOtp: otp }));

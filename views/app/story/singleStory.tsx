@@ -1,6 +1,15 @@
+"use client";
 import Link from "next/link";
-import React from "react";
-import { ArrowLeft, Dot, Eye, MessageSquare, ThumbsUp } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import {
+  ArrowLeft,
+  Dot,
+  Eye,
+  MessageSquare,
+  ThumbsUp,
+  Download,
+  Check,
+} from "lucide-react";
 import Image from "next/image";
 import { Magnetik_Regular, Magnetik_Bold } from "@/lib";
 import { cn } from "@/lib";
@@ -8,8 +17,12 @@ import {
   useStory,
   useStoryLikes,
   useStoryComments,
+  useStoryChapters,
+  useStoryEpisodes,
 } from "@/src/hooks/useStoryDetail";
 import { Skeleton } from "@heroui/skeleton";
+import { useOfflineStories } from "@/src/hooks/useOfflineStories";
+import { showToast } from "@/lib/showNotification";
 
 interface SingleStoryProps {
   storyId?: string;
@@ -17,9 +30,110 @@ interface SingleStoryProps {
 
 const SingleStory = ({ storyId }: SingleStoryProps) => {
   const { story, isLoading } = useStory(storyId);
-
   const { likeCount, isLiked, toggleLike } = useStoryLikes(storyId);
   const { commentCount } = useStoryComments(storyId);
+
+  // Offline functionality
+  const { isStoryDownloaded, downloadStory, deleteOfflineStory } =
+    useOfflineStories();
+
+  const [isDownloaded, setIsDownloaded] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  // Check if story is downloaded
+  useEffect(() => {
+    if (storyId) {
+      isStoryDownloaded(storyId).then(setIsDownloaded);
+    }
+  }, [storyId, isStoryDownloaded]);
+
+  // Determine story structure and fetch appropriate content
+  const structure = (story as any)?.structure || "chapters";
+  const shouldFetchChapters = structure === "chapters" && !isLoading;
+  const shouldFetchEpisodes = structure === "episodes" && !isLoading;
+
+  const { chapters } = useStoryChapters(
+    shouldFetchChapters ? storyId : undefined
+  );
+  const { episodes } = useStoryEpisodes(
+    shouldFetchEpisodes ? storyId : undefined
+  );
+
+  // Handle download
+  const handleDownload = async () => {
+    if (!story || !storyId) return;
+
+    setIsDownloading(true);
+
+    try {
+      let content: any[] = [];
+
+      // Handle stories with chapters
+      if (structure === "chapters" && chapters && Array.isArray(chapters)) {
+        content = chapters.map((ch: any, idx: number) => ({
+          id: ch.id,
+          title: ch.title,
+          content: ch.content,
+          number: idx + 1,
+        }));
+      }
+      // Handle stories with episodes
+      else if (
+        structure === "episodes" &&
+        episodes &&
+        Array.isArray(episodes)
+      ) {
+        content = episodes.map((ep: any, idx: number) => ({
+          id: ep.id,
+          title: ep.title,
+          content: ep.content,
+          number: idx + 1,
+        }));
+      }
+      // Handle single stories without chapters or episodes
+      else {
+        content = [
+          {
+            id: storyId,
+            title: story.title,
+            content: story.content || story.description || "",
+            number: 1,
+          },
+        ];
+      }
+
+      if (content.length === 0 || !content[0].content) {
+        showToast({
+          type: "warning",
+          message: "No content available to download",
+        });
+        return;
+      }
+
+      const success = await downloadStory(story, content);
+      if (success) {
+        setIsDownloaded(true);
+      }
+    } catch (error) {
+      console.error("Download error:", error);
+      showToast({
+        type: "error",
+        message: "Failed to download story",
+      });
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  // Handle remove download
+  const handleRemoveDownload = async () => {
+    if (!storyId) return;
+
+    const success = await deleteOfflineStory(storyId);
+    if (success) {
+      setIsDownloaded(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -186,7 +300,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
               "text-primary-shade-2 text-sm leading-relaxed whitespace-pre-wrap"
             )}
           >
-            {story.content}
+            {story.description}...
           </div>
 
           <div className="flex items-center justify-center gap-3 bg-accent-shade-2 rounded-full py-3 px-6 w-fit mx-auto">
@@ -222,6 +336,57 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
               Start Reading
             </p>
           </Link>
+
+          {/* Download Button */}
+          <button
+            onClick={isDownloaded ? handleRemoveDownload : handleDownload}
+            disabled={isDownloading}
+            className={cn(
+              "flex items-center justify-center gap-2 border-2 rounded-full py-4 w-full transition-all",
+              isDownloaded
+                ? "border-green-500 bg-green-500/10 text-green-500"
+                : "border-complimentary-colour bg-complimentary-colour/10 text-complimentary-colour hover:bg-complimentary-colour/20",
+              isDownloading && "opacity-50 cursor-not-allowed"
+            )}
+          >
+            {isDownloading ? (
+              <>
+                <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                <p
+                  className={cn(
+                    "text-base font-medium",
+                    Magnetik_Regular.className
+                  )}
+                >
+                  Downloading...
+                </p>
+              </>
+            ) : isDownloaded ? (
+              <>
+                <Check size={20} />
+                <p
+                  className={cn(
+                    "text-base font-medium",
+                    Magnetik_Regular.className
+                  )}
+                >
+                  Downloaded • Tap to Remove
+                </p>
+              </>
+            ) : (
+              <>
+                <Download size={20} />
+                <p
+                  className={cn(
+                    "text-base font-medium",
+                    Magnetik_Regular.className
+                  )}
+                >
+                  Download for Offline Reading
+                </p>
+              </>
+            )}
+          </button>
         </div>
       </div>
     </div>

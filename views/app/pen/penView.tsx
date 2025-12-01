@@ -25,6 +25,7 @@ import { useRouter } from "next/navigation";
 
 import { useUserProfile } from "@/src/hooks/useUserProfile";
 import { useStories } from "@/src/hooks/useStories";
+import { useDeleteStory } from "@/src/hooks/useStoryMutations";
 import type { StoryResponseDto } from "@/src/client/types.gen";
 
 // Locally extend StoryResponseDto for UI needs
@@ -50,9 +51,12 @@ const PenView = () => {
   // Get current user profile
   const { user } = useUserProfile();
   // Fetch stories written by the current user
-  const { stories, isLoading } = useStories({
+  const { stories, isLoading, mutate } = useStories({
     search: user?.penName || user?.firstName || user?.id,
   });
+
+  // Delete story hook
+  const { deleteStory, isDeleting } = useDeleteStory();
 
   // Filter stories by tab
   const filteredStories = useMemo(() => {
@@ -96,10 +100,16 @@ const PenView = () => {
     }
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (storyToDelete) {
-      // TODO: Implement actual delete functionality
-      // For now, just close the modal
+      const success = await deleteStory(String(storyToDelete.id));
+
+      if (success) {
+        // Optimistically update the UI by refetching stories
+        mutate();
+        console.log("✅ Story deleted and list refreshed");
+      }
+
       setIsDeleteModalOpen(false);
       setStoryToDelete(null);
     }
@@ -400,6 +410,7 @@ const PenView = () => {
             </Button>
             <Button
               onPress={confirmDelete}
+              isLoading={isDeleting}
               className="flex-1 py-6 rounded-full bg-primary-shade-6 text-universal-white body-text-small-medium-auto"
             >
               Yes

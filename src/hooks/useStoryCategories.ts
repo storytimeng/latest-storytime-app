@@ -54,7 +54,9 @@ export function usePopularStories(options: UseStoryCategoryOptions = {}) {
         }
         // Avoid duplicates
         const existingIds = new Set(prev.map((s: any) => s.id));
-        const newStories = data.stories.filter((s: any) => !existingIds.has(s.id));
+        const newStories = data.stories.filter(
+          (s: any) => !existingIds.has(s.id)
+        );
         return [...prev, ...newStories];
       });
 
@@ -76,13 +78,26 @@ export function usePopularStories(options: UseStoryCategoryOptions = {}) {
     setHasMore(true);
   }, []);
 
+  // Memoize stories array to prevent new reference unless content actually changes
+  const memoizedStories = React.useMemo(
+    () => allStories,
+    [
+      allStories.length,
+      allStories[0]?.id,
+      allStories[allStories.length - 1]?.id,
+    ]
+  );
+
+  // Track initial loading separately from loading more
+  const isInitialLoading = isLoading && allStories.length === 0;
+
   return {
-    stories: allStories,
+    stories: memoizedStories,
     total: (data as StoriesListResponseDto)?.total || 0,
     page: currentPage,
     limit: (data as StoriesListResponseDto)?.limit || limit,
     totalPages: (data as StoriesListResponseDto)?.totalPages || 0,
-    isLoading,
+    isLoading: isInitialLoading,
     isLoadingMore: isLoading && currentPage > 1,
     hasMore,
     error,
@@ -124,7 +139,9 @@ export function useRecentlyAddedStories(options: UseStoryCategoryOptions = {}) {
           return data.stories;
         }
         const existingIds = new Set(prev.map((s: any) => s.id));
-        const newStories = data.stories.filter((s: any) => !existingIds.has(s.id));
+        const newStories = data.stories.filter(
+          (s: any) => !existingIds.has(s.id)
+        );
         return [...prev, ...newStories];
       });
 
@@ -145,13 +162,26 @@ export function useRecentlyAddedStories(options: UseStoryCategoryOptions = {}) {
     setHasMore(true);
   }, []);
 
+  // Memoize stories array to prevent new reference unless content actually changes
+  const memoizedStories = React.useMemo(
+    () => allStories,
+    [
+      allStories.length,
+      allStories[0]?.id,
+      allStories[allStories.length - 1]?.id,
+    ]
+  );
+
+  // Track initial loading separately from loading more
+  const isInitialLoading = isLoading && allStories.length === 0;
+
   return {
-    stories: allStories,
+    stories: memoizedStories,
     total: (data as StoriesListResponseDto)?.total || 0,
     page: currentPage,
     limit: (data as StoriesListResponseDto)?.limit || limit,
     totalPages: (data as StoriesListResponseDto)?.totalPages || 0,
-    isLoading,
+    isLoading: isInitialLoading,
     isLoadingMore: isLoading && currentPage > 1,
     hasMore,
     error,
@@ -193,7 +223,9 @@ export function useTrendingStories(options: UseStoryCategoryOptions = {}) {
           return data.stories;
         }
         const existingIds = new Set(prev.map((s: any) => s.id));
-        const newStories = data.stories.filter((s: any) => !existingIds.has(s.id));
+        const newStories = data.stories.filter(
+          (s: any) => !existingIds.has(s.id)
+        );
         return [...prev, ...newStories];
       });
 
@@ -214,13 +246,26 @@ export function useTrendingStories(options: UseStoryCategoryOptions = {}) {
     setHasMore(true);
   }, []);
 
+  // Memoize stories array to prevent new reference unless content actually changes
+  const memoizedStories = React.useMemo(
+    () => allStories,
+    [
+      allStories.length,
+      allStories[0]?.id,
+      allStories[allStories.length - 1]?.id,
+    ]
+  );
+
+  // Track initial loading separately from loading more
+  const isInitialLoading = isLoading && allStories.length === 0;
+
   return {
-    stories: allStories,
+    stories: memoizedStories,
     total: (data as StoriesListResponseDto)?.total || 0,
     page: currentPage,
     limit: (data as StoriesListResponseDto)?.limit || limit,
     totalPages: (data as StoriesListResponseDto)?.totalPages || 0,
-    isLoading,
+    isLoading: isInitialLoading,
     isLoadingMore: isLoading && currentPage > 1,
     hasMore,
     error,
@@ -267,7 +312,9 @@ export function useOnlyOnStorytimeStories(
           return data.stories;
         }
         const existingIds = new Set(prev.map((s: any) => s.id));
-        const newStories = data.stories.filter((s: any) => !existingIds.has(s.id));
+        const newStories = data.stories.filter(
+          (s: any) => !existingIds.has(s.id)
+        );
         return [...prev, ...newStories];
       });
 
@@ -288,13 +335,26 @@ export function useOnlyOnStorytimeStories(
     setHasMore(true);
   }, []);
 
+  // Memoize stories array to prevent new reference unless content actually changes
+  const memoizedStories = React.useMemo(
+    () => allStories,
+    [
+      allStories.length,
+      allStories[0]?.id,
+      allStories[allStories.length - 1]?.id,
+    ]
+  );
+
+  // Track initial loading separately from loading more
+  const isInitialLoading = isLoading && allStories.length === 0;
+
   return {
-    stories: allStories,
+    stories: memoizedStories,
     total: (data as StoriesListResponseDto)?.total || 0,
     page: currentPage,
     limit: (data as StoriesListResponseDto)?.limit || limit,
     totalPages: (data as StoriesListResponseDto)?.totalPages || 0,
-    isLoading,
+    isLoading: isInitialLoading,
     isLoadingMore: isLoading && currentPage > 1,
     hasMore,
     error,
@@ -311,8 +371,8 @@ export function useSearchStories(options: UseSearchStoriesOptions) {
   const shouldFetch = query && query.trim().length > 0;
 
   const { data, error, isLoading, mutate } = useSWR(
-    shouldFetch 
-      ? `/stories/search?query=${query}&page=${page}&limit=${limit}${genres?.join(",") || ""}` 
+    shouldFetch
+      ? `/stories/search?query=${query}&page=${page}&limit=${limit}${genres?.join(",") || ""}`
       : null,
     async () => {
       if (!shouldFetch) return null;

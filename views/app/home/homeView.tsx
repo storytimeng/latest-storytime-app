@@ -3,7 +3,12 @@
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useMemo } from "react";
-import { GenreButton, StoryGroup, PremiumBanner, StoriesCarousel } from "@/components/reusables";
+import {
+  GenreButton,
+  StoryGroup,
+  PremiumBanner,
+  StoriesCarousel,
+} from "@/components/reusables";
 import { Magnetik_Medium, Magnetik_Bold, Magnetik_Regular } from "@/lib/font";
 import { Search } from "lucide-react";
 import { useGenres } from "@/src/hooks/useGenres";
@@ -45,39 +50,39 @@ const HomeView = () => {
   });
 
   // Fetch stories by category using dedicated endpoints
-  const { 
-    stories: exclusiveStories, 
+  const {
+    stories: exclusiveStories,
     isLoading: exclusiveLoading,
     loadMore: loadMoreExclusive,
     hasMore: hasMoreExclusive,
-    isLoadingMore: isLoadingMoreExclusive
+    isLoadingMore: isLoadingMoreExclusive,
   } = useOnlyOnStorytimeStories({
     limit: 10,
   });
-  const { 
-    stories: recentStories, 
+  const {
+    stories: recentStories,
     isLoading: recentLoading,
     loadMore: loadMoreRecent,
     hasMore: hasMoreRecent,
-    isLoadingMore: isLoadingMoreRecent
+    isLoadingMore: isLoadingMoreRecent,
   } = useRecentlyAddedStories({
     limit: 10,
   });
-  const { 
-    stories: trendingStories, 
+  const {
+    stories: trendingStories,
     isLoading: trendingLoading,
     loadMore: loadMoreTrending,
     hasMore: hasMoreTrending,
-    isLoadingMore: isLoadingMoreTrending
+    isLoadingMore: isLoadingMoreTrending,
   } = useTrendingStories({
     limit: 10,
   });
-  const { 
-    stories: popularStoriesData, 
+  const {
+    stories: popularStoriesData,
     isLoading: popularLoading,
     loadMore: loadMorePopular,
     hasMore: hasMorePopular,
-    isLoadingMore: isLoadingMorePopular
+    isLoadingMore: isLoadingMorePopular,
   } = usePopularStories({
     limit: 10,
   });
@@ -85,7 +90,9 @@ const HomeView = () => {
   // Sort popular stories by popularityScore descending
   const popularStories = useMemo(() => {
     if (!popularStoriesData) return [];
-    return [...popularStoriesData].sort((a: any, b: any) => (b.popularityScore || 0) - (a.popularityScore || 0));
+    return [...popularStoriesData].sort(
+      (a: any, b: any) => (b.popularityScore || 0) - (a.popularityScore || 0)
+    );
   }, [popularStoriesData]);
 
   // Loading state
@@ -93,6 +100,54 @@ const HomeView = () => {
     selectedGenres.length > 0
       ? filteredLoading
       : exclusiveLoading || recentLoading || trendingLoading || popularLoading;
+
+  // Memoize story sections to prevent whole view re-render
+  const RecentStoriesSection = useMemo(() => {
+    if (!recentStories.length) return null;
+    return (
+      <StoryGroup
+        title="Recently Added Stories"
+        stories={recentStories}
+        categorySlug="recently-added"
+        onLoadMore={loadMoreRecent}
+        hasMore={hasMoreRecent}
+        isLoadingMore={isLoadingMoreRecent}
+      />
+    );
+  }, [recentStories, hasMoreRecent, isLoadingMoreRecent, loadMoreRecent]);
+
+  const TrendingStoriesSection = useMemo(() => {
+    if (!trendingStories.length) return null;
+    return (
+      <StoryGroup
+        title="Trending Now"
+        stories={trendingStories}
+        categorySlug="trending"
+        onLoadMore={loadMoreTrending}
+        hasMore={hasMoreTrending}
+        isLoadingMore={isLoadingMoreTrending}
+      />
+    );
+  }, [
+    trendingStories,
+    hasMoreTrending,
+    isLoadingMoreTrending,
+    loadMoreTrending,
+  ]);
+
+  const PopularStoriesSection = useMemo(() => {
+    if (!popularStories.length) return null;
+    return (
+      <StoryGroup
+        title="Popular This Week"
+        stories={popularStories}
+        categorySlug="popular"
+        onLoadMore={loadMorePopular}
+        hasMore={hasMorePopular}
+        isLoadingMore={isLoadingMorePopular}
+      />
+    );
+  }, [popularStories, hasMorePopular, isLoadingMorePopular, loadMorePopular]);
 
   return (
     <div className="min-h-screen px-4 pt-4 space-y-4 bg-accent-shade-1">
@@ -265,37 +320,10 @@ const HomeView = () => {
           </>
         ) : (
           <>
-            {/* Show all stories when no filters */}
-            {recentStories.length > 0 && (
-              <StoryGroup
-                title="Recently Added Stories"
-                stories={recentStories}
-                categorySlug="recently-added"
-                onLoadMore={loadMoreRecent}
-                hasMore={hasMoreRecent}
-                isLoadingMore={isLoadingMoreRecent}
-              />
-            )}
-            {trendingStories.length > 0 && (
-              <StoryGroup
-                title="Trending Now"
-                stories={trendingStories}
-                categorySlug="trending"
-                onLoadMore={loadMoreTrending}
-                hasMore={hasMoreTrending}
-                isLoadingMore={isLoadingMoreTrending}
-              />
-            )}
-            {popularStories.length > 0 && (
-              <StoryGroup
-                title="Popular This Week"
-                stories={popularStories}
-                categorySlug="popular"
-                onLoadMore={loadMorePopular}
-                hasMore={hasMorePopular}
-                isLoadingMore={isLoadingMorePopular}
-              />
-            )}
+            {/* Show all stories when no filters - using memoized sections */}
+            {RecentStoriesSection}
+            {TrendingStoriesSection}
+            {PopularStoriesSection}
           </>
         )}
       </div>

@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { ThemeProvider as NextThemesProvider } from "next-themes";
 import { SWRConfig } from "swr";
 import Cookies from "js-cookie";
+import { ToastProvider } from "@heroui/toast";
 
 // Hey-API client setup (runs immediately)
 import "../src/setup";
@@ -32,6 +33,7 @@ export function Providers({ children, themeProps }: ProvidersProps) {
   return (
     <HeroUIProvider navigate={router.push}>
       <NextThemesProvider {...themeProps}>
+        <ToastProvider placement="top-center" />
         <SWRConfig
           value={{
             fetcher: async (resource: string, init?: RequestInit) => {

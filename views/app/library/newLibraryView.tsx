@@ -1,107 +1,41 @@
 "use client";
 
 import React, { useState } from "react";
-import { MessageCircle } from "lucide-react";
+import { MessageCircle, HardDrive, Trash2 } from "lucide-react";
 import { Magnetik_Bold, Magnetik_Medium, Magnetik_Regular } from "@/lib/font";
 import { StoryCard } from "@/components/reusables";
-
-import { StoryResponseDto } from "@/src/client/types.gen";
+import { useLibrary } from "@/src/hooks/useLibrary";
+import { useOfflineStories } from "@/src/hooks/useOfflineStories";
+import { formatBytes } from "@/lib/offline/indexedDB";
 
 const NewLibraryView = () => {
   const [activeTab, setActiveTab] = useState<"library" | "downloads">(
     "library"
   );
 
-  // Mock data - replace with actual data (same format as existing StoryCard expects)
-  const libraryStories: StoryResponseDto[] = [
-    {
-      id: "1",
-      title: "The Journalist",
-      author: { id: "a1", name: "Jane Moore", email: "jane@example.com", createdAt: "" },
-      content: "",
-      genres: ["Thriller"],
-      imageUrl: "/images/nature.jpg",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      // @ts-ignore - extra props used by StoryCard
-      rating: 20,
-      comments: 5,
-      storyStatus: "ongoing",
-    },
-    {
-      id: "2",
-      title: "The Journalist",
-      author: { id: "a1", name: "Jane Moore", email: "jane@example.com", createdAt: "" },
-      content: "",
-      genres: ["Thriller"],
-      imageUrl: "/images/nature.jpg",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      // @ts-ignore
-      rating: 20,
-      comments: 5,
-      storyStatus: "ongoing",
-    },
-    {
-      id: "3",
-      title: "The Journalist",
-      author: { id: "a1", name: "Jane Moore", email: "jane@example.com", createdAt: "" },
-      content: "",
-      genres: ["Adventure"],
-      imageUrl: "/images/nature.jpg",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      // @ts-ignore
-      rating: 20,
-      comments: 5,
-      storyStatus: "ongoing",
-    },
-    {
-      id: "4",
-      title: "The Journalist",
-      author: { id: "a1", name: "Jane Moore", email: "jane@example.com", createdAt: "" },
-      content: "",
-      genres: ["Thriller"],
-      imageUrl: "/images/nature.jpg",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      // @ts-ignore
-      rating: 20,
-      comments: 5,
-      storyStatus: "ongoing",
-    },
-    {
-      id: "5",
-      title: "The Journalist",
-      author: { id: "a1", name: "Jane Moore", email: "jane@example.com", createdAt: "" },
-      content: "",
-      genres: ["Thriller"],
-      imageUrl: "/images/nature.jpg",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      // @ts-ignore
-      rating: 20,
-      comments: 5,
-      storyStatus: "ongoing",
-    },
-    {
-      id: "6",
-      title: "The Journalist",
-      author: { id: "a1", name: "Jane Moore", email: "jane@example.com", createdAt: "" },
-      content: "",
-      genres: ["Thriller"],
-      imageUrl: "/images/nature.jpg",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      // @ts-ignore
-      rating: 20,
-      comments: 5,
-      storyStatus: "ongoing",
-    },
-  ];
+  // Fetch library stories from API
+  const { stories: libraryStories, isLoading } = useLibrary();
 
-  // For downloads, we'll show empty initially but structure is ready
-  const downloadedStories: StoryResponseDto[] = [];
+  // Fetch downloaded stories from IndexedDB
+  const {
+    offlineStories,
+    isLoading: isLoadingOffline,
+    storageInfo,
+    deleteOfflineStory,
+  } = useOfflineStories();
+
+  // Map offline stories to match library story format for StoryCard
+  const downloadedStories = offlineStories.map((offline) => ({
+    id: offline.id,
+    title: offline.title,
+    description: offline.description,
+    imageUrl: offline.coverImage,
+    coverImage: offline.coverImage,
+    author: offline.author,
+    genres: offline.genres,
+    status: offline.status,
+    ...offline.metadata,
+  }));
 
   const currentStories =
     activeTab === "library" ? libraryStories : downloadedStories;
@@ -140,31 +74,105 @@ const NewLibraryView = () => {
         </div>
       </div>
 
-      {/* Stories Grid */}
-      <div className="px-4">
-        <div className="grid grid-cols-2 gap-4">
-          {currentStories.map((story) => (
-            <StoryCard key={story.id} story={story} />
-          ))}
-        </div>
-      </div>
-
-      {/* Empty State for Downloads */}
-      {activeTab === "downloads" && downloadedStories.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-16 px-4">
-          <div className="w-20 h-20 bg-complimentary-colour/10 rounded-full flex items-center justify-center mb-4">
-            <MessageCircle className="w-10 h-10 text-complimentary-colour" />
+      {/* Loading State */}
+      {((isLoading && activeTab === "library") ||
+        (isLoadingOffline && activeTab === "downloads")) && (
+        <div className="px-4">
+          <div className="grid grid-cols-2 gap-4">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="space-y-2">
+                <div className="h-48 w-full bg-accent-colour animate-pulse rounded-lg" />
+                <div className="h-4 w-3/4 bg-accent-colour animate-pulse rounded" />
+                <div className="h-3 w-1/2 bg-accent-colour animate-pulse rounded" />
+              </div>
+            ))}
           </div>
-          <h3
-            className={`text-sm text-primary-colour text-center mb-2 ${Magnetik_Medium.className}`}
-          >
-            No downloaded stories
-          </h3>
-          <p
-            className={`text-xs text-primary-shade-4 text-center mb-6 ${Magnetik_Regular.className}`}
-          >
-            Download stories to read them offline anytime!
-          </p>
+        </div>
+      )}
+
+      {/* Storage Info for Downloads Tab */}
+      {activeTab === "downloads" &&
+        !isLoadingOffline &&
+        downloadedStories.length > 0 && (
+          <div className="px-4 pb-4">
+            <div className="bg-accent-colour/50 rounded-lg p-4 flex items-center gap-3">
+              <HardDrive className="w-5 h-5 text-complimentary-colour" />
+              <div className="flex-1">
+                <p
+                  className={`text-primary text-xs ${Magnetik_Medium.className}`}
+                >
+                  Storage Used
+                </p>
+                <p
+                  className={`text-primary-shade-3 text-[10px] ${Magnetik_Regular.className}`}
+                >
+                  {formatBytes(storageInfo.usage)} of{" "}
+                  {formatBytes(storageInfo.quota)} (
+                  {storageInfo.percentUsed.toFixed(1)}%)
+                </p>
+              </div>
+              <div className="text-right">
+                <p
+                  className={`text-primary text-sm ${Magnetik_Bold.className}`}
+                >
+                  {downloadedStories.length}
+                </p>
+                <p
+                  className={`text-primary-shade-3 text-[10px] ${Magnetik_Regular.className}`}
+                >
+                  {downloadedStories.length === 1 ? "story" : "stories"}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+      {/* Stories Grid */}
+      {!isLoading && !isLoadingOffline && (
+        <div className="px-4">
+          {currentStories.length > 0 ? (
+            <div className="grid grid-cols-2 gap-4">
+              {currentStories.map((story: any) => (
+                <div key={story.id} className="relative">
+                  <StoryCard story={story} />
+                  {/* Show delete button for downloads */}
+                  {activeTab === "downloads" && (
+                    <button
+                      onClick={async (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        await deleteOfflineStory(story.id);
+                      }}
+                      className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full shadow-lg hover:bg-red-600 transition-colors z-10"
+                      title="Remove download"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-16 px-4">
+              <div className="w-20 h-20 bg-complimentary-colour/10 rounded-full flex items-center justify-center mb-4">
+                <MessageCircle className="w-10 h-10 text-complimentary-colour" />
+              </div>
+              <h3
+                className={`text-sm text-primary-colour text-center mb-2 ${Magnetik_Medium.className}`}
+              >
+                {activeTab === "library"
+                  ? "No stories in library"
+                  : "No downloaded stories"}
+              </h3>
+              <p
+                className={`text-xs text-primary-shade-4 text-center mb-6 ${Magnetik_Regular.className}`}
+              >
+                {activeTab === "library"
+                  ? "Start reading stories to build your library!"
+                  : "Download stories to read them offline anytime!"}
+              </p>
+            </div>
+          )}
         </div>
       )}
     </div>
