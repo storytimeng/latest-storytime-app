@@ -19,19 +19,66 @@ try {
     },
   });
 
-  // Interceptor: on 401 try refresh once, then reload page or let store be cleared
+  // Interceptor: on 401 try refresh once, then retry the original request
+  let isRefreshing = false;
+  let failedQueue: Array<{ resolve: (value?: any) => void; reject: (reason?: any) => void }> = [];
+
+  const processQueue = (error: any, token: string | null = null) => {
+    failedQueue.forEach(prom => {
+      if (error) {
+        prom.reject(error);
+      } else {
+        prom.resolve(token);
+      }
+    });
+    failedQueue = [];
+  };
+
   client.interceptors.error.use(async (error: any, response: Response) => {
+    const originalRequest = (response as any)?._retry;
+    
     try {
-      if (response?.status === 401) {
+      if (response?.status === 401 && !originalRequest) {
+        if (isRefreshing) {
+          // Wait for the current refresh to complete
+          return new Promise((resolve, reject) => {
+            failedQueue.push({ resolve, reject });
+          }).then(token => {
+            // Retry original request with new token
+            return error;
+          }).catch(err => {
+            return Promise.reject(err);
+          });
+        }
+
+        (response as any)._retry = true;
+        isRefreshing = true;
+
         const refreshed = await refreshTokens();
+        
         if (refreshed?.token) {
-          // tell client to use new token for subsequent requests
+          // Update client config with new token
           client.setConfig({ auth: async () => refreshed.token });
-          return error; // original request will still fail; callers can retry via SWR mutate
+          processQueue(null, refreshed.token);
+          isRefreshing = false;
+          
+          // Return error to trigger SWR revalidation
+          // SWR will automatically retry the request with the new token
+          return error;
+        } else {
+          processQueue(new Error('Token refresh failed'), null);
+          isRefreshing = false;
+          // Clear auth and redirect to login
+          if (typeof window !== 'undefined') {
+            const { clearAuth } = await import('./stores/useAuthStore');
+            clearAuth();
+            window.location.href = '/auth/login';
+          }
         }
       }
     } catch (e) {
-      // noop
+      isRefreshing = false;
+      processQueue(e, null);
     }
     return error;
   });

@@ -19,6 +19,14 @@ export function useNotifications() {
       const response = await notificationsControllerGetUserNotifications({
         query: { page, limit },
       });
+      // Unwrap the nested data structure
+      if (
+        response?.data &&
+        typeof response.data === "object" &&
+        "data" in response.data
+      ) {
+        return (response.data as any).data;
+      }
       return response.data;
     }
   );
@@ -27,6 +35,14 @@ export function useNotifications() {
     "/notifications/unread/count",
     async () => {
       const response = await notificationsControllerGetUnreadCount();
+      // Unwrap the nested data structure
+      if (
+        response?.data &&
+        typeof response.data === "object" &&
+        "data" in response.data
+      ) {
+        return (response.data as any).data;
+      }
       return response.data;
     }
   );
@@ -70,6 +86,7 @@ export function useNotifications() {
       console.error("Failed to delete all notifications", error);
     }
   };
+  console.log("notification data object is:", data);
 
   return {
     notifications: (data as any)?.notifications || [],

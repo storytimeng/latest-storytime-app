@@ -14,31 +14,52 @@ export async function refreshTokens(): Promise<{
   refreshToken?: string;
 } | null> {
   try {
+    const currentRefreshToken =
+      useAuthStore.getState().refreshToken || Cookies.get(REFRESH_TOKEN_KEY);
+
+    if (!currentRefreshToken) {
+      console.error("No refresh token available");
+      return null;
+    }
+
     // Use proxy so frontend doesn't reveal backend URL
     const res = await authControllerRefresh({
       body: {
-        refreshToken: useAuthStore.getState().refreshToken || "",
+        refreshToken: currentRefreshToken,
       },
     });
 
-    if (!res.data) return null;
+    if (!res.data) {
+      console.error("No data in refresh response");
+      return null;
+    }
 
-    const payload = res.data;
+    // Unwrap nested data structure: response.data.data
+    let payload = res.data;
+    if (payload && typeof payload === "object" && "data" in payload) {
+      payload = (payload as any).data;
+    }
+
     const token = payload?.accessToken;
     const refreshToken = payload?.refreshToken;
 
-    if (token) {
-      // Persist via cookie and store
-      Cookies.set(AUTH_TOKEN_KEY, token, { secure: true });
-    }
-    if (refreshToken) {
-      Cookies.set(REFRESH_TOKEN_KEY, refreshToken, { secure: true });
+    console.log("🔍 Refresh response payload:", {
+      hasToken: !!token,
+      hasRefreshToken: !!refreshToken,
+    });
+
+    if (!token) {
+      console.error("No access token in refresh response");
+      return null;
     }
 
+    // Use the store's setToken method which handles both cookie and state
     useAuthStore.getState().setToken(token, refreshToken);
+
+    console.log("✅ Tokens refreshed successfully");
     return { token, refreshToken };
   } catch (e) {
-    console.error("Token refresh failed", e);
+    console.error("❌ Token refresh failed", e);
     return null;
   }
 }
