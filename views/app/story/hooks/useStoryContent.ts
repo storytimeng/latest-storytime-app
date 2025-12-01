@@ -7,6 +7,14 @@ interface UseStoryContentProps {
   offlineStory: any;
   offlineContent: any[];
   isUsingOfflineData: boolean;
+  syncChapterIfNeeded?: (
+    chapterId: string,
+    serverChapter: any
+  ) => Promise<boolean>;
+  syncEpisodeIfNeeded?: (
+    episodeId: string,
+    serverEpisode: any
+  ) => Promise<boolean>;
 }
 
 export function useStoryContent({
@@ -16,6 +24,8 @@ export function useStoryContent({
   offlineStory,
   offlineContent,
   isUsingOfflineData,
+  syncChapterIfNeeded,
+  syncEpisodeIfNeeded,
 }: UseStoryContentProps) {
   const [selectedChapterId, setSelectedChapterId] = useState<string | null>(
     null
@@ -67,6 +77,43 @@ export function useStoryContent({
       }
     }
   }, [activeStory, activeChapters, activeEpisodes, selectedChapterId]);
+
+  // Sync chapter/episode when selection changes and we're online with downloaded content
+  useEffect(() => {
+    const syncCurrentContent = async () => {
+      if (!selectedChapterId || isUsingOfflineData) return;
+
+      // Find the server version of current content
+      if (activeChapters && activeChapters.length > 0 && syncChapterIfNeeded) {
+        const serverChapter = activeChapters.find(
+          (c: any) => c.id === selectedChapterId
+        );
+        if (serverChapter) {
+          await syncChapterIfNeeded(selectedChapterId, serverChapter);
+        }
+      } else if (
+        activeEpisodes &&
+        activeEpisodes.length > 0 &&
+        syncEpisodeIfNeeded
+      ) {
+        const serverEpisode = activeEpisodes.find(
+          (e: any) => e.id === selectedChapterId
+        );
+        if (serverEpisode) {
+          await syncEpisodeIfNeeded(selectedChapterId, serverEpisode);
+        }
+      }
+    };
+
+    syncCurrentContent();
+  }, [
+    selectedChapterId,
+    isUsingOfflineData,
+    activeChapters,
+    activeEpisodes,
+    syncChapterIfNeeded,
+    syncEpisodeIfNeeded,
+  ]);
 
   const handleChapterChange = useCallback((chapterId: string) => {
     setSelectedChapterId(chapterId);

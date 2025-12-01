@@ -114,6 +114,9 @@ export function useOfflineStories() {
         }
 
         const downloadedAt = Date.now();
+        const lastUpdatedAt = story.updatedAt
+          ? new Date(story.updatedAt).getTime()
+          : downloadedAt;
 
         // Save story metadata
         const offlineStory: OfflineStory = {
@@ -128,6 +131,7 @@ export function useOfflineStories() {
           totalChapters: story.totalChapters,
           totalEpisodes: story.totalEpisodes,
           downloadedAt,
+          lastUpdatedAt,
           metadata: {
             ...story,
           },
@@ -137,6 +141,10 @@ export function useOfflineStories() {
 
         // Save chapters/episodes/single content
         for (const item of content) {
+          const itemUpdatedAt = (item as any).updatedAt
+            ? new Date((item as any).updatedAt).getTime()
+            : downloadedAt;
+
           if (structure === "chapters") {
             const chapter: OfflineChapter = {
               id: item.id,
@@ -146,6 +154,7 @@ export function useOfflineStories() {
               content: item.content,
               wordCount: item.content.split(/\s+/).length,
               downloadedAt,
+              lastUpdatedAt: itemUpdatedAt,
             };
             await chaptersStore.put(chapter);
           } else if (structure === "episodes") {
@@ -156,6 +165,7 @@ export function useOfflineStories() {
               title: item.title,
               content: item.content,
               downloadedAt,
+              lastUpdatedAt: itemUpdatedAt,
             };
             await episodesStore.put(episode);
           } else {
@@ -168,6 +178,7 @@ export function useOfflineStories() {
               content: item.content,
               wordCount: item.content.split(/\s+/).length,
               downloadedAt,
+              lastUpdatedAt: itemUpdatedAt,
             };
             await chaptersStore.put(chapter);
           }
@@ -211,6 +222,10 @@ export function useOfflineStories() {
         const downloadedAt = Date.now();
 
         for (const item of content) {
+          const itemUpdatedAt = (item as any).updatedAt
+            ? new Date((item as any).updatedAt).getTime()
+            : downloadedAt;
+
           if (structure === "chapters" || structure === "single") {
             const chapter: OfflineChapter = {
               id: item.id,
@@ -220,6 +235,7 @@ export function useOfflineStories() {
               content: item.content,
               wordCount: item.content.split(/\s+/).length,
               downloadedAt,
+              lastUpdatedAt: itemUpdatedAt,
             };
             await chaptersStore.put(chapter);
           } else {
@@ -230,6 +246,7 @@ export function useOfflineStories() {
               title: item.title,
               content: item.content,
               downloadedAt,
+              lastUpdatedAt: itemUpdatedAt,
             };
             await episodesStore.put(episode);
           }
@@ -305,6 +322,196 @@ export function useOfflineStories() {
     }
   }, []);
 
+  // Sync story metadata if it has been updated on server
+  const syncStoryIfNeeded = useCallback(
+    async (storyId: string, serverStory: any) => {
+      try {
+        const offlineStory = await storiesStore.get(storyId);
+        if (!offlineStory) return false;
+
+        const serverUpdatedAt = serverStory.updatedAt
+          ? new Date(serverStory.updatedAt).getTime()
+          : 0;
+        const offlineUpdatedAt = offlineStory.lastUpdatedAt || 0;
+
+        // If server version is newer, update the offline story
+        if (serverUpdatedAt > offlineUpdatedAt) {
+          const updatedStory: OfflineStory = {
+            ...offlineStory,
+            title: serverStory.title,
+            description: serverStory.description,
+            coverImage: serverStory.coverImage,
+            author: serverStory.author,
+            genres: serverStory.genres || [],
+            status: serverStory.status,
+            totalChapters: serverStory.totalChapters,
+            totalEpisodes: serverStory.totalEpisodes,
+            lastUpdatedAt: serverUpdatedAt,
+            metadata: {
+              ...serverStory,
+            },
+          };
+
+          await storiesStore.put(updatedStory);
+
+          showToast({
+            type: "info",
+            message: "Story updated with latest changes",
+          });
+
+          return true;
+        }
+
+        return false;
+      } catch (error) {
+        console.error("Failed to sync story:", error);
+        return false;
+      }
+    },
+    []
+  );
+
+  // Sync chapter if it has been updated on server
+  const syncChapterIfNeeded = useCallback(
+    async (chapterId: string, serverChapter: any) => {
+      try {
+        const offlineChapter = await chaptersStore.get(chapterId);
+        if (!offlineChapter) return false;
+
+        const serverUpdatedAt = serverChapter.updatedAt
+          ? new Date(serverChapter.updatedAt).getTime()
+          : 0;
+        const offlineUpdatedAt = offlineChapter.lastUpdatedAt || 0;
+
+        // If server version is newer, update the offline chapter
+        if (serverUpdatedAt > offlineUpdatedAt) {
+          const updatedChapter: OfflineChapter = {
+            ...offlineChapter,
+            title: serverChapter.title,
+            content: serverChapter.content,
+            wordCount: serverChapter.content.split(/\s+/).length,
+            lastUpdatedAt: serverUpdatedAt,
+          };
+
+          await chaptersStore.put(updatedChapter);
+
+          showToast({
+            type: "info",
+            message: "Chapter updated with latest changes",
+          });
+
+          return true;
+        }
+
+        return false;
+      } catch (error) {
+        console.error("Failed to sync chapter:", error);
+        return false;
+      }
+    },
+    []
+  );
+
+  // Sync episode if it has been updated on server
+  const syncEpisodeIfNeeded = useCallback(
+    async (episodeId: string, serverEpisode: any) => {
+      try {
+        const offlineEpisode = await episodesStore.get(episodeId);
+        if (!offlineEpisode) return false;
+
+        const serverUpdatedAt = serverEpisode.updatedAt
+          ? new Date(serverEpisode.updatedAt).getTime()
+          : 0;
+        const offlineUpdatedAt = offlineEpisode.lastUpdatedAt || 0;
+
+        // If server version is newer, update the offline episode
+        if (serverUpdatedAt > offlineUpdatedAt) {
+          const updatedEpisode: OfflineEpisode = {
+            ...offlineEpisode,
+            title: serverEpisode.title,
+            content: serverEpisode.content,
+            lastUpdatedAt: serverUpdatedAt,
+          };
+
+          await episodesStore.put(updatedEpisode);
+
+          showToast({
+            type: "info",
+            message: "Episode updated with latest changes",
+          });
+
+          return true;
+        }
+
+        return false;
+      } catch (error) {
+        console.error("Failed to sync episode:", error);
+        return false;
+      }
+    },
+    []
+  );
+
+  // Sync all chapters for a story
+  const syncAllChapters = useCallback(
+    async (storyId: string, serverChapters: any[]) => {
+      try {
+        let updatedCount = 0;
+
+        for (const serverChapter of serverChapters) {
+          const wasUpdated = await syncChapterIfNeeded(
+            serverChapter.id,
+            serverChapter
+          );
+          if (wasUpdated) updatedCount++;
+        }
+
+        if (updatedCount > 0) {
+          showToast({
+            type: "success",
+            message: `Updated ${updatedCount} chapter${updatedCount > 1 ? "s" : ""}`,
+          });
+        }
+
+        return updatedCount;
+      } catch (error) {
+        console.error("Failed to sync chapters:", error);
+        return 0;
+      }
+    },
+    [syncChapterIfNeeded]
+  );
+
+  // Sync all episodes for a story
+  const syncAllEpisodes = useCallback(
+    async (storyId: string, serverEpisodes: any[]) => {
+      try {
+        let updatedCount = 0;
+
+        for (const serverEpisode of serverEpisodes) {
+          const wasUpdated = await syncEpisodeIfNeeded(
+            serverEpisode.id,
+            serverEpisode
+          );
+          if (wasUpdated) updatedCount++;
+        }
+
+        if (updatedCount > 0) {
+          showToast({
+            type: "success",
+            message: `Updated ${updatedCount} episode${updatedCount > 1 ? "s" : ""}`,
+          });
+        }
+
+        return updatedCount;
+      } catch (error) {
+        console.error("Failed to sync episodes:", error);
+        return 0;
+      }
+    },
+    [syncEpisodeIfNeeded]
+  );
+
   return {
     offlineStories,
     isLoading,
@@ -315,6 +522,11 @@ export function useOfflineStories() {
     downloadAdditionalContent,
     deleteOfflineStory,
     updateLastRead,
+    syncStoryIfNeeded,
+    syncChapterIfNeeded,
+    syncEpisodeIfNeeded,
+    syncAllChapters,
+    syncAllEpisodes,
     refresh: loadOfflineStories,
   };
 }

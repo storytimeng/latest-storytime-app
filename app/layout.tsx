@@ -5,6 +5,7 @@ import clsx from "clsx";
 import { APP_CONFIG } from "@/config/app";
 import { MaxWidthWrapper } from "@/lib/maxWidthWrapper";
 import { Providers } from "./providers";
+import { PWAProvider } from "@/components/PWAProvider";
 
 import { siteConfig } from "@/config/site";
 import { fontSans } from "@/config/fonts";
@@ -22,6 +23,15 @@ export const metadata: Metadata = {
   authors: [{ name: APP_CONFIG.siteName }],
   creator: APP_CONFIG.siteName,
   publisher: APP_CONFIG.siteName,
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: APP_CONFIG.name,
+  },
+  formatDetection: {
+    telephone: false,
+  },
   openGraph: {
     title: APP_CONFIG.name,
     description: APP_CONFIG.description,
@@ -47,10 +57,10 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "white" },
-    { media: "(prefers-color-scheme: dark)", color: "black" },
-  ],
+  themeColor: "#F8951D",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
 };
 
 export default function RootLayout({
@@ -70,12 +80,13 @@ export default function RootLayout({
         )}
       >
         <Providers themeProps={{ attribute: "class", defaultTheme: "light" }}>
-          <GenresPreloader />
-          <MaxWidthWrapper>{children}</MaxWidthWrapper>
-          <LoadingOverlay />
+          <PWAProvider>
+            <GenresPreloader />
+            <MaxWidthWrapper>{children}</MaxWidthWrapper>
+            <LoadingOverlay />
+          </PWAProvider>
         </Providers>
       </body>
     </html>
   );
 }
-

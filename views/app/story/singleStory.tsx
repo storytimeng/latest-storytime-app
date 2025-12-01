@@ -33,20 +33,6 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
   const { likeCount, isLiked, toggleLike } = useStoryLikes(storyId);
   const { commentCount } = useStoryComments(storyId);
 
-  // Offline functionality
-  const { isStoryDownloaded, downloadStory, deleteOfflineStory } =
-    useOfflineStories();
-
-  const [isDownloaded, setIsDownloaded] = useState(false);
-  const [isDownloading, setIsDownloading] = useState(false);
-
-  // Check if story is downloaded
-  useEffect(() => {
-    if (storyId) {
-      isStoryDownloaded(storyId).then(setIsDownloaded);
-    }
-  }, [storyId, isStoryDownloaded]);
-
   // Determine story structure and fetch appropriate content
   const structure = (story as any)?.structure || "chapters";
   const shouldFetchChapters = structure === "chapters" && !isLoading;
@@ -58,6 +44,52 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
   const { episodes } = useStoryEpisodes(
     shouldFetchEpisodes ? storyId : undefined
   );
+
+  // Offline functionality
+  const {
+    isStoryDownloaded,
+    downloadStory,
+    deleteOfflineStory,
+    syncStoryIfNeeded,
+    syncAllChapters,
+    syncAllEpisodes,
+  } = useOfflineStories();
+
+  const [isDownloaded, setIsDownloaded] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  // Check if story is downloaded and sync if needed
+  useEffect(() => {
+    const checkAndSync = async () => {
+      if (storyId && story) {
+        const downloaded = await isStoryDownloaded(storyId);
+        setIsDownloaded(downloaded);
+
+        // If story is downloaded and we have online data, check for updates
+        if (downloaded && story) {
+          await syncStoryIfNeeded(storyId, story);
+
+          // Also sync chapters or episodes if available
+          if (chapters && chapters.length > 0) {
+            await syncAllChapters(storyId, chapters);
+          } else if (episodes && episodes.length > 0) {
+            await syncAllEpisodes(storyId, episodes);
+          }
+        }
+      }
+    };
+
+    checkAndSync();
+  }, [
+    storyId,
+    story,
+    chapters,
+    episodes,
+    isStoryDownloaded,
+    syncStoryIfNeeded,
+    syncAllChapters,
+    syncAllEpisodes,
+  ]);
 
   // Handle download
   const handleDownload = async () => {

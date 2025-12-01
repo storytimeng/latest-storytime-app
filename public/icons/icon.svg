@@ -1,0 +1,23 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="512" height="512" rx="64" fill="#F8951D"/>
+  
+  <!-- Book icon -->
+  <g transform="translate(128, 128)">
+    <!-- Book pages -->
+    <path d="M32 24C32 10.7 42.7 0 56 0H184C197.3 0 208 10.7 208 24V232C208 245.3 197.3 256 184 256H56C42.7 256 32 245.3 32 232V24Z" fill="#FFEBD0"/>
+    <path d="M208 24C208 10.7 218.7 0 232 0H360C373.3 0 384 10.7 384 24V232C384 245.3 373.3 256 360 256H232C218.7 256 208 245.3 208 232V24Z" fill="#FFEBD0"/>
+    
+    <!-- Book spine -->
+    <rect x="200" y="0" width="16" height="256" fill="#361B17"/>
+    
+    <!-- Text lines -->
+    <rect x="56" y="48" width="112" height="8" rx="4" fill="#361B17" opacity="0.3"/>
+    <rect x="56" y="72" width="112" height="8" rx="4" fill="#361B17" opacity="0.3"/>
+    <rect x="56" y="96" width="80" height="8" rx="4" fill="#361B17" opacity="0.3"/>
+    
+    <rect x="240" y="48" width="112" height="8" rx="4" fill="#361B17" opacity="0.3"/>
+    <rect x="240" y="72" width="112" height="8" rx="4" fill="#361B17" opacity="0.3"/>
+    <rect x="240" y="96" width="80" height="8" rx="4" fill="#361B17" opacity="0.3"/>
+  </g>
+</svg>

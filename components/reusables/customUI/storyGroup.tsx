@@ -81,7 +81,7 @@ const StoryGroup = React.memo(
     }
 
     const handleStoryCardClick = (storyId: string | number) => {
-      router.push(`/story/${storyId}`);
+      router.push(`/story/${storyId}/read`);
     };
 
     return (

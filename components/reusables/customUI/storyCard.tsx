@@ -55,7 +55,8 @@ const StoryCard = ({
   };
 
   // Safe access to author name - cast to any because generated AuthorDto might be missing penName
-  const authorName = (story.author as any)?.penName || story.author?.name || "Anonymous";
+  const authorName =
+    (story.author as any)?.penName || story.author?.name || "Anonymous";
   const displayImage = story.imageUrl || "/placeholder-image.jpg"; // Fallback image
   const displayGenre = story.genres?.[0] || "Uncategorized";
 
@@ -63,7 +64,7 @@ const StoryCard = ({
 
   const handleStoryClick = () => {
     if (!isPenMode) {
-      router.push(`/story/${story.id}`);
+      router.push(`/story/${story.id}/read`);
     }
   };
 

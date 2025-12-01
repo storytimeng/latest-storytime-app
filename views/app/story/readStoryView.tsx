@@ -39,7 +39,8 @@ interface ReadStoryViewProps {
 export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
   // Check online/offline status
   const isOnline = useOnlineStatus();
-  const { updateLastRead } = useOfflineStories();
+  const { updateLastRead, syncChapterIfNeeded, syncEpisodeIfNeeded } =
+    useOfflineStories();
   const { isUsingOfflineData, offlineStory, offlineContent } =
     useOfflineContent(isOnline, storyId, updateLastRead);
 
@@ -87,6 +88,8 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
     offlineStory,
     offlineContent,
     isUsingOfflineData,
+    syncChapterIfNeeded,
+    syncEpisodeIfNeeded,
   });
 
   // Handler for submitting comments
