@@ -494,7 +494,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
 
   // Render form fields
   const renderFormFields = () => (
-    <div className="space-y-6">
+    <div className="space-y-6 ">
       {/* Cover Image */}
       {renderCoverImage()}
 
@@ -509,6 +509,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
         isRequired
         isInvalid={!!formErrors.title}
         errorMessage={formErrors.title}
+        className="pt-4"
         maxLen={100}
       />
 
