@@ -9,6 +9,7 @@ import {
   storiesControllerCreateMultipleChapters,
   storiesControllerCreateMultipleEpisodes,
 } from "@/src/client";
+import { showToast } from "@/lib/showNotification";
 import type { CreateStoryDto, UpdateStoryDto } from "@/src/client/types.gen";
 
 export function useDeleteStory() {
@@ -25,12 +26,20 @@ export function useDeleteStory() {
       });
 
       console.log("✅ Story deleted successfully:", storyId);
+      showToast({
+        type: "success",
+        message: "Story deleted successfully!",
+      });
       return true;
     } catch (err) {
       const error =
         err instanceof Error ? err : new Error("Failed to delete story");
       console.error("❌ Failed to delete story:", error);
       setError(error);
+      showToast({
+        type: "error",
+        message: "Failed to delete story. Please try again.",
+      });
       return false;
     } finally {
       setIsDeleting(false);
@@ -71,6 +80,10 @@ export function useCreateStory() {
         err instanceof Error ? err : new Error("Failed to create story");
       console.error("❌ Failed to create story:", error);
       setError(error);
+      showToast({
+        type: "error",
+        message: "Failed to create story. Please try again.",
+      });
       return { success: false };
     } finally {
       setIsCreating(false);
@@ -108,6 +121,10 @@ export function useUpdateStory() {
         err instanceof Error ? err : new Error("Failed to update story");
       console.error("❌ Failed to update story:", error);
       setError(error);
+      showToast({
+        type: "error",
+        message: "Failed to update story. Please try again.",
+      });
       return false;
     } finally {
       setIsUpdating(false);
@@ -192,6 +209,10 @@ export function useCreateChapter() {
         err instanceof Error ? err : new Error("Failed to create chapter");
       console.error("❌ Failed to create chapter:", error);
       setError(error);
+      showToast({
+        type: "error",
+        message: "Failed to create chapter. Please try again.",
+      });
       return { success: false };
     } finally {
       setIsCreating(false);
@@ -238,9 +259,15 @@ export function useCreateMultipleChapters() {
       };
     } catch (err) {
       const error =
-        err instanceof Error ? err : new Error("Failed to create multiple chapters");
+        err instanceof Error
+          ? err
+          : new Error("Failed to create multiple chapters");
       console.error("❌ Failed to create multiple chapters:", error);
       setError(error);
+      showToast({
+        type: "error",
+        message: "Failed to create chapters. Please try again.",
+      });
       return { success: false };
     } finally {
       setIsCreating(false);
@@ -293,6 +320,10 @@ export function useCreateEpisode() {
         err instanceof Error ? err : new Error("Failed to create episode");
       console.error("❌ Failed to create episode:", error);
       setError(error);
+      showToast({
+        type: "error",
+        message: "Failed to create episode. Please try again.",
+      });
       return { success: false };
     } finally {
       setIsCreating(false);
@@ -339,9 +370,15 @@ export function useCreateMultipleEpisodes() {
       };
     } catch (err) {
       const error =
-        err instanceof Error ? err : new Error("Failed to create multiple episodes");
+        err instanceof Error
+          ? err
+          : new Error("Failed to create multiple episodes");
       console.error("❌ Failed to create multiple episodes:", error);
       setError(error);
+      showToast({
+        type: "error",
+        message: "Failed to create episodes. Please try again.",
+      });
       return { success: false };
     } finally {
       setIsCreating(false);

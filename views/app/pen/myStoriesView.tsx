@@ -1,140 +1,229 @@
 "use client";
 
-import React, { useState } from "react";
-import { ArrowLeft } from "lucide-react";
-import Link from "next/link";
+import React, { useState, useMemo } from "react";
+import {
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+} from "@heroui/modal";
+import { Tabs, Tab } from "@heroui/tabs";
+import { Button } from "@heroui/button";
+import { ArrowLeft, X, BookOpen } from "lucide-react";
+import { useRouter } from "next/navigation";
+import PageHeader from "@/components/reusables/customUI/pageHeader";
 import { Magnetik_Bold, Magnetik_Medium, Magnetik_Regular } from "@/lib/font";
-import { MyStoriesCard } from "@/components/reusables";
+import { StoryCard } from "@/components/reusables/customUI";
+import { useLibrary } from "@/src/hooks/useLibrary";
+import { useDeleteStory } from "@/src/hooks/useStoryMutations";
+import type { StoryResponseDto } from "@/src/client/types.gen";
 
-interface Story {
-  id: string;
-  title: string;
-  status: "Ongoing" | "Completed" | "Draft";
-  genre: string;
-  writingDate: string;
-  coverImage: string;
-}
+// Locally extend StoryResponseDto for UI needs
+type ExtendedStory = StoryResponseDto & {
+  lastEdited?: string;
+  writingDate?: string;
+  updatedAt?: string;
+  status?: string;
+};
+
+type TabKey = "Recent" | "Ongoing" | "Published" | "Drafts";
 
 const MyStoriesView = () => {
-  const [activeTab, setActiveTab] = useState<
-    "Recent" | "Ongoing" | "Published" | "Drafts"
-  >("Recent");
+  const router = useRouter();
+  const [selectedTab, setSelectedTab] = useState<TabKey>("Recent");
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [storyToDelete, setStoryToDelete] = useState<{
+    id: string | number;
+    title: string;
+  } | null>(null);
 
-  // Mock data - replace with actual data
-  const stories: Story[] = [
-    {
-      id: "1",
-      title: "The Lost Ship",
-      status: "Ongoing",
-      genre: "Adventure",
-      writingDate: "12-02-2024",
-      coverImage: "/images/nature.jpg",
-    },
-    {
-      id: "2",
-      title: "The Lost Ship",
-      status: "Completed",
-      genre: "Thriller",
-      writingDate: "12-02-2024",
-      coverImage: "/images/nature.jpg",
-    },
-    {
-      id: "3",
-      title: "The Lost Ship",
-      status: "Ongoing",
-      genre: "Adventure",
-      writingDate: "12-02-2024",
-      coverImage: "/images/nature.jpg",
-    },
-    {
-      id: "4",
-      title: "The Lost Ship",
-      status: "Completed",
-      genre: "Thriller",
-      writingDate: "12-02-2024",
-      coverImage: "/images/nature.jpg",
-    },
-  ];
+  // Fetch stories from user's library
+  const { stories, isLoading, mutate } = useLibrary();
 
-  const filteredStories = stories.filter((story) => {
-    switch (activeTab) {
+  // Delete story hook
+  const { deleteStory, isDeleting } = useDeleteStory();
+
+  // Filter stories by tab
+  const filteredStories = useMemo(() => {
+    if (!stories) return [];
+    switch (selectedTab) {
       case "Recent":
-        return true; // Show all stories
+        return [...stories].sort(
+          (a, b) =>
+            new Date(b.lastEdited || b.writingDate || b.updatedAt).getTime() -
+            new Date(a.lastEdited || a.writingDate || a.updatedAt).getTime()
+        );
       case "Ongoing":
-        return story.status === "Ongoing";
+        return stories.filter(
+          (story: ExtendedStory) => story.status === "Ongoing"
+        );
       case "Published":
-        return story.status === "Completed";
+        return stories.filter(
+          (story: ExtendedStory) => story.status === "Completed"
+        );
       case "Drafts":
-        return story.status === "Draft";
+        return stories.filter(
+          (story: ExtendedStory) => story.status === "Draft"
+        );
       default:
-        return true;
+        return stories;
     }
-  });
+  }, [selectedTab, stories]);
 
-  const handleEdit = (storyId: string) => {
-    // Navigate to edit story page
-    window.location.href = `/edit-story/${storyId}`;
+  const handleEditStory = (storyId: string | number) => {
+    router.push(`/edit-story/${storyId}`);
   };
 
-  const handleDelete = (storyId: string) => {
-    // TODO: Show confirmation dialog and delete story
-    // Implement actual delete functionality
+  const handleDeleteStory = (storyId: string | number) => {
+    const story = filteredStories.find((s: ExtendedStory) => s.id === storyId);
+    if (story) {
+      setStoryToDelete({ id: storyId, title: (story as ExtendedStory).title });
+      setIsDeleteModalOpen(true);
+    }
   };
 
-  const tabs = ["Recent", "Ongoing", "Published", "Drafts"] as const;
+  const confirmDelete = async () => {
+    if (storyToDelete) {
+      const success = await deleteStory(String(storyToDelete.id));
+
+      if (success) {
+        // Optimistically update the UI by refetching stories
+        mutate();
+        console.log("✅ Story deleted and list refreshed");
+      }
+
+      setIsDeleteModalOpen(false);
+      setStoryToDelete(null);
+    }
+  };
+
+  const cancelDelete = () => {
+    setIsDeleteModalOpen(false);
+    setStoryToDelete(null);
+  };
+
+  const handleViewStory = (storyId: string | number) => {
+    router.push(`/story/${storyId}`);
+  };
 
   return (
-    <div className="min-h-screen bg-accent-shade-1 max-w-[28rem] mx-auto">
-      {/* Header */}
-      <div className="px-4 pt-5 pb-4">
-        <div className="flex items-center gap-4">
-          <Link href="/home">
-            <ArrowLeft className="w-6 h-6 text-primary-colour" />
-          </Link>
-          <h1
-            className={`text-xl text-primary-colour ${Magnetik_Bold.className}`}
+    <>
+      <div className="min-h-screen bg-accent-shade-1 max-w-[28rem] mx-auto px-4 pb-6">
+        {/* Page Header */}
+        <PageHeader
+          title="My Stories"
+          backLink="/pen"
+          className="px-0 pt-5 pb-4"
+          titleClassName="text-xl text-primary-colour font-bold"
+        />
+
+        {/* Tabs */}
+        <div className="w-full mb-6">
+          <Tabs
+            selectedKey={selectedTab}
+            onSelectionChange={(key: React.Key) =>
+              setSelectedTab(key as TabKey)
+            }
+            variant="underlined"
+            classNames={{
+              tabList:
+                "w-full relative rounded-none p-0 border-b border-divider",
+              cursor: "w-full bg-complimentary-colour",
+              tab: "max-w-fit px-0 h-12",
+              tabContent: `group-data-[selected=true]:text-complimentary-colour ${Magnetik_Medium.className}`,
+            }}
           >
-            My Stories
-          </h1>
+            <Tab key="Recent" title="Recent" />
+            <Tab key="Ongoing" title="Ongoing" />
+            <Tab key="Published" title="Published" />
+            <Tab key="Drafts" title="Drafts" />
+          </Tabs>
         </div>
-      </div>
 
-      {/* Tabs */}
-      <div className="px-4 mb-6">
-        <div className="flex gap-6 border-b border-light-grey-2">
-          {tabs.map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`pb-3 text-sm relative ${
-                activeTab === tab
-                  ? `text-complimentary-colour ${Magnetik_Medium.className}`
-                  : `text-primary-shade-3 ${Magnetik_Regular.className}`
-              }`}
+        {/* Stories Grid */}
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <p className={`text-gray-500 ${Magnetik_Regular.className}`}>
+              Loading stories...
+            </p>
+          </div>
+        ) : filteredStories.length > 0 ? (
+          <div className="grid grid-cols-2 gap-4">
+            {filteredStories.map((story: ExtendedStory, idx: number) => (
+              <StoryCard
+                key={(story as ExtendedStory).id ?? idx}
+                story={story as ExtendedStory}
+                mode="pen"
+                onEdit={handleEditStory}
+                onDelete={handleDeleteStory}
+                onClick={handleViewStory}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-12">
+            <div className="flex items-center justify-center w-16 h-16 mb-4 rounded-full bg-light-grey-2">
+              <BookOpen className="w-8 h-8 text-gray-400" />
+            </div>
+            <p
+              className={`text-center text-gray-500 ${Magnetik_Regular.className}`}
             >
-              {tab}
-              {activeTab === tab && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-complimentary-colour" />
-              )}
-            </button>
-          ))}
-        </div>
+              No stories in {selectedTab.toLowerCase()} yet
+            </p>
+          </div>
+        )}
       </div>
 
-      {/* Stories Grid */}
-      <div className="px-4 pb-24">
-        <div className="grid grid-cols-2 gap-4">
-          {filteredStories.map((story) => (
-            <MyStoriesCard
-              key={story.id}
-              story={story}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-            />
-          ))}
-        </div>
-      </div>
-    </div>
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={isDeleteModalOpen}
+        onClose={cancelDelete}
+        placement="bottom"
+        classNames={{
+          backdrop: "bg-black/50",
+          base: "bg-universal-white rounded-t-3xl m-0 mb-0 max-w-[28rem] mx-auto",
+          closeButton: "hidden",
+        }}
+      >
+        <ModalContent>
+          <ModalHeader className="flex items-center justify-between px-6 pt-6 pb-4">
+            <button onClick={cancelDelete} className="text-primary-colour">
+              <ArrowLeft size={20} />
+            </button>
+            <h2 className="flex-1 text-center body-text-small-medium-auto text-primary-colour">
+              Delete Story
+            </h2>
+            <button onClick={cancelDelete} className="text-primary-colour">
+              <X size={20} />
+            </button>
+          </ModalHeader>
+
+          <ModalBody className="px-6 py-8">
+            <p className="text-center body-text-small-medium-auto text-primary-colour">
+              Are you sure you want to delete &ldquo;{storyToDelete?.title}
+              &rdquo;
+            </p>
+          </ModalBody>
+
+          <ModalFooter className="flex gap-4 px-6 pt-0 pb-6">
+            <Button
+              onPress={cancelDelete}
+              className="flex-1 py-6 bg-transparent border-2 rounded-full border-primary-colour text-primary-colour body-text-small-medium-auto"
+            >
+              No
+            </Button>
+            <Button
+              onPress={confirmDelete}
+              isLoading={isDeleting}
+              className="flex-1 py-6 rounded-full bg-primary-shade-6 text-universal-white body-text-small-medium-auto"
+            >
+              Yes
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+    </>
   );
 };
 
