@@ -38,6 +38,21 @@ npm install
 npm run dev
 ```
 
+### Environment Variables
+
+Create a `.env.local` file in the root directory with the following variables:
+
+```bash
+# Cache expiration time in days (0 = never expire)
+NEXT_PUBLIC_CACHE_EXPIRY_DAYS=30
+
+# API Configuration
+NEXT_PUBLIC_API_URL=https://end.digitalcoresystem.com
+NEXT_PUBLIC_PROXY=true
+```
+
+See `.env.local.example` for a complete list of environment variables.
+
 ### Setup pnpm (optional)
 
 If you are using `pnpm`, you need to add the following code to your `.npmrc` file:

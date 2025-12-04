@@ -59,6 +59,7 @@ export interface StoryFormProps {
   onSubmit: (data: StoryFormData, chapters?: Chapter[], parts?: Part[]) => void;
   onCancel?: () => void;
   isLoading?: boolean;
+  createdStoryId?: string | null; // For caching chapters/episodes after story creation
 }
 
 // Story View Types

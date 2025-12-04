@@ -42,8 +42,14 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
       ? (storeUser as any).data?.user
       : storeUser
   ) as any;
+  
+  // Handle both author object and authorId field
+  const storyAuthorId = (story as any)?.authorId || story?.author?.id;
+  const currentAuthorId = currentUser?.authorId || currentUser?.id;
   const isAuthor =
-    currentUser?.id && story?.author?.id && currentUser.id === story.author.id;
+    currentAuthorId &&
+    storyAuthorId &&
+    currentAuthorId === storyAuthorId;
 
   // Use counts from story data if available, otherwise use hook counts
   const displayLikeCount = (story as any)?.likeCount ?? likeCount ?? 0;

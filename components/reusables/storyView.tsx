@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import PageHeader from "@/components/reusables/customUI/pageHeader";
 import StoryForm from "@/components/reusables/form/storyForm";
@@ -15,6 +15,18 @@ import { useUserProfile } from "@/src/hooks/useUserProfile";
 import { usersControllerGetProfile } from "@/src/client/sdk.gen";
 import { useUserStore } from "@/src/stores/useUserStore";
 import { showToast } from "@/lib/showNotification";
+import {
+  saveChaptersCache,
+  saveEpisodesCache,
+  getChaptersCache,
+  getEpisodesCache,
+  clearStoryCache,
+  clearExpiredCaches,
+} from "@/lib/storyCache";
+import {
+  migrateLocalStorageToIndexedDB,
+  needsMigration,
+} from "@/lib/cacheMigration";
 import type {
   StoryFormData,
   Chapter,
@@ -30,6 +42,9 @@ const StoryView: React.FC<StoryViewProps> = ({ mode, storyId }) => {
   const [initialData, setInitialData] = useState<
     Partial<StoryFormData> | undefined
   >();
+  const [createdStoryId, setCreatedStoryId] = useState<string | null>(
+    storyId || null
+  );
 
   // Hooks for mutations
   const { createStory, isCreating: isCreatingStory } = useCreateStory();
@@ -41,6 +56,35 @@ const StoryView: React.FC<StoryViewProps> = ({ mode, storyId }) => {
 
   const isCreating =
     isCreatingStory || isCreatingChapters || isCreatingEpisodes;
+
+  // Migrate from localStorage to IndexedDB and clear expired caches on mount
+  useEffect(() => {
+    const initCache = async () => {
+      // Check if migration is needed
+      if (needsMigration()) {
+        console.log("Migrating cache from localStorage to IndexedDB...");
+        const result = await migrateLocalStorageToIndexedDB();
+        
+        if (result.success) {
+          showToast({
+            type: "success",
+            message: `Migrated ${result.migratedCount} cached items to IndexedDB`,
+          });
+        } else if (result.errors.length > 0) {
+          console.error("Migration errors:", result.errors);
+          showToast({
+            type: "warning",
+            message: "Some cached items failed to migrate",
+          });
+        }
+      }
+      
+      // Clear expired caches
+      await clearExpiredCaches();
+    };
+
+    initCache();
+  }, []);
 
   // Fetch story data for edit mode
   const { story, isLoading: isFetchingStory } = useFetchStory(
@@ -58,11 +102,29 @@ const StoryView: React.FC<StoryViewProps> = ({ mode, storyId }) => {
       ) as any;
       const currentUser = storeCandidate || swrUser;
 
+      console.log("[StoryView] Authorization check:", {
+        currentUserId: currentUser?.id,
+        currentUserAuthorId: currentUser?.authorId,
+        storyAuthorId: story.authorId,
+        storyAuthor: story.author,
+      });
+
       // Check if current user is the author
+      // Try multiple ways to match: author.id, authorId, or currentUser.authorId
+      const storyAuthorId = story.authorId || story.author?.id || story.author;
+      const currentAuthorId = currentUser?.authorId || currentUser?.id;
+
       const isAuthor =
-        currentUser?.id &&
-        story.author?.id &&
-        currentUser.id === story.author.id;
+        currentAuthorId &&
+        storyAuthorId &&
+        (currentAuthorId === storyAuthorId ||
+          currentUser?.id === storyAuthorId);
+
+      console.log("[StoryView] Authorization result:", {
+        isAuthor,
+        currentAuthorId,
+        storyAuthorId,
+      });
 
       if (!isAuthor) {
         showToast({
@@ -114,6 +176,80 @@ const StoryView: React.FC<StoryViewProps> = ({ mode, storyId }) => {
   const handleSubmit = useCallback(
     async (formData: StoryFormData, _chapters?: Chapter[], _parts?: Part[]) => {
       try {
+        // If we have a createdStoryId, this is publishing chapters/episodes
+        if (createdStoryId && (_chapters || _parts)) {
+          console.log("[StoryView] Publishing chapters/episodes...", {
+            createdStoryId,
+            hasChapters: formData.chapter,
+            hasEpisodes: formData.episodes,
+            chaptersCount: _chapters?.length,
+            partsCount: _parts?.length,
+          });
+
+          const hasChapters = formData.chapter === true;
+          const hasEpisodes = formData.episodes === true;
+
+          let publishSuccess = false;
+
+          // Bulk creation of chapters or episodes
+          if (hasChapters && _chapters && _chapters.length > 0) {
+            console.log("[StoryView] Creating chapters...", _chapters);
+            const chaptersPayload = _chapters.map((ch) => ({
+              title: ch.title,
+              body: ch.body,
+            }));
+            const result = await createMultipleChapters(
+              createdStoryId,
+              chaptersPayload
+            );
+            console.log("[StoryView] Chapters result:", result);
+            publishSuccess = result?.success === true;
+          } else if (hasEpisodes && _parts && _parts.length > 0) {
+            console.log("[StoryView] Creating episodes...", _parts);
+            const episodesPayload = _parts.map((ep) => ({
+              title: ep.title,
+              body: ep.body,
+            }));
+            const result = await createMultipleEpisodes(
+              createdStoryId,
+              episodesPayload
+            );
+            console.log("[StoryView] Episodes result:", result);
+            publishSuccess = result?.success === true;
+          } else {
+            console.warn("[StoryView] No chapters or episodes to publish", {
+              hasChapters,
+              hasEpisodes,
+              _chapters,
+              _parts,
+            });
+          }
+
+          // Only clear cache after successful publish
+          if (publishSuccess) {
+            clearStoryCache(createdStoryId);
+
+            showToast({
+              type: "success",
+              message: hasChapters
+                ? "Chapters published successfully!"
+                : "Episodes published successfully!",
+            });
+
+            if (formData.storyStatus === "Draft") {
+              router.push("/my-stories?tab=drafts");
+            } else {
+              router.push(`/story/${createdStoryId}`);
+            }
+          } else {
+            showToast({
+              type: "error",
+              message: "Failed to publish. Your work is saved in cache.",
+            });
+          }
+          return;
+        }
+
         // Prefer store-backed user, fall back to SWR user
         console.log("[StoryView] submit: storeUser:", storeUser);
 
@@ -276,35 +412,32 @@ const StoryView: React.FC<StoryViewProps> = ({ mode, storyId }) => {
 
           if (result.success && result.id) {
             const newStoryId = result.id;
+            setCreatedStoryId(newStoryId); // Store created story ID
 
-            // Bulk creation of chapters or episodes
-            if (_chapters && _chapters.length > 0) {
-              if (hasEpisodes) {
-                // Create episodes (UI uses _chapters param but content is episodes)
-                const episodesPayload = _chapters.map((ch) => ({
-                  title: ch.title,
-                  body: ch.body,
-                }));
-                await createMultipleEpisodes(newStoryId, episodesPayload);
-              } else if (hasChapters) {
-                // Create chapters
-                const chaptersPayload = _chapters.map((ch) => ({
-                  title: ch.title,
-                  body: ch.body,
-                }));
-                await createMultipleChapters(newStoryId, chaptersPayload);
-              }
+            // Save chapters/episodes to cache for later bulk creation
+            if (hasChapters && _chapters && _chapters.length > 0) {
+              saveChaptersCache(newStoryId, _chapters);
+            } else if (hasEpisodes && _parts && _parts.length > 0) {
+              saveEpisodesCache(newStoryId, _parts);
             }
 
+            // Show success message
             showToast({
               type: "success",
-              message: "Story created successfully!",
+              message:
+                hasChapters || hasEpisodes
+                  ? "Story created! You can now add chapters/episodes."
+                  : "Story created successfully!",
             });
 
-            if (formData.storyStatus === "Draft") {
-              router.push("/my-stories?tab=drafts");
-            } else {
-              router.push(`/story/${newStoryId}`);
+            // If has chapters/episodes, stay on the page to allow adding them
+            // Otherwise redirect
+            if (!hasChapters && !hasEpisodes) {
+              if (formData.storyStatus === "Draft") {
+                router.push("/my-stories?tab=drafts");
+              } else {
+                router.push(`/story/${newStoryId}`);
+              }
             }
           } else {
             showToast({
@@ -381,6 +514,7 @@ const StoryView: React.FC<StoryViewProps> = ({ mode, storyId }) => {
           onSubmit={handleSubmit}
           onCancel={handleCancel}
           isLoading={isCreating || isUpdating}
+          createdStoryId={createdStoryId}
         />
       </div>
     </div>

@@ -263,7 +263,10 @@ export const CollaboratorInput: React.FC<CollaboratorInputProps> = ({
       {showSuggestions && suggestions.length > 0 && (
         <div
           ref={suggestionsRef}
-          className="absolute z-50 w-full mt-2 bg-accent-shade-2 border border-light-grey-2 rounded-lg shadow-lg max-h-60 overflow-y-auto"
+          className="absolute z-50 w-full mt-2 bg-accent-shade-2 border border-light-grey-2 rounded-lg shadow-lg max-h-60 overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-accent-shade-2 [&::-webkit-scrollbar-thumb]:bg-primary-colour [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:hover:bg-primary-shade-4 [&::-webkit-scrollbar-button]:bg-primary-colour"
+          style={{
+            scrollbarColor: "var(--primary-colour) var(--accent-shade-2)",
+          }}
         >
           {suggestions.map((suggestion) => (
             <button
