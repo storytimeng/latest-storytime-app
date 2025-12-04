@@ -33,10 +33,13 @@ const StoryView: React.FC<StoryViewProps> = ({ mode, storyId }) => {
   // Hooks for mutations
   const { createStory, isCreating: isCreatingStory } = useCreateStory();
   const { updateStory, isUpdating } = useUpdateStory();
-  const { createMultipleChapters, isCreating: isCreatingChapters } = useCreateMultipleChapters();
-  const { createMultipleEpisodes, isCreating: isCreatingEpisodes } = useCreateMultipleEpisodes();
+  const { createMultipleChapters, isCreating: isCreatingChapters } =
+    useCreateMultipleChapters();
+  const { createMultipleEpisodes, isCreating: isCreatingEpisodes } =
+    useCreateMultipleEpisodes();
 
-  const isCreating = isCreatingStory || isCreatingChapters || isCreatingEpisodes;
+  const isCreating =
+    isCreatingStory || isCreatingChapters || isCreatingEpisodes;
 
   // Fetch story data for edit mode
   const { story, isLoading: isFetchingStory } = useFetchStory(
@@ -112,43 +115,37 @@ const StoryView: React.FC<StoryViewProps> = ({ mode, storyId }) => {
           return;
         }
 
-        const chapterFlag = Boolean(_chapters && _chapters.length > 0);
-        // Check if any chapter has episodes (nested structure in UI)
-        // OR if we are in "Episodes" mode (which might be represented differently in future, but for now relying on UI structure)
-        // The user said "episodes are not chapter a story either has episodes or it has chapter".
-        // So we need to check if we are creating chapters OR episodes.
-        // In the current UI (StoryForm), it seems we might be mixing them or using 'chapters' state for both.
-        // Let's assume _chapters contains the items. If the user selected "Episodes" mode in the form (if that exists) or if the items are episodes.
-        // Looking at StoryForm might be needed to distinguish, but for now let's assume:
-        // If the items have 'episodes' property populated, maybe they are chapters with episodes?
-        // BUT user said "no two ways about it".
-        // So we should probably check a flag from formData if possible, or infer.
-        // Let's assume if `formData.episodes` is true, we treat _chapters as episodes (flat list) or we need to adjust how we read `_chapters`.
-        // Actually, `StoryForm` passes `_chapters` which are `Chapter[]`.
-        // If the user wants episodes, maybe they are just "chapters" with a different label in the UI?
-        // Let's look at `apiData` construction.
-        
-        const episodesFlag = formData.episodes; // We need to ensure this comes from form data correctly.
+        // Story can have either chapters OR episodes, not both
+        // Use the flags from formData which are set based on user selection
+        const hasChapters = formData.chapter === true;
+        const hasEpisodes = formData.episodes === true;
 
         // Build content from chapters or parts
-        // If has chapters/episodes, the main content is just the description or prologue
-        const contentText = (chapterFlag || episodesFlag)
-          ? formData.description
-          : (_parts && _parts.length > 0)
-            ? _parts.map((p) => `${p.title}\n${p.body}`).join("\n\n")
-            : formData.description;
+        // If has chapters/episodes, the main content is just the description
+        // Otherwise, use parts content or just description
+        const contentText =
+          hasChapters || hasEpisodes
+            ? formData.description
+            : _parts && _parts.length > 0
+              ? _parts.map((p) => `${p.title}\n${p.body}`).join("\n\n")
+              : formData.description;
 
-        const wordsCount = formData.description.trim().split(/\s+/).filter(Boolean).length;
+        const wordsCount = formData.description
+          .trim()
+          .split(/\s+/)
+          .filter(Boolean).length;
         const descChars = formData.description.trim().length;
         const contentChars = contentText.trim().length;
-        
+
         // Backend validation guardrails
         const descWordOk = wordsCount >= 50 && wordsCount <= 100;
         const descCharOk = descChars >= 50;
         const contentOk = contentChars >= 50;
-        
+
         if (!descWordOk || !descCharOk || !contentOk) {
-          alert("Please ensure: description is 50-100 words and at least 50 characters; content at least 50 characters.");
+          alert(
+            "Please ensure: description is 50-100 words and at least 50 characters; content at least 50 characters."
+          );
           return;
         }
 
@@ -167,9 +164,9 @@ const StoryView: React.FC<StoryViewProps> = ({ mode, storyId }) => {
           onlyOnStorytime: formData.onlyOnStorytime,
           trigger: formData.trigger,
           copyright: formData.copyright,
-          // API expects boolean Chapter and Episodes flags
-          chapter: chapterFlag && !episodesFlag, // Mutually exclusive
-          episodes: episodesFlag,
+          // API expects boolean chapter and episodes flags (mutually exclusive)
+          chapter: hasChapters,
+          episodes: hasEpisodes,
           storyStatus:
             formData.storyStatus === "Completed"
               ? "complete"
@@ -194,23 +191,22 @@ const StoryView: React.FC<StoryViewProps> = ({ mode, storyId }) => {
             console.log("Story created successfully:", result.id);
             const newStoryId = result.id;
 
-            // Bulk creation
+            // Bulk creation of chapters or episodes
             if (_chapters && _chapters.length > 0) {
-              if (episodesFlag) {
-                 // Treat _chapters as episodes (flat list)
-                 // We map the UI "chapters" to API "episodes"
-                 const episodesPayload = _chapters.map(ch => ({
-                    title: ch.title,
-                    body: ch.body
-                 }));
-                 await createMultipleEpisodes(newStoryId, episodesPayload);
-              } else {
-                 // Create chapters
-                 const chaptersPayload = _chapters.map(ch => ({
-                    title: ch.title,
-                    body: ch.body
-                 }));
-                 await createMultipleChapters(newStoryId, chaptersPayload);
+              if (hasEpisodes) {
+                // Create episodes (UI uses _chapters param but content is episodes)
+                const episodesPayload = _chapters.map((ch) => ({
+                  title: ch.title,
+                  body: ch.body,
+                }));
+                await createMultipleEpisodes(newStoryId, episodesPayload);
+              } else if (hasChapters) {
+                // Create chapters
+                const chaptersPayload = _chapters.map((ch) => ({
+                  title: ch.title,
+                  body: ch.body,
+                }));
+                await createMultipleChapters(newStoryId, chaptersPayload);
               }
             }
 

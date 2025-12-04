@@ -38,6 +38,8 @@ const getInitialFormData = (
   storyStatus: "Draft",
   authorNote: "",
   giveConsent: false,
+  chapter: false,
+  episodes: false,
   ...initialData,
 });
 
@@ -89,6 +91,8 @@ const StoryBriefModal: React.FC<StoryBriefModalProps> = ({
                     setStructure((prev) => ({
                       ...prev,
                       hasChapters: Boolean(index),
+                      // If selecting Yes for chapters, set episodes to No
+                      hasEpisodes: index === 1 ? false : prev.hasEpisodes,
                     }))
                   }
                   className={cn(
@@ -123,6 +127,8 @@ const StoryBriefModal: React.FC<StoryBriefModalProps> = ({
                     setStructure((prev) => ({
                       ...prev,
                       hasEpisodes: Boolean(index),
+                      // If selecting Yes for episodes, set chapters to No
+                      hasChapters: index === 1 ? false : prev.hasChapters,
                     }))
                   }
                   className={cn(
@@ -142,7 +148,7 @@ const StoryBriefModal: React.FC<StoryBriefModalProps> = ({
             <p
               className={`text-complimentary-colour text-sm ${Magnetik_Regular.className}`}
             >
-              Note: You can change to chapters when you want in the story.
+              Note: A story can have either chapters or episodes, not both.
             </p>
           </div>
         </div>
@@ -357,6 +363,12 @@ const StoryForm: React.FC<StoryFormProps> = ({
   // Handle story structure selection
   const handleStructureNext = useCallback((structure: StoryStructure) => {
     setStoryStructure(structure);
+    // Update formData with mutually exclusive chapter/episodes flags
+    setFormData((prev) => ({
+      ...prev,
+      chapter: structure.hasChapters,
+      episodes: structure.hasEpisodes,
+    }));
     setCurrentStep("writing");
   }, []);
 
@@ -451,9 +463,12 @@ const StoryForm: React.FC<StoryFormProps> = ({
         isInvalid={!!formErrors.description}
         errorMessage={formErrors.description || ""}
         required
-        minLen={10}
-        maxLen={500}
+        minLen={50}
+        maxLen={1000}
         rows={4}
+        showWordCounter={true}
+        minWords={50}
+        maxWords={100}
       />
 
       {/* Genre Selection */}
