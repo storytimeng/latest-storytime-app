@@ -188,7 +188,7 @@ export const getStoryDraft = async (
       request.onsuccess = () => {
         db.close();
         const entry = request.result as CacheEntry | undefined;
-        
+
         if (!entry) {
           resolve(null);
           return;
@@ -232,7 +232,7 @@ export const getChaptersCache = async (
       request.onsuccess = () => {
         db.close();
         const entry = request.result as CacheEntry | undefined;
-        
+
         if (!entry) {
           resolve(null);
           return;
@@ -276,7 +276,7 @@ export const getEpisodesCache = async (
       request.onsuccess = () => {
         db.close();
         const entry = request.result as CacheEntry | undefined;
-        
+
         if (!entry) {
           resolve(null);
           return;
@@ -419,15 +419,15 @@ export const clearExpiredCaches = async (): Promise<void> => {
 
     request.onsuccess = (event) => {
       const cursor = (event.target as IDBRequest).result as IDBCursorWithValue;
-      
+
       if (cursor) {
         const entry = cursor.value as CacheEntry;
-        
+
         if (now - entry.timestamp > expiryMs) {
           cursor.delete();
           deletedCount++;
         }
-        
+
         cursor.continue();
       }
     };

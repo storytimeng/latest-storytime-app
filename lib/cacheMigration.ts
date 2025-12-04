@@ -45,7 +45,7 @@ export const migrateLocalStorageToIndexedDB = async (): Promise<{
         try {
           const storyId = key.replace(OLD_CACHE_PREFIX, "");
           const data = JSON.parse(localStorage.getItem(key) || "{}");
-          
+
           if (data.formData) {
             await saveStoryDraft(storyId, data.formData);
             localStorage.removeItem(key);
@@ -63,7 +63,7 @@ export const migrateLocalStorageToIndexedDB = async (): Promise<{
         try {
           const storyId = key.replace(OLD_CHAPTER_CACHE_PREFIX, "");
           const data = JSON.parse(localStorage.getItem(key) || "{}");
-          
+
           if (data.chapters && Array.isArray(data.chapters)) {
             await saveChaptersCache(storyId, data.chapters);
             localStorage.removeItem(key);
@@ -81,7 +81,7 @@ export const migrateLocalStorageToIndexedDB = async (): Promise<{
         try {
           const storyId = key.replace(OLD_EPISODE_CACHE_PREFIX, "");
           const data = JSON.parse(localStorage.getItem(key) || "{}");
-          
+
           if (data.episodes && Array.isArray(data.episodes)) {
             await saveEpisodesCache(storyId, data.episodes);
             localStorage.removeItem(key);

@@ -29,32 +29,37 @@ NEXT_PUBLIC_CACHE_EXPIRY_DAYS=30
 ## IndexedDB Structure
 
 ### Database
+
 - **Name**: `storytime_cache`
 - **Version**: 1
 
 ### Object Store
+
 - **Name**: `story_cache`
 - **Key Path**: `id` (format: `{storyId}_{type}`)
 
 ### Indexes
+
 - `storyId` - For querying all cache entries for a story
 - `type` - For querying by cache type (chapters/episodes/draft)
 - `timestamp` - For expiration checks
 
 ### Cache Entry Format
+
 ```typescript
 interface CacheEntry {
-  id: string;              // e.g., "123_chapters"
-  storyId: string;         // Story ID
+  id: string; // e.g., "123_chapters"
+  storyId: string; // Story ID
   type: "chapters" | "episodes" | "draft";
   data: Chapter[] | Part[] | Partial<StoryFormData>;
-  timestamp: number;       // Creation timestamp
+  timestamp: number; // Creation timestamp
 }
 ```
 
 ## API Usage
 
 ### Save Data
+
 ```typescript
 import { saveChaptersCache, saveEpisodesCache } from "@/lib/storyCache";
 
@@ -66,6 +71,7 @@ await saveEpisodesCache(storyId, episodes);
 ```
 
 ### Retrieve Data
+
 ```typescript
 import { getChaptersCache, getEpisodesCache } from "@/lib/storyCache";
 
@@ -77,6 +83,7 @@ const episodes = await getEpisodesCache(storyId);
 ```
 
 ### Check Cache
+
 ```typescript
 import { hasCachedData } from "@/lib/storyCache";
 
@@ -85,6 +92,7 @@ const cached = await hasCachedData(storyId);
 ```
 
 ### Clear Cache
+
 ```typescript
 import { clearStoryCache } from "@/lib/storyCache";
 
@@ -93,6 +101,7 @@ await clearStoryCache(storyId);
 ```
 
 ### Clear Expired
+
 ```typescript
 import { clearExpiredCaches } from "@/lib/storyCache";
 
@@ -105,8 +114,12 @@ await clearExpiredCaches();
 The system automatically migrates existing localStorage data to IndexedDB on first load.
 
 ### Manual Migration
+
 ```typescript
-import { migrateLocalStorageToIndexedDB, needsMigration } from "@/lib/cacheMigration";
+import {
+  migrateLocalStorageToIndexedDB,
+  needsMigration,
+} from "@/lib/cacheMigration";
 
 if (needsMigration()) {
   const result = await migrateLocalStorageToIndexedDB();
@@ -115,6 +128,7 @@ if (needsMigration()) {
 ```
 
 ### Migration Process
+
 1. Checks for old localStorage keys:
    - `story_draft_*`
    - `story_chapters_*`
@@ -126,18 +140,23 @@ if (needsMigration()) {
 ## Unsaved Changes Warning
 
 ### Browser Warning
+
 When user tries to close tab/refresh with unsaved changes:
+
 - Native browser dialog shown
 - Data automatically cached to IndexedDB
 - User can confirm or cancel
 
 ### Navigation Warning
+
 When user navigates away within the app:
+
 - Confirmation dialog shown
 - Data cached before navigation
 - Toast notification confirms save
 
 ### Usage in Components
+
 ```typescript
 import { useUnsavedChangesWarning } from "@/src/hooks/useUnsavedChangesWarning";
 
@@ -147,13 +166,14 @@ const { confirmNavigation } = useUnsavedChangesWarning({
     // Cache data before exit
     saveChaptersCache(storyId, chapters);
   },
-  message: "You have unsaved changes..."
+  message: "You have unsaved changes...",
 });
 ```
 
 ## Active Pages
 
 The cache system is automatically integrated into:
+
 - `/new-story` (create mode)
 - `/edit-story/[id]` (edit mode)
 - Any component using `StoryForm`
@@ -170,41 +190,46 @@ The cache system is automatically integrated into:
 
 ## Benefits Over localStorage
 
-| Feature | localStorage | IndexedDB |
-|---------|-------------|-----------|
-| Duplicate Prevention | ❌ Manual | ✅ Automatic (unique keys) |
-| Storage Limit | ~5-10MB | ~50MB+ (browser dependent) |
-| Large Data | ❌ Slow | ✅ Fast |
-| Async Operations | ❌ Blocking | ✅ Non-blocking |
-| Expiration Check | Manual iteration | Indexed queries |
-| Transaction Support | ❌ No | ✅ Yes |
+| Feature              | localStorage     | IndexedDB                  |
+| -------------------- | ---------------- | -------------------------- |
+| Duplicate Prevention | ❌ Manual        | ✅ Automatic (unique keys) |
+| Storage Limit        | ~5-10MB          | ~50MB+ (browser dependent) |
+| Large Data           | ❌ Slow          | ✅ Fast                    |
+| Async Operations     | ❌ Blocking      | ✅ Non-blocking            |
+| Expiration Check     | Manual iteration | Indexed queries            |
+| Transaction Support  | ❌ No            | ✅ Yes                     |
 
 ## Troubleshooting
 
 ### Cache Not Saving
+
 - Check browser DevTools → Application → IndexedDB → `storytime_cache`
 - Ensure `storyId` is valid
 - Check console for errors
 
 ### Cache Not Loading
+
 - Verify cache not expired (check timestamp vs `CACHE_EXPIRY_DAYS`)
 - Check browser IndexedDB support
 - Review console logs
 
 ### Migration Issues
+
 - Check localStorage for old entries
 - Run `needsMigration()` in console
 - Manually trigger migration if needed
 
 ### Clear All Cache
+
 ```javascript
 // In browser console
-indexedDB.deleteDatabase('storytime_cache');
+indexedDB.deleteDatabase("storytime_cache");
 ```
 
 ## Browser Support
 
 IndexedDB is supported in all modern browsers:
+
 - ✅ Chrome 24+
 - ✅ Firefox 16+
 - ✅ Safari 10+
