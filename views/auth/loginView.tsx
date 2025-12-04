@@ -109,12 +109,14 @@ export default function LoginView() {
 
       // Fetch and store user profile
       try {
-        const { usersControllerGetProfile } = await import("@/src/client/sdk.gen");
+        const { usersControllerGetProfile } = await import(
+          "@/src/client/sdk.gen"
+        );
         const { useUserStore } = await import("@/src/stores/useUserStore");
         console.log("Fetching user profile...");
         const profileResponse = await usersControllerGetProfile();
         console.log("Profile response:", profileResponse);
-        
+
         if (profileResponse.data) {
           console.log("Setting user profile in store:", profileResponse.data);
           useUserStore.getState().setUser(profileResponse.data as any);
@@ -123,7 +125,7 @@ export default function LoginView() {
         }
       } catch (profileError) {
         console.error("Failed to fetch profile:", profileError);
-        // Continue to home even if profile fetch fails, 
+        // Continue to home even if profile fetch fails,
         // the useUserProfile hook will try again later
       }
 

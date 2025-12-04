@@ -9,6 +9,7 @@ import { Magnetik_Bold, Magnetik_Medium, Magnetik_Regular } from "@/lib/font";
 import FormField from "./formField";
 import TextAreaField from "./textArea";
 import ImageUpload from "./imageUpload";
+import { CollaboratorInput } from "./CollaboratorInput";
 import { cn } from "@/lib/utils";
 import type {
   StoryFormData,
@@ -282,8 +283,15 @@ const StoryForm: React.FC<StoryFormProps> = ({
       errors.title = "Story title is required";
     }
 
-    if (!formData.description.trim()) {
+    // Description: 50-100 words, at least 50 chars
+    const desc = formData.description.trim();
+    const descWords = desc.split(/\s+/).filter(Boolean);
+    if (!desc) {
       errors.description = "Story description is required";
+    } else if (descWords.length < 50 || descWords.length > 100) {
+      errors.description = "Description must be 50-100 words.";
+    } else if (desc.length < 50) {
+      errors.description = "Description must be at least 50 characters.";
     }
 
     if (formData.selectedGenres.length === 0) {
@@ -426,13 +434,9 @@ const StoryForm: React.FC<StoryFormProps> = ({
       />
 
       {/* Collaborate */}
-      <FormField
-        label="Collaborate (optional)"
-        type="text"
-        id="collaborate"
-        placeholder="@penname"
+      <CollaboratorInput
         value={formData.collaborate}
-        onValueChange={(value) => handleFieldChange("collaborate", value)}
+        onChange={(value) => handleFieldChange("collaborate", value)}
         className="mt-6"
       />
 

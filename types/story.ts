@@ -24,6 +24,7 @@ export interface StoryFormData {
     coverImage?: string;
     authorNote?: string;
     giveConsent?: boolean;
+    episodes?: boolean;
   }
   
   export interface StoryStructure {

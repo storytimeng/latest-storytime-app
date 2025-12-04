@@ -4,6 +4,10 @@ import {
   storiesControllerCreate,
   storiesControllerUpdate,
   storiesControllerFindOne,
+  storiesControllerCreateChapter,
+  storiesControllerCreateEpisode,
+  storiesControllerCreateMultipleChapters,
+  storiesControllerCreateMultipleEpisodes,
 } from "@/src/client";
 import type { CreateStoryDto, UpdateStoryDto } from "@/src/client/types.gen";
 
@@ -153,6 +157,200 @@ export function useFetchStory(storyId: string | undefined) {
   return {
     story,
     isLoading,
+    error,
+  };
+}
+
+export function useCreateChapter() {
+  const [isCreating, setIsCreating] = React.useState(false);
+  const [error, setError] = React.useState<Error | null>(null);
+
+  const createChapter = async (
+    storyId: string,
+    chapterData: any
+  ): Promise<{ success: boolean; id?: string }> => {
+    setIsCreating(true);
+    setError(null);
+
+    try {
+      const response = await storiesControllerCreateChapter({
+        body: {
+          storyId,
+          ...chapterData,
+        },
+      });
+
+      const result = (response?.data as any)?.data || response?.data;
+      console.log("✅ Chapter created successfully:", result);
+
+      return {
+        success: true,
+        id: result?.id || result?._id,
+      };
+    } catch (err) {
+      const error =
+        err instanceof Error ? err : new Error("Failed to create chapter");
+      console.error("❌ Failed to create chapter:", error);
+      setError(error);
+      return { success: false };
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  return {
+    createChapter,
+    isCreating,
+    error,
+  };
+}
+
+export function useCreateMultipleChapters() {
+  const [isCreating, setIsCreating] = React.useState(false);
+  const [error, setError] = React.useState<Error | null>(null);
+
+  const createMultipleChapters = async (
+    storyId: string,
+    chapters: any[]
+  ): Promise<{ success: boolean; count?: number }> => {
+    setIsCreating(true);
+    setError(null);
+
+    try {
+      const response = await storiesControllerCreateMultipleChapters({
+        body: {
+          storyId,
+          chapters: chapters.map((ch, index) => ({
+            storyId,
+            title: ch.title,
+            content: ch.body || ch.content,
+            chapterNumber: index + 1,
+          })),
+        },
+      });
+
+      const result = (response?.data as any)?.data || response?.data;
+      console.log("✅ Multiple chapters created successfully:", result);
+
+      return {
+        success: true,
+        count: chapters.length,
+      };
+    } catch (err) {
+      const error =
+        err instanceof Error ? err : new Error("Failed to create multiple chapters");
+      console.error("❌ Failed to create multiple chapters:", error);
+      setError(error);
+      return { success: false };
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  return {
+    createMultipleChapters,
+    isCreating,
+    error,
+  };
+}
+
+export function useCreateEpisode() {
+  const [isCreating, setIsCreating] = React.useState(false);
+  const [error, setError] = React.useState<Error | null>(null);
+
+  const createEpisode = async (
+    storyId: string,
+    chapterId: string, // Kept for backward compatibility if needed, but might be unused for direct episodes
+    episodeData: any
+  ): Promise<{ success: boolean; id?: string }> => {
+    setIsCreating(true);
+    setError(null);
+
+    try {
+      // Check if we need chapterId or not based on previous findings
+      // For now, passing what we have, but if episodes are direct children, chapterId might be ignored or optional
+      const body: any = {
+        storyId,
+        ...episodeData,
+      };
+      if (chapterId) {
+        body.chapterId = chapterId;
+      }
+
+      const response = await storiesControllerCreateEpisode({
+        body,
+      });
+
+      const result = (response?.data as any)?.data || response?.data;
+      console.log("✅ Episode created successfully:", result);
+
+      return {
+        success: true,
+        id: result?.id || result?._id,
+      };
+    } catch (err) {
+      const error =
+        err instanceof Error ? err : new Error("Failed to create episode");
+      console.error("❌ Failed to create episode:", error);
+      setError(error);
+      return { success: false };
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  return {
+    createEpisode,
+    isCreating,
+    error,
+  };
+}
+
+export function useCreateMultipleEpisodes() {
+  const [isCreating, setIsCreating] = React.useState(false);
+  const [error, setError] = React.useState<Error | null>(null);
+
+  const createMultipleEpisodes = async (
+    storyId: string,
+    episodes: any[]
+  ): Promise<{ success: boolean; count?: number }> => {
+    setIsCreating(true);
+    setError(null);
+
+    try {
+      const response = await storiesControllerCreateMultipleEpisodes({
+        body: {
+          storyId,
+          episodes: episodes.map((ep, index) => ({
+            storyId,
+            title: ep.title,
+            content: ep.body || ep.content,
+            episodeNumber: index + 1,
+          })),
+        },
+      });
+
+      const result = (response?.data as any)?.data || response?.data;
+      console.log("✅ Multiple episodes created successfully:", result);
+
+      return {
+        success: true,
+        count: episodes.length,
+      };
+    } catch (err) {
+      const error =
+        err instanceof Error ? err : new Error("Failed to create multiple episodes");
+      console.error("❌ Failed to create multiple episodes:", error);
+      setError(error);
+      return { success: false };
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  return {
+    createMultipleEpisodes,
+    isCreating,
     error,
   };
 }

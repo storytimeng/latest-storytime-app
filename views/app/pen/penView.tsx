@@ -24,7 +24,7 @@ import { StoryCard } from "@/components/reusables/customUI";
 import { useRouter } from "next/navigation";
 
 import { useUserProfile } from "@/src/hooks/useUserProfile";
-import { useStories } from "@/src/hooks/useStories";
+import { useLibrary } from "@/src/hooks/useLibrary";
 import { useDeleteStory } from "@/src/hooks/useStoryMutations";
 import type { StoryResponseDto } from "@/src/client/types.gen";
 
@@ -50,10 +50,8 @@ const PenView = () => {
 
   // Get current user profile
   const { user } = useUserProfile();
-  // Fetch stories written by the current user
-  const { stories, isLoading, mutate } = useStories({
-    search: user?.penName || user?.firstName || user?.id,
-  });
+  // Fetch stories from user's library
+  const { stories, isLoading, mutate } = useLibrary();
 
   // Delete story hook
   const { deleteStory, isDeleting } = useDeleteStory();
