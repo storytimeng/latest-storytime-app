@@ -21,6 +21,7 @@ interface TextFieldProps {
   showWordCounter?: boolean;
   minWords?: number;
   maxWords?: number;
+  className?: string;
 }
 
 const TextAreaField: React.FC<TextFieldProps> = ({
@@ -39,6 +40,7 @@ const TextAreaField: React.FC<TextFieldProps> = ({
   showWordCounter = false,
   minWords,
   maxWords,
+  className,
 }) => {
   const handleChange = (value: string) => {
     onChange(value);
@@ -104,6 +106,7 @@ const TextAreaField: React.FC<TextFieldProps> = ({
         rows={rows}
         radius="md"
         variant="bordered"
+        className={className}
         classNames={{
           inputWrapper: [
             "data-[hover=true]:border-primary group-data-[focus=true]:border-primary",

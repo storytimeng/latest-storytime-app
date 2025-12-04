@@ -14,6 +14,7 @@ import {
 import { useUserProfile } from "@/src/hooks/useUserProfile";
 import { usersControllerGetProfile } from "@/src/client/sdk.gen";
 import { useUserStore } from "@/src/stores/useUserStore";
+import { showToast } from "@/lib/showNotification";
 import type {
   StoryFormData,
   Chapter,
@@ -32,7 +33,7 @@ const StoryView: React.FC<StoryViewProps> = ({ mode, storyId }) => {
 
   // Hooks for mutations
   const { createStory, isCreating: isCreatingStory } = useCreateStory();
-  const { updateStory, isUpdating } = useUpdateStory();
+  const { updateStory, isUpdating, error: updateError } = useUpdateStory();
   const { createMultipleChapters, isCreating: isCreatingChapters } =
     useCreateMultipleChapters();
   const { createMultipleEpisodes, isCreating: isCreatingEpisodes } =
@@ -46,20 +47,56 @@ const StoryView: React.FC<StoryViewProps> = ({ mode, storyId }) => {
     mode === "edit" ? storyId : undefined
   );
 
+  // Authorization check for edit mode
+  React.useEffect(() => {
+    if (mode === "edit" && story && !isFetchingStory) {
+      // Get current user
+      const storeCandidate = (
+        storeUser && (storeUser as any).data
+          ? (storeUser as any).data?.user
+          : storeUser
+      ) as any;
+      const currentUser = storeCandidate || swrUser;
+
+      // Check if current user is the author
+      const isAuthor =
+        currentUser?.id &&
+        story.author?.id &&
+        currentUser.id === story.author.id;
+
+      if (!isAuthor) {
+        showToast({
+          type: "error",
+          message: "You are not authorized to edit this story.",
+        });
+        router.push(`/story/${storyId}`);
+      }
+    }
+  }, [mode, story, isFetchingStory, storeUser, swrUser, storyId, router]);
+
   // Transform API story data to form data
   React.useEffect(() => {
     if (mode === "edit" && story) {
+      // Capitalize language to match form options (API returns lowercase)
+      const capitalizeLanguage = (lang: string) => {
+        if (!lang) return "English";
+        return lang.charAt(0).toUpperCase() + lang.slice(1).toLowerCase();
+      };
+
       setInitialData({
         id: story.id,
         title: story.title || "",
         collaborate: story.collaborate?.join(", ") || "",
         description: story.description || "",
+        content: story.content || "",
         selectedGenres: story.genres || [],
-        language: story.language || "English",
+        language: capitalizeLanguage(story.language || "english"),
         goAnonymous: story.anonymous || false,
         onlyOnStorytime: story.onlyOnStorytime || false,
         trigger: story.trigger || false,
         copyright: story.copyright || false,
+        chapter: (story as any).chapter || false,
+        episodes: (story as any).episodes || false,
         storyStatus:
           story.storyStatus === "complete"
             ? "Completed"
@@ -110,8 +147,10 @@ const StoryView: React.FC<StoryViewProps> = ({ mode, storyId }) => {
         }
 
         if (!effectiveUser?.id) {
-          // Avoid noisy console error overlay; guide user instead
-          alert("Please log in to publish your story.");
+          showToast({
+            type: "error",
+            message: "Please log in to publish your story.",
+          });
           return;
         }
 
@@ -120,75 +159,122 @@ const StoryView: React.FC<StoryViewProps> = ({ mode, storyId }) => {
         const hasChapters = formData.chapter === true;
         const hasEpisodes = formData.episodes === true;
 
-        // Build content from chapters or parts
-        // If has chapters/episodes, the main content is just the description
-        // Otherwise, use parts content or just description
         const contentText =
           hasChapters || hasEpisodes
             ? formData.description
-            : _parts && _parts.length > 0
-              ? _parts.map((p) => `${p.title}\n${p.body}`).join("\n\n")
-              : formData.description;
+            : formData.content ||
+              (_parts && _parts.length > 0
+                ? _parts.map((p) => `${p.title}\n${p.body}`).join("\n\n")
+                : formData.description);
 
         const wordsCount = formData.description
           .trim()
           .split(/\s+/)
           .filter(Boolean).length;
         const descChars = formData.description.trim().length;
-        const contentChars = contentText.trim().length;
 
-        // Backend validation guardrails
-        const descWordOk = wordsCount >= 50 && wordsCount <= 100;
-        const descCharOk = descChars >= 50;
-        const contentOk = contentChars >= 50;
-
-        if (!descWordOk || !descCharOk || !contentOk) {
-          alert(
-            "Please ensure: description is 50-100 words and at least 50 characters; content at least 50 characters."
-          );
+        // Validation for description (both create and edit)
+        if (!formData.description.trim()) {
+          showToast({
+            type: "error",
+            message: "Description is required.",
+          });
           return;
         }
 
-        // Transform form data to API format
-        const apiData = {
-          authorId: effectiveUser.id,
-          title: formData.title,
-          description: formData.description,
-          content: contentText,
-          genres: formData.selectedGenres,
-          collaborate: formData.collaborate
-            ? formData.collaborate.split(",").map((c) => c.trim())
-            : [],
-          language: formData.language.toLowerCase() as any,
-          anonymous: formData.goAnonymous,
-          onlyOnStorytime: formData.onlyOnStorytime,
-          trigger: formData.trigger,
-          copyright: formData.copyright,
-          // API expects boolean chapter and episodes flags (mutually exclusive)
-          chapter: hasChapters,
-          episodes: hasEpisodes,
-          storyStatus:
-            formData.storyStatus === "Completed"
-              ? "complete"
-              : formData.storyStatus === "In Progress"
-                ? "ongoing"
-                : ("drafts" as any),
-        };
+        if (wordsCount < 50) {
+          showToast({
+            type: "error",
+            message: `Description needs at least 50 words. You have ${wordsCount} word${wordsCount !== 1 ? "s" : ""}.`,
+          });
+          return;
+        }
+
+        if (wordsCount > 100) {
+          showToast({
+            type: "error",
+            message: `Description cannot exceed 100 words. You have ${wordsCount} words.`,
+          });
+          return;
+        }
+
+        if (descChars < 50) {
+          showToast({
+            type: "error",
+            message: `Description needs at least 50 characters. You have ${descChars} character${descChars !== 1 ? "s" : ""}.`,
+          });
+          return;
+        }
+
+        // Content validation for stories without chapters/episodes
+        if (!hasChapters && !hasEpisodes && !formData.content?.trim()) {
+          showToast({
+            type: "error",
+            message:
+              "Story content is required when not using chapters or episodes.",
+          });
+          return;
+        }
 
         if (mode === "edit" && storyId) {
-          // Update existing story
-          const success = await updateStory(storyId, apiData as UpdateStoryDto);
+          // Update existing story - only send allowed fields for update
+          const updatePayload: UpdateStoryDto = {
+            title: formData.title,
+            content: contentText,
+            genres: formData.selectedGenres,
+            collaborate: formData.collaborate
+              ? formData.collaborate.split(",").map((c) => c.trim())
+              : [],
+            imageUrl: formData.coverImage || undefined,
+          };
+
+          const success = await updateStory(storyId, updatePayload);
 
           if (success) {
-            console.log("Story updated successfully!");
+            showToast({
+              type: "success",
+              message: "Story updated successfully!",
+            });
             router.push(`/story/${storyId}`);
+          } else {
+            // Show specific error message if available
+            const errorMessage =
+              updateError?.message ||
+              "Failed to update story. Please try again.";
+            showToast({
+              type: "error",
+              message: errorMessage,
+            });
           }
         } else {
-          // Create new story
-          const result = await createStory(apiData as CreateStoryDto);
+          // Create new story - includes all fields
+          const createPayload: CreateStoryDto = {
+            authorId: effectiveUser.id,
+            title: formData.title,
+            description: formData.description,
+            content: contentText,
+            genres: formData.selectedGenres,
+            collaborate: formData.collaborate
+              ? formData.collaborate.split(",").map((c) => c.trim())
+              : [],
+            language: formData.language.toLowerCase() as any,
+            anonymous: formData.goAnonymous,
+            onlyOnStorytime: formData.onlyOnStorytime,
+            trigger: formData.trigger,
+            copyright: formData.copyright,
+            chapter: hasChapters,
+            episodes: hasEpisodes,
+            storyStatus:
+              formData.storyStatus === "Completed"
+                ? "complete"
+                : formData.storyStatus === "In Progress"
+                  ? "ongoing"
+                  : ("drafts" as any),
+          };
+
+          const result = await createStory(createPayload);
 
           if (result.success && result.id) {
-            console.log("Story created successfully:", result.id);
             const newStoryId = result.id;
 
             // Bulk creation of chapters or episodes
@@ -210,15 +296,29 @@ const StoryView: React.FC<StoryViewProps> = ({ mode, storyId }) => {
               }
             }
 
+            showToast({
+              type: "success",
+              message: "Story created successfully!",
+            });
+
             if (formData.storyStatus === "Draft") {
               router.push("/my-stories?tab=drafts");
             } else {
               router.push(`/story/${newStoryId}`);
             }
+          } else {
+            showToast({
+              type: "error",
+              message: "Failed to create story. Please try again.",
+            });
           }
         }
       } catch (error) {
         console.error("Failed to save story:", error);
+        showToast({
+          type: "error",
+          message: "An error occurred while saving the story.",
+        });
       }
     },
     [

@@ -4,6 +4,7 @@ import React, { useState, useCallback } from "react";
 import { Button } from "@heroui/button";
 import { Select, SelectItem } from "@heroui/select";
 import { Switch } from "@heroui/switch";
+import { ChevronRight } from "lucide-react";
 // Icons will be replaced with text/emoji alternatives
 import { Magnetik_Bold, Magnetik_Medium, Magnetik_Regular } from "@/lib/font";
 import FormField from "./formField";
@@ -11,6 +12,7 @@ import TextAreaField from "./textArea";
 import ImageUpload from "./imageUpload";
 import { CollaboratorInput } from "./CollaboratorInput";
 import { cn } from "@/lib/utils";
+import { showToast } from "@/lib/showNotification";
 import type {
   StoryFormData,
   StoryStructure,
@@ -29,6 +31,7 @@ const getInitialFormData = (
   title: "",
   collaborate: "",
   description: "",
+  content: "",
   selectedGenres: [],
   language: "English",
   goAnonymous: false,
@@ -262,10 +265,28 @@ const StoryForm: React.FC<StoryFormProps> = ({
   // UI state
   const [currentStep, setCurrentStep] = useState<
     "form" | "structure" | "writing" | "additional"
-  >("form");
-  const [storyStructure, setStoryStructure] = useState<StoryStructure>({
-    hasChapters: false,
-    hasEpisodes: false,
+  >(() => {
+    // In edit mode, determine initial step based on story structure
+    if (mode === "edit" && initialData) {
+      // If story has chapters or episodes, go to writing step
+      if (initialData.chapter || initialData.episodes) {
+        return "writing";
+      }
+    }
+    return "form";
+  });
+  const [storyStructure, setStoryStructure] = useState<StoryStructure>(() => {
+    // In edit mode, initialize structure from initialData
+    if (mode === "edit" && initialData) {
+      return {
+        hasChapters: initialData.chapter || false,
+        hasEpisodes: initialData.episodes || false,
+      };
+    }
+    return {
+      hasChapters: false,
+      hasEpisodes: false,
+    };
   });
 
   // Content state
@@ -280,6 +301,25 @@ const StoryForm: React.FC<StoryFormProps> = ({
   const [parts, setParts] = useState<Part[]>([
     { id: 1, title: "Part 1", body: "" },
   ]);
+
+  // Update form data when initialData changes (for edit mode)
+  React.useEffect(() => {
+    if (mode === "edit" && initialData) {
+      setFormData(getInitialFormData(initialData));
+      // Update story structure if chapter/episodes flags are set
+      if (initialData.chapter || initialData.episodes) {
+        setStoryStructure({
+          hasChapters: initialData.chapter || false,
+          hasEpisodes: initialData.episodes || false,
+        });
+        // If story has structure (chapters/episodes), show writing interface
+        setCurrentStep("writing");
+      } else {
+        // For simple stories without chapters/episodes, stay on form
+        setCurrentStep("form");
+      }
+    }
+  }, [mode, initialData]);
 
   // Form validation
   const validateForm = useCallback((): boolean => {
@@ -300,13 +340,23 @@ const StoryForm: React.FC<StoryFormProps> = ({
       errors.description = "Description must be at least 50 characters.";
     }
 
+    // Content validation: required when no chapters/episodes
+    if (
+      !storyStructure.hasChapters &&
+      !storyStructure.hasEpisodes &&
+      !formData.content?.trim()
+    ) {
+      errors.content =
+        "Story content is required when not using chapters or episodes.";
+    }
+
     if (formData.selectedGenres.length === 0) {
       errors.selectedGenres = "Please select at least one genre";
     }
 
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
-  }, [formData]);
+  }, [formData, storyStructure]);
 
   // Handle form field changes
   const handleFieldChange = useCallback(
@@ -361,16 +411,33 @@ const StoryForm: React.FC<StoryFormProps> = ({
   ]);
 
   // Handle story structure selection
-  const handleStructureNext = useCallback((structure: StoryStructure) => {
-    setStoryStructure(structure);
-    // Update formData with mutually exclusive chapter/episodes flags
-    setFormData((prev) => ({
-      ...prev,
-      chapter: structure.hasChapters,
-      episodes: structure.hasEpisodes,
-    }));
-    setCurrentStep("writing");
-  }, []);
+  const handleStructureNext = useCallback(
+    (structure: StoryStructure) => {
+      // If user selected no chapters and no episodes, they must have content
+      if (
+        !structure.hasChapters &&
+        !structure.hasEpisodes &&
+        !formData.content?.trim()
+      ) {
+        showToast({
+          type: "error",
+          message:
+            "You must write story content if you're not using chapters or episodes.",
+        });
+        return;
+      }
+
+      setStoryStructure(structure);
+      // Update formData with mutually exclusive chapter/episodes flags
+      setFormData((prev) => ({
+        ...prev,
+        chapter: structure.hasChapters,
+        episodes: structure.hasEpisodes,
+      }));
+      setCurrentStep("writing");
+    },
+    [formData]
+  );
 
   // Handle content operations
   const addChapter = useCallback(() => {
@@ -469,7 +536,78 @@ const StoryForm: React.FC<StoryFormProps> = ({
         showWordCounter={true}
         minWords={50}
         maxWords={100}
+        className="max-h-[400px]"
       />
+
+      {/* Content Field */}
+      <TextAreaField
+        label="Story Content"
+        htmlFor="content"
+        id="content"
+        placeholder="Write your story content here..."
+        value={formData.content || ""}
+        onChange={(value) => handleFieldChange("content", value)}
+        isInvalid={!!formErrors.content}
+        errorMessage={formErrors.content || ""}
+        required={!storyStructure.hasChapters && !storyStructure.hasEpisodes}
+        rows={6}
+        className="max-h-[400px]"
+      />
+      {!storyStructure.hasChapters && !storyStructure.hasEpisodes && (
+        <p className="text-xs text-gray-500 -mt-4">
+          Content is required when your story doesn't have chapters or episodes.
+        </p>
+      )}
+
+      {/* Show Chapters/Episodes in Edit Mode */}
+      {mode === "edit" &&
+        (storyStructure.hasChapters || storyStructure.hasEpisodes) &&
+        chapters.length > 0 && (
+          <div className="space-y-2">
+            <label
+              className={`text-primary-colour text-base block ${Magnetik_Medium.className}`}
+            >
+              {storyStructure.hasChapters ? "Chapters" : "Episodes"}
+            </label>
+            <div className="max-h-[300px] overflow-y-auto space-y-2 border border-gray-200 rounded-lg p-3">
+              {chapters.slice(0, 5).map((chapter, index) => (
+                <button
+                  key={chapter.id}
+                  onClick={() => setCurrentStep("writing")}
+                  className="w-full flex items-center justify-between p-3 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg transition-colors"
+                >
+                  <div className="text-left">
+                    <p
+                      className={`text-primary-colour text-sm ${Magnetik_Medium.className}`}
+                    >
+                      {storyStructure.hasChapters
+                        ? `Chapter ${index + 1}`
+                        : `Episode ${index + 1}`}
+                    </p>
+                    <p className="text-gray-500 text-xs truncate max-w-[250px]">
+                      {chapter.title || "Untitled"}
+                    </p>
+                  </div>
+                  <ChevronRight size={20} className="text-gray-400" />
+                </button>
+              ))}
+              {chapters.length > 5 && (
+                <p className="text-xs text-center text-gray-500 py-2">
+                  +{chapters.length - 5} more{" "}
+                  {storyStructure.hasChapters ? "chapters" : "episodes"}
+                </p>
+              )}
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setCurrentStep("writing")}
+              className="w-full text-complimentary-colour"
+            >
+              Edit {storyStructure.hasChapters ? "Chapters" : "Episodes"}
+            </Button>
+          </div>
+        )}
 
       {/* Genre Selection */}
       <div>
@@ -631,7 +769,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
 
       {/* Content based on story structure */}
       {storyStructure.hasChapters ? (
-        <div className="space-y-6">
+        <div className="max-h-[600px] overflow-y-auto space-y-6 pr-2">
           {chapters.map((chapter, index) => (
             <div
               key={chapter.id}
@@ -713,15 +851,15 @@ const StoryForm: React.FC<StoryFormProps> = ({
             </div>
           ))}
         </div>
-      ) : (
-        <div className="space-y-6">
+      ) : storyStructure.hasEpisodes ? (
+        <div className="max-h-[600px] overflow-y-auto space-y-6 pr-2">
           {parts.map((part, index) => (
             <div
               key={part.id}
               className="p-4 space-y-4 bg-white rounded-lg shadow-sm"
             >
               <FormField
-                label="Part Title"
+                label="Episode Title"
                 type="text"
                 id={`part-${part.id}-title`}
                 placeholder={part.title}
@@ -741,7 +879,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
                 id={`part-${part.id}-body`}
                 isInvalid={false}
                 errorMessage=""
-                placeholder="Write your story content here..."
+                placeholder="Write your episode content here..."
                 value={part.body}
                 onChange={(value) => {
                   setParts((prev) =>
@@ -759,11 +897,31 @@ const StoryForm: React.FC<StoryFormProps> = ({
                   className="flex items-center w-full gap-2 border border-dashed text-complimentary-colour border-complimentary-colour"
                   onClick={addPart}
                 >
-                  <span className={Magnetik_Medium.className}>+ Add Part</span>
+                  <span className={Magnetik_Medium.className}>
+                    + Add Episode
+                  </span>
                 </Button>
               )}
             </div>
           ))}
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <TextAreaField
+            label="Story Content"
+            htmlFor="content"
+            id="content"
+            isInvalid={false}
+            errorMessage=""
+            placeholder="Write your full story here..."
+            value={formData.content || ""}
+            onChange={(value) => handleFieldChange("content", value)}
+            rows={20}
+          />
+          <p className="text-xs text-gray-500">
+            Write your complete story in this field since you selected no
+            chapters or episodes.
+          </p>
         </div>
       )}
     </div>

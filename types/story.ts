@@ -14,6 +14,7 @@ export interface StoryFormData {
   title: string;
   collaborate: string;
   description: string;
+  content?: string;
   selectedGenres: string[];
   language: string;
   goAnonymous: boolean;

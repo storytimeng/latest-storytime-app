@@ -9,6 +9,7 @@ import {
   ThumbsUp,
   Download,
   Check,
+  Edit,
 } from "lucide-react";
 import Image from "next/image";
 import { Magnetik_Regular, Magnetik_Bold } from "@/lib";
@@ -23,6 +24,7 @@ import {
 import { Skeleton } from "@heroui/skeleton";
 import { useOfflineStories } from "@/src/hooks/useOfflineStories";
 import { showToast } from "@/lib/showNotification";
+import { useUserStore } from "@/src/stores/useUserStore";
 
 interface SingleStoryProps {
   storyId?: string;
@@ -32,6 +34,16 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
   const { story, isLoading } = useStory(storyId);
   const { likeCount, isLiked, toggleLike } = useStoryLikes(storyId);
   const { commentCount } = useStoryComments(storyId);
+  const { user: storeUser } = useUserStore();
+
+  // Check if current user is the author
+  const currentUser = (
+    storeUser && (storeUser as any).data
+      ? (storeUser as any).data?.user
+      : storeUser
+  ) as any;
+  const isAuthor =
+    currentUser?.id && story?.author?.id && currentUser.id === story.author.id;
 
   // Use counts from story data if available, otherwise use hook counts
   const displayLikeCount = (story as any)?.likeCount ?? likeCount ?? 0;
@@ -359,19 +371,42 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
             </p>
           </div>
 
-          <Link
-            href={`/story/${storyId}/read`}
-            className="flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 transition-colors rounded-full py-4 w-full shadow-lg shadow-primary/20"
-          >
-            <p
+          {/* Action Buttons */}
+          <div className={cn("flex items-center gap-3", isAuthor ? "" : "")}>
+            <Link
+              href={`/story/${storyId}/read`}
               className={cn(
-                "text-white text-base font-medium",
-                Magnetik_Regular.className
+                "flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 transition-colors rounded-full py-4 shadow-lg shadow-primary/20",
+                isAuthor ? "flex-[3]" : "w-full"
               )}
             >
-              Start Reading
-            </p>
-          </Link>
+              <p
+                className={cn(
+                  "text-white text-base font-medium",
+                  Magnetik_Regular.className
+                )}
+              >
+                Start Reading
+              </p>
+            </Link>
+
+            {isAuthor && (
+              <Link
+                href={`/edit-story/${storyId}`}
+                className="flex-1 flex items-center justify-center gap-2 border-2 border-primary/30 hover:border-primary/50 bg-transparent hover:bg-primary/5 transition-all rounded-full py-4"
+              >
+                <Edit size={18} className="text-primary" />
+                <p
+                  className={cn(
+                    "text-primary text-base font-medium",
+                    Magnetik_Regular.className
+                  )}
+                >
+                  Edit
+                </p>
+              </Link>
+            )}
+          </div>
 
           {/* Download Button */}
           <button
