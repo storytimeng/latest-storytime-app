@@ -27,7 +27,6 @@ const HomeView = () => {
   const { user } = useUserStore();
   const { selectedGenres, toggleGenre } = useStoriesFilterStore();
   const { genres: apiGenres, isLoading: genresLoading } = useGenres();
-
   // Use API genres or fallback to empty array
   const genres = apiGenres || [];
 

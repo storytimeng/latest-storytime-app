@@ -205,6 +205,14 @@ const nextConfig = {
               chunks: "all",
               priority: 30,
             },
+            // Story components chunk for better caching
+            storyComponents: {
+              name: "story-components",
+              test: /[\\/]components[\\/]reusables[\\/](storyView|form[\\/]storyForm|modals[\\/](StoryBriefModal|AdditionalInfoModal))/,
+              chunks: "async",
+              priority: 25,
+              reuseExistingChunk: true,
+            },
           },
         },
       };

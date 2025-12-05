@@ -23,10 +23,19 @@ import {
 } from "@/components/reusables/customUI";
 import { useRouter } from "next/navigation";
 import { Shield, Award } from "lucide-react";
+import { useUserProfile } from "@/src/hooks/useUserProfile";
+import { useUserAchievements } from "@/src/hooks/useUserAchievements";
+import { useApiUserStats } from "@/src/hooks/useApiUserStats";
+
 const ProfileView = () => {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const router = useRouter();
   const [activeModal, setActiveModal] = useState<string | null>(null);
+  
+  // Fetch user data
+  const { user } = useUserProfile();
+  const { badges, certificates } = useUserAchievements();
+  const { stats } = useApiUserStats();
 
   // Get search params from window.location (client-side only)
   useEffect(() => {
@@ -37,24 +46,25 @@ const ProfileView = () => {
   }, []);
 
   const profileOptions = [
-    { id: "certificate", label: "Certificate", icon: "📜" },
-    { id: "badges", label: "Badges", icon: "🏆" },
-    { id: "stories", label: "My Stories", icon: "📚" },
-    { id: "library", label: "My Library", icon: "📖" },
-    { id: "drafts", label: "My Drafts", icon: "📝" },
-    { id: "downloads", label: "My Downloads", icon: "⬇️" },
-    { id: "reading", label: "Reading time", icon: "⏰" },
-    { id: "writing", label: "Writing time", icon: "✍️" },
+    { id: "certificate", label: "Certificate", icon: "📜", type: "modal" },
+    { id: "badges", label: "Badges", icon: "🏆", type: "modal" },
+    { id: "stories", label: "My Stories", icon: "📚", type: "page", path: "/pen" },
+    { id: "library", label: "My Library", icon: "📖", type: "page", path: "/library" },
+    { id: "drafts", label: "My Drafts", icon: "📝", type: "page", path: "/pen?tab=drafts" },
+    { id: "downloads", label: "My Downloads", icon: "⬇️", type: "page", path: "/downloads" },
+    { id: "reading", label: "Reading time", icon: "⏰", type: "modal" },
+    { id: "writing", label: "Writing time", icon: "✍️", type: "modal" },
   ];
 
-  const genres = [
-    "Action",
-    "Adventure",
-    "Anthology",
-    "Biography",
-    "Classic",
-    "Comedy",
-  ];
+  // Use user's favorite genres from profile, fallback to defaults
+  const userGenres = user?.favoriteGenres || user?.genres || [];
+  const defaultGenres = ["Action", "Adventure", "Anthology", "Biography", "Classic", "Comedy"];
+  const genres = userGenres.length > 0 ? userGenres : defaultGenres;
+
+  // Handle genre click - navigate to category page
+  const handleGenreClick = (genre: string) => {
+    router.push(`/category?genre=${encodeURIComponent(genre)}`);
+  };
 
   // Handle modal state based on URL params
   useEffect(() => {
@@ -79,11 +89,17 @@ const ProfileView = () => {
     return () => window.removeEventListener("popstate", handleUrlChange);
   }, []);
 
-  const handleOptionClick = (optionId: string) => {
-    const params = new URLSearchParams(window.location.search);
-    params.set("modal", optionId);
-    router.push(`?${params.toString()}`);
-    setActiveModal(optionId);
+  const handleOptionClick = (option: typeof profileOptions[0]) => {
+    if (option.type === "page" && option.path) {
+      // Navigate to dedicated page
+      router.push(option.path);
+    } else if (option.type === "modal") {
+      // Open modal
+      const params = new URLSearchParams(window.location.search);
+      params.set("modal", option.id);
+      router.push(`?${params.toString()}`);
+      setActiveModal(option.id);
+    }
   };
 
   const handleModalClose = () => {
@@ -136,7 +152,7 @@ const ProfileView = () => {
           />
 
           {/* Profile Section */}
-          <ProfileCard showSettings={true} />
+          <ProfileCard showSettings={true} useLiveData={true} />
 
           {/* Badge/Certificate Card - Bleeding into next section */}
           <div className="relative z-20 -mb-16">
@@ -149,6 +165,7 @@ const ProfileView = () => {
                   <div className="w-8 h-8 bg-[#f8951d] rounded-lg flex items-center justify-center mx-auto">
                     <Shield className="w-6 h-6 text-white" />
                   </div>
+                  <p className="text-xs text-grey-3 mt-1">{badges.length || 0}</p>
                 </div>
                 <div className="w-px mx-4 bg-primary-shade-1"></div>
                 <div className="flex-1 text-center my-[4px]">
@@ -158,6 +175,7 @@ const ProfileView = () => {
                   <div className="w-8 h-8 bg-[#f8951d] rounded-lg flex items-center justify-center mx-auto">
                     <Award className="w-6 h-6 text-white" />
                   </div>
+                  <p className="text-xs text-grey-3 mt-1">{certificates.length || 0}</p>
                 </div>
               </div>
             </div>
@@ -176,12 +194,12 @@ const ProfileView = () => {
                 Genre
               </h3>
               <div className="grid grid-cols-3 gap-2">
-                {genres.map((genre) => (
+                {genres.slice(0, 6).map((genre) => (
                   <GenreButton
                     key={genre}
                     genre={genre}
                     isSelected={false}
-                    onClick={() => {}}
+                    onClick={() => handleGenreClick(genre)}
                   />
                 ))}
               </div>
@@ -192,7 +210,7 @@ const ProfileView = () => {
               {profileOptions.map((option) => (
                 <div
                   key={option.id}
-                  onClick={() => handleOptionClick(option.id)}
+                  onClick={() => handleOptionClick(option)}
                   className="flex items-center justify-between px-4 py-4 transition-colors bg-white cursor-pointer hover:bg-grey-5"
                 >
                   <span

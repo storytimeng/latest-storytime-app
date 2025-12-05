@@ -118,8 +118,17 @@ export default function LoginView() {
         console.log("Profile response:", profileResponse);
 
         if (profileResponse.data) {
-          console.log("Setting user profile in store:", profileResponse.data);
-          useUserStore.getState().setUser(profileResponse.data as any);
+          // Extract the actual user object from the nested response structure
+          // API returns: { data: { data: { user: {...} } } }
+          const payload = profileResponse.data as any;
+          const user = payload?.user ?? payload?.data?.user;
+          
+          if (user) {
+            console.log("Setting user profile in store:", user);
+            useUserStore.getState().setUser(user);
+          } else {
+            console.warn("Could not extract user from profile response");
+          }
         } else {
           console.warn("Profile response has no data");
         }

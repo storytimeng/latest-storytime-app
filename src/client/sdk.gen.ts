@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { AdminControllerCreateData, AdminControllerCreateErrors, AdminControllerCreateResponses, AdminControllerDeleteAdminData, AdminControllerDeleteAdminErrors, AdminControllerDeleteAdminResponses, AdminControllerDeleteStoryData, AdminControllerDeleteStoryErrors, AdminControllerDeleteStoryResponses, AdminControllerDeleteUserData, AdminControllerDeleteUserErrors, AdminControllerDeleteUserResponses, AdminControllerFindAllData, AdminControllerFindAllErrors, AdminControllerFindAllResponses, AdminControllerFindOneData, AdminControllerFindOneErrors, AdminControllerFindOneResponses, AdminControllerGetAllStoriesData, AdminControllerGetAllStoriesErrors, AdminControllerGetAllStoriesResponses, AdminControllerGetAllUsersData, AdminControllerGetAllUsersErrors, AdminControllerGetAllUsersResponses, AdminControllerGetProfileData, AdminControllerGetProfileErrors, AdminControllerGetProfileResponses, AdminControllerLoginData, AdminControllerLoginErrors, AdminControllerLoginResponses, AdminControllerSendBulkNotificationData, AdminControllerSendBulkNotificationErrors, AdminControllerSendBulkNotificationResponses, AdminControllerSendNotificationData, AdminControllerSendNotificationErrors, AdminControllerSendNotificationResponses, AdminControllerSuspendAdminData, AdminControllerSuspendAdminErrors, AdminControllerSuspendAdminResponses, AdminControllerSuspendStoryData, AdminControllerSuspendStoryErrors, AdminControllerSuspendStoryResponses, AdminControllerSuspendUserData, AdminControllerSuspendUserErrors, AdminControllerSuspendUserResponses, AdminControllerUnsuspendAdminData, AdminControllerUnsuspendAdminErrors, AdminControllerUnsuspendAdminResponses, AdminControllerUnsuspendStoryData, AdminControllerUnsuspendStoryErrors, AdminControllerUnsuspendStoryResponses, AdminControllerUnsuspendUserData, AdminControllerUnsuspendUserErrors, AdminControllerUnsuspendUserResponses, AdminControllerUpdateData, AdminControllerUpdateErrors, AdminControllerUpdateResponses, AdminControllerUpdateStoryData, AdminControllerUpdateStoryErrors, AdminControllerUpdateStoryResponses, AuthControllerForgotPasswordData, AuthControllerForgotPasswordErrors, AuthControllerForgotPasswordResponses, AuthControllerLoginData, AuthControllerLoginErrors, AuthControllerLoginResponses, AuthControllerLogoutData, AuthControllerLogoutErrors, AuthControllerLogoutResponses, AuthControllerRefreshData, AuthControllerRefreshErrors, AuthControllerRefreshResponses, AuthControllerRegisterData, AuthControllerRegisterErrors, AuthControllerRegisterResponses, AuthControllerResendOtpData, AuthControllerResendOtpErrors, AuthControllerResendOtpResponses, AuthControllerResetPasswordData, AuthControllerResetPasswordErrors, AuthControllerResetPasswordResponses, AuthControllerVerifyEmailData, AuthControllerVerifyEmailErrors, AuthControllerVerifyEmailResponses, NotificationsControllerDeleteAllNotificationsData, NotificationsControllerDeleteAllNotificationsErrors, NotificationsControllerDeleteAllNotificationsResponses, NotificationsControllerDeleteNotificationData, NotificationsControllerDeleteNotificationErrors, NotificationsControllerDeleteNotificationResponses, NotificationsControllerGetNotificationByIdData, NotificationsControllerGetNotificationByIdErrors, NotificationsControllerGetNotificationByIdResponses, NotificationsControllerGetUnreadCountData, NotificationsControllerGetUnreadCountErrors, NotificationsControllerGetUnreadCountResponses, NotificationsControllerGetUserNotificationsData, NotificationsControllerGetUserNotificationsErrors, NotificationsControllerGetUserNotificationsResponses, NotificationsControllerMarkAllAsReadData, NotificationsControllerMarkAllAsReadErrors, NotificationsControllerMarkAllAsReadResponses, NotificationsControllerMarkAsReadData, NotificationsControllerMarkAsReadErrors, NotificationsControllerMarkAsReadResponses, SearchCollaboratorsData, SearchCollaboratorsErrors, SearchCollaboratorsResponses, SearchStoriesData, SearchStoriesErrors, SearchStoriesResponses, StoriesControllerCheckUserLikeData, StoriesControllerCheckUserLikeErrors, StoriesControllerCheckUserLikeResponses, StoriesControllerCreateChapterData, StoriesControllerCreateChapterErrors, StoriesControllerCreateChapterResponses, StoriesControllerCreateCommentData, StoriesControllerCreateCommentErrors, StoriesControllerCreateCommentResponses, StoriesControllerCreateData, StoriesControllerCreateEpisodeData, StoriesControllerCreateEpisodeErrors, StoriesControllerCreateEpisodeResponses, StoriesControllerCreateErrors, StoriesControllerCreateMultipleChaptersData, StoriesControllerCreateMultipleChaptersErrors, StoriesControllerCreateMultipleChaptersResponses, StoriesControllerCreateMultipleEpisodesData, StoriesControllerCreateMultipleEpisodesErrors, StoriesControllerCreateMultipleEpisodesResponses, StoriesControllerCreateResponses, StoriesControllerDeleteCommentData, StoriesControllerDeleteCommentErrors, StoriesControllerDeleteCommentResponses, StoriesControllerFindAllData, StoriesControllerFindAllResponses, StoriesControllerFindOneData, StoriesControllerFindOneErrors, StoriesControllerFindOneResponses, StoriesControllerFindOnlyOnStorytimeData, StoriesControllerFindOnlyOnStorytimeResponses, StoriesControllerFindPopularData, StoriesControllerFindPopularResponses, StoriesControllerFindRecentlyAddedData, StoriesControllerFindRecentlyAddedResponses, StoriesControllerFindTrendingNowData, StoriesControllerFindTrendingNowResponses, StoriesControllerGetGenresData, StoriesControllerGetGenresResponses, StoriesControllerGetMyLibraryData, StoriesControllerGetMyLibraryErrors, StoriesControllerGetMyLibraryResponses, StoriesControllerGetStoryChaptersData, StoriesControllerGetStoryChaptersErrors, StoriesControllerGetStoryChaptersResponses, StoriesControllerGetStoryCommentCountData, StoriesControllerGetStoryCommentCountErrors, StoriesControllerGetStoryCommentCountResponses, StoriesControllerGetStoryCommentsData, StoriesControllerGetStoryCommentsErrors, StoriesControllerGetStoryCommentsResponses, StoriesControllerGetStoryEpisodesData, StoriesControllerGetStoryEpisodesErrors, StoriesControllerGetStoryEpisodesResponses, StoriesControllerGetStoryLikeCountData, StoriesControllerGetStoryLikeCountErrors, StoriesControllerGetStoryLikeCountResponses, StoriesControllerGetStoryLikesData, StoriesControllerGetStoryLikesErrors, StoriesControllerGetStoryLikesResponses, StoriesControllerLikeStoryData, StoriesControllerLikeStoryErrors, StoriesControllerLikeStoryResponses, StoriesControllerRemoveData, StoriesControllerRemoveErrors, StoriesControllerRemoveResponses, StoriesControllerTestByGenresData, StoriesControllerTestByGenresResponses, StoriesControllerUnlikeStoryData, StoriesControllerUnlikeStoryErrors, StoriesControllerUnlikeStoryResponses, StoriesControllerUpdateCommentData, StoriesControllerUpdateCommentErrors, StoriesControllerUpdateCommentResponses, StoriesControllerUpdateData, StoriesControllerUpdateErrors, StoriesControllerUpdateResponses, UsersControllerCheckPenNameAvailabilityData, UsersControllerCheckPenNameAvailabilityErrors, UsersControllerCheckPenNameAvailabilityResponses, UsersControllerDeleteUserData, UsersControllerDeleteUserErrors, UsersControllerDeleteUserResponses, UsersControllerFindAllData, UsersControllerFindAllResponses, UsersControllerFindOneData, UsersControllerFindOneErrors, UsersControllerFindOneResponses, UsersControllerGetAllReadingProgressData, UsersControllerGetAllReadingProgressErrors, UsersControllerGetAllReadingProgressResponses, UsersControllerGetProfileData, UsersControllerGetProfileErrors, UsersControllerGetProfileResponses, UsersControllerGetReadingHistoryData, UsersControllerGetReadingHistoryErrors, UsersControllerGetReadingHistoryResponses, UsersControllerGetReadingProgressData, UsersControllerGetReadingProgressErrors, UsersControllerGetReadingProgressResponses, UsersControllerGetShareableAchievementsData, UsersControllerGetShareableAchievementsErrors, UsersControllerGetShareableAchievementsResponses, UsersControllerGetStatsData, UsersControllerGetStatsErrors, UsersControllerGetStatsResponses, UsersControllerGetTopAuthorsData, UsersControllerGetTopAuthorsResponses, UsersControllerGetTopBadgeHoldersData, UsersControllerGetTopBadgeHoldersResponses, UsersControllerGetTopCertificateHoldersData, UsersControllerGetTopCertificateHoldersResponses, UsersControllerGetTopReadersByTimeData, UsersControllerGetTopReadersByTimeResponses, UsersControllerGetTopReadersData, UsersControllerGetTopReadersResponses, UsersControllerMarkStoryAsReadData, UsersControllerMarkStoryAsReadErrors, UsersControllerMarkStoryAsReadResponses, UsersControllerSetupProfileData, UsersControllerSetupProfileErrors, UsersControllerSetupProfileResponses, UsersControllerSuspendUserData, UsersControllerSuspendUserErrors, UsersControllerSuspendUserResponses, UsersControllerUnsuspendUserData, UsersControllerUnsuspendUserErrors, UsersControllerUnsuspendUserResponses, UsersControllerUpdateProfileData, UsersControllerUpdateProfileErrors, UsersControllerUpdateProfileResponses, UsersControllerUpdateReadingProgressData, UsersControllerUpdateReadingProgressErrors, UsersControllerUpdateReadingProgressResponses } from './types.gen';
+import type { AdminControllerCreateData, AdminControllerCreateErrors, AdminControllerCreateResponses, AdminControllerDeleteAdminData, AdminControllerDeleteAdminErrors, AdminControllerDeleteAdminResponses, AdminControllerDeleteChapterCommentData, AdminControllerDeleteChapterCommentResponses, AdminControllerDeleteChapterData, AdminControllerDeleteChapterErrors, AdminControllerDeleteChapterResponses, AdminControllerDeleteEpisodeCommentData, AdminControllerDeleteEpisodeCommentResponses, AdminControllerDeleteEpisodeData, AdminControllerDeleteEpisodeErrors, AdminControllerDeleteEpisodeResponses, AdminControllerDeleteStoryCommentData, AdminControllerDeleteStoryCommentResponses, AdminControllerDeleteStoryData, AdminControllerDeleteStoryErrors, AdminControllerDeleteStoryResponses, AdminControllerDeleteUserData, AdminControllerDeleteUserErrors, AdminControllerDeleteUserResponses, AdminControllerFindAllData, AdminControllerFindAllErrors, AdminControllerFindAllResponses, AdminControllerFindOneData, AdminControllerFindOneErrors, AdminControllerFindOneResponses, AdminControllerGetAllChaptersData, AdminControllerGetAllChaptersErrors, AdminControllerGetAllChaptersResponses, AdminControllerGetAllCommentsData, AdminControllerGetAllCommentsResponses, AdminControllerGetAllEpisodesData, AdminControllerGetAllEpisodesErrors, AdminControllerGetAllEpisodesResponses, AdminControllerGetAllStoriesData, AdminControllerGetAllStoriesErrors, AdminControllerGetAllStoriesResponses, AdminControllerGetAllUsersData, AdminControllerGetAllUsersErrors, AdminControllerGetAllUsersResponses, AdminControllerGetOverviewReportData, AdminControllerGetOverviewReportResponses, AdminControllerGetProfileData, AdminControllerGetProfileErrors, AdminControllerGetProfileResponses, AdminControllerLoginData, AdminControllerLoginErrors, AdminControllerLoginResponses, AdminControllerSendBulkNotificationData, AdminControllerSendBulkNotificationErrors, AdminControllerSendBulkNotificationResponses, AdminControllerSendNotificationData, AdminControllerSendNotificationErrors, AdminControllerSendNotificationResponses, AdminControllerSuspendAdminData, AdminControllerSuspendAdminErrors, AdminControllerSuspendAdminResponses, AdminControllerSuspendStoryData, AdminControllerSuspendStoryErrors, AdminControllerSuspendStoryResponses, AdminControllerSuspendUserData, AdminControllerSuspendUserErrors, AdminControllerSuspendUserResponses, AdminControllerUnsuspendAdminData, AdminControllerUnsuspendAdminErrors, AdminControllerUnsuspendAdminResponses, AdminControllerUnsuspendStoryData, AdminControllerUnsuspendStoryErrors, AdminControllerUnsuspendStoryResponses, AdminControllerUnsuspendUserData, AdminControllerUnsuspendUserErrors, AdminControllerUnsuspendUserResponses, AdminControllerUpdateData, AdminControllerUpdateErrors, AdminControllerUpdateResponses, AdminControllerUpdateStoryData, AdminControllerUpdateStoryErrors, AdminControllerUpdateStoryResponses, AuthControllerForgotPasswordData, AuthControllerForgotPasswordErrors, AuthControllerForgotPasswordResponses, AuthControllerLoginData, AuthControllerLoginErrors, AuthControllerLoginResponses, AuthControllerLogoutData, AuthControllerLogoutErrors, AuthControllerLogoutResponses, AuthControllerRefreshData, AuthControllerRefreshErrors, AuthControllerRefreshResponses, AuthControllerRegisterData, AuthControllerRegisterErrors, AuthControllerRegisterResponses, AuthControllerResendOtpData, AuthControllerResendOtpErrors, AuthControllerResendOtpResponses, AuthControllerResetPasswordData, AuthControllerResetPasswordErrors, AuthControllerResetPasswordResponses, AuthControllerVerifyEmailData, AuthControllerVerifyEmailErrors, AuthControllerVerifyEmailResponses, NotificationsControllerDeleteAllNotificationsData, NotificationsControllerDeleteAllNotificationsErrors, NotificationsControllerDeleteAllNotificationsResponses, NotificationsControllerDeleteNotificationData, NotificationsControllerDeleteNotificationErrors, NotificationsControllerDeleteNotificationResponses, NotificationsControllerGetNotificationByIdData, NotificationsControllerGetNotificationByIdErrors, NotificationsControllerGetNotificationByIdResponses, NotificationsControllerGetUnreadCountData, NotificationsControllerGetUnreadCountErrors, NotificationsControllerGetUnreadCountResponses, NotificationsControllerGetUserNotificationsData, NotificationsControllerGetUserNotificationsErrors, NotificationsControllerGetUserNotificationsResponses, NotificationsControllerMarkAllAsReadData, NotificationsControllerMarkAllAsReadErrors, NotificationsControllerMarkAllAsReadResponses, NotificationsControllerMarkAsReadData, NotificationsControllerMarkAsReadErrors, NotificationsControllerMarkAsReadResponses, SearchCollaboratorsData, SearchCollaboratorsErrors, SearchCollaboratorsResponses, SearchStoriesData, SearchStoriesErrors, SearchStoriesResponses, StoriesControllerCheckUserLikeData, StoriesControllerCheckUserLikeErrors, StoriesControllerCheckUserLikeResponses, StoriesControllerCreateChapterCommentData, StoriesControllerCreateChapterCommentErrors, StoriesControllerCreateChapterCommentResponses, StoriesControllerCreateChapterData, StoriesControllerCreateChapterErrors, StoriesControllerCreateChapterResponses, StoriesControllerCreateCommentData, StoriesControllerCreateCommentErrors, StoriesControllerCreateCommentResponses, StoriesControllerCreateData, StoriesControllerCreateEpisodeCommentData, StoriesControllerCreateEpisodeCommentErrors, StoriesControllerCreateEpisodeCommentResponses, StoriesControllerCreateEpisodeData, StoriesControllerCreateEpisodeErrors, StoriesControllerCreateEpisodeResponses, StoriesControllerCreateErrors, StoriesControllerCreateMultipleChaptersData, StoriesControllerCreateMultipleChaptersErrors, StoriesControllerCreateMultipleChaptersResponses, StoriesControllerCreateMultipleEpisodesData, StoriesControllerCreateMultipleEpisodesErrors, StoriesControllerCreateMultipleEpisodesResponses, StoriesControllerCreateResponses, StoriesControllerDeleteChapterCommentData, StoriesControllerDeleteChapterCommentErrors, StoriesControllerDeleteChapterCommentResponses, StoriesControllerDeleteCommentData, StoriesControllerDeleteCommentErrors, StoriesControllerDeleteCommentResponses, StoriesControllerDeleteEpisodeCommentData, StoriesControllerDeleteEpisodeCommentErrors, StoriesControllerDeleteEpisodeCommentResponses, StoriesControllerFindAllData, StoriesControllerFindAllResponses, StoriesControllerFindOneData, StoriesControllerFindOneErrors, StoriesControllerFindOneResponses, StoriesControllerFindOnlyOnStorytimeData, StoriesControllerFindOnlyOnStorytimeResponses, StoriesControllerFindPopularData, StoriesControllerFindPopularResponses, StoriesControllerFindRecentlyAddedData, StoriesControllerFindRecentlyAddedResponses, StoriesControllerFindTrendingNowData, StoriesControllerFindTrendingNowResponses, StoriesControllerGetChapterByIdData, StoriesControllerGetChapterByIdErrors, StoriesControllerGetChapterByIdResponses, StoriesControllerGetChapterCommentByIdData, StoriesControllerGetChapterCommentByIdErrors, StoriesControllerGetChapterCommentByIdResponses, StoriesControllerGetChapterCommentsData, StoriesControllerGetChapterCommentsErrors, StoriesControllerGetChapterCommentsResponses, StoriesControllerGetEpisodeByIdData, StoriesControllerGetEpisodeByIdErrors, StoriesControllerGetEpisodeByIdResponses, StoriesControllerGetEpisodeCommentByIdData, StoriesControllerGetEpisodeCommentByIdErrors, StoriesControllerGetEpisodeCommentByIdResponses, StoriesControllerGetEpisodeCommentsData, StoriesControllerGetEpisodeCommentsErrors, StoriesControllerGetEpisodeCommentsResponses, StoriesControllerGetGenresData, StoriesControllerGetGenresResponses, StoriesControllerGetMyLibraryData, StoriesControllerGetMyLibraryErrors, StoriesControllerGetMyLibraryResponses, StoriesControllerGetStoryChaptersData, StoriesControllerGetStoryChaptersErrors, StoriesControllerGetStoryChaptersResponses, StoriesControllerGetStoryCommentCountData, StoriesControllerGetStoryCommentCountErrors, StoriesControllerGetStoryCommentCountResponses, StoriesControllerGetStoryCommentsData, StoriesControllerGetStoryCommentsErrors, StoriesControllerGetStoryCommentsResponses, StoriesControllerGetStoryEpisodesData, StoriesControllerGetStoryEpisodesErrors, StoriesControllerGetStoryEpisodesResponses, StoriesControllerGetStoryLikeCountData, StoriesControllerGetStoryLikeCountErrors, StoriesControllerGetStoryLikeCountResponses, StoriesControllerGetStoryLikesData, StoriesControllerGetStoryLikesErrors, StoriesControllerGetStoryLikesResponses, StoriesControllerLikeStoryData, StoriesControllerLikeStoryErrors, StoriesControllerLikeStoryResponses, StoriesControllerRemoveData, StoriesControllerRemoveErrors, StoriesControllerRemoveResponses, StoriesControllerSoftDeleteChapterData, StoriesControllerSoftDeleteChapterErrors, StoriesControllerSoftDeleteChapterResponses, StoriesControllerSoftDeleteEpisodeData, StoriesControllerSoftDeleteEpisodeErrors, StoriesControllerSoftDeleteEpisodeResponses, StoriesControllerTestByGenresData, StoriesControllerTestByGenresResponses, StoriesControllerUnlikeStoryData, StoriesControllerUnlikeStoryErrors, StoriesControllerUnlikeStoryResponses, StoriesControllerUpdateChapterCommentData, StoriesControllerUpdateChapterCommentErrors, StoriesControllerUpdateChapterCommentResponses, StoriesControllerUpdateChapterData, StoriesControllerUpdateChapterErrors, StoriesControllerUpdateChapterResponses, StoriesControllerUpdateCommentData, StoriesControllerUpdateCommentErrors, StoriesControllerUpdateCommentResponses, StoriesControllerUpdateData, StoriesControllerUpdateEpisodeCommentData, StoriesControllerUpdateEpisodeCommentErrors, StoriesControllerUpdateEpisodeCommentResponses, StoriesControllerUpdateEpisodeData, StoriesControllerUpdateEpisodeErrors, StoriesControllerUpdateEpisodeResponses, StoriesControllerUpdateErrors, StoriesControllerUpdateResponses, UsersControllerCheckPenNameAvailabilityData, UsersControllerCheckPenNameAvailabilityErrors, UsersControllerCheckPenNameAvailabilityResponses, UsersControllerDeleteUserData, UsersControllerDeleteUserErrors, UsersControllerDeleteUserResponses, UsersControllerFindAllData, UsersControllerFindAllResponses, UsersControllerFindOneData, UsersControllerFindOneErrors, UsersControllerFindOneResponses, UsersControllerGetAllReadingProgressData, UsersControllerGetAllReadingProgressErrors, UsersControllerGetAllReadingProgressResponses, UsersControllerGetProfileData, UsersControllerGetProfileErrors, UsersControllerGetProfileResponses, UsersControllerGetReadingHistoryData, UsersControllerGetReadingHistoryErrors, UsersControllerGetReadingHistoryResponses, UsersControllerGetReadingProgressData, UsersControllerGetReadingProgressErrors, UsersControllerGetReadingProgressResponses, UsersControllerGetShareableAchievementsData, UsersControllerGetShareableAchievementsErrors, UsersControllerGetShareableAchievementsResponses, UsersControllerGetStatsData, UsersControllerGetStatsErrors, UsersControllerGetStatsResponses, UsersControllerGetTopAuthorsData, UsersControllerGetTopAuthorsResponses, UsersControllerGetTopBadgeHoldersData, UsersControllerGetTopBadgeHoldersResponses, UsersControllerGetTopCertificateHoldersData, UsersControllerGetTopCertificateHoldersResponses, UsersControllerGetTopReadersByTimeData, UsersControllerGetTopReadersByTimeResponses, UsersControllerGetTopReadersData, UsersControllerGetTopReadersResponses, UsersControllerMarkStoryAsReadData, UsersControllerMarkStoryAsReadErrors, UsersControllerMarkStoryAsReadResponses, UsersControllerSetupProfileData, UsersControllerSetupProfileErrors, UsersControllerSetupProfileResponses, UsersControllerSuspendUserData, UsersControllerSuspendUserErrors, UsersControllerSuspendUserResponses, UsersControllerUnsuspendUserData, UsersControllerUnsuspendUserErrors, UsersControllerUnsuspendUserResponses, UsersControllerUpdateProfileData, UsersControllerUpdateProfileErrors, UsersControllerUpdateProfileResponses, UsersControllerUpdateReadingProgressData, UsersControllerUpdateReadingProgressErrors, UsersControllerUpdateReadingProgressResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -547,6 +547,86 @@ export const storiesControllerCreateMultipleChapters = <ThrowOnError extends boo
 export const storiesControllerGetStoryChapters = <ThrowOnError extends boolean = false>(options: Options<StoriesControllerGetStoryChaptersData, ThrowOnError>) => (options.client ?? client).get<StoriesControllerGetStoryChaptersResponses, StoriesControllerGetStoryChaptersErrors, ThrowOnError>({ url: '/stories/{id}/chapters', ...options });
 
 /**
+ * Soft delete a chapter by ID
+ *
+ * Soft deletes a specific chapter by setting deletedAt timestamp. Only the story author can delete chapters.
+ */
+export const storiesControllerSoftDeleteChapter = <ThrowOnError extends boolean = false>(options: Options<StoriesControllerSoftDeleteChapterData, ThrowOnError>) => (options.client ?? client).delete<StoriesControllerSoftDeleteChapterResponses, StoriesControllerSoftDeleteChapterErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/stories/chapters/{chapterId}',
+    ...options
+});
+
+/**
+ * Get a single chapter by ID
+ *
+ * Retrieves a specific chapter by its ID, including title, content, and chapter number.
+ */
+export const storiesControllerGetChapterById = <ThrowOnError extends boolean = false>(options: Options<StoriesControllerGetChapterByIdData, ThrowOnError>) => (options.client ?? client).get<StoriesControllerGetChapterByIdResponses, StoriesControllerGetChapterByIdErrors, ThrowOnError>({ url: '/stories/chapters/{chapterId}', ...options });
+
+/**
+ * Update a chapter by ID
+ *
+ * Updates a specific chapter. Only the story author can update chapters.
+ */
+export const storiesControllerUpdateChapter = <ThrowOnError extends boolean = false>(options: Options<StoriesControllerUpdateChapterData, ThrowOnError>) => (options.client ?? client).put<StoriesControllerUpdateChapterResponses, StoriesControllerUpdateChapterErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/stories/chapters/{chapterId}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Get all comments for a chapter
+ *
+ * Retrieves all comments for a specific chapter.
+ */
+export const storiesControllerGetChapterComments = <ThrowOnError extends boolean = false>(options: Options<StoriesControllerGetChapterCommentsData, ThrowOnError>) => (options.client ?? client).get<StoriesControllerGetChapterCommentsResponses, StoriesControllerGetChapterCommentsErrors, ThrowOnError>({ url: '/stories/chapters/{chapterId}/comments', ...options });
+
+/**
+ * Create a comment on a chapter
+ *
+ * Creates a new comment on a chapter. Requires authentication. 30-second cooldown between comments.
+ */
+export const storiesControllerCreateChapterComment = <ThrowOnError extends boolean = false>(options: Options<StoriesControllerCreateChapterCommentData, ThrowOnError>) => (options.client ?? client).post<StoriesControllerCreateChapterCommentResponses, StoriesControllerCreateChapterCommentErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/stories/chapters/{chapterId}/comments',
+    ...options
+});
+
+/**
+ * Delete a chapter comment
+ *
+ * Deletes a chapter comment. Only the comment author can delete.
+ */
+export const storiesControllerDeleteChapterComment = <ThrowOnError extends boolean = false>(options: Options<StoriesControllerDeleteChapterCommentData, ThrowOnError>) => (options.client ?? client).delete<StoriesControllerDeleteChapterCommentResponses, StoriesControllerDeleteChapterCommentErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/stories/chapter-comments/{commentId}',
+    ...options
+});
+
+/**
+ * Get a single chapter comment by ID
+ *
+ * Retrieves a specific chapter comment with user information.
+ */
+export const storiesControllerGetChapterCommentById = <ThrowOnError extends boolean = false>(options: Options<StoriesControllerGetChapterCommentByIdData, ThrowOnError>) => (options.client ?? client).get<StoriesControllerGetChapterCommentByIdResponses, StoriesControllerGetChapterCommentByIdErrors, ThrowOnError>({ url: '/stories/chapter-comments/{commentId}', ...options });
+
+/**
+ * Update a chapter comment
+ *
+ * Updates a chapter comment. Only the comment author can update.
+ */
+export const storiesControllerUpdateChapterComment = <ThrowOnError extends boolean = false>(options: Options<StoriesControllerUpdateChapterCommentData, ThrowOnError>) => (options.client ?? client).put<StoriesControllerUpdateChapterCommentResponses, StoriesControllerUpdateChapterCommentErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/stories/chapter-comments/{commentId}',
+    ...options
+});
+
+/**
  * Create a single episode for a story
  *
  * Creates a new episode for a story that has episodes enabled. Only the story author can create episodes. Episode number auto-increments if not provided.
@@ -582,6 +662,86 @@ export const storiesControllerCreateMultipleEpisodes = <ThrowOnError extends boo
  * Retrieves all episodes for a story, ordered by episode number.
  */
 export const storiesControllerGetStoryEpisodes = <ThrowOnError extends boolean = false>(options: Options<StoriesControllerGetStoryEpisodesData, ThrowOnError>) => (options.client ?? client).get<StoriesControllerGetStoryEpisodesResponses, StoriesControllerGetStoryEpisodesErrors, ThrowOnError>({ url: '/stories/{id}/episodes', ...options });
+
+/**
+ * Soft delete an episode by ID
+ *
+ * Soft deletes a specific episode by setting deletedAt timestamp. Only the story author can delete episodes.
+ */
+export const storiesControllerSoftDeleteEpisode = <ThrowOnError extends boolean = false>(options: Options<StoriesControllerSoftDeleteEpisodeData, ThrowOnError>) => (options.client ?? client).delete<StoriesControllerSoftDeleteEpisodeResponses, StoriesControllerSoftDeleteEpisodeErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/stories/episodes/{episodeId}',
+    ...options
+});
+
+/**
+ * Get a single episode by ID
+ *
+ * Retrieves a specific episode by its ID, including title, content, and episode number.
+ */
+export const storiesControllerGetEpisodeById = <ThrowOnError extends boolean = false>(options: Options<StoriesControllerGetEpisodeByIdData, ThrowOnError>) => (options.client ?? client).get<StoriesControllerGetEpisodeByIdResponses, StoriesControllerGetEpisodeByIdErrors, ThrowOnError>({ url: '/stories/episodes/{episodeId}', ...options });
+
+/**
+ * Update an episode by ID
+ *
+ * Updates a specific episode. Only the story author can update episodes.
+ */
+export const storiesControllerUpdateEpisode = <ThrowOnError extends boolean = false>(options: Options<StoriesControllerUpdateEpisodeData, ThrowOnError>) => (options.client ?? client).put<StoriesControllerUpdateEpisodeResponses, StoriesControllerUpdateEpisodeErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/stories/episodes/{episodeId}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Get all comments for an episode
+ *
+ * Retrieves all comments for a specific episode.
+ */
+export const storiesControllerGetEpisodeComments = <ThrowOnError extends boolean = false>(options: Options<StoriesControllerGetEpisodeCommentsData, ThrowOnError>) => (options.client ?? client).get<StoriesControllerGetEpisodeCommentsResponses, StoriesControllerGetEpisodeCommentsErrors, ThrowOnError>({ url: '/stories/episodes/{episodeId}/comments', ...options });
+
+/**
+ * Create a comment on an episode
+ *
+ * Creates a new comment on an episode. Requires authentication. 30-second cooldown between comments.
+ */
+export const storiesControllerCreateEpisodeComment = <ThrowOnError extends boolean = false>(options: Options<StoriesControllerCreateEpisodeCommentData, ThrowOnError>) => (options.client ?? client).post<StoriesControllerCreateEpisodeCommentResponses, StoriesControllerCreateEpisodeCommentErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/stories/episodes/{episodeId}/comments',
+    ...options
+});
+
+/**
+ * Delete an episode comment
+ *
+ * Deletes an episode comment. Only the comment author can delete.
+ */
+export const storiesControllerDeleteEpisodeComment = <ThrowOnError extends boolean = false>(options: Options<StoriesControllerDeleteEpisodeCommentData, ThrowOnError>) => (options.client ?? client).delete<StoriesControllerDeleteEpisodeCommentResponses, StoriesControllerDeleteEpisodeCommentErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/stories/episode-comments/{commentId}',
+    ...options
+});
+
+/**
+ * Get a single episode comment by ID
+ *
+ * Retrieves a specific episode comment with user information.
+ */
+export const storiesControllerGetEpisodeCommentById = <ThrowOnError extends boolean = false>(options: Options<StoriesControllerGetEpisodeCommentByIdData, ThrowOnError>) => (options.client ?? client).get<StoriesControllerGetEpisodeCommentByIdResponses, StoriesControllerGetEpisodeCommentByIdErrors, ThrowOnError>({ url: '/stories/episode-comments/{commentId}', ...options });
+
+/**
+ * Update an episode comment
+ *
+ * Updates an episode comment. Only the comment author can update.
+ */
+export const storiesControllerUpdateEpisodeComment = <ThrowOnError extends boolean = false>(options: Options<StoriesControllerUpdateEpisodeCommentData, ThrowOnError>) => (options.client ?? client).put<StoriesControllerUpdateEpisodeCommentResponses, StoriesControllerUpdateEpisodeCommentErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/stories/episode-comments/{commentId}',
+    ...options
+});
 
 /**
  * Unlike a story
@@ -912,4 +1072,103 @@ export const adminControllerSendBulkNotification = <ThrowOnError extends boolean
         'Content-Type': 'application/json',
         ...options.headers
     }
+});
+
+/**
+ * Get all episodes (Admin only)
+ *
+ * Retrieves all episodes across all stories. Requires admin authentication.
+ */
+export const adminControllerGetAllEpisodes = <ThrowOnError extends boolean = false>(options?: Options<AdminControllerGetAllEpisodesData, ThrowOnError>) => (options?.client ?? client).get<AdminControllerGetAllEpisodesResponses, AdminControllerGetAllEpisodesErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/admin/episodes',
+    ...options
+});
+
+/**
+ * Delete an episode (Admin only)
+ *
+ * Permanently deletes an episode. Requires admin authentication.
+ */
+export const adminControllerDeleteEpisode = <ThrowOnError extends boolean = false>(options: Options<AdminControllerDeleteEpisodeData, ThrowOnError>) => (options.client ?? client).delete<AdminControllerDeleteEpisodeResponses, AdminControllerDeleteEpisodeErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/admin/episodes/{id}',
+    ...options
+});
+
+/**
+ * Get all chapters (Admin only)
+ *
+ * Retrieves all chapters across all stories. Requires admin authentication.
+ */
+export const adminControllerGetAllChapters = <ThrowOnError extends boolean = false>(options?: Options<AdminControllerGetAllChaptersData, ThrowOnError>) => (options?.client ?? client).get<AdminControllerGetAllChaptersResponses, AdminControllerGetAllChaptersErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/admin/chapters',
+    ...options
+});
+
+/**
+ * Delete a chapter (Admin only)
+ *
+ * Permanently deletes a chapter. Requires admin authentication.
+ */
+export const adminControllerDeleteChapter = <ThrowOnError extends boolean = false>(options: Options<AdminControllerDeleteChapterData, ThrowOnError>) => (options.client ?? client).delete<AdminControllerDeleteChapterResponses, AdminControllerDeleteChapterErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/admin/chapters/{id}',
+    ...options
+});
+
+/**
+ * Get all comments (Admin only)
+ *
+ * Retrieves all comments (story, episode, and chapter) across the platform. Requires admin authentication.
+ */
+export const adminControllerGetAllComments = <ThrowOnError extends boolean = false>(options?: Options<AdminControllerGetAllCommentsData, ThrowOnError>) => (options?.client ?? client).get<AdminControllerGetAllCommentsResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/admin/comments',
+    ...options
+});
+
+/**
+ * Delete a story comment (Admin only)
+ *
+ * Deletes a story comment. Requires admin authentication.
+ */
+export const adminControllerDeleteStoryComment = <ThrowOnError extends boolean = false>(options: Options<AdminControllerDeleteStoryCommentData, ThrowOnError>) => (options.client ?? client).delete<AdminControllerDeleteStoryCommentResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/admin/comments/story/{id}',
+    ...options
+});
+
+/**
+ * Delete an episode comment (Admin only)
+ *
+ * Deletes an episode comment. Requires admin authentication.
+ */
+export const adminControllerDeleteEpisodeComment = <ThrowOnError extends boolean = false>(options: Options<AdminControllerDeleteEpisodeCommentData, ThrowOnError>) => (options.client ?? client).delete<AdminControllerDeleteEpisodeCommentResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/admin/comments/episode/{id}',
+    ...options
+});
+
+/**
+ * Delete a chapter comment (Admin only)
+ *
+ * Deletes a chapter comment. Requires admin authentication.
+ */
+export const adminControllerDeleteChapterComment = <ThrowOnError extends boolean = false>(options: Options<AdminControllerDeleteChapterCommentData, ThrowOnError>) => (options.client ?? client).delete<AdminControllerDeleteChapterCommentResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/admin/comments/chapter/{id}',
+    ...options
+});
+
+/**
+ * Get platform overview report (Admin only)
+ *
+ * Retrieves platform-wide statistics including users, stories, episodes, chapters, and comments.
+ */
+export const adminControllerGetOverviewReport = <ThrowOnError extends boolean = false>(options?: Options<AdminControllerGetOverviewReportData, ThrowOnError>) => (options?.client ?? client).get<AdminControllerGetOverviewReportResponses, unknown, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/admin/reports/overview',
+    ...options
 });

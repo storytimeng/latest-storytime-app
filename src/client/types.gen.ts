@@ -2263,6 +2263,286 @@ export type StoriesControllerGetStoryChaptersResponses = {
     200: unknown;
 };
 
+export type StoriesControllerSoftDeleteChapterData = {
+    body?: never;
+    path: {
+        /**
+         * Chapter UUID
+         */
+        chapterId: string;
+    };
+    query?: never;
+    url: '/stories/chapters/{chapterId}';
+};
+
+export type StoriesControllerSoftDeleteChapterErrors = {
+    /**
+     * Bad request - Chapter is already deleted
+     */
+    400: unknown;
+    /**
+     * Unauthorized - Invalid or missing token
+     */
+    401: unknown;
+    /**
+     * Forbidden - Only the story author can delete chapters
+     */
+    403: unknown;
+    /**
+     * Chapter not found
+     */
+    404: unknown;
+};
+
+export type StoriesControllerSoftDeleteChapterResponses = {
+    /**
+     * Chapter soft deleted successfully
+     */
+    204: void;
+};
+
+export type StoriesControllerSoftDeleteChapterResponse = StoriesControllerSoftDeleteChapterResponses[keyof StoriesControllerSoftDeleteChapterResponses];
+
+export type StoriesControllerGetChapterByIdData = {
+    body?: never;
+    path: {
+        /**
+         * Chapter UUID
+         */
+        chapterId: string;
+    };
+    query?: never;
+    url: '/stories/chapters/{chapterId}';
+};
+
+export type StoriesControllerGetChapterByIdErrors = {
+    /**
+     * Chapter not found
+     */
+    404: unknown;
+};
+
+export type StoriesControllerGetChapterByIdResponses = {
+    /**
+     * Chapter retrieved successfully
+     */
+    200: {
+        id?: string;
+        title?: string;
+        content?: string;
+        chapterNumber?: number;
+        storyId?: string;
+        createdAt?: string;
+        updatedAt?: string;
+    };
+};
+
+export type StoriesControllerGetChapterByIdResponse = StoriesControllerGetChapterByIdResponses[keyof StoriesControllerGetChapterByIdResponses];
+
+export type StoriesControllerUpdateChapterData = {
+    body: {
+        title?: string;
+        content?: string;
+        chapterNumber?: number;
+    };
+    path: {
+        /**
+         * Chapter UUID
+         */
+        chapterId: string;
+    };
+    query?: never;
+    url: '/stories/chapters/{chapterId}';
+};
+
+export type StoriesControllerUpdateChapterErrors = {
+    /**
+     * Unauthorized - Invalid or missing token
+     */
+    401: unknown;
+    /**
+     * Forbidden - Only the story author can update chapters
+     */
+    403: unknown;
+    /**
+     * Chapter not found
+     */
+    404: unknown;
+};
+
+export type StoriesControllerUpdateChapterResponses = {
+    /**
+     * Chapter updated successfully
+     */
+    200: {
+        id?: string;
+        title?: string;
+        content?: string;
+        chapterNumber?: number;
+        storyId?: string;
+        createdAt?: string;
+        updatedAt?: string;
+    };
+};
+
+export type StoriesControllerUpdateChapterResponse = StoriesControllerUpdateChapterResponses[keyof StoriesControllerUpdateChapterResponses];
+
+export type StoriesControllerGetChapterCommentsData = {
+    body?: never;
+    path: {
+        /**
+         * Chapter UUID
+         */
+        chapterId: string;
+    };
+    query?: never;
+    url: '/stories/chapters/{chapterId}/comments';
+};
+
+export type StoriesControllerGetChapterCommentsErrors = {
+    /**
+     * Chapter not found
+     */
+    404: unknown;
+};
+
+export type StoriesControllerGetChapterCommentsResponses = {
+    /**
+     * Comments retrieved successfully
+     */
+    200: unknown;
+};
+
+export type StoriesControllerCreateChapterCommentData = {
+    body?: never;
+    path: {
+        /**
+         * Chapter UUID
+         */
+        chapterId: string;
+    };
+    query?: never;
+    url: '/stories/chapters/{chapterId}/comments';
+};
+
+export type StoriesControllerCreateChapterCommentErrors = {
+    /**
+     * Bad request - Throttling or validation error
+     */
+    400: unknown;
+    /**
+     * Unauthorized
+     */
+    401: unknown;
+    /**
+     * Chapter not found
+     */
+    404: unknown;
+};
+
+export type StoriesControllerCreateChapterCommentResponses = {
+    /**
+     * Comment created successfully
+     */
+    201: unknown;
+};
+
+export type StoriesControllerDeleteChapterCommentData = {
+    body?: never;
+    path: {
+        /**
+         * Comment UUID
+         */
+        commentId: string;
+    };
+    query?: never;
+    url: '/stories/chapter-comments/{commentId}';
+};
+
+export type StoriesControllerDeleteChapterCommentErrors = {
+    /**
+     * Unauthorized
+     */
+    401: unknown;
+    /**
+     * Forbidden - Not comment author
+     */
+    403: unknown;
+    /**
+     * Comment not found
+     */
+    404: unknown;
+};
+
+export type StoriesControllerDeleteChapterCommentResponses = {
+    /**
+     * Comment deleted successfully
+     */
+    204: void;
+};
+
+export type StoriesControllerDeleteChapterCommentResponse = StoriesControllerDeleteChapterCommentResponses[keyof StoriesControllerDeleteChapterCommentResponses];
+
+export type StoriesControllerGetChapterCommentByIdData = {
+    body?: never;
+    path: {
+        /**
+         * Comment UUID
+         */
+        commentId: string;
+    };
+    query?: never;
+    url: '/stories/chapter-comments/{commentId}';
+};
+
+export type StoriesControllerGetChapterCommentByIdErrors = {
+    /**
+     * Comment not found
+     */
+    404: unknown;
+};
+
+export type StoriesControllerGetChapterCommentByIdResponses = {
+    /**
+     * Comment retrieved successfully
+     */
+    200: unknown;
+};
+
+export type StoriesControllerUpdateChapterCommentData = {
+    body?: never;
+    path: {
+        /**
+         * Comment UUID
+         */
+        commentId: string;
+    };
+    query?: never;
+    url: '/stories/chapter-comments/{commentId}';
+};
+
+export type StoriesControllerUpdateChapterCommentErrors = {
+    /**
+     * Unauthorized
+     */
+    401: unknown;
+    /**
+     * Forbidden - Not comment author
+     */
+    403: unknown;
+    /**
+     * Comment not found
+     */
+    404: unknown;
+};
+
+export type StoriesControllerUpdateChapterCommentResponses = {
+    /**
+     * Comment updated successfully
+     */
+    200: unknown;
+};
+
 export type StoriesControllerCreateEpisodeData = {
     body: CreateEpisodeDto;
     path?: never;
@@ -2335,6 +2615,286 @@ export type StoriesControllerGetStoryEpisodesErrors = {
 export type StoriesControllerGetStoryEpisodesResponses = {
     /**
      * Episodes retrieved successfully
+     */
+    200: unknown;
+};
+
+export type StoriesControllerSoftDeleteEpisodeData = {
+    body?: never;
+    path: {
+        /**
+         * Episode UUID
+         */
+        episodeId: string;
+    };
+    query?: never;
+    url: '/stories/episodes/{episodeId}';
+};
+
+export type StoriesControllerSoftDeleteEpisodeErrors = {
+    /**
+     * Bad request - Episode is already deleted
+     */
+    400: unknown;
+    /**
+     * Unauthorized - Invalid or missing token
+     */
+    401: unknown;
+    /**
+     * Forbidden - Only the story author can delete episodes
+     */
+    403: unknown;
+    /**
+     * Episode not found
+     */
+    404: unknown;
+};
+
+export type StoriesControllerSoftDeleteEpisodeResponses = {
+    /**
+     * Episode soft deleted successfully
+     */
+    204: void;
+};
+
+export type StoriesControllerSoftDeleteEpisodeResponse = StoriesControllerSoftDeleteEpisodeResponses[keyof StoriesControllerSoftDeleteEpisodeResponses];
+
+export type StoriesControllerGetEpisodeByIdData = {
+    body?: never;
+    path: {
+        /**
+         * Episode UUID
+         */
+        episodeId: string;
+    };
+    query?: never;
+    url: '/stories/episodes/{episodeId}';
+};
+
+export type StoriesControllerGetEpisodeByIdErrors = {
+    /**
+     * Episode not found
+     */
+    404: unknown;
+};
+
+export type StoriesControllerGetEpisodeByIdResponses = {
+    /**
+     * Episode retrieved successfully
+     */
+    200: {
+        id?: string;
+        title?: string;
+        content?: string;
+        episodeNumber?: number;
+        storyId?: string;
+        createdAt?: string;
+        updatedAt?: string;
+    };
+};
+
+export type StoriesControllerGetEpisodeByIdResponse = StoriesControllerGetEpisodeByIdResponses[keyof StoriesControllerGetEpisodeByIdResponses];
+
+export type StoriesControllerUpdateEpisodeData = {
+    body: {
+        title?: string;
+        content?: string;
+        episodeNumber?: number;
+    };
+    path: {
+        /**
+         * Episode UUID
+         */
+        episodeId: string;
+    };
+    query?: never;
+    url: '/stories/episodes/{episodeId}';
+};
+
+export type StoriesControllerUpdateEpisodeErrors = {
+    /**
+     * Unauthorized - Invalid or missing token
+     */
+    401: unknown;
+    /**
+     * Forbidden - Only the story author can update episodes
+     */
+    403: unknown;
+    /**
+     * Episode not found
+     */
+    404: unknown;
+};
+
+export type StoriesControllerUpdateEpisodeResponses = {
+    /**
+     * Episode updated successfully
+     */
+    200: {
+        id?: string;
+        title?: string;
+        content?: string;
+        episodeNumber?: number;
+        storyId?: string;
+        createdAt?: string;
+        updatedAt?: string;
+    };
+};
+
+export type StoriesControllerUpdateEpisodeResponse = StoriesControllerUpdateEpisodeResponses[keyof StoriesControllerUpdateEpisodeResponses];
+
+export type StoriesControllerGetEpisodeCommentsData = {
+    body?: never;
+    path: {
+        /**
+         * Episode UUID
+         */
+        episodeId: string;
+    };
+    query?: never;
+    url: '/stories/episodes/{episodeId}/comments';
+};
+
+export type StoriesControllerGetEpisodeCommentsErrors = {
+    /**
+     * Episode not found
+     */
+    404: unknown;
+};
+
+export type StoriesControllerGetEpisodeCommentsResponses = {
+    /**
+     * Comments retrieved successfully
+     */
+    200: unknown;
+};
+
+export type StoriesControllerCreateEpisodeCommentData = {
+    body?: never;
+    path: {
+        /**
+         * Episode UUID
+         */
+        episodeId: string;
+    };
+    query?: never;
+    url: '/stories/episodes/{episodeId}/comments';
+};
+
+export type StoriesControllerCreateEpisodeCommentErrors = {
+    /**
+     * Bad request - Throttling or validation error
+     */
+    400: unknown;
+    /**
+     * Unauthorized
+     */
+    401: unknown;
+    /**
+     * Episode not found
+     */
+    404: unknown;
+};
+
+export type StoriesControllerCreateEpisodeCommentResponses = {
+    /**
+     * Comment created successfully
+     */
+    201: unknown;
+};
+
+export type StoriesControllerDeleteEpisodeCommentData = {
+    body?: never;
+    path: {
+        /**
+         * Comment UUID
+         */
+        commentId: string;
+    };
+    query?: never;
+    url: '/stories/episode-comments/{commentId}';
+};
+
+export type StoriesControllerDeleteEpisodeCommentErrors = {
+    /**
+     * Unauthorized
+     */
+    401: unknown;
+    /**
+     * Forbidden - Not comment author
+     */
+    403: unknown;
+    /**
+     * Comment not found
+     */
+    404: unknown;
+};
+
+export type StoriesControllerDeleteEpisodeCommentResponses = {
+    /**
+     * Comment deleted successfully
+     */
+    204: void;
+};
+
+export type StoriesControllerDeleteEpisodeCommentResponse = StoriesControllerDeleteEpisodeCommentResponses[keyof StoriesControllerDeleteEpisodeCommentResponses];
+
+export type StoriesControllerGetEpisodeCommentByIdData = {
+    body?: never;
+    path: {
+        /**
+         * Comment UUID
+         */
+        commentId: string;
+    };
+    query?: never;
+    url: '/stories/episode-comments/{commentId}';
+};
+
+export type StoriesControllerGetEpisodeCommentByIdErrors = {
+    /**
+     * Comment not found
+     */
+    404: unknown;
+};
+
+export type StoriesControllerGetEpisodeCommentByIdResponses = {
+    /**
+     * Comment retrieved successfully
+     */
+    200: unknown;
+};
+
+export type StoriesControllerUpdateEpisodeCommentData = {
+    body?: never;
+    path: {
+        /**
+         * Comment UUID
+         */
+        commentId: string;
+    };
+    query?: never;
+    url: '/stories/episode-comments/{commentId}';
+};
+
+export type StoriesControllerUpdateEpisodeCommentErrors = {
+    /**
+     * Unauthorized
+     */
+    401: unknown;
+    /**
+     * Forbidden - Not comment author
+     */
+    403: unknown;
+    /**
+     * Comment not found
+     */
+    404: unknown;
+};
+
+export type StoriesControllerUpdateEpisodeCommentResponses = {
+    /**
+     * Comment updated successfully
      */
     200: unknown;
 };
@@ -3316,3 +3876,195 @@ export type AdminControllerSendBulkNotificationResponses = {
 };
 
 export type AdminControllerSendBulkNotificationResponse = AdminControllerSendBulkNotificationResponses[keyof AdminControllerSendBulkNotificationResponses];
+
+export type AdminControllerGetAllEpisodesData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/admin/episodes';
+};
+
+export type AdminControllerGetAllEpisodesErrors = {
+    /**
+     * Unauthorized
+     */
+    401: unknown;
+    /**
+     * Forbidden - Admin access required
+     */
+    403: unknown;
+};
+
+export type AdminControllerGetAllEpisodesResponses = {
+    /**
+     * Episodes retrieved successfully
+     */
+    200: unknown;
+};
+
+export type AdminControllerDeleteEpisodeData = {
+    body?: never;
+    path: {
+        /**
+         * Episode UUID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/admin/episodes/{id}';
+};
+
+export type AdminControllerDeleteEpisodeErrors = {
+    /**
+     * Episode not found
+     */
+    404: unknown;
+};
+
+export type AdminControllerDeleteEpisodeResponses = {
+    /**
+     * Episode deleted successfully
+     */
+    200: unknown;
+};
+
+export type AdminControllerGetAllChaptersData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/admin/chapters';
+};
+
+export type AdminControllerGetAllChaptersErrors = {
+    /**
+     * Unauthorized
+     */
+    401: unknown;
+    /**
+     * Forbidden - Admin access required
+     */
+    403: unknown;
+};
+
+export type AdminControllerGetAllChaptersResponses = {
+    /**
+     * Chapters retrieved successfully
+     */
+    200: unknown;
+};
+
+export type AdminControllerDeleteChapterData = {
+    body?: never;
+    path: {
+        /**
+         * Chapter UUID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/admin/chapters/{id}';
+};
+
+export type AdminControllerDeleteChapterErrors = {
+    /**
+     * Chapter not found
+     */
+    404: unknown;
+};
+
+export type AdminControllerDeleteChapterResponses = {
+    /**
+     * Chapter deleted successfully
+     */
+    200: unknown;
+};
+
+export type AdminControllerGetAllCommentsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Filter by comment type
+         */
+        type?: 'story' | 'episode' | 'chapter';
+    };
+    url: '/admin/comments';
+};
+
+export type AdminControllerGetAllCommentsResponses = {
+    /**
+     * Comments retrieved successfully
+     */
+    200: unknown;
+};
+
+export type AdminControllerDeleteStoryCommentData = {
+    body?: never;
+    path: {
+        /**
+         * Comment UUID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/admin/comments/story/{id}';
+};
+
+export type AdminControllerDeleteStoryCommentResponses = {
+    /**
+     * Comment deleted successfully
+     */
+    200: unknown;
+};
+
+export type AdminControllerDeleteEpisodeCommentData = {
+    body?: never;
+    path: {
+        /**
+         * Comment UUID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/admin/comments/episode/{id}';
+};
+
+export type AdminControllerDeleteEpisodeCommentResponses = {
+    /**
+     * Comment deleted successfully
+     */
+    200: unknown;
+};
+
+export type AdminControllerDeleteChapterCommentData = {
+    body?: never;
+    path: {
+        /**
+         * Comment UUID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/admin/comments/chapter/{id}';
+};
+
+export type AdminControllerDeleteChapterCommentResponses = {
+    /**
+     * Comment deleted successfully
+     */
+    200: unknown;
+};
+
+export type AdminControllerGetOverviewReportData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/admin/reports/overview';
+};
+
+export type AdminControllerGetOverviewReportResponses = {
+    /**
+     * Overview report retrieved successfully
+     */
+    200: unknown;
+};

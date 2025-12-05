@@ -2,7 +2,7 @@ import Cookies from "js-cookie";
 import { client } from "./client/client.gen";
 import { createClientConfig } from "./heyapi-runtime";
 import { getAuthToken } from "./stores/useAuthStore";
-import { refreshTokens } from "./lib/tokenManager";
+import { refreshTokens, ensureValidToken } from "./lib/tokenManager";
 
 // Initialize HeyAPI client config immediately
 try {
@@ -10,12 +10,12 @@ try {
   console.log("🔧 Initializing HeyAPI client with config:", config);
   client.setConfig(config);
 
-  // Set auth callback so generated client can resolve auth tokens
+  // Set auth callback with proactive token refresh
   client.setConfig({
     auth: async (auth) => {
-      // prefer in-memory/store token, fallback to cookie
-      const token = getAuthToken() || Cookies.get("authToken");
-      return token;
+      // Ensure token is valid before making request (proactive refresh)
+      const validToken = await ensureValidToken();
+      return validToken || getAuthToken() || Cookies.get("authToken");
     },
   });
 
@@ -152,6 +152,8 @@ try {
           const retryResponse = await fetch(response.url, retryOpts);
 
           isRefreshing = false;
+
+          // Return the successful response to SWR (success or failure from retry)
           console.log(
             "[Interceptor] ✅ Request retry completed:",
             retryResponse.status
@@ -174,6 +176,7 @@ try {
             window.location.href = "/auth/login";
           }
 
+          // Return 401 response so components can handle it gracefully
           return response;
         }
       } catch (error) {
@@ -188,6 +191,7 @@ try {
           window.location.href = "/auth/login";
         }
 
+        // Return 401 response so components can handle it gracefully
         return response;
       }
     }

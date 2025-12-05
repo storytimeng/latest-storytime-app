@@ -18,7 +18,7 @@ export function useUserProfile() {
       }
       // Unwrap nested payload: { data: { user: {...} } }
       const payload = response?.data as any;
-      const user = payload?.user ?? payload?.data?.user;
+      const user =  payload?.data?.user ?? payload?.user ;
       console.log("useUserProfile: unwrapped user:", user);
       return user as UserProfile;
     },

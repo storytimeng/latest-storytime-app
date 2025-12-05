@@ -6,6 +6,8 @@ import { Camera, Settings } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { cn } from "@/lib";
+import { useUserProfile } from "@/src/hooks/useUserProfile";
+import { Skeleton } from "@heroui/skeleton";
 
 interface ProfileCardProps {
   name?: string;
@@ -15,17 +17,50 @@ interface ProfileCardProps {
   className?: string;
   containerClassName?: string;
   textClassName?: string;
+  useLiveData?: boolean; // If true, fetch from API
 }
 
 const ProfileCard = ({
-  name = "Ruby Ruby",
-  username = "@Rubystar",
-  profileImage = "/person-with-sunglasses-smiling.jpg",
+  name,
+  username,
+  profileImage,
   showSettings = false,
   className = "",
   containerClassName = "",
   textClassName = "",
+  useLiveData = false,
 }: ProfileCardProps) => {
+  const { user, isLoading } = useUserProfile();
+
+  // Use live data from API if enabled
+  const displayName = useLiveData && user 
+    ? user.penName || `${user.firstName || ""} ${user.lastName || ""}`.trim() || "User"
+    : name || "Ruby Ruby";
+  
+  const displayUsername = useLiveData && user
+    ? user.penName ? `@${user.penName}` : user.email
+    : username || "@Rubystar";
+  
+  const displayImage = useLiveData && user
+    ? user.avatar || "/person-with-sunglasses-smiling.jpg"
+    : profileImage || "/person-with-sunglasses-smiling.jpg";
+
+  if (useLiveData && isLoading) {
+    return (
+      <div className={`bg-primary-colour px-5 pb-6 mt-[10px] ${containerClassName}`}>
+        <div className={`flex items-center justify-between h-[60px] ${className}`}>
+          <div className="flex items-center gap-4">
+            <Skeleton className="w-[60px] h-[60px] rounded-full" />
+            <div className="flex flex-col gap-2">
+              <Skeleton className="h-6 w-24 rounded" />
+              <Skeleton className="h-4 w-32 rounded" />
+            </div>
+          </div>
+          {showSettings && <Skeleton className="w-10 h-10 rounded" />}
+        </div>
+      </div>
+    );
+  }
   return (
     <div
       className={`bg-primary-colour px-5 pb-6 mt-[10px] ${containerClassName}`}
@@ -37,7 +72,7 @@ const ProfileCard = ({
           <div className="relative">
             <div className="w-[60px] h-[60px] rounded-full overflow-hidden border-4 border-complimentary-colour">
               <Image
-                src={profileImage}
+                src={displayImage}
                 alt="Profile"
                 width={60}
                 height={60}
@@ -54,8 +89,8 @@ const ProfileCard = ({
               textClassName
             )}
           >
-            <h2 className="body-text-big-bold-auto">{name}</h2>
-            <p className="body-text-small-medium-auto">{username}</p>
+            <h2 className="body-text-big-bold-auto">{displayName}</h2>
+            <p className="body-text-small-medium-auto">{displayUsername}</p>
           </div>
         </div>
 

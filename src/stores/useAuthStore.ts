@@ -16,6 +16,23 @@ export interface AuthState {
 
 const AUTH_TOKEN_KEY = "authToken";
 const REFRESH_TOKEN_KEY = "refreshToken";
+const TOKEN_EXPIRY_KEY = "tokenExpiry";
+
+/**
+ * Decode JWT to get expiry time
+ */
+function decodeTokenExpiry(token: string): number | null {
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) return null;
+
+    const payload = JSON.parse(atob(parts[1]));
+    return payload.exp ? payload.exp * 1000 : null; // Convert to milliseconds
+  } catch (e) {
+    console.error("Failed to decode token:", e);
+    return null;
+  }
+}
 
 export const useAuthStore = create<AuthState>((set, get) => ({
   token:
@@ -33,8 +50,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       Cookies.set(AUTH_TOKEN_KEY, token, {
         secure: process.env.NODE_ENV === "production",
       });
+
+      // Store token expiry
+      const expiry = decodeTokenExpiry(token);
+      if (expiry) {
+        Cookies.set(TOKEN_EXPIRY_KEY, expiry.toString(), {
+          secure: process.env.NODE_ENV === "production",
+        });
+        console.log("Token expiry set:", new Date(expiry).toISOString());
+      }
     } else {
       Cookies.remove(AUTH_TOKEN_KEY);
+      Cookies.remove(TOKEN_EXPIRY_KEY);
     }
     if (refreshToken) {
       Cookies.set(REFRESH_TOKEN_KEY, refreshToken, {
@@ -52,6 +79,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   clear: () => {
     Cookies.remove(AUTH_TOKEN_KEY);
     Cookies.remove(REFRESH_TOKEN_KEY);
+    Cookies.remove(TOKEN_EXPIRY_KEY);
     set(() => ({ token: undefined, refreshToken: undefined }));
   },
   clearReset: () => set(() => ({ resetEmail: undefined, resetOtp: undefined })),

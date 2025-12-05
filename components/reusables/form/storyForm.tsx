@@ -23,6 +23,9 @@ import {
 } from "@/lib/storyCache";
 import { CacheLoadingModal } from "@/components/reusables/customUI/CacheLoadingModal";
 import { useUnsavedChangesWarning } from "@/src/hooks/useUnsavedChangesWarning";
+// Custom hooks for refactored logic
+import { useStoryFormState } from "@/src/hooks/useStoryFormState";
+import { useStoryContent } from "@/src/hooks/useStoryContent";
 import type {
   StoryFormData,
   StoryStructure,
@@ -265,62 +268,47 @@ const StoryForm: React.FC<StoryFormProps> = ({
   isLoading = false,
   createdStoryId,
 }) => {
-  // Form state
-  const [formData, setFormData] = useState<StoryFormData>(() =>
-    getInitialFormData(initialData)
-  );
-  const [formErrors, setFormErrors] = useState<
-    Partial<Record<keyof StoryFormData, string>>
-  >({});
+  // ============================================================================
+  // REFACTORED: Custom hooks (now active!)
+  // ============================================================================
+  const formStateHook = useStoryFormState({ initialData, mode });
+  const contentStateHook = useStoryContent({ storyStructure: formStateHook.storyStructure });
+  
+  // Create aliases for backward compatibility - these reference hook state
+  const formData = formStateHook.formData;
+  const formErrors = formStateHook.formErrors;
+  const currentStep = formStateHook.currentStep;
+  const storyStructure = formStateHook.storyStructure;
+  const setFormData = formStateHook.setFormData;
+  const setFormErrors = formStateHook.setFormErrors;
+  const setCurrentStep = formStateHook.setCurrentStep;
+  const setStoryStructure = formStateHook.setStoryStructure;
+  const handleFieldChange = formStateHook.handleFieldChange;
+  const handleGenreToggle = formStateHook.handleGenreToggle;
+  const validateForm = formStateHook.validateForm;
+  const handleStructureNext = formStateHook.handleStructureNext;
+  
+  // Content state from hooks
+  const chapters = contentStateHook.chapters;
+  const parts = contentStateHook.parts;
+  const setChapters = contentStateHook.setChapters;
+  const setParts = contentStateHook.setParts;
+  const addChapter = contentStateHook.addChapter;
+  const addPart = contentStateHook.addPart;
+  const toggleChapter = contentStateHook.toggleChapter;
+  const toggleEpisode = contentStateHook.toggleEpisode;
+  const expandedChapters = contentStateHook.expandedChapters;
+  const expandedEpisodes = contentStateHook.expandedEpisodes;
+  const setExpandedChapters = contentStateHook.setExpandedChapters;
+  const setExpandedEpisodes = contentStateHook.setExpandedEpisodes;
+  // ============================================================================
 
-  // UI state
-  const [currentStep, setCurrentStep] = useState<
-    "form" | "structure" | "writing" | "additional"
-  >(() => {
-    // In edit mode, determine initial step based on story structure
-    if (mode === "edit" && initialData) {
-      // If story has chapters or episodes, go to writing step
-      if (initialData.chapter || initialData.episodes) {
-        return "writing";
-      }
-    }
-    return "form";
-  });
-  const [storyStructure, setStoryStructure] = useState<StoryStructure>(() => {
-    // In edit mode, initialize structure from initialData
-    if (mode === "edit" && initialData) {
-      return {
-        hasChapters: initialData.chapter || false,
-        hasEpisodes: initialData.episodes || false,
-      };
-    }
-    // Default to hasChapters: true for create mode
-    return {
-      hasChapters: true,
-      hasEpisodes: false,
-    };
-  });
-
-  // Cache loading modal state
+  // Cache loading modal state (not in hooks yet)
   const [showCacheModal, setShowCacheModal] = useState(false);
   const [pendingCacheType, setPendingCacheType] = useState<
     "chapters" | "episodes" | null
   >(null);
   const [cacheChecked, setCacheChecked] = useState(false);
-
-  // Content state - Initialize with empty defaults first
-  const [chapters, setChapters] = useState<Chapter[]>([
-    {
-      id: 1,
-      title: "Chapter 1",
-      body: "",
-      episodes: [{ id: 1, title: "Episode 1", body: "" }],
-    },
-  ]);
-
-  const [parts, setParts] = useState<Part[]>([
-    { id: 1, title: "Part 1", body: "" },
-  ]);
 
   // Track unsaved changes
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -440,39 +428,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
     setPendingCacheType(null);
   }, [createdStoryId, mode, initialData?.id]);
 
-  // Accordion state for collapsing chapters/episodes
-  const [expandedChapters, setExpandedChapters] = useState<Set<number>>(
-    new Set([1])
-  );
-  const [expandedEpisodes, setExpandedEpisodes] = useState<Set<number>>(
-    new Set([1])
-  );
-
-  // Toggle chapter expansion
-  const toggleChapter = useCallback((chapterId: number) => {
-    setExpandedChapters((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(chapterId)) {
-        newSet.delete(chapterId);
-      } else {
-        newSet.add(chapterId);
-      }
-      return newSet;
-    });
-  }, []);
-
-  // Toggle episode expansion
-  const toggleEpisode = useCallback((episodeId: number) => {
-    setExpandedEpisodes((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(episodeId)) {
-        newSet.delete(episodeId);
-      } else {
-        newSet.add(episodeId);
-      }
-      return newSet;
-    });
-  }, []);
+  // Accordion state and toggle functions are now handled by contentStateHook
 
   // Auto-save chapters to cache when they change
   useEffect(() => {
@@ -521,69 +477,9 @@ const StoryForm: React.FC<StoryFormProps> = ({
     }
   }, [mode, initialData]);
 
-  // Form validation
-  const validateForm = useCallback((): boolean => {
-    const errors: Partial<Record<keyof StoryFormData, string>> = {};
-
-    if (!formData.title.trim()) {
-      errors.title = "Story title is required";
-    }
-
-    // Description: 50-100 words, at least 50 chars
-    const desc = formData.description.trim();
-    const descWords = desc.split(/\s+/).filter(Boolean);
-    if (!desc) {
-      errors.description = "Story description is required";
-    } else if (descWords.length < 50 || descWords.length > 100) {
-      errors.description = "Description must be 50-100 words.";
-    } else if (desc.length < 50) {
-      errors.description = "Description must be at least 50 characters.";
-    }
-
-    // Content validation: required when no chapters/episodes
-    if (
-      !storyStructure.hasChapters &&
-      !storyStructure.hasEpisodes &&
-      !formData.content?.trim()
-    ) {
-      errors.content =
-        "Story content is required when not using chapters or episodes.";
-    }
-
-    if (formData.selectedGenres.length === 0) {
-      errors.selectedGenres = "Please select at least one genre";
-    }
-
-    setFormErrors(errors);
-    return Object.keys(errors).length === 0;
-  }, [formData, storyStructure]);
-
-  // Handle form field changes
-  const handleFieldChange = useCallback(
-    (
-      field: keyof StoryFormData,
-      value: string | number | boolean | string[]
-    ) => {
-      setFormData((prev) => ({ ...prev, [field]: value }));
-      // Clear error when user starts typing
-      if (formErrors[field]) {
-        setFormErrors((prev) => ({ ...prev, [field]: undefined }));
-      }
-    },
-    [formErrors]
-  );
-
-  // Handle genre selection
-  const handleGenreToggle = useCallback((genre: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      selectedGenres: prev.selectedGenres.includes(genre)
-        ? prev.selectedGenres.filter((g) => g !== genre)
-        : prev.selectedGenres.length < 3
-          ? [...prev.selectedGenres, genre]
-          : prev.selectedGenres, // Limit to 3 genres
-    }));
-  }, []);
+  // Form validation is now handled by formStateHook.validateForm
+  // handleFieldChange is now handled by formStateHook.handleFieldChange
+  // handleGenreToggle is now handled by formStateHook.handleGenreToggle
 
   // Handle form submission
   const handleSubmit = useCallback(() => {
@@ -613,62 +509,9 @@ const StoryForm: React.FC<StoryFormProps> = ({
     parts,
   ]);
 
-  // Handle story structure selection
-  const handleStructureNext = useCallback(
-    (structure: StoryStructure) => {
-      // If user selected no chapters and no episodes, they must have content
-      if (
-        !structure.hasChapters &&
-        !structure.hasEpisodes &&
-        !formData.content?.trim()
-      ) {
-        showToast({
-          type: "error",
-          message:
-            "You must write story content if you're not using chapters or episodes.",
-        });
-        return;
-      }
+  // handleStructureNext is now handled by formStateHook.handleStructureNext
 
-      setStoryStructure(structure);
-      // Update formData with mutually exclusive chapter/episodes flags
-      setFormData((prev) => ({
-        ...prev,
-        chapter: structure.hasChapters,
-        episodes: structure.hasEpisodes,
-      }));
-      setCurrentStep("writing");
-    },
-    [formData]
-  );
-
-  // Handle content operations
-  const addChapter = useCallback(() => {
-    const newChapterId = chapters.length + 1;
-    setChapters((prev) => [
-      ...prev,
-      {
-        id: newChapterId,
-        title: `Chapter ${newChapterId}`,
-        body: "",
-        episodes: storyStructure.hasEpisodes
-          ? [{ id: 1, title: "Episode 1", body: "" }]
-          : undefined,
-      },
-    ]);
-    // Expand the newly added chapter
-    setExpandedChapters(new Set([newChapterId]));
-  }, [chapters.length, storyStructure.hasEpisodes]);
-
-  const addPart = useCallback(() => {
-    const newPartId = parts.length + 1;
-    setParts((prev) => [
-      ...prev,
-      { id: newPartId, title: `Part ${newPartId}`, body: "" },
-    ]);
-    // Expand the newly added episode
-    setExpandedEpisodes(new Set([newPartId]));
-  }, [parts.length]);
+  // addChapter and addPart are now handled by contentStateHook
 
   // Handle additional info submission
   const handleAdditionalInfoSubmit = useCallback(
