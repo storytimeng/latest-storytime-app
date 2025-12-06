@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Modal, ModalContent, useDisclosure } from "@heroui/modal";
+import { Modal, ModalContent } from "@heroui/modal";
 
 import { ChevronRight } from "lucide-react";
 import {
@@ -19,31 +19,35 @@ import {
   DownloadsModal,
   ReadingModal,
   WritingModal,
+  EditProfileModal,
+  EditGenresModal,
+  LeaderboardModal,
   DefaultModal,
 } from "@/components/reusables/customUI";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Shield, Award } from "lucide-react";
 import { useUserProfile } from "@/src/hooks/useUserProfile";
 import { useUserAchievements } from "@/src/hooks/useUserAchievements";
 import { useApiUserStats } from "@/src/hooks/useApiUserStats";
 
 const ProfileView = () => {
-  const { isOpen, onOpen, onClose } = useDisclosure();
   const router = useRouter();
-  const [activeModal, setActiveModal] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+  const activeModal = searchParams.get("modal");
+  
+  // Keep track of the last active modal to preserve content during exit animation
+  const [lastActiveModal, setLastActiveModal] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (activeModal) {
+      setLastActiveModal(activeModal);
+    }
+  }, [activeModal]);
   
   // Fetch user data
   const { user } = useUserProfile();
   const { badges, certificates } = useUserAchievements();
   const { stats } = useApiUserStats();
-
-  // Get search params from window.location (client-side only)
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      setActiveModal(params.get("modal"));
-    }
-  }, []);
 
   const profileOptions = [
     { id: "certificate", label: "Certificate", icon: "📜", type: "modal" },
@@ -54,6 +58,8 @@ const ProfileView = () => {
     { id: "downloads", label: "My Downloads", icon: "⬇️", type: "page", path: "/downloads" },
     { id: "reading", label: "Reading time", icon: "⏰", type: "modal" },
     { id: "writing", label: "Writing time", icon: "✍️", type: "modal" },
+    { id: "leaderboard", label: "Leaderboard", icon: "🏅", type: "modal" },
+    { id: "history", label: "Reading History", icon: "📜", type: "page", path: "/library?tab=History" },
   ];
 
   // Use user's favorite genres from profile, fallback to defaults
@@ -66,51 +72,30 @@ const ProfileView = () => {
     router.push(`/category?genre=${encodeURIComponent(genre)}`);
   };
 
-  // Handle modal state based on URL params
-  useEffect(() => {
-    if (activeModal) {
-      onOpen();
-    } else {
-      onClose();
-    }
-  }, [activeModal, onOpen, onClose]);
-
-  // Listen for URL changes
-  useEffect(() => {
-    const handleUrlChange = () => {
-      if (typeof window !== "undefined") {
-        const params = new URLSearchParams(window.location.search);
-        setActiveModal(params.get("modal"));
-      }
-    };
-
-    // Listen for popstate (browser back/forward)
-    window.addEventListener("popstate", handleUrlChange);
-    return () => window.removeEventListener("popstate", handleUrlChange);
-  }, []);
-
   const handleOptionClick = (option: typeof profileOptions[0]) => {
     if (option.type === "page" && option.path) {
       // Navigate to dedicated page
       router.push(option.path);
     } else if (option.type === "modal") {
-      // Open modal
-      const params = new URLSearchParams(window.location.search);
+      // Open modal via URL
+      const params = new URLSearchParams(searchParams.toString());
       params.set("modal", option.id);
-      router.push(`?${params.toString()}`);
-      setActiveModal(option.id);
+      router.push(`?${params.toString()}`, { scroll: false });
     }
   };
 
   const handleModalClose = () => {
-    const params = new URLSearchParams(window.location.search);
+    const params = new URLSearchParams(searchParams.toString());
     params.delete("modal");
-    router.push(`?${params.toString()}`);
-    setActiveModal(null);
+    router.push(`?${params.toString()}`, { scroll: false });
   };
 
   const renderModalContent = () => {
-    switch (activeModal) {
+    // Use activeModal if present, otherwise use lastActiveModal (for exit animation)
+    const modalToRender = activeModal || lastActiveModal;
+    if (!modalToRender) return null;
+
+    switch (modalToRender) {
       case "certificate":
         return <CertificateModal />;
       case "badges":
@@ -127,8 +112,16 @@ const ProfileView = () => {
         return <ReadingModal />;
       case "writing":
         return <WritingModal />;
+      case "edit-profile":
+        return <EditProfileModal />;
+      case "edit-genres":
+        return <EditGenresModal />;
+      case "leaderboard":
+        return <LeaderboardModal />;
       default:
-        const option = profileOptions.find((opt) => opt.id === activeModal);
+        const option = profileOptions.find((opt) => opt.id === modalToRender);
+        if (!option) return null;
+        
         return (
           <DefaultModal
             title={option?.label || "Details"}
@@ -188,11 +181,19 @@ const ProfileView = () => {
             {/* Added top padding to accommodate bleeding card */}
             {/* Genre Section */}
             <div className="pb-10">
-              <h3
-                className={`body-text-medium-small-auto text-primary-colour mb-2 `}
-              >
-                Genre
-              </h3>
+              <div className="flex items-center justify-between mb-2">
+                <h3
+                  className={`body-text-medium-small-auto text-primary-colour`}
+                >
+                  Genre
+                </h3>
+                <button 
+                  onClick={() => router.push("?modal=edit-genres", { scroll: false })}
+                  className="text-primary-colour p-1"
+                >
+                  <span className="text-xl">✎</span>
+                </button>
+              </div>
               <div className="grid grid-cols-3 gap-2">
                 {genres.slice(0, 6).map((genre) => (
                   <GenreButton
@@ -231,7 +232,7 @@ const ProfileView = () => {
 
       {/* Bottom Sheet Modal */}
       <Modal
-        isOpen={isOpen}
+        isOpen={!!activeModal}
         onClose={handleModalClose}
         className="m-0"
         classNames={{

@@ -6,6 +6,7 @@ import { Search, Filter, BookOpen } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { Magnetik_Bold, Magnetik_Medium, Magnetik_Regular } from "@/lib/font";
+import { useSearchParams } from "next/navigation";
 
 interface LibraryItem {
   id: string;
@@ -18,9 +19,12 @@ interface LibraryItem {
 }
 
 const LibraryView = () => {
+  const searchParams = useSearchParams();
+  const initialTab = searchParams.get("tab") as "All" | "Reading" | "Completed" | "Want to Read" | "History" | null;
+  
   const [activeTab, setActiveTab] = useState<
-    "All" | "Reading" | "Completed" | "Want to Read"
-  >("All");
+    "All" | "Reading" | "Completed" | "Want to Read" | "History"
+  >(initialTab || "All");
   const [searchQuery, setSearchQuery] = useState("");
 
   // Mock data - replace with actual data
@@ -70,7 +74,7 @@ const LibraryView = () => {
     return matchesTab && matchesSearch;
   });
 
-  const tabs = ["All", "Reading", "Completed", "Want to Read"] as const;
+  const tabs = ["All", "Reading", "Completed", "Want to Read", "History"] as const;
 
   return (
     <div className="min-h-screen bg-accent-shade-1 max-w-[28rem] mx-auto">
@@ -167,7 +171,7 @@ const LibraryView = () => {
         <div className="space-y-4">
           {filteredItems.map((item) => (
             <Link href={`/story/${item.id}`} key={item.id}>
-              <div className="flex gap-3 p-3 transition-shadow border rounded-lg bg-universal-white border-light-grey-2 hover:shadow-sm">
+              <div className="flex gap-3 p-3 transition-shadow border rounded-lg bg-universal-white border-light-grey-3 hover:shadow-sm">
                 {/* Cover Image */}
                 <div className="relative flex-shrink-0 w-16 h-20 overflow-hidden rounded-lg bg-light-grey-2">
                   <Image

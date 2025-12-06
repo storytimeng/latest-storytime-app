@@ -4,6 +4,7 @@ import React from "react";
 import { Button } from "@heroui/button";
 import { Camera, Settings } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { cn } from "@/lib";
 import { useUserProfile } from "@/src/hooks/useUserProfile";
@@ -30,16 +31,17 @@ const ProfileCard = ({
   textClassName = "",
   useLiveData = false,
 }: ProfileCardProps) => {
+  const router = useRouter();
   const { user, isLoading } = useUserProfile();
 
   // Use live data from API if enabled
   const displayName = useLiveData && user 
-    ? user.penName || `${user.firstName || ""} ${user.lastName || ""}`.trim() || "User"
-    : name || "Ruby Ruby";
+    ?  `${user.firstName || ""} ${user.lastName || ""}`.trim() || "User"
+    : name || "Reader";
   
   const displayUsername = useLiveData && user
     ? user.penName ? `@${user.penName}` : user.email
-    : username || "@Rubystar";
+    : username || "@Anonymous";
   
   const displayImage = useLiveData && user
     ? user.avatar || "/person-with-sunglasses-smiling.jpg"
@@ -79,15 +81,19 @@ const ProfileCard = ({
                 className="object-cover w-full h-full"
               />
             </div>
-            <div className="absolute flex items-center justify-center w-8 h-8 rounded-full -bottom-1 -right-1 bg-universal-white">
+            <button 
+              className="absolute flex items-center justify-center w-8 h-8 rounded-full -bottom-1 -right-1 bg-universal-white cursor-pointer hover:bg-gray-100 transition-colors"
+              onClick={() => router.push("?modal=edit-profile", { scroll: false })}
+            >
               <Camera className="w-4 h-4 text-primary-colour" />
-            </div>
+            </button>
           </div>
           <div
             className={cn(
-              "text-universal-white gap-y-[4px] flex items-center flex-col text-left",
+              "text-universal-white gap-y-[4px] flex items-center flex-col text-left cursor-pointer hover:opacity-80 transition-opacity",
               textClassName
             )}
+            onClick={() => router.push("?modal=edit-profile", { scroll: false })}
           >
             <h2 className="body-text-big-bold-auto">{displayName}</h2>
             <p className="body-text-small-medium-auto">{displayUsername}</p>
