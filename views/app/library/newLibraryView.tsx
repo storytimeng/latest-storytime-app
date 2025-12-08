@@ -1,20 +1,57 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { MessageCircle, HardDrive, Trash2 } from "lucide-react";
 import { Magnetik_Bold, Magnetik_Medium, Magnetik_Regular } from "@/lib/font";
 import { StoryCard } from "@/components/reusables";
-import { useLibrary } from "@/src/hooks/useLibrary";
+import { useReadingHistory } from "@/src/hooks/useReadingHistory";
 import { useOfflineStories } from "@/src/hooks/useOfflineStories";
 import { formatBytes } from "@/lib/offline/indexedDB";
+import { usersControllerGetAllReadingProgress } from "@/src/client/sdk.gen";
 
 const NewLibraryView = () => {
   const [activeTab, setActiveTab] = useState<"library" | "downloads">(
     "library"
   );
+  const [page, setPage] = useState(1);
+  const [readingProgress, setReadingProgress] = useState<Record<string, number>>({});
+  const observerTarget = useRef<HTMLDivElement>(null);
 
-  // Fetch library stories from API
-  const { stories: libraryStories, isLoading } = useLibrary();
+  // Fetch reading history with pagination
+  const { history, isLoading, totalPages } = useReadingHistory(page, 20);
+
+  // Fetch reading progress for all stories
+  useEffect(() => {
+    const fetchProgress = async () => {
+      try {
+        const response = await usersControllerGetAllReadingProgress({
+          query: { page: 1, limit: 100 },
+        });
+        
+        if (!response.error && response.data) {
+          // @ts-ignore
+          const progressData = response.data?.data || response.data;
+          const progressMap: Record<string, number> = {};
+          
+          if (Array.isArray(progressData)) {
+            progressData.forEach((item: any) => {
+              if (item.storyId && item.percentageRead !== undefined) {
+                progressMap[item.storyId] = item.percentageRead;
+              }
+            });
+          }
+          
+          setReadingProgress(progressMap);
+        }
+      } catch (error) {
+        console.error('Error fetching reading progress:', error);
+      }
+    };
+
+    if (activeTab === "library" && history.length > 0) {
+      fetchProgress();
+    }
+  }, [activeTab, history]);
 
   // Fetch downloaded stories from IndexedDB
   const {
@@ -23,6 +60,22 @@ const NewLibraryView = () => {
     storageInfo,
     deleteOfflineStory,
   } = useOfflineStories();
+
+  // Map reading history to library story format
+  const libraryStories = history.map((item: any) => {
+    const story = item.story;
+    return {
+      id: story.id,
+      title: story.title,
+      description: story.description,
+      imageUrl: story.imageUrl,
+      coverImage: story.imageUrl,
+      author: story.author,
+      genres: [], // Reading history doesn't include genres
+      status: story.storyStatus,
+      progress: readingProgress[story.id] || 0,
+    };
+  });
 
   // Map offline stories to match library story format for StoryCard
   const downloadedStories = offlineStories.map((offline) => ({
@@ -39,6 +92,29 @@ const NewLibraryView = () => {
 
   const currentStories =
     activeTab === "library" ? libraryStories : downloadedStories;
+
+  // Infinite scroll handler
+  const handleObserver = useCallback(
+    (entries: IntersectionObserverEntry[]) => {
+      const [target] = entries;
+      if (target.isIntersecting && !isLoading && page < totalPages) {
+        setPage((prev) => prev + 1);
+      }
+    },
+    [isLoading, page, totalPages]
+  );
+
+  useEffect(() => {
+    const element = observerTarget.current;
+    const option = { threshold: 0 };
+
+    const observer = new IntersectionObserver(handleObserver, option);
+    if (element) observer.observe(element);
+
+    return () => {
+      if (element) observer.unobserve(element);
+    };
+  }, [handleObserver]);
 
   return (
     <div className="min-h-screen bg-accent-shade-1 max-w-[28rem] mx-auto pb-20">
@@ -75,7 +151,7 @@ const NewLibraryView = () => {
       </div>
 
       {/* Loading State */}
-      {((isLoading && activeTab === "library") ||
+      {((isLoading && activeTab === "library" && page === 1) ||
         (isLoadingOffline && activeTab === "downloads")) && (
         <div className="px-4">
           <div className="grid grid-cols-2 gap-4">
@@ -128,30 +204,39 @@ const NewLibraryView = () => {
         )}
 
       {/* Stories Grid */}
-      {!isLoading && !isLoadingOffline && (
+      {!(isLoading && page === 1) && !isLoadingOffline && (
         <div className="px-4">
           {currentStories.length > 0 ? (
-            <div className="grid grid-cols-2 gap-4">
-              {currentStories.map((story: any) => (
-                <div key={story.id} className="relative">
-                  <StoryCard story={story} />
-                  {/* Show delete button for downloads */}
-                  {activeTab === "downloads" && (
-                    <button
-                      onClick={async (e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        await deleteOfflineStory(story.id);
-                      }}
-                      className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full shadow-lg hover:bg-red-600 transition-colors z-10"
-                      title="Remove download"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  )}
+            <>
+              <div className="grid grid-cols-2 gap-4">
+                {currentStories.map((story: any) => (
+                  <div key={story.id} className="relative">
+                    <StoryCard story={story} />
+                    {/* Show delete button for downloads */}
+                    {activeTab === "downloads" && (
+                      <button
+                        onClick={async (e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          await deleteOfflineStory(story.id);
+                        }}
+                        className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full shadow-lg hover:bg-red-600 transition-colors z-10"
+                        title="Remove download"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+              
+              {/* Infinite scroll trigger */}
+              {activeTab === "library" && page < totalPages && (
+                <div ref={observerTarget} className="py-4 flex justify-center">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-complimentary-colour"></div>
                 </div>
-              ))}
-            </div>
+              )}
+            </>
           ) : (
             <div className="flex flex-col items-center justify-center py-16 px-4">
               <div className="w-20 h-20 bg-complimentary-colour/10 rounded-full flex items-center justify-center mb-4">
