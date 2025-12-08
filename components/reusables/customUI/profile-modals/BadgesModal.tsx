@@ -80,7 +80,7 @@ export const BadgesModal = () => {
     return {
       ...badge,
       category: badge.category || 'explorer',
-      name: badge.name || badge.id.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+      name: badge.name || badge.id.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())
     };
   };
 

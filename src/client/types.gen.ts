@@ -74,6 +74,29 @@ export type UpdateReadingProgressDto = {
     readingTimeSeconds?: number;
 };
 
+export type UpdateChapterEpisodeProgressDto = {
+    /**
+     * Percentage of chapter/episode read (0-100)
+     */
+    percentageRead?: number;
+    /**
+     * Number of words read in this chapter/episode
+     */
+    wordsRead?: number;
+    /**
+     * Total words in the chapter/episode
+     */
+    totalWords?: number;
+    /**
+     * Additional reading time in seconds
+     */
+    readingTimeSeconds?: number;
+    /**
+     * Whether this chapter/episode is completed
+     */
+    isCompleted?: boolean;
+};
+
 export type SetupProfileDto = {
     /**
      * Pen name or author name
@@ -941,6 +964,195 @@ export type UsersControllerGetAllReadingProgressErrors = {
 export type UsersControllerGetAllReadingProgressResponses = {
     /**
      * Reading progress list retrieved successfully
+     */
+    200: unknown;
+};
+
+export type UsersControllerGetAggregatedStoryProgressData = {
+    body?: never;
+    path: {
+        /**
+         * Story UUID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/users/stories/{id}/reading-progress';
+};
+
+export type UsersControllerGetAggregatedStoryProgressErrors = {
+    /**
+     * Unauthorized - Invalid or missing token
+     */
+    401: unknown;
+    /**
+     * Story not found
+     */
+    404: unknown;
+};
+
+export type UsersControllerGetAggregatedStoryProgressResponses = {
+    /**
+     * Aggregated reading progress retrieved successfully
+     */
+    200: {
+        message?: string;
+        storyProgress?: {
+            [key: string]: unknown;
+        } | null;
+        chapterProgress?: Array<{
+            [key: string]: unknown;
+        }>;
+        episodeProgress?: Array<{
+            [key: string]: unknown;
+        }>;
+        aggregated?: {
+            totalChapters?: number;
+            completedChapters?: number;
+            totalEpisodes?: number;
+            completedEpisodes?: number;
+            overallPercentage?: number;
+            totalWordsRead?: number;
+            totalWords?: number;
+            totalReadingTimeSeconds?: number;
+        };
+    };
+};
+
+export type UsersControllerGetAggregatedStoryProgressResponse = UsersControllerGetAggregatedStoryProgressResponses[keyof UsersControllerGetAggregatedStoryProgressResponses];
+
+export type UsersControllerGetChapterProgressData = {
+    body?: never;
+    path: {
+        /**
+         * Story UUID
+         */
+        storyId: string;
+        /**
+         * Chapter UUID
+         */
+        chapterId: string;
+    };
+    query?: never;
+    url: '/users/stories/{storyId}/chapters/{chapterId}/reading-progress';
+};
+
+export type UsersControllerGetChapterProgressErrors = {
+    /**
+     * Unauthorized - Invalid or missing token
+     */
+    401: unknown;
+    /**
+     * Story or chapter not found
+     */
+    404: unknown;
+};
+
+export type UsersControllerGetChapterProgressResponses = {
+    /**
+     * Chapter reading progress retrieved successfully
+     */
+    200: unknown;
+};
+
+export type UsersControllerUpdateChapterProgressData = {
+    body: UpdateChapterEpisodeProgressDto;
+    path: {
+        /**
+         * Story UUID
+         */
+        storyId: string;
+        /**
+         * Chapter UUID
+         */
+        chapterId: string;
+    };
+    query?: never;
+    url: '/users/stories/{storyId}/chapters/{chapterId}/reading-progress';
+};
+
+export type UsersControllerUpdateChapterProgressErrors = {
+    /**
+     * Unauthorized - Invalid or missing token
+     */
+    401: unknown;
+    /**
+     * Story or chapter not found
+     */
+    404: unknown;
+};
+
+export type UsersControllerUpdateChapterProgressResponses = {
+    /**
+     * Chapter reading progress updated successfully
+     */
+    200: unknown;
+};
+
+export type UsersControllerGetEpisodeProgressData = {
+    body?: never;
+    path: {
+        /**
+         * Story UUID
+         */
+        storyId: string;
+        /**
+         * Episode UUID
+         */
+        episodeId: string;
+    };
+    query?: never;
+    url: '/users/stories/{storyId}/episodes/{episodeId}/reading-progress';
+};
+
+export type UsersControllerGetEpisodeProgressErrors = {
+    /**
+     * Unauthorized - Invalid or missing token
+     */
+    401: unknown;
+    /**
+     * Story or episode not found
+     */
+    404: unknown;
+};
+
+export type UsersControllerGetEpisodeProgressResponses = {
+    /**
+     * Episode reading progress retrieved successfully
+     */
+    200: unknown;
+};
+
+export type UsersControllerUpdateEpisodeProgressData = {
+    body: UpdateChapterEpisodeProgressDto;
+    path: {
+        /**
+         * Story UUID
+         */
+        storyId: string;
+        /**
+         * Episode UUID
+         */
+        episodeId: string;
+    };
+    query?: never;
+    url: '/users/stories/{storyId}/episodes/{episodeId}/reading-progress';
+};
+
+export type UsersControllerUpdateEpisodeProgressErrors = {
+    /**
+     * Unauthorized - Invalid or missing token
+     */
+    401: unknown;
+    /**
+     * Story or episode not found
+     */
+    404: unknown;
+};
+
+export type UsersControllerUpdateEpisodeProgressResponses = {
+    /**
+     * Episode reading progress updated successfully
      */
     200: unknown;
 };
