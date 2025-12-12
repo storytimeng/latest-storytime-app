@@ -1,4 +1,5 @@
-import React, { useState, lazy, Suspense } from "react";
+import React, { useState, Suspense } from "react";
+import { useParams, useSearchParams } from "next/navigation";
 import { Skeleton } from "@heroui/skeleton";
 import {
   useStory,
@@ -32,6 +33,11 @@ interface ReadStoryViewProps {
 }
 
 export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
+  const searchParams = useSearchParams();
+  const initialChapterId = searchParams.get("chapterId");
+  const initialEpisodeId = searchParams.get("episodeId");
+  const initialContentId = initialChapterId || initialEpisodeId;
+
   // Check online/offline status
   const isOnline = useOnlineStatus();
   const { updateLastRead, syncChapterIfNeeded, syncEpisodeIfNeeded } =
@@ -93,6 +99,7 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
     isUsingOfflineData,
     syncChapterIfNeeded,
     syncEpisodeIfNeeded,
+    initialContentId,
   });
 
   // Handler for submitting comments

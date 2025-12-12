@@ -15,6 +15,7 @@ interface UseStoryContentProps {
     episodeId: string,
     serverEpisode: any
   ) => Promise<boolean>;
+  initialContentId?: string | null;
 }
 
 export function useStoryContent({
@@ -26,9 +27,10 @@ export function useStoryContent({
   isUsingOfflineData,
   syncChapterIfNeeded,
   syncEpisodeIfNeeded,
+  initialContentId,
 }: UseStoryContentProps) {
   const [selectedChapterId, setSelectedChapterId] = useState<string | null>(
-    null
+    initialContentId || null
   );
   const [currentContent, setCurrentContent] = useState("");
   const [currentTitle, setCurrentTitle] = useState("");
