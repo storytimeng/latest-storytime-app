@@ -79,6 +79,7 @@ const ProfileCard = ({
                 width={60}
                 height={60}
                 className="object-cover w-full h-full"
+                
               />
             </div>
             <button 

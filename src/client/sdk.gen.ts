@@ -2,7 +2,7 @@
 
 import type { Client, Options as Options2, TDataShape } from './client';
 import { client } from './client.gen';
-import type { AdminControllerCreateData, AdminControllerCreateErrors, AdminControllerCreateResponses, AdminControllerDeleteAdminData, AdminControllerDeleteAdminErrors, AdminControllerDeleteAdminResponses, AdminControllerDeleteChapterCommentData, AdminControllerDeleteChapterCommentResponses, AdminControllerDeleteChapterData, AdminControllerDeleteChapterErrors, AdminControllerDeleteChapterResponses, AdminControllerDeleteEpisodeCommentData, AdminControllerDeleteEpisodeCommentResponses, AdminControllerDeleteEpisodeData, AdminControllerDeleteEpisodeErrors, AdminControllerDeleteEpisodeResponses, AdminControllerDeleteStoryCommentData, AdminControllerDeleteStoryCommentResponses, AdminControllerDeleteStoryData, AdminControllerDeleteStoryErrors, AdminControllerDeleteStoryResponses, AdminControllerDeleteUserData, AdminControllerDeleteUserErrors, AdminControllerDeleteUserResponses, AdminControllerFindAllData, AdminControllerFindAllErrors, AdminControllerFindAllResponses, AdminControllerFindOneData, AdminControllerFindOneErrors, AdminControllerFindOneResponses, AdminControllerGetAllChaptersData, AdminControllerGetAllChaptersErrors, AdminControllerGetAllChaptersResponses, AdminControllerGetAllCommentsData, AdminControllerGetAllCommentsResponses, AdminControllerGetAllEpisodesData, AdminControllerGetAllEpisodesErrors, AdminControllerGetAllEpisodesResponses, AdminControllerGetAllStoriesData, AdminControllerGetAllStoriesErrors, AdminControllerGetAllStoriesResponses, AdminControllerGetAllUsersData, AdminControllerGetAllUsersErrors, AdminControllerGetAllUsersResponses, AdminControllerGetOverviewReportData, AdminControllerGetOverviewReportResponses, AdminControllerGetProfileData, AdminControllerGetProfileErrors, AdminControllerGetProfileResponses, AdminControllerLoginData, AdminControllerLoginErrors, AdminControllerLoginResponses, AdminControllerSendBulkNotificationData, AdminControllerSendBulkNotificationErrors, AdminControllerSendBulkNotificationResponses, AdminControllerSendNotificationData, AdminControllerSendNotificationErrors, AdminControllerSendNotificationResponses, AdminControllerSuspendAdminData, AdminControllerSuspendAdminErrors, AdminControllerSuspendAdminResponses, AdminControllerSuspendStoryData, AdminControllerSuspendStoryErrors, AdminControllerSuspendStoryResponses, AdminControllerSuspendUserData, AdminControllerSuspendUserErrors, AdminControllerSuspendUserResponses, AdminControllerUnsuspendAdminData, AdminControllerUnsuspendAdminErrors, AdminControllerUnsuspendAdminResponses, AdminControllerUnsuspendStoryData, AdminControllerUnsuspendStoryErrors, AdminControllerUnsuspendStoryResponses, AdminControllerUnsuspendUserData, AdminControllerUnsuspendUserErrors, AdminControllerUnsuspendUserResponses, AdminControllerUpdateData, AdminControllerUpdateErrors, AdminControllerUpdateResponses, AdminControllerUpdateStoryData, AdminControllerUpdateStoryErrors, AdminControllerUpdateStoryResponses, AuthControllerForgotPasswordData, AuthControllerForgotPasswordErrors, AuthControllerForgotPasswordResponses, AuthControllerLoginData, AuthControllerLoginErrors, AuthControllerLoginResponses, AuthControllerLogoutData, AuthControllerLogoutErrors, AuthControllerLogoutResponses, AuthControllerRefreshData, AuthControllerRefreshErrors, AuthControllerRefreshResponses, AuthControllerRegisterData, AuthControllerRegisterErrors, AuthControllerRegisterResponses, AuthControllerResendOtpData, AuthControllerResendOtpErrors, AuthControllerResendOtpResponses, AuthControllerResetPasswordData, AuthControllerResetPasswordErrors, AuthControllerResetPasswordResponses, AuthControllerVerifyEmailData, AuthControllerVerifyEmailErrors, AuthControllerVerifyEmailResponses, NotificationsControllerDeleteAllNotificationsData, NotificationsControllerDeleteAllNotificationsErrors, NotificationsControllerDeleteAllNotificationsResponses, NotificationsControllerDeleteNotificationData, NotificationsControllerDeleteNotificationErrors, NotificationsControllerDeleteNotificationResponses, NotificationsControllerGetNotificationByIdData, NotificationsControllerGetNotificationByIdErrors, NotificationsControllerGetNotificationByIdResponses, NotificationsControllerGetUnreadCountData, NotificationsControllerGetUnreadCountErrors, NotificationsControllerGetUnreadCountResponses, NotificationsControllerGetUserNotificationsData, NotificationsControllerGetUserNotificationsErrors, NotificationsControllerGetUserNotificationsResponses, NotificationsControllerMarkAllAsReadData, NotificationsControllerMarkAllAsReadErrors, NotificationsControllerMarkAllAsReadResponses, NotificationsControllerMarkAsReadData, NotificationsControllerMarkAsReadErrors, NotificationsControllerMarkAsReadResponses, SearchCollaboratorsData, SearchCollaboratorsErrors, SearchCollaboratorsResponses, SearchStoriesData, SearchStoriesErrors, SearchStoriesResponses, StoriesControllerCheckUserLikeData, StoriesControllerCheckUserLikeErrors, StoriesControllerCheckUserLikeResponses, StoriesControllerCreateChapterCommentData, StoriesControllerCreateChapterCommentErrors, StoriesControllerCreateChapterCommentResponses, StoriesControllerCreateChapterData, StoriesControllerCreateChapterErrors, StoriesControllerCreateChapterResponses, StoriesControllerCreateCommentData, StoriesControllerCreateCommentErrors, StoriesControllerCreateCommentResponses, StoriesControllerCreateData, StoriesControllerCreateEpisodeCommentData, StoriesControllerCreateEpisodeCommentErrors, StoriesControllerCreateEpisodeCommentResponses, StoriesControllerCreateEpisodeData, StoriesControllerCreateEpisodeErrors, StoriesControllerCreateEpisodeResponses, StoriesControllerCreateErrors, StoriesControllerCreateMultipleChaptersData, StoriesControllerCreateMultipleChaptersErrors, StoriesControllerCreateMultipleChaptersResponses, StoriesControllerCreateMultipleEpisodesData, StoriesControllerCreateMultipleEpisodesErrors, StoriesControllerCreateMultipleEpisodesResponses, StoriesControllerCreateResponses, StoriesControllerDeleteChapterCommentData, StoriesControllerDeleteChapterCommentErrors, StoriesControllerDeleteChapterCommentResponses, StoriesControllerDeleteCommentData, StoriesControllerDeleteCommentErrors, StoriesControllerDeleteCommentResponses, StoriesControllerDeleteEpisodeCommentData, StoriesControllerDeleteEpisodeCommentErrors, StoriesControllerDeleteEpisodeCommentResponses, StoriesControllerFindAllData, StoriesControllerFindAllResponses, StoriesControllerFindOneData, StoriesControllerFindOneErrors, StoriesControllerFindOneResponses, StoriesControllerFindOnlyOnStorytimeData, StoriesControllerFindOnlyOnStorytimeResponses, StoriesControllerFindPopularData, StoriesControllerFindPopularResponses, StoriesControllerFindRecentlyAddedData, StoriesControllerFindRecentlyAddedResponses, StoriesControllerFindTrendingNowData, StoriesControllerFindTrendingNowResponses, StoriesControllerGetChapterByIdData, StoriesControllerGetChapterByIdErrors, StoriesControllerGetChapterByIdResponses, StoriesControllerGetChapterCommentByIdData, StoriesControllerGetChapterCommentByIdErrors, StoriesControllerGetChapterCommentByIdResponses, StoriesControllerGetChapterCommentsData, StoriesControllerGetChapterCommentsErrors, StoriesControllerGetChapterCommentsResponses, StoriesControllerGetEpisodeByIdData, StoriesControllerGetEpisodeByIdErrors, StoriesControllerGetEpisodeByIdResponses, StoriesControllerGetEpisodeCommentByIdData, StoriesControllerGetEpisodeCommentByIdErrors, StoriesControllerGetEpisodeCommentByIdResponses, StoriesControllerGetEpisodeCommentsData, StoriesControllerGetEpisodeCommentsErrors, StoriesControllerGetEpisodeCommentsResponses, StoriesControllerGetGenresData, StoriesControllerGetGenresResponses, StoriesControllerGetMyLibraryData, StoriesControllerGetMyLibraryErrors, StoriesControllerGetMyLibraryResponses, StoriesControllerGetStoryChaptersData, StoriesControllerGetStoryChaptersErrors, StoriesControllerGetStoryChaptersResponses, StoriesControllerGetStoryCommentCountData, StoriesControllerGetStoryCommentCountErrors, StoriesControllerGetStoryCommentCountResponses, StoriesControllerGetStoryCommentsData, StoriesControllerGetStoryCommentsErrors, StoriesControllerGetStoryCommentsResponses, StoriesControllerGetStoryEpisodesData, StoriesControllerGetStoryEpisodesErrors, StoriesControllerGetStoryEpisodesResponses, StoriesControllerGetStoryLikeCountData, StoriesControllerGetStoryLikeCountErrors, StoriesControllerGetStoryLikeCountResponses, StoriesControllerGetStoryLikesData, StoriesControllerGetStoryLikesErrors, StoriesControllerGetStoryLikesResponses, StoriesControllerLikeStoryData, StoriesControllerLikeStoryErrors, StoriesControllerLikeStoryResponses, StoriesControllerRemoveData, StoriesControllerRemoveErrors, StoriesControllerRemoveResponses, StoriesControllerSoftDeleteChapterData, StoriesControllerSoftDeleteChapterErrors, StoriesControllerSoftDeleteChapterResponses, StoriesControllerSoftDeleteEpisodeData, StoriesControllerSoftDeleteEpisodeErrors, StoriesControllerSoftDeleteEpisodeResponses, StoriesControllerTestByGenresData, StoriesControllerTestByGenresResponses, StoriesControllerUnlikeStoryData, StoriesControllerUnlikeStoryErrors, StoriesControllerUnlikeStoryResponses, StoriesControllerUpdateChapterCommentData, StoriesControllerUpdateChapterCommentErrors, StoriesControllerUpdateChapterCommentResponses, StoriesControllerUpdateChapterData, StoriesControllerUpdateChapterErrors, StoriesControllerUpdateChapterResponses, StoriesControllerUpdateCommentData, StoriesControllerUpdateCommentErrors, StoriesControllerUpdateCommentResponses, StoriesControllerUpdateData, StoriesControllerUpdateEpisodeCommentData, StoriesControllerUpdateEpisodeCommentErrors, StoriesControllerUpdateEpisodeCommentResponses, StoriesControllerUpdateEpisodeData, StoriesControllerUpdateEpisodeErrors, StoriesControllerUpdateEpisodeResponses, StoriesControllerUpdateErrors, StoriesControllerUpdateResponses, UsersControllerCheckPenNameAvailabilityData, UsersControllerCheckPenNameAvailabilityErrors, UsersControllerCheckPenNameAvailabilityResponses, UsersControllerDeleteUserData, UsersControllerDeleteUserErrors, UsersControllerDeleteUserResponses, UsersControllerFindAllData, UsersControllerFindAllResponses, UsersControllerFindOneData, UsersControllerFindOneErrors, UsersControllerFindOneResponses, UsersControllerGetAggregatedStoryProgressData, UsersControllerGetAggregatedStoryProgressErrors, UsersControllerGetAggregatedStoryProgressResponses, UsersControllerGetAllReadingProgressData, UsersControllerGetAllReadingProgressErrors, UsersControllerGetAllReadingProgressResponses, UsersControllerGetChapterProgressData, UsersControllerGetChapterProgressErrors, UsersControllerGetChapterProgressResponses, UsersControllerGetEpisodeProgressData, UsersControllerGetEpisodeProgressErrors, UsersControllerGetEpisodeProgressResponses, UsersControllerGetProfileData, UsersControllerGetProfileErrors, UsersControllerGetProfileResponses, UsersControllerGetReadingHistoryData, UsersControllerGetReadingHistoryErrors, UsersControllerGetReadingHistoryResponses, UsersControllerGetReadingProgressData, UsersControllerGetReadingProgressErrors, UsersControllerGetReadingProgressResponses, UsersControllerGetShareableAchievementsData, UsersControllerGetShareableAchievementsErrors, UsersControllerGetShareableAchievementsResponses, UsersControllerGetStatsData, UsersControllerGetStatsErrors, UsersControllerGetStatsResponses, UsersControllerGetTopAuthorsData, UsersControllerGetTopAuthorsResponses, UsersControllerGetTopBadgeHoldersData, UsersControllerGetTopBadgeHoldersResponses, UsersControllerGetTopCertificateHoldersData, UsersControllerGetTopCertificateHoldersResponses, UsersControllerGetTopReadersByTimeData, UsersControllerGetTopReadersByTimeResponses, UsersControllerGetTopReadersData, UsersControllerGetTopReadersResponses, UsersControllerMarkStoryAsReadData, UsersControllerMarkStoryAsReadErrors, UsersControllerMarkStoryAsReadResponses, UsersControllerSetupProfileData, UsersControllerSetupProfileErrors, UsersControllerSetupProfileResponses, UsersControllerSuspendUserData, UsersControllerSuspendUserErrors, UsersControllerSuspendUserResponses, UsersControllerUnsuspendUserData, UsersControllerUnsuspendUserErrors, UsersControllerUnsuspendUserResponses, UsersControllerUpdateChapterProgressData, UsersControllerUpdateChapterProgressErrors, UsersControllerUpdateChapterProgressResponses, UsersControllerUpdateEpisodeProgressData, UsersControllerUpdateEpisodeProgressErrors, UsersControllerUpdateEpisodeProgressResponses, UsersControllerUpdateProfileData, UsersControllerUpdateProfileErrors, UsersControllerUpdateProfileResponses, UsersControllerUpdateReadingProgressData, UsersControllerUpdateReadingProgressErrors, UsersControllerUpdateReadingProgressResponses } from './types.gen';
+import type { AdminControllerCreateData, AdminControllerCreateErrors, AdminControllerCreateResponses, AdminControllerDeleteAdminData, AdminControllerDeleteAdminErrors, AdminControllerDeleteAdminResponses, AdminControllerDeleteChapterCommentData, AdminControllerDeleteChapterCommentResponses, AdminControllerDeleteChapterData, AdminControllerDeleteChapterErrors, AdminControllerDeleteChapterResponses, AdminControllerDeleteEpisodeCommentData, AdminControllerDeleteEpisodeCommentResponses, AdminControllerDeleteEpisodeData, AdminControllerDeleteEpisodeErrors, AdminControllerDeleteEpisodeResponses, AdminControllerDeleteStoryCommentData, AdminControllerDeleteStoryCommentResponses, AdminControllerDeleteStoryData, AdminControllerDeleteStoryErrors, AdminControllerDeleteStoryResponses, AdminControllerDeleteUserData, AdminControllerDeleteUserErrors, AdminControllerDeleteUserResponses, AdminControllerFindAllData, AdminControllerFindAllErrors, AdminControllerFindAllResponses, AdminControllerFindOneData, AdminControllerFindOneErrors, AdminControllerFindOneResponses, AdminControllerGetAllChaptersData, AdminControllerGetAllChaptersErrors, AdminControllerGetAllChaptersResponses, AdminControllerGetAllCommentsData, AdminControllerGetAllCommentsResponses, AdminControllerGetAllEpisodesData, AdminControllerGetAllEpisodesErrors, AdminControllerGetAllEpisodesResponses, AdminControllerGetAllStoriesData, AdminControllerGetAllStoriesErrors, AdminControllerGetAllStoriesResponses, AdminControllerGetAllUsersData, AdminControllerGetAllUsersErrors, AdminControllerGetAllUsersResponses, AdminControllerGetOverviewReportData, AdminControllerGetOverviewReportResponses, AdminControllerGetProfileData, AdminControllerGetProfileErrors, AdminControllerGetProfileResponses, AdminControllerLoginData, AdminControllerLoginErrors, AdminControllerLoginResponses, AdminControllerSendBulkNotificationData, AdminControllerSendBulkNotificationErrors, AdminControllerSendBulkNotificationResponses, AdminControllerSendNotificationData, AdminControllerSendNotificationErrors, AdminControllerSendNotificationResponses, AdminControllerSuspendAdminData, AdminControllerSuspendAdminErrors, AdminControllerSuspendAdminResponses, AdminControllerSuspendStoryData, AdminControllerSuspendStoryErrors, AdminControllerSuspendStoryResponses, AdminControllerSuspendUserData, AdminControllerSuspendUserErrors, AdminControllerSuspendUserResponses, AdminControllerUnsuspendAdminData, AdminControllerUnsuspendAdminErrors, AdminControllerUnsuspendAdminResponses, AdminControllerUnsuspendStoryData, AdminControllerUnsuspendStoryErrors, AdminControllerUnsuspendStoryResponses, AdminControllerUnsuspendUserData, AdminControllerUnsuspendUserErrors, AdminControllerUnsuspendUserResponses, AdminControllerUpdateData, AdminControllerUpdateErrors, AdminControllerUpdateResponses, AdminControllerUpdateStoryData, AdminControllerUpdateStoryErrors, AdminControllerUpdateStoryResponses, AuthControllerForgotPasswordData, AuthControllerForgotPasswordErrors, AuthControllerForgotPasswordResponses, AuthControllerLoginData, AuthControllerLoginErrors, AuthControllerLoginResponses, AuthControllerLogoutData, AuthControllerLogoutErrors, AuthControllerLogoutResponses, AuthControllerRefreshData, AuthControllerRefreshErrors, AuthControllerRefreshResponses, AuthControllerRegisterData, AuthControllerRegisterErrors, AuthControllerRegisterResponses, AuthControllerResendOtpData, AuthControllerResendOtpErrors, AuthControllerResendOtpResponses, AuthControllerResetPasswordData, AuthControllerResetPasswordErrors, AuthControllerResetPasswordResponses, AuthControllerVerifyEmailData, AuthControllerVerifyEmailErrors, AuthControllerVerifyEmailResponses, FaqsControllerCreateData, FaqsControllerCreateErrors, FaqsControllerCreateResponses, FaqsControllerFindAllData, FaqsControllerFindAllForAdminData, FaqsControllerFindAllForAdminErrors, FaqsControllerFindAllForAdminResponses, FaqsControllerFindAllResponses, FaqsControllerFindOneData, FaqsControllerFindOneErrors, FaqsControllerFindOneResponses, FaqsControllerRemoveData, FaqsControllerRemoveErrors, FaqsControllerRemoveResponses, FaqsControllerUpdateData, FaqsControllerUpdateErrors, FaqsControllerUpdateResponses, NotificationsControllerDeleteAllNotificationsData, NotificationsControllerDeleteAllNotificationsErrors, NotificationsControllerDeleteAllNotificationsResponses, NotificationsControllerDeleteNotificationData, NotificationsControllerDeleteNotificationErrors, NotificationsControllerDeleteNotificationResponses, NotificationsControllerGetNotificationByIdData, NotificationsControllerGetNotificationByIdErrors, NotificationsControllerGetNotificationByIdResponses, NotificationsControllerGetUnreadCountData, NotificationsControllerGetUnreadCountErrors, NotificationsControllerGetUnreadCountResponses, NotificationsControllerGetUserNotificationsData, NotificationsControllerGetUserNotificationsErrors, NotificationsControllerGetUserNotificationsResponses, NotificationsControllerMarkAllAsReadData, NotificationsControllerMarkAllAsReadErrors, NotificationsControllerMarkAllAsReadResponses, NotificationsControllerMarkAsReadData, NotificationsControllerMarkAsReadErrors, NotificationsControllerMarkAsReadResponses, SearchCollaboratorsData, SearchCollaboratorsErrors, SearchCollaboratorsResponses, SearchStoriesData, SearchStoriesErrors, SearchStoriesResponses, StoriesControllerCheckUserLikeData, StoriesControllerCheckUserLikeErrors, StoriesControllerCheckUserLikeResponses, StoriesControllerCreateChapterCommentData, StoriesControllerCreateChapterCommentErrors, StoriesControllerCreateChapterCommentResponses, StoriesControllerCreateChapterData, StoriesControllerCreateChapterErrors, StoriesControllerCreateChapterResponses, StoriesControllerCreateCommentData, StoriesControllerCreateCommentErrors, StoriesControllerCreateCommentResponses, StoriesControllerCreateData, StoriesControllerCreateEpisodeCommentData, StoriesControllerCreateEpisodeCommentErrors, StoriesControllerCreateEpisodeCommentResponses, StoriesControllerCreateEpisodeData, StoriesControllerCreateEpisodeErrors, StoriesControllerCreateEpisodeResponses, StoriesControllerCreateErrors, StoriesControllerCreateMultipleChaptersData, StoriesControllerCreateMultipleChaptersErrors, StoriesControllerCreateMultipleChaptersResponses, StoriesControllerCreateMultipleEpisodesData, StoriesControllerCreateMultipleEpisodesErrors, StoriesControllerCreateMultipleEpisodesResponses, StoriesControllerCreateResponses, StoriesControllerDeleteChapterCommentData, StoriesControllerDeleteChapterCommentErrors, StoriesControllerDeleteChapterCommentResponses, StoriesControllerDeleteCommentData, StoriesControllerDeleteCommentErrors, StoriesControllerDeleteCommentResponses, StoriesControllerDeleteEpisodeCommentData, StoriesControllerDeleteEpisodeCommentErrors, StoriesControllerDeleteEpisodeCommentResponses, StoriesControllerFindAllData, StoriesControllerFindAllResponses, StoriesControllerFindOneData, StoriesControllerFindOneErrors, StoriesControllerFindOneResponses, StoriesControllerFindOnlyOnStorytimeData, StoriesControllerFindOnlyOnStorytimeResponses, StoriesControllerFindPopularData, StoriesControllerFindPopularResponses, StoriesControllerFindRecentlyAddedData, StoriesControllerFindRecentlyAddedResponses, StoriesControllerFindTrendingNowData, StoriesControllerFindTrendingNowResponses, StoriesControllerGetChapterByIdData, StoriesControllerGetChapterByIdErrors, StoriesControllerGetChapterByIdResponses, StoriesControllerGetChapterCommentByIdData, StoriesControllerGetChapterCommentByIdErrors, StoriesControllerGetChapterCommentByIdResponses, StoriesControllerGetChapterCommentsData, StoriesControllerGetChapterCommentsErrors, StoriesControllerGetChapterCommentsResponses, StoriesControllerGetEpisodeByIdData, StoriesControllerGetEpisodeByIdErrors, StoriesControllerGetEpisodeByIdResponses, StoriesControllerGetEpisodeCommentByIdData, StoriesControllerGetEpisodeCommentByIdErrors, StoriesControllerGetEpisodeCommentByIdResponses, StoriesControllerGetEpisodeCommentsData, StoriesControllerGetEpisodeCommentsErrors, StoriesControllerGetEpisodeCommentsResponses, StoriesControllerGetGenresData, StoriesControllerGetGenresResponses, StoriesControllerGetLanguagesData, StoriesControllerGetLanguagesResponses, StoriesControllerGetMyLibraryData, StoriesControllerGetMyLibraryErrors, StoriesControllerGetMyLibraryResponses, StoriesControllerGetStoryChaptersData, StoriesControllerGetStoryChaptersErrors, StoriesControllerGetStoryChaptersResponses, StoriesControllerGetStoryCommentCountData, StoriesControllerGetStoryCommentCountErrors, StoriesControllerGetStoryCommentCountResponses, StoriesControllerGetStoryCommentsData, StoriesControllerGetStoryCommentsErrors, StoriesControllerGetStoryCommentsResponses, StoriesControllerGetStoryEpisodesData, StoriesControllerGetStoryEpisodesErrors, StoriesControllerGetStoryEpisodesResponses, StoriesControllerGetStoryLikeCountData, StoriesControllerGetStoryLikeCountErrors, StoriesControllerGetStoryLikeCountResponses, StoriesControllerGetStoryLikesData, StoriesControllerGetStoryLikesErrors, StoriesControllerGetStoryLikesResponses, StoriesControllerLikeStoryData, StoriesControllerLikeStoryErrors, StoriesControllerLikeStoryResponses, StoriesControllerRemoveData, StoriesControllerRemoveErrors, StoriesControllerRemoveResponses, StoriesControllerSoftDeleteChapterData, StoriesControllerSoftDeleteChapterErrors, StoriesControllerSoftDeleteChapterResponses, StoriesControllerSoftDeleteEpisodeData, StoriesControllerSoftDeleteEpisodeErrors, StoriesControllerSoftDeleteEpisodeResponses, StoriesControllerTestByGenresData, StoriesControllerTestByGenresResponses, StoriesControllerUnlikeStoryData, StoriesControllerUnlikeStoryErrors, StoriesControllerUnlikeStoryResponses, StoriesControllerUpdateChapterCommentData, StoriesControllerUpdateChapterCommentErrors, StoriesControllerUpdateChapterCommentResponses, StoriesControllerUpdateChapterData, StoriesControllerUpdateChapterErrors, StoriesControllerUpdateChapterResponses, StoriesControllerUpdateCommentData, StoriesControllerUpdateCommentErrors, StoriesControllerUpdateCommentResponses, StoriesControllerUpdateData, StoriesControllerUpdateEpisodeCommentData, StoriesControllerUpdateEpisodeCommentErrors, StoriesControllerUpdateEpisodeCommentResponses, StoriesControllerUpdateEpisodeData, StoriesControllerUpdateEpisodeErrors, StoriesControllerUpdateEpisodeResponses, StoriesControllerUpdateErrors, StoriesControllerUpdateResponses, SupportControllerCreateData, SupportControllerCreateErrors, SupportControllerCreateResponses, SupportControllerFindActiveData, SupportControllerFindActiveErrors, SupportControllerFindActiveResponses, SupportControllerFindAllForAdminData, SupportControllerFindAllForAdminErrors, SupportControllerFindAllForAdminResponses, SupportControllerFindOneData, SupportControllerFindOneErrors, SupportControllerFindOneResponses, SupportControllerRemoveData, SupportControllerRemoveErrors, SupportControllerRemoveResponses, SupportControllerUpdateData, SupportControllerUpdateErrors, SupportControllerUpdateResponses, TermsAndPolicyControllerCreateData, TermsAndPolicyControllerCreateErrors, TermsAndPolicyControllerCreateResponses, TermsAndPolicyControllerFindAllData, TermsAndPolicyControllerFindAllForAdminData, TermsAndPolicyControllerFindAllForAdminErrors, TermsAndPolicyControllerFindAllForAdminResponses, TermsAndPolicyControllerFindAllResponses, TermsAndPolicyControllerFindOneData, TermsAndPolicyControllerFindOneErrors, TermsAndPolicyControllerFindOneResponses, TermsAndPolicyControllerGetPrivacyPolicyData, TermsAndPolicyControllerGetPrivacyPolicyErrors, TermsAndPolicyControllerGetPrivacyPolicyResponses, TermsAndPolicyControllerGetTermsData, TermsAndPolicyControllerGetTermsErrors, TermsAndPolicyControllerGetTermsResponses, TermsAndPolicyControllerRemoveData, TermsAndPolicyControllerRemoveErrors, TermsAndPolicyControllerRemoveResponses, TermsAndPolicyControllerUpdateData, TermsAndPolicyControllerUpdateErrors, TermsAndPolicyControllerUpdateResponses, UsersControllerCheckPenNameAvailabilityData, UsersControllerCheckPenNameAvailabilityErrors, UsersControllerCheckPenNameAvailabilityResponses, UsersControllerDeleteUserData, UsersControllerDeleteUserErrors, UsersControllerDeleteUserResponses, UsersControllerFindAllData, UsersControllerFindAllResponses, UsersControllerFindOneData, UsersControllerFindOneErrors, UsersControllerFindOneResponses, UsersControllerGetAggregatedStoryProgressData, UsersControllerGetAggregatedStoryProgressErrors, UsersControllerGetAggregatedStoryProgressResponses, UsersControllerGetAllReadingProgressData, UsersControllerGetAllReadingProgressErrors, UsersControllerGetAllReadingProgressResponses, UsersControllerGetChapterProgressData, UsersControllerGetChapterProgressErrors, UsersControllerGetChapterProgressResponses, UsersControllerGetEpisodeProgressData, UsersControllerGetEpisodeProgressErrors, UsersControllerGetEpisodeProgressResponses, UsersControllerGetProfileData, UsersControllerGetProfileErrors, UsersControllerGetProfileResponses, UsersControllerGetReadingHistoryData, UsersControllerGetReadingHistoryErrors, UsersControllerGetReadingHistoryResponses, UsersControllerGetReadingProgressData, UsersControllerGetReadingProgressErrors, UsersControllerGetReadingProgressResponses, UsersControllerGetShareableAchievementsData, UsersControllerGetShareableAchievementsErrors, UsersControllerGetShareableAchievementsResponses, UsersControllerGetStatsData, UsersControllerGetStatsErrors, UsersControllerGetStatsResponses, UsersControllerGetTopAuthorsData, UsersControllerGetTopAuthorsResponses, UsersControllerGetTopBadgeHoldersData, UsersControllerGetTopBadgeHoldersResponses, UsersControllerGetTopCertificateHoldersData, UsersControllerGetTopCertificateHoldersResponses, UsersControllerGetTopReadersByTimeData, UsersControllerGetTopReadersByTimeResponses, UsersControllerGetTopReadersData, UsersControllerGetTopReadersResponses, UsersControllerMarkStoryAsReadData, UsersControllerMarkStoryAsReadErrors, UsersControllerMarkStoryAsReadResponses, UsersControllerSetupProfileData, UsersControllerSetupProfileErrors, UsersControllerSetupProfileResponses, UsersControllerSuspendUserData, UsersControllerSuspendUserErrors, UsersControllerSuspendUserResponses, UsersControllerUnsuspendUserData, UsersControllerUnsuspendUserErrors, UsersControllerUnsuspendUserResponses, UsersControllerUpdateChapterProgressData, UsersControllerUpdateChapterProgressErrors, UsersControllerUpdateChapterProgressResponses, UsersControllerUpdateEpisodeProgressData, UsersControllerUpdateEpisodeProgressErrors, UsersControllerUpdateEpisodeProgressResponses, UsersControllerUpdateProfileData, UsersControllerUpdateProfileErrors, UsersControllerUpdateProfileResponses, UsersControllerUpdateReadingProgressData, UsersControllerUpdateReadingProgressErrors, UsersControllerUpdateReadingProgressResponses } from './types.gen';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean> = Options2<TData, ThrowOnError> & {
     /**
@@ -480,6 +480,13 @@ export const searchStories = <ThrowOnError extends boolean = false>(options: Opt
  * Returns the curated list of genres that can be used when creating or filtering stories.
  */
 export const storiesControllerGetGenres = <ThrowOnError extends boolean = false>(options?: Options<StoriesControllerGetGenresData, ThrowOnError>) => (options?.client ?? client).get<StoriesControllerGetGenresResponses, unknown, ThrowOnError>({ url: '/stories/genres', ...options });
+
+/**
+ * Get available story languages
+ *
+ * Returns the list of languages that can be used when creating stories.
+ */
+export const storiesControllerGetLanguages = <ThrowOnError extends boolean = false>(options?: Options<StoriesControllerGetLanguagesData, ThrowOnError>) => (options?.client ?? client).get<StoriesControllerGetLanguagesResponses, unknown, ThrowOnError>({ url: '/stories/languages', ...options });
 
 /**
  * Test endpoint: Get stories filtered by genres only
@@ -1234,4 +1241,216 @@ export const adminControllerGetOverviewReport = <ThrowOnError extends boolean = 
     security: [{ scheme: 'bearer', type: 'http' }],
     url: '/admin/reports/overview',
     ...options
+});
+
+/**
+ * Get all active FAQs
+ *
+ * Returns all active FAQs ordered by display order. This endpoint is accessible to all users (no authentication required).
+ */
+export const faqsControllerFindAll = <ThrowOnError extends boolean = false>(options?: Options<FaqsControllerFindAllData, ThrowOnError>) => (options?.client ?? client).get<FaqsControllerFindAllResponses, unknown, ThrowOnError>({ url: '/faqs', ...options });
+
+/**
+ * Create a new FAQ (Admin only)
+ *
+ * Creates a new FAQ. Requires admin authentication.
+ */
+export const faqsControllerCreate = <ThrowOnError extends boolean = false>(options: Options<FaqsControllerCreateData, ThrowOnError>) => (options.client ?? client).post<FaqsControllerCreateResponses, FaqsControllerCreateErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/faqs',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Get all FAQs including inactive (Admin only)
+ *
+ * Returns all FAQs including inactive ones. Requires admin authentication.
+ */
+export const faqsControllerFindAllForAdmin = <ThrowOnError extends boolean = false>(options?: Options<FaqsControllerFindAllForAdminData, ThrowOnError>) => (options?.client ?? client).get<FaqsControllerFindAllForAdminResponses, FaqsControllerFindAllForAdminErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/faqs/admin/all',
+    ...options
+});
+
+/**
+ * Delete an FAQ (Admin only)
+ *
+ * Deletes an FAQ permanently. Requires admin authentication.
+ */
+export const faqsControllerRemove = <ThrowOnError extends boolean = false>(options: Options<FaqsControllerRemoveData, ThrowOnError>) => (options.client ?? client).delete<FaqsControllerRemoveResponses, FaqsControllerRemoveErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/faqs/{id}',
+    ...options
+});
+
+/**
+ * Get a single FAQ by ID
+ *
+ * Returns a single FAQ by its ID. Accessible to all users.
+ */
+export const faqsControllerFindOne = <ThrowOnError extends boolean = false>(options: Options<FaqsControllerFindOneData, ThrowOnError>) => (options.client ?? client).get<FaqsControllerFindOneResponses, FaqsControllerFindOneErrors, ThrowOnError>({ url: '/faqs/{id}', ...options });
+
+/**
+ * Update an FAQ (Admin only)
+ *
+ * Updates an existing FAQ. Requires admin authentication.
+ */
+export const faqsControllerUpdate = <ThrowOnError extends boolean = false>(options: Options<FaqsControllerUpdateData, ThrowOnError>) => (options.client ?? client).put<FaqsControllerUpdateResponses, FaqsControllerUpdateErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/faqs/{id}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Get all active policies
+ *
+ * Returns all active terms of service and privacy policy. Accessible to all users (no authentication required).
+ */
+export const termsAndPolicyControllerFindAll = <ThrowOnError extends boolean = false>(options?: Options<TermsAndPolicyControllerFindAllData, ThrowOnError>) => (options?.client ?? client).get<TermsAndPolicyControllerFindAllResponses, unknown, ThrowOnError>({ url: '/terms-and-policy', ...options });
+
+/**
+ * Create a new policy (Admin only)
+ *
+ * Creates a new terms of service or privacy policy. Requires admin authentication.
+ */
+export const termsAndPolicyControllerCreate = <ThrowOnError extends boolean = false>(options: Options<TermsAndPolicyControllerCreateData, ThrowOnError>) => (options.client ?? client).post<TermsAndPolicyControllerCreateResponses, TermsAndPolicyControllerCreateErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/terms-and-policy',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Get active terms of service
+ *
+ * Returns the active terms of service. Accessible to all users.
+ */
+export const termsAndPolicyControllerGetTerms = <ThrowOnError extends boolean = false>(options?: Options<TermsAndPolicyControllerGetTermsData, ThrowOnError>) => (options?.client ?? client).get<TermsAndPolicyControllerGetTermsResponses, TermsAndPolicyControllerGetTermsErrors, ThrowOnError>({ url: '/terms-and-policy/terms', ...options });
+
+/**
+ * Get active privacy policy
+ *
+ * Returns the active privacy policy. Accessible to all users.
+ */
+export const termsAndPolicyControllerGetPrivacyPolicy = <ThrowOnError extends boolean = false>(options?: Options<TermsAndPolicyControllerGetPrivacyPolicyData, ThrowOnError>) => (options?.client ?? client).get<TermsAndPolicyControllerGetPrivacyPolicyResponses, TermsAndPolicyControllerGetPrivacyPolicyErrors, ThrowOnError>({ url: '/terms-and-policy/privacy', ...options });
+
+/**
+ * Get all policies including inactive (Admin only)
+ *
+ * Returns all policies including inactive ones. Requires admin authentication.
+ */
+export const termsAndPolicyControllerFindAllForAdmin = <ThrowOnError extends boolean = false>(options?: Options<TermsAndPolicyControllerFindAllForAdminData, ThrowOnError>) => (options?.client ?? client).get<TermsAndPolicyControllerFindAllForAdminResponses, TermsAndPolicyControllerFindAllForAdminErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/terms-and-policy/admin/all',
+    ...options
+});
+
+/**
+ * Delete a policy (Admin only)
+ *
+ * Deletes a policy permanently. Requires admin authentication.
+ */
+export const termsAndPolicyControllerRemove = <ThrowOnError extends boolean = false>(options: Options<TermsAndPolicyControllerRemoveData, ThrowOnError>) => (options.client ?? client).delete<TermsAndPolicyControllerRemoveResponses, TermsAndPolicyControllerRemoveErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/terms-and-policy/{id}',
+    ...options
+});
+
+/**
+ * Get a single policy by ID
+ *
+ * Returns a single policy by its ID. Accessible to all users.
+ */
+export const termsAndPolicyControllerFindOne = <ThrowOnError extends boolean = false>(options: Options<TermsAndPolicyControllerFindOneData, ThrowOnError>) => (options.client ?? client).get<TermsAndPolicyControllerFindOneResponses, TermsAndPolicyControllerFindOneErrors, ThrowOnError>({ url: '/terms-and-policy/{id}', ...options });
+
+/**
+ * Update a policy (Admin only)
+ *
+ * Updates an existing policy. Requires admin authentication.
+ */
+export const termsAndPolicyControllerUpdate = <ThrowOnError extends boolean = false>(options: Options<TermsAndPolicyControllerUpdateData, ThrowOnError>) => (options.client ?? client).put<TermsAndPolicyControllerUpdateResponses, TermsAndPolicyControllerUpdateErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/terms-and-policy/{id}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Get active support information
+ *
+ * Returns the active support contact information including email, phone, and social media links. Accessible to all users (no authentication required).
+ */
+export const supportControllerFindActive = <ThrowOnError extends boolean = false>(options?: Options<SupportControllerFindActiveData, ThrowOnError>) => (options?.client ?? client).get<SupportControllerFindActiveResponses, SupportControllerFindActiveErrors, ThrowOnError>({ url: '/support', ...options });
+
+/**
+ * Create a new support record (Admin only)
+ *
+ * Creates a new support contact information record. Requires admin authentication.
+ */
+export const supportControllerCreate = <ThrowOnError extends boolean = false>(options: Options<SupportControllerCreateData, ThrowOnError>) => (options.client ?? client).post<SupportControllerCreateResponses, SupportControllerCreateErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/support',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+/**
+ * Get all support records including inactive (Admin only)
+ *
+ * Returns all support records including inactive ones. Requires admin authentication.
+ */
+export const supportControllerFindAllForAdmin = <ThrowOnError extends boolean = false>(options?: Options<SupportControllerFindAllForAdminData, ThrowOnError>) => (options?.client ?? client).get<SupportControllerFindAllForAdminResponses, SupportControllerFindAllForAdminErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/support/admin/all',
+    ...options
+});
+
+/**
+ * Delete a support record (Admin only)
+ *
+ * Deletes a support record permanently. Requires admin authentication.
+ */
+export const supportControllerRemove = <ThrowOnError extends boolean = false>(options: Options<SupportControllerRemoveData, ThrowOnError>) => (options.client ?? client).delete<SupportControllerRemoveResponses, SupportControllerRemoveErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/support/{id}',
+    ...options
+});
+
+/**
+ * Get a single support record by ID
+ *
+ * Returns a single support record by its ID. Accessible to all users.
+ */
+export const supportControllerFindOne = <ThrowOnError extends boolean = false>(options: Options<SupportControllerFindOneData, ThrowOnError>) => (options.client ?? client).get<SupportControllerFindOneResponses, SupportControllerFindOneErrors, ThrowOnError>({ url: '/support/{id}', ...options });
+
+/**
+ * Update a support record (Admin only)
+ *
+ * Updates an existing support record. Requires admin authentication.
+ */
+export const supportControllerUpdate = <ThrowOnError extends boolean = false>(options: Options<SupportControllerUpdateData, ThrowOnError>) => (options.client ?? client).put<SupportControllerUpdateResponses, SupportControllerUpdateErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/support/{id}',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
 });

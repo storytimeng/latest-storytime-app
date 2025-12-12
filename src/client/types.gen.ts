@@ -282,6 +282,44 @@ export type AuthorDto = {
     createdAt: string;
 };
 
+export type EpisodeInfoDto = {
+    /**
+     * Episode ID
+     */
+    id: string;
+    /**
+     * Episode number
+     */
+    episodeNumber: number;
+    /**
+     * Episode creation date
+     */
+    createdAt: string;
+    /**
+     * Episode last update date
+     */
+    updatedAt: string;
+};
+
+export type ChapterInfoDto = {
+    /**
+     * Chapter ID
+     */
+    id: string;
+    /**
+     * Chapter number
+     */
+    chapterNumber: number;
+    /**
+     * Chapter creation date
+     */
+    createdAt: string;
+    /**
+     * Chapter last update date
+     */
+    updatedAt: string;
+};
+
 export type StoryResponseDto = {
     /**
      * Story ID
@@ -315,6 +353,34 @@ export type StoryResponseDto = {
      * Story last update date
      */
     updatedAt: string;
+    /**
+     * Array of episode IDs (for backward compatibility)
+     */
+    episodeIds?: Array<string>;
+    /**
+     * Array of episode details with ID, episode number, and timestamps
+     */
+    episodes?: Array<EpisodeInfoDto>;
+    /**
+     * Array of chapter IDs (for backward compatibility)
+     */
+    chapterIds?: Array<string>;
+    /**
+     * Array of chapter details with ID, chapter number, and timestamps
+     */
+    chapters?: Array<ChapterInfoDto>;
+    /**
+     * Number of likes
+     */
+    likeCount: number;
+    /**
+     * Number of comments
+     */
+    commentCount: number;
+    /**
+     * Number of views/reads
+     */
+    viewCount: number;
 };
 
 export type StoriesListResponseDto = {
@@ -368,7 +434,7 @@ export type CreateStoryDto = {
     /**
      * Language of the story
      */
-    language: 'english' | 'spanish' | 'french' | 'german' | 'italian' | 'portuguese' | 'chinese' | 'japanese' | 'korean' | 'arabic' | 'hindi' | 'russian' | 'other';
+    language: 'english' | 'spanish' | 'french' | 'german' | 'italian' | 'portuguese' | 'chinese' | 'japanese' | 'korean' | 'arabic' | 'hindi' | 'russian' | 'yoruba' | 'igbo' | 'hausa' | 'other';
     /**
      * If true, author details will not be shown when displaying the story
      */
@@ -495,6 +561,10 @@ export type CreateCommentDto = {
      * The comment content
      */
     content: string;
+    /**
+     * The UUID of the parent comment if this is a reply
+     */
+    parentCommentId?: string;
 };
 
 export type UpdateCommentDto = {
@@ -668,6 +738,295 @@ export type CreateBulkNotificationDto = {
      * Optional list of user IDs to send notification to (if not provided, sends to all users)
      */
     userIds?: Array<string>;
+};
+
+export type FaqResponseDto = {
+    /**
+     * FAQ ID
+     */
+    id: string;
+    /**
+     * FAQ question
+     */
+    question: string;
+    /**
+     * FAQ answer
+     */
+    answer: string;
+    /**
+     * Display order (lower numbers appear first)
+     */
+    order: number;
+    /**
+     * Whether the FAQ is active
+     */
+    isActive: boolean;
+    /**
+     * FAQ creation date
+     */
+    createdAt: string;
+    /**
+     * FAQ last update date
+     */
+    updatedAt: string;
+};
+
+export type FaqsListResponseDto = {
+    /**
+     * List of FAQs
+     */
+    faqs: Array<FaqResponseDto>;
+    /**
+     * Total number of FAQs
+     */
+    total: number;
+};
+
+export type CreateFaqDto = {
+    /**
+     * The FAQ question
+     */
+    question: string;
+    /**
+     * The FAQ answer
+     */
+    answer: string;
+    /**
+     * Display order (lower numbers appear first)
+     */
+    order?: number;
+    /**
+     * Whether the FAQ is active and visible to users
+     */
+    isActive?: boolean;
+};
+
+export type UpdateFaqDto = {
+    /**
+     * The FAQ question
+     */
+    question?: string;
+    /**
+     * The FAQ answer
+     */
+    answer?: string;
+    /**
+     * Display order (lower numbers appear first)
+     */
+    order?: number;
+    /**
+     * Whether the FAQ is active and visible to users
+     */
+    isActive?: boolean;
+};
+
+export type TermsAndPolicyResponseDto = {
+    /**
+     * Policy ID
+     */
+    id: string;
+    /**
+     * Type of policy
+     */
+    type: 'terms' | 'privacy';
+    /**
+     * Policy title
+     */
+    title: string;
+    /**
+     * Policy content
+     */
+    content: string;
+    /**
+     * Policy version
+     */
+    version?: string;
+    /**
+     * Whether the policy is active
+     */
+    isActive: boolean;
+    /**
+     * Policy creation date
+     */
+    createdAt: string;
+    /**
+     * Policy last update date
+     */
+    updatedAt: string;
+};
+
+export type TermsAndPolicyListResponseDto = {
+    /**
+     * List of policies
+     */
+    policies: Array<TermsAndPolicyResponseDto>;
+    /**
+     * Total number of policies
+     */
+    total: number;
+};
+
+export type CreateTermsAndPolicyDto = {
+    /**
+     * Type of policy document
+     */
+    type: 'terms' | 'privacy';
+    /**
+     * Title of the policy document
+     */
+    title: string;
+    /**
+     * Content of the policy document
+     */
+    content: string;
+    /**
+     * Version number of the policy
+     */
+    version?: string;
+    /**
+     * Whether the policy is active and visible to users
+     */
+    isActive?: boolean;
+};
+
+export type UpdateTermsAndPolicyDto = {
+    /**
+     * Type of policy document
+     */
+    type?: 'terms' | 'privacy';
+    /**
+     * Title of the policy document
+     */
+    title?: string;
+    /**
+     * Content of the policy document
+     */
+    content?: string;
+    /**
+     * Version number of the policy
+     */
+    version?: string;
+    /**
+     * Whether the policy is active and visible to users
+     */
+    isActive?: boolean;
+};
+
+export type SupportResponseDto = {
+    /**
+     * Support ID
+     */
+    id: string;
+    /**
+     * Support email
+     */
+    email: string;
+    /**
+     * Support phone number
+     */
+    phone?: string;
+    /**
+     * Facebook page URL
+     */
+    facebook?: string;
+    /**
+     * Instagram profile URL
+     */
+    instagram?: string;
+    /**
+     * Twitter/X profile URL
+     */
+    twitter?: string;
+    /**
+     * LinkedIn profile URL
+     */
+    linkedin?: string;
+    /**
+     * YouTube channel URL
+     */
+    youtube?: string;
+    /**
+     * Whether the support information is active
+     */
+    isActive: boolean;
+    /**
+     * Creation date
+     */
+    createdAt: string;
+    /**
+     * Last update date
+     */
+    updatedAt: string;
+};
+
+export type CreateSupportDto = {
+    /**
+     * Support email address
+     */
+    email: string;
+    /**
+     * Support phone number
+     */
+    phone?: string;
+    /**
+     * Facebook page URL
+     */
+    facebook?: string;
+    /**
+     * Instagram profile URL
+     */
+    instagram?: string;
+    /**
+     * Twitter/X profile URL
+     */
+    twitter?: string;
+    /**
+     * LinkedIn profile URL
+     */
+    linkedin?: string;
+    /**
+     * YouTube channel URL
+     */
+    youtube?: string;
+    /**
+     * Whether the support information is active
+     */
+    isActive?: boolean;
+};
+
+export type UpdateSupportDto = {
+    /**
+     * Support email address
+     */
+    email?: string;
+    /**
+     * Support phone number
+     */
+    phone?: string;
+    /**
+     * Facebook page URL
+     */
+    facebook?: string;
+    /**
+     * Instagram profile URL
+     */
+    instagram?: string;
+    /**
+     * Twitter/X profile URL
+     */
+    twitter?: string;
+    /**
+     * LinkedIn profile URL
+     */
+    linkedin?: string;
+    /**
+     * YouTube channel URL
+     */
+    youtube?: string;
+    /**
+     * Whether the support information is active
+     */
+    isActive?: boolean;
 };
 
 export type UsersControllerCheckPenNameAvailabilityData = {
@@ -2050,6 +2409,24 @@ export type StoriesControllerGetGenresResponses = {
 };
 
 export type StoriesControllerGetGenresResponse = StoriesControllerGetGenresResponses[keyof StoriesControllerGetGenresResponses];
+
+export type StoriesControllerGetLanguagesData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/stories/languages';
+};
+
+export type StoriesControllerGetLanguagesResponses = {
+    /**
+     * Languages retrieved successfully
+     */
+    200: {
+        languages?: Array<string>;
+    };
+};
+
+export type StoriesControllerGetLanguagesResponse = StoriesControllerGetLanguagesResponses[keyof StoriesControllerGetLanguagesResponses];
 
 export type StoriesControllerTestByGenresData = {
     body?: never;
@@ -4280,3 +4657,542 @@ export type AdminControllerGetOverviewReportResponses = {
      */
     200: unknown;
 };
+
+export type FaqsControllerFindAllData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/faqs';
+};
+
+export type FaqsControllerFindAllResponses = {
+    /**
+     * FAQs retrieved successfully
+     */
+    200: FaqsListResponseDto;
+};
+
+export type FaqsControllerFindAllResponse = FaqsControllerFindAllResponses[keyof FaqsControllerFindAllResponses];
+
+export type FaqsControllerCreateData = {
+    body: CreateFaqDto;
+    path?: never;
+    query?: never;
+    url: '/faqs';
+};
+
+export type FaqsControllerCreateErrors = {
+    /**
+     * Validation error or bad request
+     */
+    400: unknown;
+    /**
+     * Unauthorized - Admin authentication required
+     */
+    401: unknown;
+};
+
+export type FaqsControllerCreateResponses = {
+    /**
+     * FAQ created successfully
+     */
+    201: FaqResponseDto;
+};
+
+export type FaqsControllerCreateResponse = FaqsControllerCreateResponses[keyof FaqsControllerCreateResponses];
+
+export type FaqsControllerFindAllForAdminData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/faqs/admin/all';
+};
+
+export type FaqsControllerFindAllForAdminErrors = {
+    /**
+     * Unauthorized - Admin authentication required
+     */
+    401: unknown;
+};
+
+export type FaqsControllerFindAllForAdminResponses = {
+    /**
+     * All FAQs retrieved successfully
+     */
+    200: FaqsListResponseDto;
+};
+
+export type FaqsControllerFindAllForAdminResponse = FaqsControllerFindAllForAdminResponses[keyof FaqsControllerFindAllForAdminResponses];
+
+export type FaqsControllerRemoveData = {
+    body?: never;
+    path: {
+        /**
+         * FAQ UUID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/faqs/{id}';
+};
+
+export type FaqsControllerRemoveErrors = {
+    /**
+     * Unauthorized - Admin authentication required
+     */
+    401: unknown;
+    /**
+     * FAQ not found
+     */
+    404: unknown;
+};
+
+export type FaqsControllerRemoveResponses = {
+    /**
+     * FAQ deleted successfully
+     */
+    204: void;
+};
+
+export type FaqsControllerRemoveResponse = FaqsControllerRemoveResponses[keyof FaqsControllerRemoveResponses];
+
+export type FaqsControllerFindOneData = {
+    body?: never;
+    path: {
+        /**
+         * FAQ UUID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/faqs/{id}';
+};
+
+export type FaqsControllerFindOneErrors = {
+    /**
+     * FAQ not found
+     */
+    404: unknown;
+};
+
+export type FaqsControllerFindOneResponses = {
+    /**
+     * FAQ retrieved successfully
+     */
+    200: FaqResponseDto;
+};
+
+export type FaqsControllerFindOneResponse = FaqsControllerFindOneResponses[keyof FaqsControllerFindOneResponses];
+
+export type FaqsControllerUpdateData = {
+    body: UpdateFaqDto;
+    path: {
+        /**
+         * FAQ UUID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/faqs/{id}';
+};
+
+export type FaqsControllerUpdateErrors = {
+    /**
+     * Validation error or bad request
+     */
+    400: unknown;
+    /**
+     * Unauthorized - Admin authentication required
+     */
+    401: unknown;
+    /**
+     * FAQ not found
+     */
+    404: unknown;
+};
+
+export type FaqsControllerUpdateResponses = {
+    /**
+     * FAQ updated successfully
+     */
+    200: FaqResponseDto;
+};
+
+export type FaqsControllerUpdateResponse = FaqsControllerUpdateResponses[keyof FaqsControllerUpdateResponses];
+
+export type TermsAndPolicyControllerFindAllData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/terms-and-policy';
+};
+
+export type TermsAndPolicyControllerFindAllResponses = {
+    /**
+     * Policies retrieved successfully
+     */
+    200: TermsAndPolicyListResponseDto;
+};
+
+export type TermsAndPolicyControllerFindAllResponse = TermsAndPolicyControllerFindAllResponses[keyof TermsAndPolicyControllerFindAllResponses];
+
+export type TermsAndPolicyControllerCreateData = {
+    body: CreateTermsAndPolicyDto;
+    path?: never;
+    query?: never;
+    url: '/terms-and-policy';
+};
+
+export type TermsAndPolicyControllerCreateErrors = {
+    /**
+     * Validation error or bad request
+     */
+    400: unknown;
+    /**
+     * Unauthorized - Admin authentication required
+     */
+    401: unknown;
+};
+
+export type TermsAndPolicyControllerCreateResponses = {
+    /**
+     * Policy created successfully
+     */
+    201: TermsAndPolicyResponseDto;
+};
+
+export type TermsAndPolicyControllerCreateResponse = TermsAndPolicyControllerCreateResponses[keyof TermsAndPolicyControllerCreateResponses];
+
+export type TermsAndPolicyControllerGetTermsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/terms-and-policy/terms';
+};
+
+export type TermsAndPolicyControllerGetTermsErrors = {
+    /**
+     * No active terms of service found
+     */
+    404: unknown;
+};
+
+export type TermsAndPolicyControllerGetTermsResponses = {
+    /**
+     * Terms of service retrieved successfully
+     */
+    200: TermsAndPolicyResponseDto;
+};
+
+export type TermsAndPolicyControllerGetTermsResponse = TermsAndPolicyControllerGetTermsResponses[keyof TermsAndPolicyControllerGetTermsResponses];
+
+export type TermsAndPolicyControllerGetPrivacyPolicyData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/terms-and-policy/privacy';
+};
+
+export type TermsAndPolicyControllerGetPrivacyPolicyErrors = {
+    /**
+     * No active privacy policy found
+     */
+    404: unknown;
+};
+
+export type TermsAndPolicyControllerGetPrivacyPolicyResponses = {
+    /**
+     * Privacy policy retrieved successfully
+     */
+    200: TermsAndPolicyResponseDto;
+};
+
+export type TermsAndPolicyControllerGetPrivacyPolicyResponse = TermsAndPolicyControllerGetPrivacyPolicyResponses[keyof TermsAndPolicyControllerGetPrivacyPolicyResponses];
+
+export type TermsAndPolicyControllerFindAllForAdminData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/terms-and-policy/admin/all';
+};
+
+export type TermsAndPolicyControllerFindAllForAdminErrors = {
+    /**
+     * Unauthorized - Admin authentication required
+     */
+    401: unknown;
+};
+
+export type TermsAndPolicyControllerFindAllForAdminResponses = {
+    /**
+     * All policies retrieved successfully
+     */
+    200: TermsAndPolicyListResponseDto;
+};
+
+export type TermsAndPolicyControllerFindAllForAdminResponse = TermsAndPolicyControllerFindAllForAdminResponses[keyof TermsAndPolicyControllerFindAllForAdminResponses];
+
+export type TermsAndPolicyControllerRemoveData = {
+    body?: never;
+    path: {
+        /**
+         * Policy UUID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/terms-and-policy/{id}';
+};
+
+export type TermsAndPolicyControllerRemoveErrors = {
+    /**
+     * Unauthorized - Admin authentication required
+     */
+    401: unknown;
+    /**
+     * Policy not found
+     */
+    404: unknown;
+};
+
+export type TermsAndPolicyControllerRemoveResponses = {
+    /**
+     * Policy deleted successfully
+     */
+    204: void;
+};
+
+export type TermsAndPolicyControllerRemoveResponse = TermsAndPolicyControllerRemoveResponses[keyof TermsAndPolicyControllerRemoveResponses];
+
+export type TermsAndPolicyControllerFindOneData = {
+    body?: never;
+    path: {
+        /**
+         * Policy UUID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/terms-and-policy/{id}';
+};
+
+export type TermsAndPolicyControllerFindOneErrors = {
+    /**
+     * Policy not found
+     */
+    404: unknown;
+};
+
+export type TermsAndPolicyControllerFindOneResponses = {
+    /**
+     * Policy retrieved successfully
+     */
+    200: TermsAndPolicyResponseDto;
+};
+
+export type TermsAndPolicyControllerFindOneResponse = TermsAndPolicyControllerFindOneResponses[keyof TermsAndPolicyControllerFindOneResponses];
+
+export type TermsAndPolicyControllerUpdateData = {
+    body: UpdateTermsAndPolicyDto;
+    path: {
+        /**
+         * Policy UUID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/terms-and-policy/{id}';
+};
+
+export type TermsAndPolicyControllerUpdateErrors = {
+    /**
+     * Validation error or bad request
+     */
+    400: unknown;
+    /**
+     * Unauthorized - Admin authentication required
+     */
+    401: unknown;
+    /**
+     * Policy not found
+     */
+    404: unknown;
+};
+
+export type TermsAndPolicyControllerUpdateResponses = {
+    /**
+     * Policy updated successfully
+     */
+    200: TermsAndPolicyResponseDto;
+};
+
+export type TermsAndPolicyControllerUpdateResponse = TermsAndPolicyControllerUpdateResponses[keyof TermsAndPolicyControllerUpdateResponses];
+
+export type SupportControllerFindActiveData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/support';
+};
+
+export type SupportControllerFindActiveErrors = {
+    /**
+     * No active support information found
+     */
+    404: unknown;
+};
+
+export type SupportControllerFindActiveResponses = {
+    /**
+     * Support information retrieved successfully
+     */
+    200: SupportResponseDto;
+};
+
+export type SupportControllerFindActiveResponse = SupportControllerFindActiveResponses[keyof SupportControllerFindActiveResponses];
+
+export type SupportControllerCreateData = {
+    body: CreateSupportDto;
+    path?: never;
+    query?: never;
+    url: '/support';
+};
+
+export type SupportControllerCreateErrors = {
+    /**
+     * Validation error or bad request
+     */
+    400: unknown;
+    /**
+     * Unauthorized - Admin authentication required
+     */
+    401: unknown;
+};
+
+export type SupportControllerCreateResponses = {
+    /**
+     * Support record created successfully
+     */
+    201: SupportResponseDto;
+};
+
+export type SupportControllerCreateResponse = SupportControllerCreateResponses[keyof SupportControllerCreateResponses];
+
+export type SupportControllerFindAllForAdminData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/support/admin/all';
+};
+
+export type SupportControllerFindAllForAdminErrors = {
+    /**
+     * Unauthorized - Admin authentication required
+     */
+    401: unknown;
+};
+
+export type SupportControllerFindAllForAdminResponses = {
+    /**
+     * All support records retrieved successfully
+     */
+    200: Array<SupportResponseDto>;
+};
+
+export type SupportControllerFindAllForAdminResponse = SupportControllerFindAllForAdminResponses[keyof SupportControllerFindAllForAdminResponses];
+
+export type SupportControllerRemoveData = {
+    body?: never;
+    path: {
+        /**
+         * Support UUID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/support/{id}';
+};
+
+export type SupportControllerRemoveErrors = {
+    /**
+     * Unauthorized - Admin authentication required
+     */
+    401: unknown;
+    /**
+     * Support record not found
+     */
+    404: unknown;
+};
+
+export type SupportControllerRemoveResponses = {
+    /**
+     * Support record deleted successfully
+     */
+    204: void;
+};
+
+export type SupportControllerRemoveResponse = SupportControllerRemoveResponses[keyof SupportControllerRemoveResponses];
+
+export type SupportControllerFindOneData = {
+    body?: never;
+    path: {
+        /**
+         * Support UUID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/support/{id}';
+};
+
+export type SupportControllerFindOneErrors = {
+    /**
+     * Support record not found
+     */
+    404: unknown;
+};
+
+export type SupportControllerFindOneResponses = {
+    /**
+     * Support record retrieved successfully
+     */
+    200: SupportResponseDto;
+};
+
+export type SupportControllerFindOneResponse = SupportControllerFindOneResponses[keyof SupportControllerFindOneResponses];
+
+export type SupportControllerUpdateData = {
+    body: UpdateSupportDto;
+    path: {
+        /**
+         * Support UUID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/support/{id}';
+};
+
+export type SupportControllerUpdateErrors = {
+    /**
+     * Validation error or bad request
+     */
+    400: unknown;
+    /**
+     * Unauthorized - Admin authentication required
+     */
+    401: unknown;
+    /**
+     * Support record not found
+     */
+    404: unknown;
+};
+
+export type SupportControllerUpdateResponses = {
+    /**
+     * Support record updated successfully
+     */
+    200: SupportResponseDto;
+};
+
+export type SupportControllerUpdateResponse = SupportControllerUpdateResponses[keyof SupportControllerUpdateResponses];
