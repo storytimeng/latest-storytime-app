@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useChapter, useEpisode } from "@/src/hooks/useStoryDetail";
 
 interface UseStoryContentProps {
   story: any;
@@ -32,78 +33,77 @@ export function useStoryContent({
   const [selectedChapterId, setSelectedChapterId] = useState<string | null>(
     initialContentId || null
   );
-  const [currentContent, setCurrentContent] = useState("");
-  const [currentTitle, setCurrentTitle] = useState("");
 
   const activeStory = isUsingOfflineData ? offlineStory : story;
   const activeChapters = isUsingOfflineData ? offlineContent : chapters;
   const activeEpisodes = isUsingOfflineData ? offlineContent : episodes;
 
+  // Determine if we're using chapters or episodes
+  const isChapterMode = activeChapters && activeChapters.length > 0;
+  const isEpisodeMode = !isChapterMode && activeEpisodes && activeEpisodes.length > 0;
+
+  // Fetch individual chapter/episode on-demand (only when online)
+  const { chapter: fetchedChapter, comments: chapterComments, isLoading: isChapterLoading, mutate: mutateChapter } = useChapter(
+    !isUsingOfflineData && isChapterMode && selectedChapterId ? selectedChapterId : undefined
+  );
+  
+  const { episode: fetchedEpisode, comments: episodeComments, isLoading: isEpisodeLoading, mutate: mutateEpisode } = useEpisode(
+    !isUsingOfflineData && isEpisodeMode && selectedChapterId ? selectedChapterId : undefined
+  );
+
+  // Get current content from either fetched data or offline data
+  const currentContent = isUsingOfflineData
+    ? (offlineContent.find((c: any) => c.id === selectedChapterId)?.content || "")
+    : isChapterMode
+    ? (fetchedChapter as any)?.content || ""
+    : isEpisodeMode
+    ? (fetchedEpisode as any)?.content || ""
+    : activeStory?.content || activeStory?.description || "";
+
+  const currentTitle = isUsingOfflineData
+    ? (offlineContent.find((c: any) => c.id === selectedChapterId)?.title || activeStory?.title)
+    : isChapterMode
+    ? (fetchedChapter as any)?.title || ""
+    : isEpisodeMode
+    ? (fetchedEpisode as any)?.title || ""
+    : activeStory?.title || "";
+
+  // Get comments from fetched data
+  const currentComments = isChapterMode ? chapterComments : isEpisodeMode ? episodeComments : [];
+
+  // Debug logging
+  console.log("useStoryContent Debug:", {
+    isChapterMode,
+    isEpisodeMode,
+    selectedChapterId,
+    fetchedEpisode,
+    fetchedChapter,
+    currentContent: currentContent?.substring(0, 100),
+    currentTitle,
+    activeEpisodes,
+    activeChapters,
+  });
+
+  // Set initial content ID when chapters/episodes load
   useEffect(() => {
-    if (activeStory) {
-      if (activeChapters && activeChapters.length > 0) {
-        if (!selectedChapterId) {
-          setSelectedChapterId(activeChapters[0].id);
-          setCurrentContent(activeChapters[0].content);
-          setCurrentTitle(activeChapters[0].title);
-        } else {
-          const chapter = activeChapters.find(
-            (c: any) => c.id === selectedChapterId
-          );
-          if (chapter) {
-            setCurrentContent(chapter.content);
-            setCurrentTitle(chapter.title);
-          }
-        }
-      } else if (activeEpisodes && activeEpisodes.length > 0) {
-        if (!selectedChapterId) {
-          setSelectedChapterId(activeEpisodes[0].id);
-          setCurrentContent(activeEpisodes[0].content);
-          setCurrentTitle(activeEpisodes[0].title);
-        } else {
-          const episode = activeEpisodes.find(
-            (e: any) => e.id === selectedChapterId
-          );
-          if (episode) {
-            setCurrentContent(episode.content);
-            setCurrentTitle(episode.title);
-          }
-        }
-      } else {
-        setCurrentContent(
-          activeStory.content ||
-            activeStory.description ||
-            "No content available."
-        );
-        setCurrentTitle(activeStory.title);
+    if (!selectedChapterId && activeStory) {
+      if (isChapterMode) {
+        setSelectedChapterId(activeChapters[0]?.id || null);
+      } else if (isEpisodeMode) {
+        setSelectedChapterId(activeEpisodes[0]?.id || null);
       }
     }
-  }, [activeStory, activeChapters, activeEpisodes, selectedChapterId]);
+  }, [activeStory, activeChapters, activeEpisodes, isChapterMode, isEpisodeMode, selectedChapterId]);
 
   // Sync chapter/episode when selection changes and we're online with downloaded content
   useEffect(() => {
     const syncCurrentContent = async () => {
       if (!selectedChapterId || isUsingOfflineData) return;
 
-      // Find the server version of current content
-      if (activeChapters && activeChapters.length > 0 && syncChapterIfNeeded) {
-        const serverChapter = activeChapters.find(
-          (c: any) => c.id === selectedChapterId
-        );
-        if (serverChapter) {
-          await syncChapterIfNeeded(selectedChapterId, serverChapter);
-        }
-      } else if (
-        activeEpisodes &&
-        activeEpisodes.length > 0 &&
-        syncEpisodeIfNeeded
-      ) {
-        const serverEpisode = activeEpisodes.find(
-          (e: any) => e.id === selectedChapterId
-        );
-        if (serverEpisode) {
-          await syncEpisodeIfNeeded(selectedChapterId, serverEpisode);
-        }
+      if (isChapterMode && fetchedChapter && syncChapterIfNeeded) {
+        await syncChapterIfNeeded(selectedChapterId, fetchedChapter);
+      } else if (isEpisodeMode && fetchedEpisode && syncEpisodeIfNeeded) {
+        await syncEpisodeIfNeeded(selectedChapterId, fetchedEpisode);
       }
     };
 
@@ -111,8 +111,10 @@ export function useStoryContent({
   }, [
     selectedChapterId,
     isUsingOfflineData,
-    activeChapters,
-    activeEpisodes,
+    fetchedChapter,
+    fetchedEpisode,
+    isChapterMode,
+    isEpisodeMode,
     syncChapterIfNeeded,
     syncEpisodeIfNeeded,
   ]);
@@ -123,9 +125,7 @@ export function useStoryContent({
   }, []);
 
   const handlePrevious = useCallback(() => {
-    if (!activeChapters && !activeEpisodes) return;
-
-    const list = activeChapters?.length ? activeChapters : activeEpisodes;
+    const list = isChapterMode ? activeChapters : isEpisodeMode ? activeEpisodes : [];
     if (!list || list.length === 0) return;
 
     const currentIndex = list.findIndex(
@@ -135,12 +135,10 @@ export function useStoryContent({
       setSelectedChapterId(list[currentIndex - 1].id);
       window.scrollTo(0, 0);
     }
-  }, [activeChapters, activeEpisodes, selectedChapterId]);
+  }, [activeChapters, activeEpisodes, selectedChapterId, isChapterMode, isEpisodeMode]);
 
   const handleNext = useCallback(() => {
-    if (!activeChapters && !activeEpisodes) return;
-
-    const list = activeChapters?.length ? activeChapters : activeEpisodes;
+    const list = isChapterMode ? activeChapters : isEpisodeMode ? activeEpisodes : [];
     if (!list || list.length === 0) return;
 
     const currentIndex = list.findIndex(
@@ -150,14 +148,10 @@ export function useStoryContent({
       setSelectedChapterId(list[currentIndex + 1].id);
       window.scrollTo(0, 0);
     }
-  }, [activeChapters, activeEpisodes, selectedChapterId]);
+  }, [activeChapters, activeEpisodes, selectedChapterId, isChapterMode, isEpisodeMode]);
 
-  const hasNavigation =
-    (activeChapters && activeChapters.length > 1) ||
-    (activeEpisodes && activeEpisodes.length > 1);
-  const navigationList = activeChapters?.length
-    ? activeChapters
-    : activeEpisodes || [];
+  const navigationList = isChapterMode ? activeChapters : isEpisodeMode ? activeEpisodes : [];
+  const hasNavigation = navigationList && navigationList.length > 1;
   const currentIndex = Array.isArray(navigationList)
     ? navigationList.findIndex((i: any) => i.id === selectedChapterId)
     : -1;
@@ -166,6 +160,7 @@ export function useStoryContent({
     selectedChapterId,
     currentContent,
     currentTitle,
+    currentComments,
     hasNavigation,
     navigationList,
     currentIndex,
@@ -173,5 +168,6 @@ export function useStoryContent({
     handleChapterChange,
     handlePrevious,
     handleNext,
+    isLoading: isChapterLoading || isEpisodeLoading,
   };
 }

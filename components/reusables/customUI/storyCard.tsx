@@ -22,10 +22,7 @@ interface ExtendedStory extends StoryResponseDto {
   anonymous?: boolean;
   onlyOnStorytime?: boolean;
   storyStatus?: string;
-  likeCount?: number;
-  commentCount?: number;
   popularityScore?: number;
-  viewCount?: number;
   // Legacy fields that might still be used or needed for compatibility
   status?: string;
   rating?: number;

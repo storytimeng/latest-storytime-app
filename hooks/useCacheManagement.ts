@@ -182,13 +182,15 @@ export const useCacheManagement = () => {
       try {
         const { useAuthStore } = await import("@/src/stores/useAuthStore");
         const { useUserStore } = await import("@/src/stores/useUserStore");
-        const { useLoadingStore } = await import("@/src/stores/useLoadingStore");
+        const { useLoadingStore } = await import(
+          "@/src/stores/useLoadingStore"
+        );
 
         // Reset stores if they have reset methods
         if (typeof useAuthStore.getState === "function") {
           useAuthStore.setState({
-            resetEmail: null,
-            resetOtp: null,
+            resetEmail: undefined,
+            resetOtp: undefined,
           });
         }
 

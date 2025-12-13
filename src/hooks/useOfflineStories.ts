@@ -309,6 +309,44 @@ export function useOfflineStories() {
     [loadOfflineStories]
   );
 
+  // Delete specific downloaded content (chapter/episode)
+  const deleteOfflineContent = useCallback(
+    async (storyId: string, contentId: string, type: "chapter" | "episode") => {
+      try {
+        if (type === "chapter") {
+          await chaptersStore.delete(contentId);
+        } else {
+          await episodesStore.delete(contentId);
+        }
+
+        // Check if story has any content left
+        const chapters = await chaptersStore.getByIndex("storyId", storyId);
+        const episodes = await episodesStore.getByIndex("storyId", storyId);
+
+        if (chapters.length === 0 && episodes.length === 0) {
+          // If no content left, delete the story metadata too
+          await storiesStore.delete(storyId);
+          await loadOfflineStories(); // Refresh list
+        }
+
+        showToast({
+          type: "success",
+          message: "Removed from downloads",
+        });
+
+        return true;
+      } catch (error) {
+        console.error("Failed to delete offline content:", error);
+        showToast({
+          type: "error",
+          message: "Failed to remove content",
+        });
+        return false;
+      }
+    },
+    [loadOfflineStories]
+  );
+
   // Update last read time
   const updateLastRead = useCallback(async (storyId: string) => {
     try {
@@ -521,6 +559,7 @@ export function useOfflineStories() {
     downloadStory,
     downloadAdditionalContent,
     deleteOfflineStory,
+    deleteOfflineContent,
     updateLastRead,
     syncStoryIfNeeded,
     syncChapterIfNeeded,

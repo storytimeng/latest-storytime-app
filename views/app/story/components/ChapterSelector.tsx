@@ -37,7 +37,7 @@ export const ChapterSelector = React.memo(
           {navigationList.map((item: any) => (
             <SelectItem key={item.id} id={item.id}>
               {item.title ||
-                `Chapter ${item.chapterNumber || item.episodeNumber}`}
+                `${item.chapterNumber ? 'Chapter' : 'Episode'} ${item.chapterNumber || item.episodeNumber}`}
             </SelectItem>
           ))}
         </Select>

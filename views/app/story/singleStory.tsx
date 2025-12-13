@@ -13,6 +13,9 @@ import {
   Edit,
   ChevronRight,
   Users,
+  Trash2,
+  X,
+  Eye,
 } from "lucide-react";
 import Image from "next/image";
 import { Magnetik_Regular, Magnetik_Bold } from "@/lib";
@@ -23,6 +26,7 @@ import {
   useStoryComments,
   useStoryChapters,
   useStoryEpisodes,
+  useAggregatedProgress,
 } from "@/src/hooks/useStoryDetail";
 import { Skeleton } from "@heroui/skeleton";
 import { useDisclosure } from "@heroui/modal";
@@ -39,12 +43,39 @@ interface SingleStoryProps {
 
 type Tab = "episodes" | "details" | "reviews";
 
+// Helper function to format reading time
+const formatReadingTime = (seconds: number): string => {
+  if (!seconds || seconds === 0) return "0m";
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  if (hours > 0) {
+    return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
+  }
+  return `${minutes}m`;
+};
+
 const SingleStory = ({ storyId }: SingleStoryProps) => {
   const { story, isLoading } = useStory(storyId);
   const { likeCount, isLiked, toggleLike } = useStoryLikes(storyId);
-  const { commentCount, comments } = useStoryComments(storyId);
+  const { commentCount, comments, createComment } = useStoryComments(storyId);
+  const { aggregatedData } = useAggregatedProgress(storyId);
   const { user: storeUser } = useUserStore();
   const [activeTab, setActiveTab] = useState<Tab>("episodes");
+  const [reviewText, setReviewText] = useState("");
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+
+  // Extract progress data from aggregated response
+  const storyProgress = aggregatedData?.storyProgress;
+  const aggregated = aggregatedData?.aggregated;
+
+  // Debug: Log aggregated data
+  useEffect(() => {
+    if (aggregatedData) {
+      console.log("Aggregated Data:", aggregatedData);
+      console.log("Story Progress:", storyProgress);
+      console.log("Aggregated Stats:", aggregated);
+    }
+  }, [aggregatedData, storyProgress, aggregated]);
 
   // Scroll animation for FAB
   const { scrollY } = useScroll();
@@ -55,18 +86,18 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
       setShowFab(latest > 400);
     });
   }, [scrollY]);
-  
+
   // Modal state
-  const { 
-    isOpen: isCollaboratorsOpen, 
-    onOpen: onOpenCollaborators, 
-    onOpenChange: onCollaboratorsOpenChange 
+  const {
+    isOpen: isCollaboratorsOpen,
+    onOpen: onOpenCollaborators,
+    onOpenChange: onCollaboratorsOpenChange,
   } = useDisclosure();
 
   const {
     isOpen: isImagePreviewOpen,
     onOpen: onOpenImagePreview,
-    onOpenChange: onImagePreviewOpenChange
+    onOpenChange: onImagePreviewOpenChange,
   } = useDisclosure();
 
   // Check if current user is the author
@@ -75,14 +106,12 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
       ? (storeUser as any).data?.user
       : storeUser
   ) as any;
-  
+
   // Handle both author object and authorId field
   const storyAuthorId = (story as any)?.authorId || story?.author?.id;
   const currentAuthorId = currentUser?.authorId || currentUser?.id;
   const isAuthor =
-    currentAuthorId &&
-    storyAuthorId &&
-    currentAuthorId === storyAuthorId;
+    currentAuthorId && storyAuthorId && currentAuthorId === storyAuthorId;
 
   // Use counts from story data if available, otherwise use hook counts
   const displayLikeCount = (story as any)?.likeCount ?? likeCount ?? 0;
@@ -92,7 +121,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
   const storyData = story as any;
   const hasEpisodes = storyData?.episodes && storyData.episodes.length > 0;
   const hasChapters = storyData?.chapter === true; // API returns 'chapter': boolean
-  
+
   let structure = "single";
   if (hasEpisodes) {
     structure = "episodes";
@@ -101,8 +130,10 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
   }
 
   // Use data from story object if available, otherwise fall back to hooks
-  const shouldFetchChapters = structure === "chapters" && !storyData?.chapters?.length && !isLoading;
-  const shouldFetchEpisodes = structure === "episodes" && !storyData?.episodes?.length && !isLoading;
+  const shouldFetchChapters =
+    structure === "chapters" && !storyData?.chapters?.length && !isLoading;
+  const shouldFetchEpisodes =
+    structure === "episodes" && !storyData?.episodes?.length && !isLoading;
 
   const { chapters: fetchedChapters } = useStoryChapters(
     shouldFetchChapters ? storyId : undefined
@@ -111,14 +142,21 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
     shouldFetchEpisodes ? storyId : undefined
   );
 
-  const chapters = storyData?.chapters?.length ? storyData.chapters : fetchedChapters;
-  const episodes = storyData?.episodes?.length ? storyData.episodes : fetchedEpisodes;
+  const chapters = storyData?.chapters?.length
+    ? storyData.chapters
+    : fetchedChapters;
+  const episodes = storyData?.episodes?.length
+    ? storyData.episodes
+    : fetchedEpisodes;
 
   // Offline functionality
   const {
     isStoryDownloaded,
+    getDownloadedContent,
     downloadStory,
+    downloadAdditionalContent,
     deleteOfflineStory,
+    deleteOfflineContent,
     syncStoryIfNeeded,
     syncAllChapters,
     syncAllEpisodes,
@@ -126,6 +164,187 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
 
   const [isDownloaded, setIsDownloaded] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+
+  // Selection Mode State
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedContentIds, setSelectedContentIds] = useState<Set<string>>(
+    new Set()
+  );
+  const [downloadedContentIds, setDownloadedContentIds] = useState<Set<string>>(
+    new Set()
+  );
+
+  // Check downloaded content status
+  useEffect(() => {
+    const checkDownloadedContent = async () => {
+      if (storyId && structure !== "single") {
+        const downloadedItems = await getDownloadedContent(
+          storyId,
+          structure as any
+        );
+        const ids = new Set(downloadedItems.map((item: any) => item.id));
+        setDownloadedContentIds(ids);
+      }
+    };
+
+    checkDownloadedContent();
+  }, [storyId, structure, getDownloadedContent, isDownloaded]); // Re-check when story download status changes
+
+  // Toggle selection mode
+  const toggleSelectionMode = () => {
+    setIsSelectionMode(!isSelectionMode);
+    setSelectedContentIds(new Set());
+  };
+
+  // Toggle selection of an item
+  const toggleItemSelection = (id: string) => {
+    const newSelected = new Set(selectedContentIds);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedContentIds(newSelected);
+
+    if (!isSelectionMode && newSelected.size > 0) {
+      setIsSelectionMode(true);
+    } else if (isSelectionMode && newSelected.size === 0) {
+      // Optional: Auto-exit selection mode if nothing selected?
+      // User might prefer to stay in mode. Let's keep it manual exit or explicit "Cancel".
+    }
+  };
+
+  // Select/Deselect All
+  const toggleSelectAll = () => {
+    if (!contentList) return;
+
+    if (selectedContentIds.size === contentList.length) {
+      setSelectedContentIds(new Set());
+    } else {
+      const allIds = new Set<string>(contentList.map((item: any) => item.id));
+      setSelectedContentIds(allIds);
+    }
+  };
+
+  // Handle bulk download
+  const handleBulkDownload = async () => {
+    if (!storyId || selectedContentIds.size === 0) return;
+
+    setIsDownloading(true);
+    try {
+      const itemsToDownload = contentList.filter((item: any) =>
+        selectedContentIds.has(item.id)
+      );
+
+      // Fetch full content for each item by ID
+      const {
+        storiesControllerGetChapterById,
+        storiesControllerGetEpisodeById,
+      } = await import("@/src/client");
+
+      const contentPromises = itemsToDownload.map(
+        async (item: any, idx: number) => {
+          try {
+            let fullContent = item.content;
+
+            // Fetch full content from API if not already present
+            if (!fullContent || fullContent.length < 100) {
+              if (structure === "chapters") {
+                const response = await storiesControllerGetChapterById({
+                  path: { chapterId: item.id },
+                });
+                // Response.data is the chapter object directly
+                fullContent = (response.data as any)?.content || item.content;
+              } else {
+                const response = await storiesControllerGetEpisodeById({
+                  path: { episodeId: item.id },
+                });
+                // Response.data is the episode object directly
+                fullContent = (response.data as any)?.content || item.content;
+              }
+            }
+
+            return {
+              id: item.id,
+              title: item.title,
+              content: fullContent,
+              number:
+                structure === "chapters"
+                  ? item.chapterNumber || idx + 1
+                  : item.episodeNumber || idx + 1,
+              updatedAt: item.updatedAt,
+            };
+          } catch (error) {
+            console.error(`Failed to fetch content for ${item.id}:`, error);
+            // Fallback to existing content if fetch fails
+            return {
+              id: item.id,
+              title: item.title,
+              content: item.content || "",
+              number:
+                structure === "chapters"
+                  ? item.chapterNumber || idx + 1
+                  : item.episodeNumber || idx + 1,
+              updatedAt: item.updatedAt,
+            };
+          }
+        }
+      );
+
+      const content = await Promise.all(contentPromises);
+
+      // If story metadata isn't downloaded, download it first
+      const isStoryMetaDownloaded = await isStoryDownloaded(storyId);
+      if (!isStoryMetaDownloaded) {
+        await downloadStory(story, content);
+      } else {
+        await downloadAdditionalContent(storyId, structure as any, content);
+      }
+
+      // Refresh downloaded status
+      const newDownloadedIds = new Set(downloadedContentIds);
+      selectedContentIds.forEach((id) => newDownloadedIds.add(id));
+      setDownloadedContentIds(newDownloadedIds);
+      setIsSelectionMode(false);
+      setSelectedContentIds(new Set());
+      setIsDownloaded(true);
+      showToast({ type: "success", message: "Downloaded successfully" });
+    } catch (error) {
+      console.error("Bulk download error:", error);
+      showToast({ type: "error", message: "Download failed" });
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  // Handle bulk delete
+  const handleBulkDelete = async () => {
+    if (!storyId || selectedContentIds.size === 0) return;
+
+    try {
+      for (const id of selectedContentIds) {
+        await deleteOfflineContent(
+          storyId,
+          id,
+          structure === "chapters" ? "chapter" : "episode"
+        );
+      }
+
+      // Refresh downloaded status
+      const newDownloadedIds = new Set(downloadedContentIds);
+      selectedContentIds.forEach((id) => newDownloadedIds.delete(id));
+      setDownloadedContentIds(newDownloadedIds);
+
+      setIsSelectionMode(false);
+      setSelectedContentIds(new Set());
+
+      // Check if anything is left
+      const stillDownloaded = await isStoryDownloaded(storyId);
+      setIsDownloaded(stillDownloaded);
+    } catch (error) {
+      console.error("Bulk delete error:", error);
+    }
+  };
 
   // Check if story is downloaded and sync if needed
   useEffect(() => {
@@ -317,17 +536,46 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
   const isExclusive = (story as any).onlyOnStorytime || false;
   const viewCount = (story as any).viewCount || 0;
   const popularityScore = (story as any).popularityScore || 0;
+
+  // Calculate star rating from popularity score (0-100 scale to 0-5 stars)
+  const calculateStarRating = (score: number): number => {
+    if (score === 0) return 4.5; // Default rating
+    // Divide by 20 to convert 0-100 scale to 0-5 stars
+    const stars = score / 20;
+    return Math.min(Math.max(stars, 0), 5); // Clamp between 0 and 5
+  };
+
+  const starRating = calculateStarRating(popularityScore);
+  const fullStars = Math.floor(starRating);
+  const hasHalfStar = starRating % 1 >= 0.5;
+
+  // Handle review submission
+  const handleReviewSubmit = async () => {
+    if (!reviewText.trim() || !storyId) return;
+
+    setIsSubmittingReview(true);
+    try {
+      await createComment(reviewText);
+      setReviewText("");
+      showToast({ type: "success", message: "Review posted successfully!" });
+    } catch (error: any) {
+      const errorMessage = error?.message || "Failed to post review";
+      showToast({ type: "error", message: errorMessage });
+    } finally {
+      setIsSubmittingReview(false);
+    }
+  };
   const collaborators = (story as any).collaborate as string[] | null;
 
   return (
     <div className="bg-accent-shade-1 min-h-screen pb-20 relative">
-      <CollaboratorsModal 
-        isOpen={isCollaboratorsOpen} 
+      <CollaboratorsModal
+        isOpen={isCollaboratorsOpen}
         onOpenChange={onCollaboratorsOpenChange}
         author={author}
         collaborators={collaborators}
       />
-      
+
       <ImagePreviewModal
         isOpen={isImagePreviewOpen}
         onOpenChange={onImagePreviewOpenChange}
@@ -352,7 +600,10 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
         {/* Header Navigation */}
         <div className="absolute top-0 left-0 right-0 z-20 pt-6 px-4">
           <div className="flex items-center justify-between">
-            <Link href="/home" className="p-2 rounded-full bg-white/10 backdrop-blur-md hover:bg-white/20 transition-colors">
+            <Link
+              href="/home"
+              className="p-2 rounded-full bg-white/10 backdrop-blur-md hover:bg-white/20 transition-colors"
+            >
               <ArrowLeft size={24} className="text-white" />
             </Link>
             <button className="p-2 rounded-full bg-white/10 backdrop-blur-md hover:bg-white/20 transition-colors">
@@ -364,7 +615,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
         {/* Main Content */}
         <div className="absolute inset-0 z-10 flex flex-col justify-end px-4 pb-8">
           <div className="flex gap-5 items-end">
-            <motion.div 
+            <motion.div
               className="relative w-36 h-52 rounded-xl overflow-hidden shadow-2xl flex-shrink-0 border border-white/10 ring-1 ring-black/20 cursor-pointer"
               onClick={onOpenImagePreview}
               layoutId={`story-image-${storyId}`}
@@ -386,20 +637,28 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
                   #1 in {story.genres?.[0] || "Storytime"}
                 </span>
               )}
-              <h1 className={cn("text-white text-2xl font-bold leading-tight line-clamp-2 drop-shadow-sm", Magnetik_Bold.className)}>
+              <h1
+                className={cn(
+                  "text-white text-2xl font-bold leading-tight line-clamp-2 drop-shadow-sm",
+                  Magnetik_Bold.className
+                )}
+              >
                 {story.title}
               </h1>
-              
-              <button 
+
+              <button
                 onClick={onOpenCollaborators}
                 className="flex items-center gap-2 text-white/90 text-xs hover:text-white transition-colors group"
               >
                 <span className="font-medium border-b border-transparent group-hover:border-white/50 transition-all">
                   {author?.penName || author?.name || "Unknown"}
                 </span>
-                <Users size={12} className="opacity-60 group-hover:opacity-100 transition-opacity" />
+                <Users
+                  size={12}
+                  className="opacity-60 group-hover:opacity-100 transition-opacity"
+                />
               </button>
-              
+
               <div className="flex items-center gap-2 text-white/70 text-xs">
                 <span className="capitalize">{status}</span>
                 <span>•</span>
@@ -408,12 +667,16 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
 
               <div className="flex items-center gap-4 text-white/60 text-xs mt-1">
                 <div className="flex items-center gap-1.5 bg-white/5 px-2 py-1 rounded-md backdrop-blur-sm">
-                  <Play size={10} className="fill-current" />
-                  <span>{(viewCount / 1000).toFixed(1)}K</span>
+                  <Eye size={10} />
+                  <span>
+                    {viewCount >= 1000
+                      ? `${(viewCount / 1000).toFixed(1)}K`
+                      : viewCount}
+                  </span>
                 </div>
                 <div className="flex items-center gap-1.5 bg-white/5 px-2 py-1 rounded-md backdrop-blur-sm">
                   <Star size={10} className="fill-current" />
-                  <span>{popularityScore > 0 ? popularityScore : "4.8"}</span>
+                  <span>{starRating.toFixed(1)}</span>
                 </div>
               </div>
             </div>
@@ -422,14 +685,35 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
           {/* Action Button */}
           <div className="mt-8">
             <Link
-              href={`/story/${storyId}/read${hasContent ? `?${structure === "chapters" ? "chapterId" : "episodeId"}=${contentList[0].id}` : ""}`}
+              href={
+                storyProgress &&
+                ((storyProgress as any)?.lastReadChapter ||
+                  (storyProgress as any)?.lastReadEpisode)
+                  ? `/story/${storyId}/read?${structure === "chapters" ? "chapterId" : "episodeId"}=${
+                      structure === "chapters"
+                        ? contentList[
+                            (storyProgress as any).lastReadChapter - 1
+                          ]?.id
+                        : contentList[
+                            (storyProgress as any).lastReadEpisode - 1
+                          ]?.id
+                    }`
+                  : `/story/${storyId}/read${hasContent ? `?${structure === "chapters" ? "chapterId" : "episodeId"}=${contentList[0].id}` : ""}`
+              }
               className="w-full bg-primary hover:bg-primary/90 text-white py-4 rounded-full font-bold text-base flex items-center justify-center gap-2.5 transition-all shadow-lg shadow-primary/25 active:scale-[0.98]"
             >
               <Play size={22} className="fill-current" />
               <span>
-                {isSingleStory 
-                  ? "Read Story" 
-                  : `Play ${structure === "chapters" ? "Chapter" : "Episode"} 1`}
+                {storyProgress &&
+                ((storyProgress as any)?.lastReadChapter ||
+                  (storyProgress as any)?.lastReadEpisode)
+                  ? `Continue ${structure === "chapters" ? "Chapter" : "Episode"} ${
+                      (storyProgress as any)?.lastReadChapter ||
+                      (storyProgress as any)?.lastReadEpisode
+                    }`
+                  : isSingleStory
+                    ? "Read Story"
+                    : `Play ${structure === "chapters" ? "Chapter" : "Episode"} 1`}
               </span>
             </Link>
           </div>
@@ -437,7 +721,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
       </div>
 
       {/* Tabs */}
-      <div className="sticky top-0 z-30 bg-accent-shade-1 border-b border-white/5 px-4 backdrop-blur-xl bg-accent-shade-1/95">
+      <div className="sticky top-0 z-30 border-b border-white/5 px-4 backdrop-blur-xl bg-accent-shade-1/95">
         <div className="flex items-center gap-8 overflow-x-auto no-scrollbar">
           {!isSingleStory && (
             <button
@@ -487,40 +771,229 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
       <div className="px-4 py-6">
         {activeTab === "episodes" && !isSingleStory && (
           <div className="space-y-4">
+            {/* Reading Progress Indicator */}
+            {aggregated && aggregated.overallPercentage > 0 && (
+              <div className="mb-6 p-4 rounded-xl bg-complimentary-colour/5 border border-complimentary-colour/20">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-primary">
+                    Reading Progress
+                  </span>
+                  <span className="text-xs text-complimentary-colour font-bold">
+                    {Math.round(aggregated.overallPercentage)}%
+                  </span>
+                </div>
+                <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-complimentary-colour rounded-full transition-all duration-500"
+                    style={{ width: `${aggregated.overallPercentage}%` }}
+                  />
+                </div>
+                <div className="flex items-center justify-between mt-2 text-xs text-primary/60">
+                  <span>
+                    {structure === "chapters"
+                      ? `${aggregated.completedChapters} of ${aggregated.totalChapters} chapters`
+                      : `${aggregated.completedEpisodes} of ${aggregated.totalEpisodes} episodes`}{" "}
+                    completed
+                  </span>
+                  {aggregated.totalReadingTimeSeconds > 0 && (
+                    <span>
+                      {formatReadingTime(aggregated.totalReadingTimeSeconds)}{" "}
+                      read
+                    </span>
+                  )}
+                </div>
+                {storyProgress?.lastReadChapter ||
+                storyProgress?.lastReadEpisode ? (
+                  <div className="text-xs text-primary/50 mt-1">
+                    Last: {structure === "chapters" ? "Chapter" : "Episode"}{" "}
+                    {storyProgress.lastReadChapter ||
+                      storyProgress.lastReadEpisode}
+                  </div>
+                ) : null}
+              </div>
+            )}
+
             <div className="flex items-center justify-between text-xs text-primary/40 mb-2 font-medium uppercase tracking-wider">
-              <span>All {structure === "chapters" ? "Chapters" : "Episodes"}</span>
-              <button className="text-complimentary-colour hover:text-complimentary-colour/80 transition-colors">Sort: Oldest</button>
+              <div className="flex items-center gap-4">
+                <span>
+                  All {structure === "chapters" ? "Chapters" : "Episodes"}
+                </span>
+                {isSelectionMode && (
+                  <button
+                    onClick={toggleSelectAll}
+                    className="text-primary hover:text-white transition-colors"
+                  >
+                    {selectedContentIds.size === contentList.length
+                      ? "Deselect All"
+                      : "Select All"}
+                  </button>
+                )}
+              </div>
+              <div className="flex items-center gap-3">
+                {!isSelectionMode ? (
+                  <button
+                    onClick={toggleSelectionMode}
+                    className="text-primary hover:text-white transition-colors"
+                  >
+                    Select
+                  </button>
+                ) : (
+                  <button
+                    onClick={toggleSelectionMode}
+                    className="text-primary hover:text-white transition-colors"
+                  >
+                    Cancel
+                  </button>
+                )}
+                <button className="text-complimentary-colour hover:text-complimentary-colour/80 transition-colors">
+                  Sort: Oldest
+                </button>
+              </div>
             </div>
-            
-            {contentList?.map((item: any, index: number) => (
-              <Link
-                key={item.id}
-                href={`/story/${storyId}/read?${structure === "chapters" ? "chapterId" : "episodeId"}=${item.id}`}
-                className="flex items-center gap-4 py-3 group hover:bg-white/5 rounded-xl transition-colors px-2 -mx-2"
-              >
-                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary/60 group-hover:bg-complimentary-colour group-hover:text-white transition-all shadow-sm">
-                  <Play size={14} className="fill-current ml-0.5" />
+
+            {contentList?.map((item: any, index: number) => {
+              const isSelected = selectedContentIds.has(item.id);
+              const isItemDownloaded = downloadedContentIds.has(item.id);
+
+              // Find progress for this specific episode/chapter
+              const itemProgress =
+                structure === "episodes"
+                  ? aggregatedData?.episodeProgress?.find(
+                      (ep: any) => ep.episodeId === item.id
+                    )
+                  : aggregatedData?.chapterProgress?.find(
+                      (ch: any) => ch.chapterId === item.id
+                    );
+
+              const percentageRead = itemProgress
+                ? parseFloat(itemProgress.percentageRead)
+                : 0;
+              const readingTime = itemProgress?.readingTimeSeconds || 0;
+              const isCompleted = itemProgress?.isCompleted || false;
+
+              return (
+                <div
+                  key={item.id}
+                  className={cn(
+                    "flex items-center gap-4 py-3 px-2 -mx-2 rounded-xl transition-colors relative group",
+                    isSelected ? "bg-white/10" : "hover:bg-white/5"
+                  )}
+                  onClick={() =>
+                    isSelectionMode && toggleItemSelection(item.id)
+                  }
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    if (!isSelectionMode) {
+                      setIsSelectionMode(true);
+                      toggleItemSelection(item.id);
+                    }
+                  }}
+                >
+                  {isSelectionMode ? (
+                    <div
+                      className={cn(
+                        "w-6 h-6 rounded-md border-2 flex items-center justify-center transition-colors",
+                        isSelected
+                          ? "bg-primary border-primary text-white"
+                          : "border-white/20"
+                      )}
+                    >
+                      {isSelected && <Check size={14} />}
+                    </div>
+                  ) : (
+                    <Link
+                      href={`/story/${storyId}/read?${structure === "chapters" ? "chapterId" : "episodeId"}=${item.id}`}
+                      className="absolute inset-0 z-10"
+                    />
+                  )}
+
+                  <div
+                    className={cn(
+                      "w-10 h-10 rounded-full flex items-center justify-center transition-all shadow-sm relative",
+                      isCompleted
+                        ? "bg-green-500/20 text-green-500"
+                        : percentageRead > 0
+                          ? "bg-complimentary-colour/20 text-complimentary-colour"
+                          : "bg-primary/10 text-primary/60 group-hover:bg-complimentary-colour group-hover:text-white"
+                    )}
+                  >
+                    {isCompleted ? (
+                      <Check size={14} className="font-bold" />
+                    ) : (
+                      <Play size={14} className="fill-current ml-0.5" />
+                    )}
+                    {percentageRead > 0 && !isCompleted && (
+                      <svg className="absolute inset-0 w-full h-full -rotate-90">
+                        <circle
+                          cx="20"
+                          cy="20"
+                          r="18"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          fill="none"
+                          strokeDasharray={`${percentageRead * 1.13} 113`}
+                          className="text-complimentary-colour"
+                        />
+                      </svg>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-primary text-sm font-medium truncate group-hover:text-complimentary-colour transition-colors">
+                        {item.title ||
+                          `${structure === "chapters" ? "Chapter" : "Episode"} ${index + 1}`}
+                      </h3>
+                      {percentageRead > 0 && !isCompleted && (
+                        <span className="text-xs text-complimentary-colour font-medium">
+                          {Math.round(percentageRead)}%
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 text-primary/40 text-xs mt-1">
+                      <span>
+                        {new Date(
+                          item.createdAt || Date.now()
+                        ).toLocaleDateString()}
+                      </span>
+                      {readingTime > 0 && (
+                        <>
+                          <span>•</span>
+                          <span className="text-complimentary-colour/70">
+                            {formatReadingTime(readingTime)}
+                          </span>
+                        </>
+                      )}
+                      <span>•</span>
+                      <span>
+                        {Math.ceil((item.content?.length || 0) / 1000)} min read
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {isItemDownloaded && (
+                      <div className="w-6 h-6 flex items-center justify-center rounded-full bg-green-500/10 text-green-500">
+                        <Check size={12} />
+                      </div>
+                    )}
+                    {!isSelectionMode && (
+                      <div className="w-8 h-8 flex items-center justify-center rounded-full border border-white/10 text-primary/20 group-hover:border-complimentary-colour/50 group-hover:text-complimentary-colour transition-colors">
+                        <Play size={12} className="fill-current" />
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-primary text-sm font-medium truncate group-hover:text-complimentary-colour transition-colors">
-                    {item.title || `${structure === "chapters" ? "Chapter" : "Episode"} ${index + 1}`}
-                  </h3>
-                  <p className="text-primary/40 text-xs mt-1">
-                    {new Date(item.createdAt || Date.now()).toLocaleDateString()} • {Math.ceil((item.content?.length || 0) / 1000)} min read
-                  </p>
-                </div>
-                <div className="w-8 h-8 flex items-center justify-center rounded-full border border-white/10 text-primary/20 group-hover:border-complimentary-colour/50 group-hover:text-complimentary-colour transition-colors">
-                  <Play size={12} className="fill-current" />
-                </div>
-              </Link>
-            ))}
+              );
+            })}
           </div>
         )}
 
         {activeTab === "details" && (
           <div className="space-y-8">
             <div className="space-y-4">
-              <h3 className="text-primary font-bold text-lg">About the Story</h3>
+              <h3 className="text-primary font-bold text-lg">
+                About the Story
+              </h3>
               <p className="text-primary/70 text-sm leading-relaxed whitespace-pre-wrap">
                 {story.description}
               </p>
@@ -551,7 +1024,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
                 </Link>
               </div>
             )}
-            
+
             <button
               onClick={isDownloaded ? handleRemoveDownload : handleDownload}
               disabled={isDownloading}
@@ -582,30 +1055,105 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
         {activeTab === "reviews" && (
           <div className="space-y-8">
             <div className="flex items-center gap-4 mb-6 bg-white/5 p-6 rounded-2xl">
-              <div className="text-5xl font-bold text-primary">{popularityScore > 0 ? popularityScore : "4.8"}</div>
+              <div className="text-5xl font-bold text-primary">
+                {starRating.toFixed(1)}
+              </div>
               <div className="space-y-2">
                 <div className="flex text-yellow-500 gap-1">
-                  <Star size={20} className="fill-current" />
-                  <Star size={20} className="fill-current" />
-                  <Star size={20} className="fill-current" />
-                  <Star size={20} className="fill-current" />
-                  <Star size={20} className="fill-current" />
+                  {[...Array(5)].map((_, index) => {
+                    if (index < fullStars) {
+                      return (
+                        <Star key={index} size={20} className="fill-current" />
+                      );
+                    } else if (index === fullStars && hasHalfStar) {
+                      return (
+                        <div key={index} className="relative">
+                          <Star size={20} className="text-yellow-500/30" />
+                          <div className="absolute inset-0 overflow-hidden w-1/2">
+                            <Star
+                              size={20}
+                              className="fill-current text-yellow-500"
+                            />
+                          </div>
+                        </div>
+                      );
+                    } else {
+                      return (
+                        <Star
+                          key={index}
+                          size={20}
+                          className="text-yellow-500/30"
+                        />
+                      );
+                    }
+                  })}
                 </div>
-                <p className="text-primary/40 text-sm font-medium">{displayCommentCount} ratings</p>
+                <p className="text-primary/40 text-sm font-medium">
+                  {displayCommentCount} reviews
+                </p>
               </div>
             </div>
-            
+
+            {/* Write a Review Section */}
+            <div className="bg-white/5 p-6 rounded-2xl space-y-4">
+              <h3 className="text-lg font-bold text-primary">Write a Review</h3>
+              <textarea
+                value={reviewText}
+                onChange={(e) => setReviewText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    handleReviewSubmit();
+                  }
+                }}
+                placeholder="Share your thoughts about this story..."
+                className="w-full bg-white/10 text-primary rounded-xl p-4 min-h-[120px] resize-none focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
+                disabled={isSubmittingReview}
+              />
+              <button
+                onClick={handleReviewSubmit}
+                disabled={!reviewText.trim() || isSubmittingReview}
+                className="px-6 py-2 bg-primary hover:bg-primary/90 disabled:bg-primary/30 disabled:cursor-not-allowed text-white rounded-full font-medium text-sm transition-colors"
+              >
+                {isSubmittingReview ? "Posting..." : "Post Review"}
+              </button>
+            </div>
+
             <div className="space-y-6">
               {comments && comments.length > 0 ? (
                 comments.map((comment: any) => (
-                  <div key={comment.id} className="bg-white/5 p-4 rounded-xl space-y-3">
+                  <div
+                    key={comment.id}
+                    className="bg-white/5 p-4 rounded-xl space-y-3"
+                  >
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
-                        {(comment.user?.firstName?.[0] || comment.user?.penName?.[0] || "U").toUpperCase()}
-                      </div>
+                      {comment.user?.avatar ? (
+                        <div className="relative w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
+                          <Image
+                            src={comment.user.avatar}
+                            alt={
+                              comment.user?.penName ||
+                              comment.user?.firstName ||
+                              "User"
+                            }
+                            fill
+                            className="object-cover"
+                          />
+                        </div>
+                      ) : (
+                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs flex-shrink-0">
+                          {(
+                            comment.user?.firstName?.[0] ||
+                            comment.user?.penName?.[0] ||
+                            "U"
+                          ).toUpperCase()}
+                        </div>
+                      )}
                       <div>
                         <p className="text-primary font-medium text-sm">
-                          {comment.user?.penName || comment.user?.firstName || "User"}
+                          {comment.user?.penName ||
+                            comment.user?.firstName ||
+                            "User"}
                         </p>
                         <p className="text-primary/40 text-[10px]">
                           {new Date(comment.createdAt).toLocaleDateString()}
@@ -641,11 +1189,64 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
             className="fixed bottom-6 right-6 z-50 overflow-hidden"
           >
             <Link
-              href={`/story/${storyId}/read${hasContent ? `?${structure === "chapters" ? "chapterId" : "episodeId"}=${contentList[0].id}` : ""}`}
+              href={
+                storyProgress &&
+                ((storyProgress as any)?.lastReadChapter ||
+                  (storyProgress as any)?.lastReadEpisode)
+                  ? `/story/${storyId}/read?${structure === "chapters" ? "chapterId" : "episodeId"}=${
+                      structure === "chapters"
+                        ? contentList[
+                            (storyProgress as any).lastReadChapter - 1
+                          ]?.id
+                        : contentList[
+                            (storyProgress as any).lastReadEpisode - 1
+                          ]?.id
+                    }`
+                  : `/story/${storyId}/read${hasContent ? `?${structure === "chapters" ? "chapterId" : "episodeId"}=${contentList[0].id}` : ""}`
+              }
               className="w-14 h-14 bg-primary hover:bg-primary/90 text-white rounded-full flex items-center justify-center shadow-lg shadow-primary/30"
             >
               <Play size={24} className="fill-current ml-1" />
             </Link>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Selection Mode Action Bar */}
+      <AnimatePresence>
+        {isSelectionMode && selectedContentIds.size > 0 && (
+          <motion.div
+            initial={{ y: 100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 100, opacity: 0 }}
+            className="fixed bottom-0 left-0 right-0 z-40 bg-accent-shade-1 border-t border-white/10 p-4 pb-8 shadow-2xl"
+          >
+            <div className="max-w-[28rem] mx-auto flex items-center justify-between gap-4">
+              <div className="text-sm text-primary font-medium">
+                {selectedContentIds.size} selected
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleBulkDelete}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors text-sm font-medium"
+                >
+                  <Trash2 size={16} />
+                  <span>Remove</span>
+                </button>
+                <button
+                  onClick={handleBulkDownload}
+                  disabled={isDownloading}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-white hover:bg-primary/90 transition-colors text-sm font-medium shadow-lg shadow-primary/20"
+                >
+                  {isDownloading ? (
+                    <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <Download size={16} />
+                  )}
+                  <span>Download</span>
+                </button>
+              </div>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
