@@ -83,7 +83,11 @@ export function StoriesCarousel({
           className="flex"
           style={{ x }}
           drag="x"
-          dragConstraints={{ left: -(stories.length - 1) * (containerRef.current?.offsetWidth || 0), right: 0 }}
+          dragConstraints={{
+            left:
+              -(stories.length - 1) * (containerRef.current?.offsetWidth || 0),
+            right: 0,
+          }}
           dragElastic={0.1}
           onDragStart={() => setIsDragging(true)}
           onDragEnd={() => {
@@ -91,21 +95,30 @@ export function StoriesCarousel({
             const width = containerRef.current?.offsetWidth || 0;
             const offset = x.get();
             const newIndex = Math.round(-offset / width);
-            setCurrentIndex(Math.max(0, Math.min(newIndex, stories.length - 1)));
+            setCurrentIndex(
+              Math.max(0, Math.min(newIndex, stories.length - 1))
+            );
           }}
         >
           {stories.map((story) => {
-             // Safe access to author name
-             const authorName = (story.author as any)?.penName || story.author?.name || "Anonymous";
-             const displayImage = story.imageUrl || "/placeholder-image.jpg";
-             
-             return (
-            <motion.div
-              key={story.id}
-              className="relative h-52 rounded-xl flex-shrink-0 w-full"
-            >
-              <Link href={`/story/${story.id}`} className="block w-full h-full">
-                {displayImage ? (
+            // Safe access to author name
+            const authorName =
+              (story.author as any)?.penName ||
+              story.author?.name ||
+              "Anonymous";
+            const displayImage =
+              story.imageUrl || "/images/storytime-fallback.png";
+
+            return (
+              <motion.div
+                key={story.id}
+                className="relative h-52 rounded-xl flex-shrink-0 w-full"
+              >
+                <Link
+                  href={`/story/${story.id}`}
+                  className="block w-full h-full"
+                >
+                  {displayImage ? (
                     <Image
                       src={displayImage}
                       alt={story.title}
@@ -115,39 +128,40 @@ export function StoriesCarousel({
                       priority={story.id === currentStory.id}
                       sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                     />
-                ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-primary-shade-3 to-primary-shade-6 rounded-xl" />
-                )}
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-primary-shade-3 to-primary-shade-6 rounded-xl" />
+                  )}
 
-                {/* Genre Badge */}
-                {story.genres && story.genres.length > 0 && (
-                  <div className="absolute top-2 right-2">
-                    <div className="bg-accent-colour body-text-smallest-medium-auto px-3 py-[3px] rounded-[2px] text-primary-colour">
-                      {story.genres[0]}
+                  {/* Genre Badge */}
+                  {story.genres && story.genres.length > 0 && (
+                    <div className="absolute top-2 right-2">
+                      <div className="bg-accent-colour body-text-smallest-medium-auto px-3 py-[3px] rounded-[2px] text-primary-colour">
+                        {story.genres[0]}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {/* Story Info Overlay */}
-                <div className="absolute bottom-0 left-0 right-0 p-4 text-center bg-gradient-to-t from-black/100 to-transparent">
-                  <h3 className="text-white text-lg font-bold mb-1 line-clamp-1">
-                    {story.title}
-                  </h3>
-                  {/* description is not in StoryResponseDto but might be in API response. Casting to any to be safe or omitting if not needed */}
-                  {(story as any).description && (
-                    <p className="text-white/90 text-[10px] leading-relaxed line-clamp-2 mb-1">
-                      {(story as any).description}
-                    </p>
-                  )}
-                  {story.author && (
-                    <span className="text-[10px] font-bold text-complimentary-colour">
-                      by {authorName}
-                    </span>
-                  )}
-                </div>
-              </Link>
-            </motion.div>
-          )})}
+                  {/* Story Info Overlay */}
+                  <div className="absolute bottom-0 left-0 right-0 p-4 text-center bg-gradient-to-t from-black/100 to-transparent">
+                    <h3 className="text-white text-lg font-bold mb-1 line-clamp-1">
+                      {story.title}
+                    </h3>
+                    {/* description is not in StoryResponseDto but might be in API response. Casting to any to be safe or omitting if not needed */}
+                    {(story as any).description && (
+                      <p className="text-white/90 text-[10px] leading-relaxed line-clamp-2 mb-1">
+                        {(story as any).description}
+                      </p>
+                    )}
+                    {story.author && (
+                      <span className="text-[10px] font-bold text-complimentary-colour">
+                        by {authorName}
+                      </span>
+                    )}
+                  </div>
+                </Link>
+              </motion.div>
+            );
+          })}
         </motion.div>
       </div>
 

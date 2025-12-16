@@ -30,6 +30,12 @@ import {
 } from "@/src/hooks/useStoryDetail";
 import { Skeleton } from "@heroui/skeleton";
 import { useDisclosure } from "@heroui/modal";
+import {
+  Dropdown,
+  DropdownTrigger,
+  DropdownMenu,
+  DropdownItem,
+} from "@heroui/dropdown";
 import { useOfflineStories } from "@/src/hooks/useOfflineStories";
 import { showToast } from "@/lib/showNotification";
 import { useUserStore } from "@/src/stores/useUserStore";
@@ -58,7 +64,8 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
   const { story, isLoading } = useStory(storyId);
   const { likeCount, isLiked, toggleLike } = useStoryLikes(storyId);
   const { commentCount, comments, createComment } = useStoryComments(storyId);
-  const { aggregatedData } = useAggregatedProgress(storyId);
+  const { aggregatedData, mutate: mutateProgress } =
+    useAggregatedProgress(storyId);
   const { user: storeUser } = useUserStore();
   const [activeTab, setActiveTab] = useState<Tab>("episodes");
   const [reviewText, setReviewText] = useState("");
@@ -164,6 +171,93 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
 
   const [isDownloaded, setIsDownloaded] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadingItems, setDownloadingItems] = useState<Set<string>>(
+    new Set()
+  );
+  const longPressTimer = React.useRef<NodeJS.Timeout | null>(null);
+
+  const handleTouchStart = (id: string) => {
+    longPressTimer.current = setTimeout(() => {
+      if (!isSelectionMode) {
+        setIsSelectionMode(true);
+        toggleItemSelection(id);
+      }
+    }, 500);
+  };
+
+  const handleTouchEnd = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+    }
+  };
+
+  // Handle single item download
+  const handleSingleDownload = async (item: any, index: number) => {
+    if (downloadingItems.has(item.id)) return;
+
+    setDownloadingItems((prev) => new Set(prev).add(item.id));
+    try {
+      let fullContent = item.content;
+
+      // Fetch full content if needed
+      if (!fullContent || fullContent.length < 100) {
+        const {
+          storiesControllerGetChapterById,
+          storiesControllerGetEpisodeById,
+        } = await import("@/src/client");
+
+        if (structure === "chapters") {
+          const response = await storiesControllerGetChapterById({
+            path: { chapterId: item.id },
+          });
+          fullContent = (response.data as any)?.content || item.content;
+        } else {
+          const response = await storiesControllerGetEpisodeById({
+            path: { episodeId: item.id },
+          });
+          fullContent = (response.data as any)?.content || item.content;
+        }
+      }
+
+      const contentToDownload = [
+        {
+          id: item.id,
+          title: item.title,
+          content: fullContent,
+          number:
+            structure === "chapters"
+              ? item.chapterNumber || index + 1
+              : item.episodeNumber || index + 1,
+          updatedAt: item.updatedAt,
+        },
+      ];
+
+      // If story metadata isn't downloaded, download it first
+      const isStoryMetaDownloaded = await isStoryDownloaded(storyId!);
+      if (!isStoryMetaDownloaded) {
+        await downloadStory(story, contentToDownload);
+      } else {
+        await downloadAdditionalContent(
+          storyId!,
+          structure as any,
+          contentToDownload
+        );
+      }
+
+      // Update downloaded status
+      setDownloadedContentIds((prev) => new Set(prev).add(item.id));
+      showToast({ type: "success", message: "Downloaded" });
+    } catch (error) {
+      console.error(`Failed to download item ${item.id}:`, error);
+      showToast({ type: "error", message: "Download failed" });
+    } finally {
+      setDownloadingItems((prev) => {
+        const next = new Set(prev);
+        next.delete(item.id);
+        return next;
+      });
+    }
+  };
 
   // Selection Mode State
   const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -226,16 +320,12 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
     }
   };
 
-  // Handle bulk download
-  const handleBulkDownload = async () => {
-    if (!storyId || selectedContentIds.size === 0) return;
+  // Perform batch download
+  const performBatchDownload = async (itemsToDownload: any[]) => {
+    if (!storyId || itemsToDownload.length === 0) return;
 
     setIsDownloading(true);
     try {
-      const itemsToDownload = contentList.filter((item: any) =>
-        selectedContentIds.has(item.id)
-      );
-
       // Fetch full content for each item by ID
       const {
         storiesControllerGetChapterById,
@@ -303,7 +393,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
 
       // Refresh downloaded status
       const newDownloadedIds = new Set(downloadedContentIds);
-      selectedContentIds.forEach((id) => newDownloadedIds.add(id));
+      itemsToDownload.forEach((item) => newDownloadedIds.add(item.id));
       setDownloadedContentIds(newDownloadedIds);
       setIsSelectionMode(false);
       setSelectedContentIds(new Set());
@@ -315,6 +405,62 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
     } finally {
       setIsDownloading(false);
     }
+  };
+
+  // Handle batch download action from dropdown
+  const handleBatchDownloadAction = async (key: string) => {
+    if (!contentList || contentList.length === 0) return;
+
+    let startIndex = 0;
+    if (storyProgress) {
+      const lastRead =
+        structure === "chapters"
+          ? (storyProgress as any).lastReadChapter
+          : (storyProgress as any).lastReadEpisode;
+      if (lastRead) startIndex = lastRead;
+    }
+
+    let itemsToDownload: any[] = [];
+
+    if (key === "unread") {
+      itemsToDownload = contentList.filter((item: any) => {
+        const itemProgress =
+          structure === "episodes"
+            ? aggregatedData?.episodeProgress?.find(
+                (ep: any) => ep.episodeId === item.id
+              )
+            : aggregatedData?.chapterProgress?.find(
+                (ch: any) => ch.chapterId === item.id
+              );
+        return !itemProgress?.isCompleted;
+      });
+    } else {
+      const count = parseInt(key.replace("next-", ""));
+      if (!isNaN(count)) {
+        itemsToDownload = contentList.slice(startIndex, startIndex + count);
+      }
+    }
+
+    // Filter out already downloaded
+    itemsToDownload = itemsToDownload.filter(
+      (item: any) => !downloadedContentIds.has(item.id)
+    );
+
+    if (itemsToDownload.length === 0) {
+      showToast({ type: "info", message: "No new items to download" });
+      return;
+    }
+
+    await performBatchDownload(itemsToDownload);
+  };
+
+  // Handle bulk download
+  const handleBulkDownload = async () => {
+    if (!storyId || selectedContentIds.size === 0) return;
+    const itemsToDownload = contentList.filter((item: any) =>
+      selectedContentIds.has(item.id)
+    );
+    await performBatchDownload(itemsToDownload);
   };
 
   // Handle bulk delete
@@ -343,6 +489,47 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
       setIsDownloaded(stillDownloaded);
     } catch (error) {
       console.error("Bulk delete error:", error);
+    }
+  };
+
+  // Handle bulk mark as read
+  const handleBulkMarkAsRead = async () => {
+    if (!storyId || selectedContentIds.size === 0) return;
+
+    try {
+      const {
+        usersControllerUpdateChapterProgress,
+        usersControllerUpdateEpisodeProgress,
+      } = await import("@/src/client");
+
+      const promises = Array.from(selectedContentIds).map(async (id) => {
+        const progressData = {
+          percentageRead: 100,
+          isCompleted: true,
+        };
+
+        if (structure === "chapters") {
+          await usersControllerUpdateChapterProgress({
+            path: { storyId, chapterId: id },
+            body: progressData,
+          });
+        } else {
+          await usersControllerUpdateEpisodeProgress({
+            path: { storyId, episodeId: id },
+            body: progressData,
+          });
+        }
+      });
+
+      await Promise.all(promises);
+
+      showToast({ type: "success", message: "Marked as read" });
+      setIsSelectionMode(false);
+      setSelectedContentIds(new Set());
+      mutateProgress();
+    } catch (error) {
+      console.error("Bulk mark as read error:", error);
+      showToast({ type: "error", message: "Failed to mark as read" });
     }
   };
 
@@ -469,14 +656,14 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
 
   if (isLoading) {
     return (
-      <div className="bg-accent-shade-1 min-h-screen pb-20 relative">
+      <div className="relative min-h-screen pb-20 bg-accent-shade-1">
         {/* Hero Skeleton */}
         <div className="relative w-full h-[480px] overflow-hidden">
           <Skeleton className="absolute inset-0 w-full h-full opacity-20" />
           <div className="absolute inset-0 z-10 flex flex-col justify-end px-4 pb-8">
-            <div className="flex gap-5 items-end">
-              <Skeleton className="w-36 h-52 rounded-xl flex-shrink-0" />
-              <div className="flex-1 space-y-3 mb-1">
+            <div className="flex items-end gap-5">
+              <Skeleton className="flex-shrink-0 w-36 h-52 rounded-xl" />
+              <div className="flex-1 mb-1 space-y-3">
                 <Skeleton className="w-20 h-4 rounded-md" />
                 <Skeleton className="w-3/4 h-8 rounded-lg" />
                 <Skeleton className="w-1/2 h-4 rounded-md" />
@@ -487,13 +674,13 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
               </div>
             </div>
             <div className="mt-8">
-              <Skeleton className="w-full h-14 rounded-full" />
+              <Skeleton className="w-full rounded-full h-14" />
             </div>
           </div>
         </div>
 
         {/* Tabs Skeleton */}
-        <div className="px-4 py-4 flex gap-8 border-b border-white/5">
+        <div className="flex gap-8 px-4 py-4 border-b border-white/5">
           <Skeleton className="w-20 h-6 rounded-md" />
           <Skeleton className="w-16 h-6 rounded-md" />
           <Skeleton className="w-16 h-6 rounded-md" />
@@ -518,7 +705,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
 
   if (!story) {
     return (
-      <div className="bg-accent-shade-1 min-h-screen flex items-center justify-center">
+      <div className="flex items-center justify-center min-h-screen bg-accent-shade-1">
         <p className="text-primary">Story not found</p>
       </div>
     );
@@ -531,7 +718,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
     penName?: string;
   };
   const author = story.author as ExtendedAuthorDto;
-  const displayImage = story.imageUrl || "/placeholder-image.jpg";
+  const displayImage = story.imageUrl || "/images/storytime-fallback.png";
   const status = (story as any).storyStatus || "Ongoing";
   const isExclusive = (story as any).onlyOnStorytime || false;
   const viewCount = (story as any).viewCount || 0;
@@ -568,7 +755,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
   const collaborators = (story as any).collaborate as string[] | null;
 
   return (
-    <div className="bg-accent-shade-1 min-h-screen pb-20 relative">
+    <div className="relative min-h-screen pb-20 bg-accent-shade-1">
       <CollaboratorsModal
         isOpen={isCollaboratorsOpen}
         onOpenChange={onCollaboratorsOpenChange}
@@ -592,31 +779,80 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
             src={displayImage}
             alt={story.title}
             fill
-            className="object-cover blur-2xl opacity-40 scale-110"
+            className="object-cover scale-110 blur-2xl opacity-40"
             priority
           />
           <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/40 to-accent-shade-1" />
         </div>
         {/* Header Navigation */}
-        <div className="absolute top-0 left-0 right-0 z-20 pt-6 px-4">
+        <div className="absolute top-0 left-0 right-0 z-20 px-4 pt-6">
           <div className="flex items-center justify-between">
             <Link
               href="/home"
-              className="p-2 rounded-full bg-white/10 backdrop-blur-md hover:bg-white/20 transition-colors"
+              className="p-2 transition-colors rounded-full bg-white/10 backdrop-blur-md hover:bg-white/20"
             >
               <ArrowLeft size={24} className="text-white" />
             </Link>
-            <button className="p-2 rounded-full bg-white/10 backdrop-blur-md hover:bg-white/20 transition-colors">
-              <Share2 size={24} className="text-white" />
-            </button>
+            <div className="flex items-center gap-2">
+              {!isSingleStory ? (
+                <Dropdown>
+                  <DropdownTrigger>
+                    <button className="p-2 transition-colors rounded-full bg-white/10 backdrop-blur-md hover:bg-white/20">
+                      <Download size={24} className="text-white" />
+                    </button>
+                  </DropdownTrigger>
+                  <DropdownMenu
+                    aria-label="Download Options"
+                    onAction={(key) => handleBatchDownloadAction(key as string)}
+                  >
+                    <DropdownItem key="next-1">
+                      Next {structure === "chapters" ? "Chapter" : "Episode"}
+                    </DropdownItem>
+                    <DropdownItem key="next-5">
+                      Next 5{" "}
+                      {structure === "chapters" ? "Chapters" : "Episodes"}
+                    </DropdownItem>
+                    <DropdownItem key="next-10">
+                      Next 10{" "}
+                      {structure === "chapters" ? "Chapters" : "Episodes"}
+                    </DropdownItem>
+                    <DropdownItem key="next-25">
+                      Next 25{" "}
+                      {structure === "chapters" ? "Chapters" : "Episodes"}
+                    </DropdownItem>
+                    <DropdownItem key="unread">
+                      Download Unread{" "}
+                      {structure === "chapters" ? "Chapters" : "Episodes"}
+                    </DropdownItem>
+                  </DropdownMenu>
+                </Dropdown>
+              ) : (
+                <button
+                  onClick={isDownloaded ? handleRemoveDownload : handleDownload}
+                  disabled={isDownloading}
+                  className="p-2 transition-colors rounded-full bg-white/10 backdrop-blur-md hover:bg-white/20"
+                >
+                  {isDownloading ? (
+                    <div className="w-6 h-6 border-2 border-white rounded-full border-t-transparent animate-spin" />
+                  ) : isDownloaded ? (
+                    <Check size={24} className="text-green-500" />
+                  ) : (
+                    <Download size={24} className="text-white" />
+                  )}
+                </button>
+              )}
+              <button className="p-2 transition-colors rounded-full bg-white/10 backdrop-blur-md hover:bg-white/20">
+                <Share2 size={24} className="text-white" />
+              </button>
+            </div>
           </div>
         </div>
 
         {/* Main Content */}
         <div className="absolute inset-0 z-10 flex flex-col justify-end px-4 pb-8">
-          <div className="flex gap-5 items-end">
+          <div className="flex items-end gap-5">
             <motion.div
-              className="relative w-36 h-52 rounded-xl overflow-hidden shadow-2xl flex-shrink-0 border border-white/10 ring-1 ring-black/20 cursor-pointer"
+              className="relative flex-shrink-0 overflow-hidden border shadow-2xl cursor-pointer w-36 h-52 rounded-xl border-white/10 ring-1 ring-black/20"
               onClick={onOpenImagePreview}
               layoutId={`story-image-${storyId}`}
               whileHover={{ scale: 1.05 }}
@@ -648,24 +884,24 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
 
               <button
                 onClick={onOpenCollaborators}
-                className="flex items-center gap-2 text-white/90 text-xs hover:text-white transition-colors group"
+                className="flex items-center gap-2 text-xs transition-colors text-white/90 hover:text-white group"
               >
-                <span className="font-medium border-b border-transparent group-hover:border-white/50 transition-all">
+                <span className="font-medium transition-all border-b border-transparent group-hover:border-white/50">
                   {author?.penName || author?.name || "Unknown"}
                 </span>
                 <Users
                   size={12}
-                  className="opacity-60 group-hover:opacity-100 transition-opacity"
+                  className="transition-opacity opacity-60 group-hover:opacity-100"
                 />
               </button>
 
-              <div className="flex items-center gap-2 text-white/70 text-xs">
+              <div className="flex items-center gap-2 text-xs text-white/70">
                 <span className="capitalize">{status}</span>
                 <span>•</span>
                 <span>{new Date(story.createdAt).getFullYear()}</span>
               </div>
 
-              <div className="flex items-center gap-4 text-white/60 text-xs mt-1">
+              <div className="flex items-center gap-4 mt-1 text-xs text-white/60">
                 <div className="flex items-center gap-1.5 bg-white/5 px-2 py-1 rounded-md backdrop-blur-sm">
                   <Eye size={10} />
                   <span>
@@ -721,7 +957,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
       </div>
 
       {/* Tabs */}
-      <div className="sticky top-0 z-30 border-b border-white/5 px-4 backdrop-blur-xl bg-accent-shade-1/95">
+      <div className="sticky top-0 z-30 px-4 border-b border-white/5 backdrop-blur-xl bg-accent-shade-1/95">
         <div className="flex items-center gap-8 overflow-x-auto no-scrollbar">
           {!isSingleStory && (
             <button
@@ -773,18 +1009,18 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
           <div className="space-y-4">
             {/* Reading Progress Indicator */}
             {aggregated && aggregated.overallPercentage > 0 && (
-              <div className="mb-6 p-4 rounded-xl bg-complimentary-colour/5 border border-complimentary-colour/20">
+              <div className="p-4 mb-6 border rounded-xl bg-complimentary-colour/5 border-complimentary-colour/20">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-medium text-primary">
                     Reading Progress
                   </span>
-                  <span className="text-xs text-complimentary-colour font-bold">
+                  <span className="text-xs font-bold text-complimentary-colour">
                     {Math.round(aggregated.overallPercentage)}%
                   </span>
                 </div>
-                <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
+                <div className="w-full h-2 overflow-hidden rounded-full bg-white/10">
                   <div
-                    className="h-full bg-complimentary-colour rounded-full transition-all duration-500"
+                    className="h-full transition-all duration-500 rounded-full bg-complimentary-colour"
                     style={{ width: `${aggregated.overallPercentage}%` }}
                   />
                 </div>
@@ -804,7 +1040,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
                 </div>
                 {storyProgress?.lastReadChapter ||
                 storyProgress?.lastReadEpisode ? (
-                  <div className="text-xs text-primary/50 mt-1">
+                  <div className="mt-1 text-xs text-primary/50">
                     Last: {structure === "chapters" ? "Chapter" : "Episode"}{" "}
                     {storyProgress.lastReadChapter ||
                       storyProgress.lastReadEpisode}
@@ -813,7 +1049,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
               </div>
             )}
 
-            <div className="flex items-center justify-between text-xs text-primary/40 mb-2 font-medium uppercase tracking-wider">
+            <div className="flex items-center justify-between mb-2 text-xs font-medium tracking-wider uppercase text-primary/40">
               <div className="flex items-center gap-4">
                 <span>
                   All {structure === "chapters" ? "Chapters" : "Episodes"}
@@ -821,7 +1057,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
                 {isSelectionMode && (
                   <button
                     onClick={toggleSelectAll}
-                    className="text-primary hover:text-white transition-colors"
+                    className="transition-colors text-primary hover:text-white"
                   >
                     {selectedContentIds.size === contentList.length
                       ? "Deselect All"
@@ -833,19 +1069,19 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
                 {!isSelectionMode ? (
                   <button
                     onClick={toggleSelectionMode}
-                    className="text-primary hover:text-white transition-colors"
+                    className="transition-colors text-primary hover:text-white"
                   >
                     Select
                   </button>
                 ) : (
                   <button
                     onClick={toggleSelectionMode}
-                    className="text-primary hover:text-white transition-colors"
+                    className="transition-colors text-primary hover:text-white"
                   >
                     Cancel
                   </button>
                 )}
-                <button className="text-complimentary-colour hover:text-complimentary-colour/80 transition-colors">
+                <button className="transition-colors text-complimentary-colour hover:text-complimentary-colour/80">
                   Sort: Oldest
                 </button>
               </div>
@@ -854,6 +1090,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
             {contentList?.map((item: any, index: number) => {
               const isSelected = selectedContentIds.has(item.id);
               const isItemDownloaded = downloadedContentIds.has(item.id);
+              const isItemDownloading = downloadingItems.has(item.id);
 
               // Find progress for this specific episode/chapter
               const itemProgress =
@@ -870,13 +1107,17 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
                 : 0;
               const readingTime = itemProgress?.readingTimeSeconds || 0;
               const isCompleted = itemProgress?.isCompleted || false;
+              const isRead = percentageRead > 0 || isCompleted;
 
               return (
                 <div
                   key={item.id}
                   className={cn(
-                    "flex items-center gap-4 py-3 px-2 -mx-2 rounded-xl transition-colors relative group",
-                    isSelected ? "bg-white/10" : "hover:bg-white/5"
+                    "flex items-center gap-4 py-3 px-2 -mx-2 rounded-xl transition-colors relative group select-none",
+                    isSelected
+                      ? "bg-primary/10 border border-primary/20"
+                      : "hover:bg-white/5",
+                    isRead && !isSelected ? "opacity-50" : ""
                   )}
                   onClick={() =>
                     isSelectionMode && toggleItemSelection(item.id)
@@ -888,6 +1129,9 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
                       toggleItemSelection(item.id);
                     }
                   }}
+                  onPointerDown={() => handleTouchStart(item.id)}
+                  onPointerUp={handleTouchEnd}
+                  onPointerLeave={handleTouchEnd}
                 >
                   {isSelectionMode ? (
                     <div
@@ -939,17 +1183,17 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <h3 className="text-primary text-sm font-medium truncate group-hover:text-complimentary-colour transition-colors">
+                      <h3 className="text-sm font-medium truncate transition-colors text-primary group-hover:text-complimentary-colour">
                         {item.title ||
                           `${structure === "chapters" ? "Chapter" : "Episode"} ${index + 1}`}
                       </h3>
                       {percentageRead > 0 && !isCompleted && (
-                        <span className="text-xs text-complimentary-colour font-medium">
+                        <span className="text-xs font-medium text-complimentary-colour">
                           {Math.round(percentageRead)}%
                         </span>
                       )}
                     </div>
-                    <div className="flex items-center gap-2 text-primary/40 text-xs mt-1">
+                    <div className="flex items-center gap-2 mt-1 text-xs text-primary/40">
                       <span>
                         {new Date(
                           item.createdAt || Date.now()
@@ -970,14 +1214,63 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    {isItemDownloaded && (
-                      <div className="w-6 h-6 flex items-center justify-center rounded-full bg-green-500/10 text-green-500">
-                        <Check size={12} />
+                  <div className="z-20 flex items-center gap-2">
+                    {isItemDownloaded ? (
+                      <div className="flex items-center justify-center w-8 h-8 text-green-500 rounded-full bg-green-500/10">
+                        <Check size={16} />
                       </div>
+                    ) : (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSingleDownload(item, index);
+                        }}
+                        disabled={isItemDownloading}
+                        className="flex items-center justify-center w-8 h-8 transition-colors border rounded-full border-white/10 text-primary/40 hover:text-primary hover:border-primary"
+                      >
+                        {isItemDownloading ? (
+                          <svg className="w-5 h-5 -rotate-90">
+                            <circle
+                              cx="10"
+                              cy="10"
+                              r="8"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              fill="none"
+                              className="text-primary/20"
+                            />
+                            <circle
+                              cx="10"
+                              cy="10"
+                              r="8"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              fill="none"
+                              strokeDasharray="50"
+                              strokeDashoffset="50"
+                              className="text-primary animate-[dash_1.5s_ease-in-out_infinite]"
+                            />
+                            <style jsx>{`
+                              @keyframes dash {
+                                0% {
+                                  stroke-dashoffset: 50;
+                                }
+                                50% {
+                                  stroke-dashoffset: 0;
+                                }
+                                100% {
+                                  stroke-dashoffset: -50;
+                                }
+                              }
+                            `}</style>
+                          </svg>
+                        ) : (
+                          <Download size={16} />
+                        )}
+                      </button>
                     )}
                     {!isSelectionMode && (
-                      <div className="w-8 h-8 flex items-center justify-center rounded-full border border-white/10 text-primary/20 group-hover:border-complimentary-colour/50 group-hover:text-complimentary-colour transition-colors">
+                      <div className="flex items-center justify-center w-8 h-8 transition-colors border rounded-full border-white/10 text-primary/20 group-hover:border-complimentary-colour/50 group-hover:text-complimentary-colour">
                         <Play size={12} className="fill-current" />
                       </div>
                     )}
@@ -991,16 +1284,16 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
         {activeTab === "details" && (
           <div className="space-y-8">
             <div className="space-y-4">
-              <h3 className="text-primary font-bold text-lg">
+              <h3 className="text-lg font-bold text-primary">
                 About the Story
               </h3>
-              <p className="text-primary/70 text-sm leading-relaxed whitespace-pre-wrap">
+              <p className="text-sm leading-relaxed whitespace-pre-wrap text-primary/70">
                 {story.description}
               </p>
             </div>
 
             <div className="space-y-3">
-              <h3 className="text-primary font-bold text-sm">Genres</h3>
+              <h3 className="text-sm font-bold text-primary">Genres</h3>
               <div className="flex flex-wrap gap-2">
                 {story.genres?.map((genre: string) => (
                   <span
@@ -1017,7 +1310,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
               <div className="pt-6 border-t border-primary/10">
                 <Link
                   href={`/edit-story/${storyId}`}
-                  className="flex items-center justify-center gap-2 w-full py-4 rounded-xl border border-primary/20 text-primary hover:bg-primary/5 transition-colors font-medium"
+                  className="flex items-center justify-center w-full gap-2 py-4 font-medium transition-colors border rounded-xl border-primary/20 text-primary hover:bg-primary/5"
                 >
                   <Edit size={18} />
                   <span>Edit Story</span>
@@ -1036,7 +1329,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
               )}
             >
               {isDownloading ? (
-                <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                <div className="w-5 h-5 border-2 border-current rounded-full border-t-transparent animate-spin" />
               ) : isDownloaded ? (
                 <>
                   <Check size={18} />
@@ -1054,12 +1347,12 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
 
         {activeTab === "reviews" && (
           <div className="space-y-8">
-            <div className="flex items-center gap-4 mb-6 bg-white/5 p-6 rounded-2xl">
+            <div className="flex items-center gap-4 p-6 mb-6 bg-white/5 rounded-2xl">
               <div className="text-5xl font-bold text-primary">
                 {starRating.toFixed(1)}
               </div>
               <div className="space-y-2">
-                <div className="flex text-yellow-500 gap-1">
+                <div className="flex gap-1 text-yellow-500">
                   {[...Array(5)].map((_, index) => {
                     if (index < fullStars) {
                       return (
@@ -1069,10 +1362,10 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
                       return (
                         <div key={index} className="relative">
                           <Star size={20} className="text-yellow-500/30" />
-                          <div className="absolute inset-0 overflow-hidden w-1/2">
+                          <div className="absolute inset-0 w-1/2 overflow-hidden">
                             <Star
                               size={20}
-                              className="fill-current text-yellow-500"
+                              className="text-yellow-500 fill-current"
                             />
                           </div>
                         </div>
@@ -1088,14 +1381,14 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
                     }
                   })}
                 </div>
-                <p className="text-primary/40 text-sm font-medium">
+                <p className="text-sm font-medium text-primary/40">
                   {displayCommentCount} reviews
                 </p>
               </div>
             </div>
 
             {/* Write a Review Section */}
-            <div className="bg-white/5 p-6 rounded-2xl space-y-4">
+            <div className="p-6 space-y-4 bg-white/5 rounded-2xl">
               <h3 className="text-lg font-bold text-primary">Write a Review</h3>
               <textarea
                 value={reviewText}
@@ -1113,7 +1406,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
               <button
                 onClick={handleReviewSubmit}
                 disabled={!reviewText.trim() || isSubmittingReview}
-                className="px-6 py-2 bg-primary hover:bg-primary/90 disabled:bg-primary/30 disabled:cursor-not-allowed text-white rounded-full font-medium text-sm transition-colors"
+                className="px-6 py-2 text-sm font-medium text-white transition-colors rounded-full bg-primary hover:bg-primary/90 disabled:bg-primary/30 disabled:cursor-not-allowed"
               >
                 {isSubmittingReview ? "Posting..." : "Post Review"}
               </button>
@@ -1124,11 +1417,11 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
                 comments.map((comment: any) => (
                   <div
                     key={comment.id}
-                    className="bg-white/5 p-4 rounded-xl space-y-3"
+                    className="p-4 space-y-3 bg-white/5 rounded-xl"
                   >
                     <div className="flex items-center gap-3">
                       {comment.user?.avatar ? (
-                        <div className="relative w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
+                        <div className="relative flex-shrink-0 w-8 h-8 overflow-hidden rounded-full">
                           <Image
                             src={comment.user.avatar}
                             alt={
@@ -1141,7 +1434,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
                           />
                         </div>
                       ) : (
-                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs flex-shrink-0">
+                        <div className="flex items-center justify-center flex-shrink-0 w-8 h-8 text-xs font-bold rounded-full bg-primary/10 text-primary">
                           {(
                             comment.user?.firstName?.[0] ||
                             comment.user?.penName?.[0] ||
@@ -1150,7 +1443,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
                         </div>
                       )}
                       <div>
-                        <p className="text-primary font-medium text-sm">
+                        <p className="text-sm font-medium text-primary">
                           {comment.user?.penName ||
                             comment.user?.firstName ||
                             "User"}
@@ -1160,14 +1453,14 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
                         </p>
                       </div>
                     </div>
-                    <p className="text-primary/80 text-sm leading-relaxed">
+                    <p className="text-sm leading-relaxed text-primary/80">
                       {comment.content}
                     </p>
                   </div>
                 ))
               ) : (
-                <div className="text-center py-12 text-primary/40 text-sm">
-                  <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4">
+                <div className="py-12 text-sm text-center text-primary/40">
+                  <div className="flex items-center justify-center w-16 h-16 mx-auto mb-4 rounded-full bg-white/5">
                     <Star size={24} className="opacity-50" />
                   </div>
                   <p>No reviews yet. Be the first to review!</p>
@@ -1186,7 +1479,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
             animate={{ width: 56, opacity: 1, y: 0 }}
             exit={{ width: 200, opacity: 0, y: 50 }}
             transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            className="fixed bottom-6 right-6 z-50 overflow-hidden"
+            className="fixed z-50 overflow-hidden bottom-6 right-6"
           >
             <Link
               href={
@@ -1204,9 +1497,9 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
                     }`
                   : `/story/${storyId}/read${hasContent ? `?${structure === "chapters" ? "chapterId" : "episodeId"}=${contentList[0].id}` : ""}`
               }
-              className="w-14 h-14 bg-primary hover:bg-primary/90 text-white rounded-full flex items-center justify-center shadow-lg shadow-primary/30"
+              className="flex items-center justify-center text-white rounded-full shadow-lg w-14 h-14 bg-primary hover:bg-primary/90 shadow-primary/30"
             >
-              <Play size={24} className="fill-current ml-1" />
+              <Play size={24} className="ml-1 fill-current" />
             </Link>
           </motion.div>
         )}
@@ -1219,16 +1512,23 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
             initial={{ y: 100, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 100, opacity: 0 }}
-            className="fixed bottom-0 left-0 right-0 z-40 bg-accent-shade-1 border-t border-white/10 p-4 pb-8 shadow-2xl"
+            className="fixed bottom-0 left-0 right-0 z-40 p-4 pb-8 border-t shadow-2xl bg-accent-shade-1 border-white/10"
           >
             <div className="max-w-[28rem] mx-auto flex items-center justify-between gap-4">
-              <div className="text-sm text-primary font-medium">
+              <div className="text-sm font-medium text-primary">
                 {selectedContentIds.size} selected
               </div>
               <div className="flex items-center gap-3">
                 <button
+                  onClick={handleBulkMarkAsRead}
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors rounded-lg bg-complimentary-colour/10 text-complimentary-colour hover:bg-complimentary-colour/20"
+                >
+                  <Check size={16} />
+                  <span>Mark Read</span>
+                </button>
+                <button
                   onClick={handleBulkDelete}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors text-sm font-medium"
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-500 transition-colors rounded-lg bg-red-500/10 hover:bg-red-500/20"
                 >
                   <Trash2 size={16} />
                   <span>Remove</span>
@@ -1236,10 +1536,10 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
                 <button
                   onClick={handleBulkDownload}
                   disabled={isDownloading}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-white hover:bg-primary/90 transition-colors text-sm font-medium shadow-lg shadow-primary/20"
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white transition-colors rounded-lg shadow-lg bg-primary hover:bg-primary/90 shadow-primary/20"
                 >
                   {isDownloading ? (
-                    <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                    <div className="w-4 h-4 border-2 border-current rounded-full border-t-transparent animate-spin" />
                   ) : (
                     <Download size={16} />
                   )}

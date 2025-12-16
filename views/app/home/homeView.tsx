@@ -154,7 +154,7 @@ const HomeView = () => {
         <div className="flex items-center gap-3">
           <Link href="/profile" aria-label="Go to profile">
             <Avatar
-              src={user?.profilePicture}
+              src={user?.avatar || user?.profilePicture}
               name={user?.penName || "User"}
               size="md"
               className="cursor-pointer"
@@ -163,6 +163,13 @@ const HomeView = () => {
                 name: `${Magnetik_Bold.className} text-white`,
               }}
               showFallback
+              fallback={
+                <img
+                  src="/images/storytime-fallback.png"
+                  alt="fallback"
+                  className="object-cover w-full h-full"
+                />
+              }
             />
           </Link>
           <div className="flex items-center gap-1">
@@ -171,7 +178,7 @@ const HomeView = () => {
             >
               Hi{" "}
               <span
-                className={`text-secondary font-bold ${Magnetik_Bold.className}`}
+                className={`text-primary font-bold ${Magnetik_Bold.className}`}
               >
                 {user?.penName || "Reader"}
               </span>
@@ -245,7 +252,7 @@ const HomeView = () => {
               {[...Array(6)].map((_, i) => (
                 <div
                   key={i}
-                  className="h-10 w-24 rounded-lg bg-accent-colour animate-pulse"
+                  className="w-24 h-10 rounded-lg bg-accent-colour animate-pulse"
                 />
               ))}
             </div>
@@ -270,12 +277,12 @@ const HomeView = () => {
           <div className="space-y-4">
             {[...Array(3)].map((_, i) => (
               <div key={i} className="space-y-2">
-                <div className="h-6 w-48 bg-accent-colour animate-pulse rounded" />
+                <div className="w-48 h-6 rounded bg-accent-colour animate-pulse" />
                 <div className="flex gap-3 overflow-x-auto">
                   {[...Array(3)].map((_, j) => (
                     <div
                       key={j}
-                      className="h-48 w-32 bg-accent-colour animate-pulse rounded-lg flex-shrink-0"
+                      className="flex-shrink-0 w-32 h-48 rounded-lg bg-accent-colour animate-pulse"
                     />
                   ))}
                 </div>
