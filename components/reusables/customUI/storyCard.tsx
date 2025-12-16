@@ -75,7 +75,7 @@ const StoryCard = ({
   const displayImage = story.imageUrl || "/images/storytime-fallback.png"; // Fallback image
   const displayGenre = story.genres?.[0] || "Uncategorized";
 
-  const storyLink = `/story/${story.id}/`;
+  const storyLink = `/story/${story.id}`;
 
   const cardContent = (
     <Card

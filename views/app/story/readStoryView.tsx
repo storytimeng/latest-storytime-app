@@ -7,7 +7,7 @@ import React, {
   useRef,
   useCallback,
 } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Skeleton } from "@heroui/skeleton";
 import {
   useStory,
@@ -24,6 +24,8 @@ import {
   useOnlineStatus,
 } from "@/src/hooks/useOfflineStories";
 import { useUserStore } from "@/src/stores/useUserStore";
+import { useAuthStore } from "@/src/stores/useAuthStore";
+import { useAuthModalStore } from "@/src/stores/useAuthModalStore";
 
 // Component imports
 import { OfflineBanner } from "./components/OfflineBanner";
@@ -44,10 +46,22 @@ interface ReadStoryViewProps {
 }
 
 export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const initialChapterId = searchParams.get("chapterId");
   const initialEpisodeId = searchParams.get("episodeId");
   const initialContentId = initialChapterId || initialEpisodeId;
+
+  // Auth check
+  const { openModal: openAuthModal } = useAuthModalStore();
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+
+  useEffect(() => {
+    if (!isAuthenticated()) {
+      openAuthModal("login");
+      router.push(`/story/${storyId}`);
+    }
+  }, [isAuthenticated, openAuthModal, router, storyId]);
 
   // Get current user
   const { user } = useUserStore();
@@ -69,10 +83,31 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
 
   // Reading progress tracking
   const contentContainerRef = useRef<HTMLDivElement>(null);
+  const storyContentRef = useRef<HTMLDivElement>(null); // Ref for the actual story text container
   const commentsSectionRef = useRef<HTMLDivElement>(null);
-  const startTimeRef = useRef<number>(Date.now());
-  const lastProgressUpdateRef = useRef<number>(0);
+  const accumulatedTimeRef = useRef<number>(0); // Track time before current session
+  const lastVisibilityChangeRef = useRef<number>(Date.now());
   const hasRestoredScrollRef = useRef<boolean>(false);
+
+  // Handle page visibility to track accurate reading time
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      const now = Date.now();
+      if (document.hidden) {
+        // User left: add current session time to accumulated
+        accumulatedTimeRef.current +=
+          (now - lastVisibilityChangeRef.current) / 1000;
+      } else {
+        // User returned: reset start time for new session
+        lastVisibilityChangeRef.current = now;
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []);
 
   // Get progress hooks
   const { progress: storyProgress, updateProgress: updateStoryProgress } =
@@ -123,6 +158,12 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
     syncEpisodeIfNeeded,
     initialContentId: initialContentId || undefined,
   });
+
+  // Memoize word count to avoid recalculating on every render/interval
+  const totalWords = React.useMemo(() => {
+    if (!currentContent) return 0;
+    return currentContent.trim().split(/\s+/).length;
+  }, [currentContent]);
 
   // Get chapter/episode progress hooks based on content type - only call the one we need
   const { progress: chapterProgress, updateProgress: updateChapterProgress } =
@@ -186,65 +227,70 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
 
   // Calculate reading progress based on scroll position
   const calculateProgress = useCallback(() => {
-    if (!contentContainerRef.current || !isOnline) return;
+    if (!isOnline) return;
 
-    const scrollTop = window.scrollY || document.documentElement.scrollTop;
-    const scrollHeight = document.documentElement.scrollHeight;
-    const clientHeight = document.documentElement.clientHeight;
-
-    const contentText = currentContent || "";
-    const words = contentText.split(/\s+/).filter((w: string) => w.length > 0);
-    const totalWords = words.length;
+    // Calculate active reading time
+    const currentSessionTime = !document.hidden
+      ? (Date.now() - lastVisibilityChangeRef.current) / 1000
+      : 0;
     const readingTimeSeconds = Math.floor(
-      (Date.now() - startTimeRef.current) / 1000
+      accumulatedTimeRef.current + currentSessionTime
     );
 
-    // Check if comments section is visible - means story is fully read
-    if (commentsSectionRef.current) {
-      const commentsRect = commentsSectionRef.current.getBoundingClientRect();
-      const isCommentsVisible = commentsRect.top < clientHeight;
-
-      if (isCommentsVisible) {
-        return {
-          percentageRead: 100,
-          wordsRead: totalWords,
-          totalWords,
-          readingTimeSeconds,
-        };
-      }
-    }
-
-    // If entire content fits on screen, it's 100% read
-    if (scrollHeight <= clientHeight) {
+    // If we can't measure content, return basic stats
+    if (!storyContentRef.current) {
       return {
-        percentageRead: 100,
-        wordsRead: totalWords,
+        percentageRead: 0,
+        wordsRead: 0,
         totalWords,
         readingTimeSeconds,
       };
     }
 
-    // Calculate based on BOTTOM of viewport (what user can see)
-    const scrollBottom = scrollTop + clientHeight;
-    const maxScroll = scrollHeight;
+    const clientHeight = window.innerHeight;
+    const contentRect = storyContentRef.current.getBoundingClientRect();
+    const contentTop = contentRect.top;
+    const contentHeight = contentRect.height;
+    const contentBottom = contentRect.bottom;
 
-    // Calculate percentage based on bottom of viewport
-    const percentageRead = Math.min(
-      100,
-      Math.round((scrollBottom / maxScroll) * 100)
-    );
+    // Calculate how much of the content has been scrolled past the bottom of the viewport
+    // When contentTop is at clientHeight, we are at 0% (start of content entering view)
+    // When contentBottom is at clientHeight, we are at 100% (end of content entering view)
 
-    // Count actual words up to the bottom of viewport
-    const scrollRatio = scrollBottom / maxScroll;
-    const wordsRead = Math.floor(scrollRatio * totalWords);
+    // However, usually "read" means the user has scrolled it out of view (top) or it's fully visible.
+    // A better metric for "reading" text is: how much of the text has passed the user's eye line?
+    // Let's assume the user reads at the bottom of the screen (worst case) or middle.
+    // Standard practice: Percentage of content that is above the bottom of the viewport.
+
+    // Distance from top of content to bottom of viewport
+    const visibleContentHeight = clientHeight - contentTop;
+
+    let percentageRead = 0;
+
+    if (contentHeight <= 0) {
+      percentageRead = 100;
+    } else {
+      percentageRead = (visibleContentHeight / contentHeight) * 100;
+    }
+
+    // Clamp percentage
+    percentageRead = Math.min(100, Math.max(0, percentageRead));
+
+    // If the bottom of the content is visible in the viewport, consider it 100% read
+    if (contentBottom <= clientHeight) {
+      percentageRead = 100;
+    }
+
+    // Calculate words read based on percentage
+    const wordsRead = Math.floor((percentageRead / 100) * totalWords);
 
     return {
-      percentageRead: isNaN(percentageRead) ? 0 : Math.max(percentageRead, 0),
-      wordsRead: Math.min(wordsRead, totalWords),
+      percentageRead: Math.round(percentageRead),
+      wordsRead,
       totalWords,
       readingTimeSeconds,
     };
-  }, [currentContent, isOnline]);
+  }, [totalWords, isOnline]);
 
   // Update reading progress - no debounce since interval controls frequency
   const updateReadingProgress = useCallback(async () => {
@@ -277,13 +323,15 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
   ]);
 
   // Initialize start time ONCE from saved progress
+  const isTimeInitializedRef = useRef(false);
   useEffect(() => {
-    if (!currentProgress || startTimeRef.current !== Date.now()) return;
+    if (!currentProgress || isTimeInitializedRef.current) return;
 
-    // Only initialize if we haven't set it yet (still at default Date.now())
     const existingReadingTime =
       (currentProgress as any)?.readingTimeSeconds || 0;
-    startTimeRef.current = Date.now() - existingReadingTime * 1000;
+
+    accumulatedTimeRef.current = existingReadingTime;
+    isTimeInitializedRef.current = true;
   }, [currentProgress]);
 
   // Restore scroll position from progress
@@ -339,9 +387,9 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
   // Loading state
   if (isStoryLoading && !isUsingOfflineData) {
     return (
-      <div className="min-h-screen bg-accent-shade-1 p-4 space-y-4">
+      <div className="min-h-screen p-4 space-y-4 bg-accent-shade-1">
         <Skeleton className="w-full h-12 rounded-lg" />
-        <Skeleton className="w-full h-96 rounded-lg" />
+        <Skeleton className="w-full rounded-lg h-96" />
       </div>
     );
   }
@@ -349,7 +397,7 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
   // Story not found
   if (!activeStory) {
     return (
-      <div className="min-h-screen bg-accent-shade-1 flex items-center justify-center">
+      <div className="flex items-center justify-center min-h-screen bg-accent-shade-1">
         <p className="text-primary">
           {!isOnline ? "Story not available offline" : "Story not found"}
         </p>
@@ -389,20 +437,22 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
       {/* Story Content */}
       {isContentLoading ? (
         <div className="px-4 py-8">
-          <Skeleton className="w-full h-96 rounded-lg" />
+          <Skeleton className="w-full rounded-lg h-96" />
         </div>
       ) : (
-        <StoryContent
-          content={currentContent}
-          authorName={
-            activeStory.anonymous
-              ? "Anonymous"
-              : activeStory.author?.penName || "Unknown Author"
-          }
-          authorAvatar={activeStory.author?.avatar}
-          hasNavigation={hasNavigation}
-          description={activeStory.description}
-        />
+        <div ref={storyContentRef}>
+          <StoryContent
+            content={currentContent}
+            authorName={
+              activeStory.anonymous
+                ? "Anonymous"
+                : activeStory.author?.penName || "Unknown Author"
+            }
+            authorAvatar={activeStory.author?.avatar}
+            hasNavigation={hasNavigation}
+            description={activeStory.description}
+          />
+        </div>
       )}
 
       {/* Interaction Section (only when online) */}

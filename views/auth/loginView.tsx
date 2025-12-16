@@ -26,7 +26,15 @@ const loginSchema = z.object({
   rememberMe: z.boolean().optional(),
 });
 
-export default function LoginView() {
+interface LoginViewProps {
+  onSuccess?: () => void;
+  onSwitchView?: (view: string) => void;
+}
+
+export default function LoginView({
+  onSuccess,
+  onSwitchView,
+}: LoginViewProps) {
   const router = useRouter();
   const { show: showLoading, hide: hideLoading } = useLoadingStore();
   const [formData, setFormData] = useState<LoginFormData>({
@@ -139,7 +147,11 @@ export default function LoginView() {
       }
 
       showToast({ type: "success", message: "Signed in", duration: 1500 });
-      router.push("/home");
+      if (onSuccess) {
+        onSuccess();
+      } else {
+        router.push("/home");
+      }
     } catch (err: any) {
       console.error("Login error:", err);
       setErrors({ email: "Invalid email or password" });
@@ -210,12 +222,22 @@ export default function LoginView() {
               Keep me logged in
             </label>
           </div>
-          <Link
-            href="/auth/forgot-password"
-            className="text-sm hover:text-grey-1 body-text-small-medium-auto transition-transform-colors text-primary-colour hover:underline"
-          >
-            Forgot password?
-          </Link>
+          {onSwitchView ? (
+            <button
+              type="button"
+              onClick={() => onSwitchView("forgot-password")}
+              className="text-sm hover:text-grey-1 body-text-small-medium-auto transition-transform-colors text-primary-colour hover:underline"
+            >
+              Forgot password?
+            </button>
+          ) : (
+            <Link
+              href="/auth/forgot-password"
+              className="text-sm hover:text-grey-1 body-text-small-medium-auto transition-transform-colors text-primary-colour hover:underline"
+            >
+              Forgot password?
+            </Link>
+          )}
         </div>
       </form>
 
@@ -254,12 +276,21 @@ export default function LoginView() {
       <div className="mt-4 text-center">
         <p className="body-text-small-medium-auto ">
           Have an account?{" "}
-          <Link
-            href="/auth/signup"
-            className="font-medium text-primary-colour hover:underline body-text-small-regular-auto"
-          >
-            Sign Up
-          </Link>
+          {onSwitchView ? (
+            <button
+              onClick={() => onSwitchView("signup")}
+              className="font-medium text-primary-colour hover:underline body-text-small-regular-auto"
+            >
+              Sign Up
+            </button>
+          ) : (
+            <Link
+              href="/auth/signup"
+              className="font-medium text-primary-colour hover:underline body-text-small-regular-auto"
+            >
+              Sign Up
+            </Link>
+          )}
         </p>
       </div>
     </div>

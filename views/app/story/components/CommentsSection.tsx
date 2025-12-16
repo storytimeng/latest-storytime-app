@@ -42,10 +42,14 @@ export const CommentsSection = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [replyText, setReplyText] = useState("");
-  const [collapsedThreads, setCollapsedThreads] = useState<Set<string>>(new Set());
+  const [collapsedThreads, setCollapsedThreads] = useState<Set<string>>(
+    new Set()
+  );
   const [optimisticComments, setOptimisticComments] = useState<Comment[]>([]);
   const [cooldownSeconds, setCooldownSeconds] = useState(0);
-  const [replyCooldowns, setReplyCooldowns] = useState<Map<string, number>>(new Map());
+  const [replyCooldowns, setReplyCooldowns] = useState<Map<string, number>>(
+    new Map()
+  );
 
   // Countdown timer effect for main comment
   useEffect(() => {
@@ -101,13 +105,13 @@ export const CommentsSection = ({
 
     // After 2 seconds, remove optimistic comments that have been matched
     const timer = setTimeout(() => {
-      setOptimisticComments((prev) => 
-        prev.filter(oc => {
+      setOptimisticComments((prev) =>
+        prev.filter((oc) => {
           // Keep if still optimistic (pending)
           if (oc.isOptimistic) return true;
-          
+
           // Remove if it's been updated with a real ID (no longer starts with 'optimistic')
-          return oc.id.startsWith('optimistic');
+          return oc.id.startsWith("optimistic");
         })
       );
     }, 2000);
@@ -118,13 +122,15 @@ export const CommentsSection = ({
   // Merge optimistic comments with actual comments, matching and updating IDs
   const allComments = useMemo(() => {
     // Create a map of real comments
-    const realCommentsMap = new Map(comments.map(c => [c.id, c]));
-    
+    const realCommentsMap = new Map(comments.map((c) => [c.id, c]));
+
     // Find optimistic comments that match real ones (by content and user)
-    const updatedOptimistic = optimisticComments.map(oc => {
+    const updatedOptimistic = optimisticComments.map((oc) => {
       // Find a matching real comment (same content, user, and within 5 seconds)
-      const matchingReal = comments.find(rc => {
-        const timeDiff = Math.abs(new Date(rc.createdAt).getTime() - new Date(oc.createdAt).getTime());
+      const matchingReal = comments.find((rc) => {
+        const timeDiff = Math.abs(
+          new Date(rc.createdAt).getTime() - new Date(oc.createdAt).getTime()
+        );
         return (
           rc.content === oc.content &&
           rc.user.id === oc.user.id &&
@@ -132,25 +138,27 @@ export const CommentsSection = ({
           timeDiff < 5000 // Within 5 seconds
         );
       });
-      
+
       // If we found a match, update the optimistic comment with real data but keep it in place
       if (matchingReal) {
         return { ...matchingReal, isOptimistic: false };
       }
-      
+
       return oc;
     });
-    
+
     // Get IDs of comments that were matched (to avoid duplicates)
     const matchedRealIds = new Set(
       updatedOptimistic
-        .filter(oc => !oc.id.startsWith('optimistic'))
-        .map(oc => oc.id)
+        .filter((oc) => !oc.id.startsWith("optimistic"))
+        .map((oc) => oc.id)
     );
-    
+
     // Add real comments that weren't matched
-    const unmatchedRealComments = comments.filter(rc => !matchedRealIds.has(rc.id));
-    
+    const unmatchedRealComments = comments.filter(
+      (rc) => !matchedRealIds.has(rc.id)
+    );
+
     return [...unmatchedRealComments, ...updatedOptimistic];
   }, [comments, optimisticComments]);
 
@@ -207,25 +215,31 @@ export const CommentsSection = ({
       // Set 30-second cooldown after successful submission
       setCooldownSeconds(30);
       // Mark optimistic comment as no longer optimistic (unfade it)
-      setOptimisticComments((prev) => 
-        prev.map((c) => 
+      setOptimisticComments((prev) =>
+        prev.map((c) =>
           c.id === optimisticId ? { ...c, isOptimistic: false } : c
         )
       );
     } catch (error: any) {
       console.error("Failed to submit comment:", error);
-      
+
       // Check if it's a rate limit error
-      if (error?.message && typeof error.message === 'string' && error.message.includes('wait')) {
+      if (
+        error?.message &&
+        typeof error.message === "string" &&
+        error.message.includes("wait")
+      ) {
         const waitTime = extractWaitTime(error.message);
         setCooldownSeconds(waitTime);
       } else if (error?.statusCode === 400 && error?.message) {
         const waitTime = extractWaitTime(error.message);
         setCooldownSeconds(waitTime);
       }
-      
+
       // Remove optimistic comment immediately on error
-      setOptimisticComments((prev) => prev.filter((c) => c.id !== optimisticId));
+      setOptimisticComments((prev) =>
+        prev.filter((c) => c.id !== optimisticId)
+      );
       // Restore the text so user can try again
       setNewComment(commentText);
     } finally {
@@ -258,25 +272,31 @@ export const CommentsSection = ({
       // Set 30-second cooldown for this specific reply thread
       setReplyCooldowns((prev) => new Map(prev).set(parentId, 30));
       // Mark optimistic reply as no longer optimistic (unfade it)
-      setOptimisticComments((prev) => 
-        prev.map((c) => 
+      setOptimisticComments((prev) =>
+        prev.map((c) =>
           c.id === optimisticId ? { ...c, isOptimistic: false } : c
         )
       );
     } catch (error: any) {
       console.error("Failed to submit reply:", error);
-      
+
       // Check if it's a rate limit error
-      if (error?.message && typeof error.message === 'string' && error.message.includes('wait')) {
+      if (
+        error?.message &&
+        typeof error.message === "string" &&
+        error.message.includes("wait")
+      ) {
         const waitTime = extractWaitTime(error.message);
         setReplyCooldowns((prev) => new Map(prev).set(parentId, waitTime));
       } else if (error?.statusCode === 400 && error?.message) {
         const waitTime = extractWaitTime(error.message);
         setReplyCooldowns((prev) => new Map(prev).set(parentId, waitTime));
       }
-      
+
       // Remove optimistic reply immediately on error
-      setOptimisticComments((prev) => prev.filter((c) => c.id !== optimisticId));
+      setOptimisticComments((prev) =>
+        prev.filter((c) => c.id !== optimisticId)
+      );
       // Restore reply form with the text
       setReplyText(replyContent);
       setReplyingTo(parentId);
@@ -312,9 +332,11 @@ export const CommentsSection = ({
 
         <div className={`${depth > 0 ? "ml-6 pl-6" : ""} relative group`}>
           {/* Comment content with subtle background on hover */}
-          <div className={`flex gap-2 mb-2 rounded-lg p-2 -ml-2 hover:bg-default-100 transition-all duration-300 ${
-            comment.isOptimistic ? "opacity-50" : "opacity-100"
-          }`}>
+          <div
+            className={`flex gap-2 mb-2 rounded-lg p-2 -ml-2 hover:bg-default-100 transition-all duration-300 ${
+              comment.isOptimistic ? "opacity-50" : "opacity-100"
+            }`}
+          >
             <Avatar
               src={comment.user.avatar}
               name={comment.user.penName}
@@ -323,23 +345,33 @@ export const CommentsSection = ({
             />
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
-                <span className={`text-sm font-semibold text-foreground ${Magnetik_Medium.className}`}>
+                <span
+                  className={`text-sm font-semibold text-foreground ${Magnetik_Medium.className}`}
+                >
                   {comment.user.penName}
                 </span>
                 <span className="text-xs text-default-400">
-                  {new Date(comment.createdAt).toLocaleDateString()}
+                  {new Date(comment.createdAt).toLocaleDateString()}{" "}
+                  {new Date(comment.createdAt).toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
                 </span>
               </div>
-              <p className={`text-sm text-foreground mb-2 leading-relaxed ${Magnetik_Regular.className}`}>
+              <p
+                className={`text-sm text-foreground mb-2 leading-relaxed ${Magnetik_Regular.className}`}
+              >
                 {comment.content}
               </p>
-              
+
               {/* Action buttons - Reddit style */}
               <div className="flex items-center gap-4">
                 {/* Reply button */}
                 {isThreaded && (
                   <button
-                    onClick={() => setReplyingTo(showReplyForm ? null : comment.id)}
+                    onClick={() =>
+                      setReplyingTo(showReplyForm ? null : comment.id)
+                    }
                     className="flex items-center gap-1 text-xs font-medium text-default-500 hover:text-primary-500 transition-colors px-2 py-1 rounded hover:bg-default-200"
                   >
                     <MessageCircle size={14} />
@@ -356,7 +388,10 @@ export const CommentsSection = ({
                     {isCollapsed ? (
                       <>
                         <ChevronRight size={14} />
-                        <span>{comment.replies!.length} {comment.replies!.length === 1 ? 'reply' : 'replies'}</span>
+                        <span>
+                          {comment.replies!.length}{" "}
+                          {comment.replies!.length === 1 ? "reply" : "replies"}
+                        </span>
                       </>
                     ) : (
                       <>
@@ -375,7 +410,7 @@ export const CommentsSection = ({
                     value={replyText}
                     onChange={(e) => setReplyText(e.target.value)}
                     onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
+                      if (e.key === "Enter" && !e.shiftKey) {
                         e.preventDefault();
                         handleReply(comment.id);
                       }
@@ -394,7 +429,7 @@ export const CommentsSection = ({
                       isLoading={isSubmitting}
                       isDisabled={!replyText.trim() || replyCooldown > 0}
                     >
-                      {replyCooldown > 0 ? `Wait ${replyCooldown}s` : 'Reply'}
+                      {replyCooldown > 0 ? `Wait ${replyCooldown}s` : "Reply"}
                     </Button>
                     <Button
                       size="sm"
@@ -427,14 +462,16 @@ export const CommentsSection = ({
     <div className="space-y-6">
       {/* New comment form */}
       <div className="space-y-3">
-        <h3 className={`text-lg font-medium text-primary-colour ${Magnetik_Medium.className}`}>
+        <h3
+          className={`text-lg font-medium text-primary-colour ${Magnetik_Medium.className}`}
+        >
           Comments ({allComments.length})
         </h3>
         <Textarea
           value={newComment}
           onChange={(e) => setNewComment(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
+            if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault();
               handleSubmit();
             }
@@ -452,7 +489,7 @@ export const CommentsSection = ({
           isDisabled={!newComment.trim() || cooldownSeconds > 0}
           startContent={<MessageCircle size={18} />}
         >
-          {cooldownSeconds > 0 ? `Wait ${cooldownSeconds}s` : 'Post Comment'}
+          {cooldownSeconds > 0 ? `Wait ${cooldownSeconds}s` : "Post Comment"}
         </Button>
       </div>
 

@@ -27,6 +27,8 @@ import { useUserProfile } from "@/src/hooks/useUserProfile";
 import { useLibrary } from "@/src/hooks/useLibrary";
 import { useDeleteStory } from "@/src/hooks/useStoryMutations";
 import type { StoryResponseDto } from "@/src/client/types.gen";
+import { useAuthStore } from "@/src/stores/useAuthStore";
+import { useAuthModalStore } from "@/src/stores/useAuthModalStore";
 
 // Locally extend StoryResponseDto for UI needs
 type ExtendedStory = StoryResponseDto & {
@@ -40,6 +42,16 @@ type TabKey = "Recent" | "Ongoing" | "Published" | "Drafts";
 
 const PenView = () => {
   const router = useRouter();
+  const { openModal: openAuthModal } = useAuthModalStore();
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+
+  useEffect(() => {
+    if (!isAuthenticated()) {
+      openAuthModal("login");
+      router.push("/");
+    }
+  }, [isAuthenticated, openAuthModal, router]);
+
   const [selectedTab, setSelectedTab] = useState<TabKey>("Recent");
   const [showAllStories, setShowAllStories] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -72,11 +84,13 @@ const PenView = () => {
         );
       case "Published":
         return stories.filter(
-          (story: ExtendedStory) => story.status === "Completed"
+          (story: ExtendedStory) =>
+            story.status === "Completed" || story.storyStatus === "complete"
         );
       case "Drafts":
         return stories.filter(
-          (story: ExtendedStory) => story.status === "Draft"
+          (story: ExtendedStory) =>
+            story.status === "Draft" || story.storyStatus === "drafts"
         );
       default:
         return stories;

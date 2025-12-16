@@ -4,7 +4,7 @@
  */
 
 const DB_NAME = "StorytimeOfflineDB";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 // Store names
 export const STORES = {
@@ -15,7 +15,9 @@ export const STORES = {
 } as const;
 
 export interface OfflineStory {
-  id: string;
+  id: string; // composite: userId_storyId
+  storyId: string; // original story ID
+  userId: string; // Added for multi-user support
   title: string;
   description: string;
   coverImage: string;
@@ -32,8 +34,10 @@ export interface OfflineStory {
 }
 
 export interface OfflineChapter {
-  id: string;
+  id: string; // composite: userId_chapterId
+  chapterId: string; // original chapter ID
   storyId: string;
+  userId: string; // Added for multi-user support
   chapterNumber: number;
   title: string;
   content: string;
@@ -43,8 +47,10 @@ export interface OfflineChapter {
 }
 
 export interface OfflineEpisode {
-  id: string;
+  id: string; // composite: userId_episodeId
+  episodeId: string; // original episode ID
   storyId: string;
+  userId: string; // Added for multi-user support
   episodeNumber: number;
   title: string;
   content: string;
@@ -81,6 +87,19 @@ export function initDB(): Promise<IDBDatabase> {
           unique: false,
         });
         storyStore.createIndex("lastReadAt", "lastReadAt", { unique: false });
+        storyStore.createIndex("userId", "userId", { unique: false });
+        storyStore.createIndex("storyId", "storyId", { unique: false });
+      } else {
+        // Upgrade existing store
+        const storyStore = (
+          event.target as IDBOpenDBRequest
+        ).transaction!.objectStore(STORES.STORIES);
+        if (!storyStore.indexNames.contains("userId")) {
+          storyStore.createIndex("userId", "userId", { unique: false });
+        }
+        if (!storyStore.indexNames.contains("storyId")) {
+          storyStore.createIndex("storyId", "storyId", { unique: false });
+        }
       }
 
       // Chapters store
@@ -93,9 +112,33 @@ export function initDB(): Promise<IDBDatabase> {
           "storyId_chapterNumber",
           ["storyId", "chapterNumber"],
           {
-            unique: true,
+            unique: false, // Changed to false because multiple users can have same story/chapter
           }
         );
+        chapterStore.createIndex("userId", "userId", { unique: false });
+        chapterStore.createIndex("chapterId", "chapterId", { unique: false });
+      } else {
+        const chapterStore = (
+          event.target as IDBOpenDBRequest
+        ).transaction!.objectStore(STORES.CHAPTERS);
+        if (!chapterStore.indexNames.contains("userId")) {
+          chapterStore.createIndex("userId", "userId", { unique: false });
+        }
+        if (!chapterStore.indexNames.contains("chapterId")) {
+          chapterStore.createIndex("chapterId", "chapterId", { unique: false });
+        }
+        // We might need to update unique constraint on storyId_chapterNumber if it exists
+        // But changing index properties usually requires deleting and recreating
+        if (chapterStore.indexNames.contains("storyId_chapterNumber")) {
+          chapterStore.deleteIndex("storyId_chapterNumber");
+          chapterStore.createIndex(
+            "storyId_chapterNumber",
+            ["storyId", "chapterNumber"],
+            {
+              unique: false,
+            }
+          );
+        }
       }
 
       // Episodes store
@@ -108,9 +151,31 @@ export function initDB(): Promise<IDBDatabase> {
           "storyId_episodeNumber",
           ["storyId", "episodeNumber"],
           {
-            unique: true,
+            unique: false, // Changed to false
           }
         );
+        episodeStore.createIndex("userId", "userId", { unique: false });
+        episodeStore.createIndex("episodeId", "episodeId", { unique: false });
+      } else {
+        const episodeStore = (
+          event.target as IDBOpenDBRequest
+        ).transaction!.objectStore(STORES.EPISODES);
+        if (!episodeStore.indexNames.contains("userId")) {
+          episodeStore.createIndex("userId", "userId", { unique: false });
+        }
+        if (!episodeStore.indexNames.contains("episodeId")) {
+          episodeStore.createIndex("episodeId", "episodeId", { unique: false });
+        }
+        if (episodeStore.indexNames.contains("storyId_episodeNumber")) {
+          episodeStore.deleteIndex("storyId_episodeNumber");
+          episodeStore.createIndex(
+            "storyId_episodeNumber",
+            ["storyId", "episodeNumber"],
+            {
+              unique: false,
+            }
+          );
+        }
       }
 
       // Metadata store (for storing settings, last sync time, etc.)

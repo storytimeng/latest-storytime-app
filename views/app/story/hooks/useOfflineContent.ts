@@ -4,21 +4,27 @@ import {
   chaptersStore,
   episodesStore,
 } from "@/lib/offline/indexedDB";
+import { useUserStore } from "@/src/stores/useUserStore";
 
 export function useOfflineContent(
   isOnline: boolean,
   storyId: string,
   updateLastRead: (id: string) => Promise<void>
 ) {
+  const { user } = useUserStore();
+  const userId = user?.id;
+
   const [isUsingOfflineData, setIsUsingOfflineData] = useState(false);
   const [offlineStory, setOfflineStory] = useState<any>(null);
   const [offlineContent, setOfflineContent] = useState<any[]>([]);
 
   useEffect(() => {
-    if (!isOnline) {
+    if (!isOnline && userId) {
       const loadOfflineData = async () => {
         try {
-          const offlineStoryData = await storiesStore.get(storyId);
+          const offlineStoryData = await storiesStore.get(
+            `${userId}_${storyId}`
+          );
           if (offlineStoryData) {
             setOfflineStory(offlineStoryData);
             setIsUsingOfflineData(true);
@@ -32,20 +38,22 @@ export function useOfflineContent(
                 "storyId",
                 storyId
               );
+              const userChapters = offlineChapters.filter(
+                (c) => c.userId === userId
+              );
               setOfflineContent(
-                offlineChapters.sort(
-                  (a, b) => a.chapterNumber - b.chapterNumber
-                )
+                userChapters.sort((a, b) => a.chapterNumber - b.chapterNumber)
               );
             } else {
               const offlineEpisodes = await episodesStore.getByIndex(
                 "storyId",
                 storyId
               );
+              const userEpisodes = offlineEpisodes.filter(
+                (e) => e.userId === userId
+              );
               setOfflineContent(
-                offlineEpisodes.sort(
-                  (a, b) => a.episodeNumber - b.episodeNumber
-                )
+                userEpisodes.sort((a, b) => a.episodeNumber - b.episodeNumber)
               );
             }
           }
@@ -60,7 +68,7 @@ export function useOfflineContent(
       setOfflineStory(null);
       setOfflineContent([]);
     }
-  }, [isOnline, storyId, updateLastRead]);
+  }, [isOnline, storyId, updateLastRead, userId]);
 
   return {
     isUsingOfflineData,

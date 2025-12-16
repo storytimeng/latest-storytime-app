@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import React, { useState, useEffect } from "react";
 import {
   ArrowLeft,
@@ -39,6 +40,8 @@ import {
 import { useOfflineStories } from "@/src/hooks/useOfflineStories";
 import { showToast } from "@/lib/showNotification";
 import { useUserStore } from "@/src/stores/useUserStore";
+import { useAuthStore } from "@/src/stores/useAuthStore";
+import { useAuthModalStore } from "@/src/stores/useAuthModalStore";
 import { CollaboratorsModal } from "@/components/reusables/modals/CollaboratorsModal";
 import { ImagePreviewModal } from "@/components/reusables/modals/ImagePreviewModal";
 import { motion, AnimatePresence, useScroll } from "framer-motion";
@@ -67,6 +70,9 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
   const { aggregatedData, mutate: mutateProgress } =
     useAggregatedProgress(storyId);
   const { user: storeUser } = useUserStore();
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const { openModal: openAuthModal } = useAuthModalStore();
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<Tab>("episodes");
   const [reviewText, setReviewText] = useState("");
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
@@ -193,6 +199,11 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
 
   // Handle single item download
   const handleSingleDownload = async (item: any, index: number) => {
+    if (!isAuthenticated()) {
+      openAuthModal("login");
+      return;
+    }
+
     if (downloadingItems.has(item.id)) return;
 
     setDownloadingItems((prev) => new Set(prev).add(item.id));
@@ -409,6 +420,11 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
 
   // Handle batch download action from dropdown
   const handleBatchDownloadAction = async (key: string) => {
+    if (!isAuthenticated()) {
+      openAuthModal("login");
+      return;
+    }
+
     if (!contentList || contentList.length === 0) return;
 
     let startIndex = 0;
@@ -456,6 +472,11 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
 
   // Handle bulk download
   const handleBulkDownload = async () => {
+    if (!isAuthenticated()) {
+      openAuthModal("login");
+      return;
+    }
+
     if (!storyId || selectedContentIds.size === 0) return;
     const itemsToDownload = contentList.filter((item: any) =>
       selectedContentIds.has(item.id)
@@ -570,6 +591,42 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
   const contentList = structure === "chapters" ? chapters : episodes;
   const hasContent = contentList && contentList.length > 0;
   const isSingleStory = structure === "single";
+
+  // Calculate continue target
+  const continueTarget = React.useMemo(() => {
+    if (!contentList || contentList.length === 0) return null;
+
+    // Default to first item
+    if (!storyProgress) return contentList[0];
+
+    const lastReadIndex =
+      structure === "chapters"
+        ? (storyProgress as any).lastReadChapter
+        : (storyProgress as any).lastReadEpisode;
+
+    if (!lastReadIndex) return contentList[0];
+
+    // Check if the last read item is completed
+    // Note: lastReadIndex is 1-based
+    const lastReadItem = contentList[lastReadIndex - 1];
+    if (!lastReadItem) return contentList[0];
+
+    const progressList =
+      structure === "chapters"
+        ? aggregatedData?.chapterProgress
+        : aggregatedData?.episodeProgress;
+    const itemProgress = progressList?.find((p: any) =>
+      structure === "chapters"
+        ? p.chapterId === lastReadItem.id
+        : p.episodeId === lastReadItem.id
+    );
+
+    if (itemProgress?.isCompleted && lastReadIndex < contentList.length) {
+      return contentList[lastReadIndex]; // Next item
+    }
+
+    return lastReadItem; // Current item
+  }, [storyProgress, contentList, structure, aggregatedData]);
 
   // Set default tab if single story
   useEffect(() => {
@@ -920,38 +977,37 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
 
           {/* Action Button */}
           <div className="mt-8">
-            <Link
-              href={
-                storyProgress &&
-                ((storyProgress as any)?.lastReadChapter ||
-                  (storyProgress as any)?.lastReadEpisode)
-                  ? `/story/${storyId}/read?${structure === "chapters" ? "chapterId" : "episodeId"}=${
-                      structure === "chapters"
-                        ? contentList[
-                            (storyProgress as any).lastReadChapter - 1
-                          ]?.id
-                        : contentList[
-                            (storyProgress as any).lastReadEpisode - 1
-                          ]?.id
-                    }`
-                  : `/story/${storyId}/read${hasContent ? `?${structure === "chapters" ? "chapterId" : "episodeId"}=${contentList[0].id}` : ""}`
-              }
+            <button
+              onClick={() => {
+                if (!isAuthenticated()) {
+                  openAuthModal("login");
+                  return;
+                }
+                const url = continueTarget
+                  ? `/story/${storyId}/read?${structure === "chapters" ? "chapterId" : "episodeId"}=${continueTarget.id}`
+                  : `/story/${storyId}/read${
+                      hasContent
+                        ? `?${structure === "chapters" ? "chapterId" : "episodeId"}=${contentList[0].id}`
+                        : ""
+                    }`;
+                router.push(url);
+              }}
               className="w-full bg-primary hover:bg-primary/90 text-white py-4 rounded-full font-bold text-base flex items-center justify-center gap-2.5 transition-all shadow-lg shadow-primary/25 active:scale-[0.98]"
             >
               <Play size={22} className="fill-current" />
               <span>
-                {storyProgress &&
-                ((storyProgress as any)?.lastReadChapter ||
-                  (storyProgress as any)?.lastReadEpisode)
+                {continueTarget && storyProgress
                   ? `Continue ${structure === "chapters" ? "Chapter" : "Episode"} ${
-                      (storyProgress as any)?.lastReadChapter ||
-                      (storyProgress as any)?.lastReadEpisode
+                      continueTarget.number ||
+                      (structure === "chapters"
+                        ? continueTarget.chapterNumber
+                        : continueTarget.episodeNumber)
                     }`
                   : isSingleStory
                     ? "Read Story"
                     : `Play ${structure === "chapters" ? "Chapter" : "Episode"} 1`}
               </span>
-            </Link>
+            </button>
           </div>
         </div>
       </div>
@@ -1195,22 +1251,35 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
                     </div>
                     <div className="flex items-center gap-2 mt-1 text-xs text-primary/40">
                       <span>
-                        {new Date(
-                          item.createdAt || Date.now()
-                        ).toLocaleDateString()}
+                        {item.createdAt
+                          ? new Date(item?.createdAt).toLocaleDateString()
+                          : ""}
                       </span>
                       {readingTime > 0 && (
                         <>
                           <span>•</span>
                           <span className="text-complimentary-colour/70">
-                            {formatReadingTime(readingTime)}
+                            {formatReadingTime(readingTime)} read
                           </span>
                         </>
                       )}
-                      <span>•</span>
-                      <span>
-                        {Math.ceil((item.content?.length || 0) / 1000)} min read
-                      </span>
+                      {(() => {
+                        const content = item.content || item.body;
+                        const wordCount =
+                          item.totalWords ||
+                          (content ? content.trim().split(/\s+/).length : 0);
+
+                        if (wordCount > 0) {
+                          const mins = Math.ceil(wordCount / 200);
+                          return (
+                            <>
+                              <span>•</span>
+                              <span>{mins} min read</span>
+                            </>
+                          );
+                        }
+                        return null;
+                      })()}
                     </div>
                   </div>
 
@@ -1283,6 +1352,42 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
 
         {activeTab === "details" && (
           <div className="space-y-8">
+            {/* Aggregated Stats */}
+            {aggregated && (
+              <div className="grid grid-cols-2 gap-4 p-4 border rounded-xl bg-white/5 border-white/10">
+                <div className="space-y-1">
+                  <p className="text-xs text-primary/50">Total Words</p>
+                  <p className="text-lg font-bold text-primary">
+                    {aggregated.totalWords?.toLocaleString() || 0}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs text-primary/50">Reading Time</p>
+                  <p className="text-lg font-bold text-primary">
+                    {formatReadingTime(aggregated.totalReadingTimeSeconds)}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs text-primary/50">
+                    {structure === "chapters" ? "Chapters" : "Episodes"}
+                  </p>
+                  <p className="text-lg font-bold text-primary">
+                    {structure === "chapters"
+                      ? aggregated.totalChapters
+                      : aggregated.totalEpisodes}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs text-primary/50">Completed</p>
+                  <p className="text-lg font-bold text-primary">
+                    {structure === "chapters"
+                      ? aggregated.completedChapters
+                      : aggregated.completedEpisodes}
+                  </p>
+                </div>
+              </div>
+            )}
+
             <div className="space-y-4">
               <h3 className="text-lg font-bold text-primary">
                 About the Story
@@ -1449,7 +1554,11 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
                             "User"}
                         </p>
                         <p className="text-primary/40 text-[10px]">
-                          {new Date(comment.createdAt).toLocaleDateString()}
+                          {new Date(comment.createdAt).toLocaleDateString()} at{" "}
+                          {new Date(comment.createdAt).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
                         </p>
                       </div>
                     </div>
@@ -1483,18 +1592,8 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
           >
             <Link
               href={
-                storyProgress &&
-                ((storyProgress as any)?.lastReadChapter ||
-                  (storyProgress as any)?.lastReadEpisode)
-                  ? `/story/${storyId}/read?${structure === "chapters" ? "chapterId" : "episodeId"}=${
-                      structure === "chapters"
-                        ? contentList[
-                            (storyProgress as any).lastReadChapter - 1
-                          ]?.id
-                        : contentList[
-                            (storyProgress as any).lastReadEpisode - 1
-                          ]?.id
-                    }`
+                continueTarget
+                  ? `/story/${storyId}/read?${structure === "chapters" ? "chapterId" : "episodeId"}=${continueTarget.id}`
                   : `/story/${storyId}/read${hasContent ? `?${structure === "chapters" ? "chapterId" : "episodeId"}=${contentList[0].id}` : ""}`
               }
               className="flex items-center justify-center text-white rounded-full shadow-lg w-14 h-14 bg-primary hover:bg-primary/90 shadow-primary/30"

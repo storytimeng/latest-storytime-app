@@ -21,11 +21,7 @@ import {
   migrateLocalStorageToIndexedDB,
   needsMigration,
 } from "@/lib/cacheMigration";
-import type {
-  StoryFormData,
-  Chapter,
-  Part,
-} from "@/types/story";
+import type { StoryFormData, Chapter, Part } from "@/types/story";
 import type { CreateStoryDto, UpdateStoryDto } from "@/src/client/types.gen";
 
 interface UseStoryViewLogicProps {
@@ -39,7 +35,11 @@ interface UseStoryViewLogicReturn {
   isCreating: boolean;
   isUpdating: boolean;
   isFetchingStory: boolean;
-  handleSubmit: (formData: StoryFormData, chapters?: Chapter[], parts?: Part[]) => Promise<void>;
+  handleSubmit: (
+    formData: StoryFormData,
+    chapters?: Chapter[],
+    parts?: Part[]
+  ) => Promise<void>;
   handleCancel: () => void;
   pageTitle: string;
   backLink: string;
@@ -56,16 +56,23 @@ export function useStoryViewLogic({
   const router = useRouter();
   const { user: swrUser } = useUserProfile();
   const { user: storeUser } = useUserStore();
-  const [initialData, setInitialData] = useState<Partial<StoryFormData> | undefined>();
-  const [createdStoryId, setCreatedStoryId] = useState<string | null>(storyId || null);
+  const [initialData, setInitialData] = useState<
+    Partial<StoryFormData> | undefined
+  >();
+  const [createdStoryId, setCreatedStoryId] = useState<string | null>(
+    storyId || null
+  );
 
   // Hooks for mutations
   const { createStory, isCreating: isCreatingStory } = useCreateStory();
   const { updateStory, isUpdating, error: updateError } = useUpdateStory();
-  const { createMultipleChapters, isCreating: isCreatingChapters } = useCreateMultipleChapters();
-  const { createMultipleEpisodes, isCreating: isCreatingEpisodes } = useCreateMultipleEpisodes();
+  const { createMultipleChapters, isCreating: isCreatingChapters } =
+    useCreateMultipleChapters();
+  const { createMultipleEpisodes, isCreating: isCreatingEpisodes } =
+    useCreateMultipleEpisodes();
 
-  const isCreating = isCreatingStory || isCreatingChapters || isCreatingEpisodes;
+  const isCreating =
+    isCreatingStory || isCreatingChapters || isCreatingEpisodes;
 
   // Fetch story data for edit mode
   const { story, isLoading: isFetchingStory } = useFetchStory(
@@ -75,9 +82,9 @@ export function useStoryViewLogic({
   // Initialize cache on mount
   useEffect(() => {
     const initCache = async () => {
-      if (needsMigration()) {
-        const result = await migrateLocalStorageToIndexedDB();
-        
+      if (storeUser?.id && needsMigration()) {
+        const result = await migrateLocalStorageToIndexedDB(storeUser.id);
+
         if (result.success) {
           showToast({
             type: "success",
@@ -91,12 +98,14 @@ export function useStoryViewLogic({
           });
         }
       }
-      
+
       await clearExpiredCaches();
     };
 
-    initCache();
-  }, []);
+    if (storeUser?.id) {
+      initCache();
+    }
+  }, [storeUser?.id]);
 
   // Authorization check for edit mode
   useEffect(() => {
@@ -363,10 +372,20 @@ export function useStoryViewLogic({
             setCreatedStoryId(newStoryId);
 
             // Save chapters/episodes to cache for later bulk creation
-            if (hasChapters && _chapters && _chapters.length > 0) {
-              saveChaptersCache(newStoryId, _chapters);
-            } else if (hasEpisodes && _parts && _parts.length > 0) {
-              saveEpisodesCache(newStoryId, _parts);
+            if (
+              hasChapters &&
+              _chapters &&
+              _chapters.length > 0 &&
+              storeUser?.id
+            ) {
+              saveChaptersCache(newStoryId, storeUser.id, _chapters);
+            } else if (
+              hasEpisodes &&
+              _parts &&
+              _parts.length > 0 &&
+              storeUser?.id
+            ) {
+              saveEpisodesCache(newStoryId, storeUser.id, _parts);
             }
 
             showToast({

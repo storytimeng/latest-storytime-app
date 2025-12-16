@@ -9,6 +9,7 @@ import {
   clearStoryCache,
 } from "@/lib/storyCache";
 import { useUnsavedChangesWarning } from "@/src/hooks/useUnsavedChangesWarning";
+import { useUserStore } from "@/src/stores/useUserStore";
 import type { Chapter, Part, StoryStructure } from "@/types/story";
 
 interface UseStoryCacheProps {
@@ -43,6 +44,9 @@ export function useStoryCache({
   parts,
   hasUnsavedChanges,
 }: UseStoryCacheProps): UseStoryCacheReturn {
+  const { user } = useUserStore();
+  const userId = user?.id;
+
   const [showCacheModal, setShowCacheModal] = useState(false);
   const [pendingCacheType, setPendingCacheType] = useState<
     "chapters" | "episodes" | null
@@ -60,12 +64,12 @@ export function useStoryCache({
     hasUnsavedChanges,
     onSave: () => {
       const storyId = createdStoryId || (mode === "edit" && initialDataId);
-      if (storyId) {
+      if (storyId && userId) {
         if (storyStructure.hasChapters && chapters.length > 0) {
-          saveChaptersCache(storyId, chapters);
+          saveChaptersCache(storyId, userId, chapters);
         }
         if (storyStructure.hasEpisodes && parts.length > 0) {
-          saveEpisodesCache(storyId, parts);
+          saveEpisodesCache(storyId, userId, parts);
         }
       }
     },
@@ -73,13 +77,13 @@ export function useStoryCache({
 
   // Check for cached data when story ID becomes available
   useEffect(() => {
-    if (cacheChecked) return;
+    if (cacheChecked || !userId) return;
 
     const storyId = createdStoryId || (mode === "edit" && initialDataId);
     if (!storyId) return;
 
     const checkCache = async () => {
-      const cached = await hasCachedData(storyId);
+      const cached = await hasCachedData(storyId, userId);
 
       if (cached.hasChapters && storyStructure.hasChapters) {
         setPendingCacheType("chapters");
@@ -95,15 +99,22 @@ export function useStoryCache({
     };
 
     checkCache();
-  }, [createdStoryId, mode, initialDataId, storyStructure, cacheChecked]);
+  }, [
+    createdStoryId,
+    mode,
+    initialDataId,
+    storyStructure,
+    cacheChecked,
+    userId,
+  ]);
 
   // Handle loading cache
   const handleLoadCache = useCallback(async () => {
     const storyId = createdStoryId || (mode === "edit" && initialDataId);
-    if (!storyId || !pendingCacheType) return;
+    if (!storyId || !pendingCacheType || !userId) return;
 
     if (pendingCacheType === "chapters") {
-      const cached = await getChaptersCache(storyId);
+      const cached = await getChaptersCache(storyId, userId);
       if (cached && cached.length > 0) {
         // Note: This needs to be handled by parent component
         // We'll return the cached data through a callback
@@ -114,7 +125,7 @@ export function useStoryCache({
         });
       }
     } else if (pendingCacheType === "episodes") {
-      const cached = await getEpisodesCache(storyId);
+      const cached = await getEpisodesCache(storyId, userId);
       if (cached && cached.length > 0) {
         setExpandedEpisodes(new Set([cached[0].id]));
         showToast({
@@ -126,13 +137,13 @@ export function useStoryCache({
 
     setShowCacheModal(false);
     setPendingCacheType(null);
-  }, [createdStoryId, mode, initialDataId, pendingCacheType]);
+  }, [createdStoryId, mode, initialDataId, pendingCacheType, userId]);
 
   // Handle discarding cache
   const handleDiscardCache = useCallback(async () => {
     const storyId = createdStoryId || (mode === "edit" && initialDataId);
-    if (storyId) {
-      await clearStoryCache(storyId);
+    if (storyId && userId) {
+      await clearStoryCache(storyId, userId);
       showToast({
         type: "info",
         message: "Cached data has been discarded",
@@ -140,23 +151,42 @@ export function useStoryCache({
     }
     setShowCacheModal(false);
     setPendingCacheType(null);
-  }, [createdStoryId, mode, initialDataId]);
+  }, [createdStoryId, mode, initialDataId, userId]);
 
   // Auto-save chapters to cache when they change
   useEffect(() => {
     const storyId = createdStoryId || (mode === "edit" && initialDataId);
-    if (storyId && chapters.length > 0 && storyStructure.hasChapters) {
-      saveChaptersCache(storyId, chapters);
+    if (
+      storyId &&
+      chapters.length > 0 &&
+      storyStructure.hasChapters &&
+      userId
+    ) {
+      saveChaptersCache(storyId, userId, chapters);
     }
-  }, [chapters, createdStoryId, mode, initialDataId, storyStructure.hasChapters]);
+  }, [
+    chapters,
+    createdStoryId,
+    mode,
+    initialDataId,
+    storyStructure.hasChapters,
+    userId,
+  ]);
 
   // Auto-save episodes to cache when they change
   useEffect(() => {
     const storyId = createdStoryId || (mode === "edit" && initialDataId);
-    if (storyId && parts.length > 0 && storyStructure.hasEpisodes) {
-      saveEpisodesCache(storyId, parts);
+    if (storyId && parts.length > 0 && storyStructure.hasEpisodes && userId) {
+      saveEpisodesCache(storyId, userId, parts);
     }
-  }, [parts, createdStoryId, mode, initialDataId, storyStructure.hasEpisodes]);
+  }, [
+    parts,
+    createdStoryId,
+    mode,
+    initialDataId,
+    storyStructure.hasEpisodes,
+    userId,
+  ]);
 
   return {
     showCacheModal,

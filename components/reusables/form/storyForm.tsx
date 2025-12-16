@@ -26,6 +26,7 @@ import { useUnsavedChangesWarning } from "@/src/hooks/useUnsavedChangesWarning";
 // Custom hooks for refactored logic
 import { useStoryFormState } from "@/src/hooks/useStoryFormState";
 import { useStoryContent } from "@/src/hooks/useStoryContent";
+import { useUserStore } from "@/src/stores/useUserStore";
 import type {
   StoryFormData,
   StoryStructure,
@@ -268,12 +269,17 @@ const StoryForm: React.FC<StoryFormProps> = ({
   isLoading = false,
   createdStoryId,
 }) => {
+  const { user } = useUserStore();
+  const userId = user?.id;
+
   // ============================================================================
   // REFACTORED: Custom hooks (now active!)
   // ============================================================================
   const formStateHook = useStoryFormState({ initialData, mode });
-  const contentStateHook = useStoryContent({ storyStructure: formStateHook.storyStructure });
-  
+  const contentStateHook = useStoryContent({
+    storyStructure: formStateHook.storyStructure,
+  });
+
   // Create aliases for backward compatibility - these reference hook state
   const formData = formStateHook.formData;
   const formErrors = formStateHook.formErrors;
@@ -287,7 +293,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
   const handleGenreToggle = formStateHook.handleGenreToggle;
   const validateForm = formStateHook.validateForm;
   const handleStructureNext = formStateHook.handleStructureNext;
-  
+
   // Content state from hooks
   const chapters = contentStateHook.chapters;
   const parts = contentStateHook.parts;
@@ -329,7 +335,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
   // Track changes
   useEffect(() => {
     if (!initialFormDataRef.current) return;
-    
+
     const currentData = JSON.stringify({
       formData,
       chapters,
@@ -518,7 +524,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
     (authorNote: string, giveConsent: boolean) => {
       // Reset unsaved changes flag before submit
       setHasUnsavedChanges(false);
-      
+
       const finalData = { ...formData, authorNote, giveConsent };
       const contentData = storyStructure.hasChapters ? chapters : undefined;
       const partsData = !storyStructure.hasChapters ? parts : undefined;

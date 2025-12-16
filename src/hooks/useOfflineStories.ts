@@ -9,11 +9,15 @@ import {
   getStorageEstimate,
 } from "@/lib/offline/indexedDB";
 import { showToast } from "@/lib/showNotification";
+import { useUserStore } from "@/src/stores/useUserStore";
 
 /**
  * Hook for managing offline stories
  */
 export function useOfflineStories() {
+  const { user } = useUserStore();
+  const userId = user?.id;
+
   const [offlineStories, setOfflineStories] = useState<OfflineStory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [storageInfo, setStorageInfo] = useState({
@@ -24,9 +28,17 @@ export function useOfflineStories() {
 
   // Load all offline stories
   const loadOfflineStories = useCallback(async () => {
+    if (!userId) {
+      setOfflineStories([]);
+      setIsLoading(false);
+      return;
+    }
+
     try {
       setIsLoading(true);
-      const stories = await storiesStore.getAll();
+      // Filter by userId
+      const stories = await storiesStore.getByIndex("userId", userId);
+
       // Sort by last read, then by download date
       stories.sort((a, b) => {
         if (a.lastReadAt && b.lastReadAt) {
@@ -48,7 +60,7 @@ export function useOfflineStories() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [userId]);
 
   useEffect(() => {
     loadOfflineStories();
@@ -57,34 +69,40 @@ export function useOfflineStories() {
   // Check if a story is downloaded
   const isStoryDownloaded = useCallback(
     async (storyId: string): Promise<boolean> => {
+      if (!userId) return false;
       try {
-        const story = await storiesStore.get(storyId);
+        const story = await storiesStore.get(`${userId}_${storyId}`);
         return !!story;
       } catch (error) {
         console.error("Failed to check story download status:", error);
         return false;
       }
     },
-    []
+    [userId]
   );
 
   // Get downloaded chapters/episodes for a story
   const getDownloadedContent = useCallback(
     async (storyId: string, structure: "chapters" | "episodes" | "single") => {
+      if (!userId) return [];
       try {
         if (structure === "chapters" || structure === "single") {
           const chapters = await chaptersStore.getByIndex("storyId", storyId);
-          return chapters.sort((a, b) => a.chapterNumber - b.chapterNumber);
+          // Filter by userId
+          const userChapters = chapters.filter((c) => c.userId === userId);
+          return userChapters.sort((a, b) => a.chapterNumber - b.chapterNumber);
         } else {
           const episodes = await episodesStore.getByIndex("storyId", storyId);
-          return episodes.sort((a, b) => a.episodeNumber - b.episodeNumber);
+          // Filter by userId
+          const userEpisodes = episodes.filter((e) => e.userId === userId);
+          return userEpisodes.sort((a, b) => a.episodeNumber - b.episodeNumber);
         }
       } catch (error) {
         console.error("Failed to get downloaded content:", error);
         return [];
       }
     },
-    []
+    [userId]
   );
 
   // Download a story with its content
@@ -98,6 +116,14 @@ export function useOfflineStories() {
         number: number;
       }>
     ) => {
+      if (!userId) {
+        showToast({
+          type: "error",
+          message: "You must be logged in to download stories",
+        });
+        return false;
+      }
+
       try {
         // Determine structure: chapters, episodes, or single
         let structure: "chapters" | "episodes" | "single" = "single";
@@ -120,7 +146,9 @@ export function useOfflineStories() {
 
         // Save story metadata
         const offlineStory: OfflineStory = {
-          id: story.id,
+          id: `${userId}_${story.id}`,
+          storyId: story.id,
+          userId,
           title: story.title,
           description: story.description,
           coverImage: story.coverImage,
@@ -147,8 +175,10 @@ export function useOfflineStories() {
 
           if (structure === "chapters") {
             const chapter: OfflineChapter = {
-              id: item.id,
+              id: `${userId}_${item.id}`,
+              chapterId: item.id,
               storyId: story.id,
+              userId,
               chapterNumber: item.number,
               title: item.title,
               content: item.content,
@@ -159,8 +189,10 @@ export function useOfflineStories() {
             await chaptersStore.put(chapter);
           } else if (structure === "episodes") {
             const episode: OfflineEpisode = {
-              id: item.id,
+              id: `${userId}_${item.id}`,
+              episodeId: item.id,
               storyId: story.id,
+              userId,
               episodeNumber: item.number,
               title: item.title,
               content: item.content,
@@ -171,8 +203,10 @@ export function useOfflineStories() {
           } else {
             // For single stories, store as a chapter with number 1
             const chapter: OfflineChapter = {
-              id: item.id,
+              id: `${userId}_${item.id}`,
+              chapterId: item.id,
               storyId: story.id,
+              userId,
               chapterNumber: 1,
               title: item.title,
               content: item.content,
@@ -203,7 +237,7 @@ export function useOfflineStories() {
         return false;
       }
     },
-    [loadOfflineStories]
+    [loadOfflineStories, userId]
   );
 
   // Download additional chapters/episodes
@@ -218,6 +252,8 @@ export function useOfflineStories() {
         number: number;
       }>
     ) => {
+      if (!userId) return false;
+
       try {
         const downloadedAt = Date.now();
 
@@ -228,8 +264,10 @@ export function useOfflineStories() {
 
           if (structure === "chapters" || structure === "single") {
             const chapter: OfflineChapter = {
-              id: item.id,
+              id: `${userId}_${item.id}`,
+              chapterId: item.id,
               storyId,
+              userId,
               chapterNumber: item.number,
               title: item.title,
               content: item.content,
@@ -240,8 +278,10 @@ export function useOfflineStories() {
             await chaptersStore.put(chapter);
           } else {
             const episode: OfflineEpisode = {
-              id: item.id,
+              id: `${userId}_${item.id}`,
+              episodeId: item.id,
               storyId,
+              userId,
               episodeNumber: item.number,
               title: item.title,
               content: item.content,
@@ -267,26 +307,32 @@ export function useOfflineStories() {
         return false;
       }
     },
-    []
+    [userId]
   );
 
   // Delete a downloaded story
   const deleteOfflineStory = useCallback(
     async (storyId: string) => {
+      if (!userId) return false;
+
       try {
         // Delete story
-        await storiesStore.delete(storyId);
+        await storiesStore.delete(`${userId}_${storyId}`);
 
         // Delete all chapters
         const chapters = await chaptersStore.getByIndex("storyId", storyId);
         for (const chapter of chapters) {
-          await chaptersStore.delete(chapter.id);
+          if (chapter.userId === userId) {
+            await chaptersStore.delete(chapter.id);
+          }
         }
 
         // Delete all episodes
         const episodes = await episodesStore.getByIndex("storyId", storyId);
         for (const episode of episodes) {
-          await episodesStore.delete(episode.id);
+          if (episode.userId === userId) {
+            await episodesStore.delete(episode.id);
+          }
         }
 
         await loadOfflineStories();
@@ -306,26 +352,31 @@ export function useOfflineStories() {
         return false;
       }
     },
-    [loadOfflineStories]
+    [loadOfflineStories, userId]
   );
 
   // Delete specific downloaded content (chapter/episode)
   const deleteOfflineContent = useCallback(
     async (storyId: string, contentId: string, type: "chapter" | "episode") => {
+      if (!userId) return false;
+
       try {
         if (type === "chapter") {
-          await chaptersStore.delete(contentId);
+          await chaptersStore.delete(`${userId}_${contentId}`);
         } else {
-          await episodesStore.delete(contentId);
+          await episodesStore.delete(`${userId}_${contentId}`);
         }
 
         // Check if story has any content left
         const chapters = await chaptersStore.getByIndex("storyId", storyId);
-        const episodes = await episodesStore.getByIndex("storyId", storyId);
+        const userChapters = chapters.filter((c) => c.userId === userId);
 
-        if (chapters.length === 0 && episodes.length === 0) {
+        const episodes = await episodesStore.getByIndex("storyId", storyId);
+        const userEpisodes = episodes.filter((e) => e.userId === userId);
+
+        if (userChapters.length === 0 && userEpisodes.length === 0) {
           // If no content left, delete the story metadata too
-          await storiesStore.delete(storyId);
+          await storiesStore.delete(`${userId}_${storyId}`);
           await loadOfflineStories(); // Refresh list
         }
 
@@ -344,27 +395,32 @@ export function useOfflineStories() {
         return false;
       }
     },
-    [loadOfflineStories]
+    [loadOfflineStories, userId]
   );
 
   // Update last read time
-  const updateLastRead = useCallback(async (storyId: string) => {
-    try {
-      const story = await storiesStore.get(storyId);
-      if (story) {
-        story.lastReadAt = Date.now();
-        await storiesStore.put(story);
+  const updateLastRead = useCallback(
+    async (storyId: string) => {
+      if (!userId) return;
+      try {
+        const story = await storiesStore.get(`${userId}_${storyId}`);
+        if (story) {
+          story.lastReadAt = Date.now();
+          await storiesStore.put(story);
+        }
+      } catch (error) {
+        console.error("Failed to update last read:", error);
       }
-    } catch (error) {
-      console.error("Failed to update last read:", error);
-    }
-  }, []);
+    },
+    [userId]
+  );
 
   // Sync story metadata if it has been updated on server
   const syncStoryIfNeeded = useCallback(
     async (storyId: string, serverStory: any) => {
+      if (!userId) return false;
       try {
-        const offlineStory = await storiesStore.get(storyId);
+        const offlineStory = await storiesStore.get(`${userId}_${storyId}`);
         if (!offlineStory) return false;
 
         const serverUpdatedAt = serverStory.updatedAt

@@ -14,7 +14,15 @@ interface ForgotPasswordFormData {
   email: string;
 }
 
-export default function ForgotPasswordView() {
+interface ForgotPasswordViewProps {
+  onSuccess?: (email: string) => void;
+  onBack?: () => void;
+}
+
+export default function ForgotPasswordView({
+  onSuccess,
+  onBack,
+}: ForgotPasswordViewProps) {
   const router = useRouter();
   const { show: showLoading, hide: hideLoading } = useLoadingStore();
   const [formData, setFormData] = useState<ForgotPasswordFormData>({
@@ -60,7 +68,11 @@ export default function ForgotPasswordView() {
         message: "Reset email sent",
         duration: 2000,
       });
-      router.push("/auth/email-sent");
+      if (onSuccess) {
+        onSuccess(formData.email);
+      } else {
+        router.push("/auth/email-sent");
+      }
     } catch (err: any) {
       console.error("Password reset error:", err);
       showToast({
@@ -75,7 +87,11 @@ export default function ForgotPasswordView() {
   };
 
   const handleBackToLogin = () => {
-    router.push("/auth/login");
+    if (onBack) {
+      onBack();
+    } else {
+      router.push("/auth/login");
+    }
   };
 
   return (

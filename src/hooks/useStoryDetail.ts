@@ -113,7 +113,7 @@ export function useStoryLikes(storyId: string | undefined) {
     // Optimistic update
     const previousLiked = isLiked;
     const previousCount = likeCount;
-    
+
     setIsLiked(!isLiked);
     setLikeCount((prev) => (isLiked ? prev - 1 : prev + 1));
 
@@ -431,8 +431,13 @@ export function useReadingProgress(storyId: string | undefined) {
           // Extract progress from nested data.progress
           const progressData = (response.data as any).progress || response.data;
           // Convert percentageRead from string to number if needed
-          if (progressData.percentageRead && typeof progressData.percentageRead === "string") {
-            progressData.percentageRead = parseFloat(progressData.percentageRead);
+          if (
+            progressData.percentageRead &&
+            typeof progressData.percentageRead === "string"
+          ) {
+            progressData.percentageRead = parseFloat(
+              progressData.percentageRead
+            );
           }
           return progressData;
         }
@@ -507,8 +512,13 @@ export function useChapterProgress(
           // Extract progress from nested data.progress
           const progressData = (response.data as any).progress || response.data;
           // Convert percentageRead from string to number if needed
-          if (progressData.percentageRead && typeof progressData.percentageRead === "string") {
-            progressData.percentageRead = parseFloat(progressData.percentageRead);
+          if (
+            progressData.percentageRead &&
+            typeof progressData.percentageRead === "string"
+          ) {
+            progressData.percentageRead = parseFloat(
+              progressData.percentageRead
+            );
           }
           return progressData;
         }
@@ -578,8 +588,13 @@ export function useEpisodeProgress(
           // Extract progress from nested data.progress
           const progressData = (response.data as any).progress || response.data;
           // Convert percentageRead from string to number if needed
-          if (progressData.percentageRead && typeof progressData.percentageRead === "string") {
-            progressData.percentageRead = parseFloat(progressData.percentageRead);
+          if (
+            progressData.percentageRead &&
+            typeof progressData.percentageRead === "string"
+          ) {
+            progressData.percentageRead = parseFloat(
+              progressData.percentageRead
+            );
           }
           return progressData;
         }
@@ -641,10 +656,18 @@ export function useAggregatedProgress(storyId: string | undefined) {
           typeof response.data === "object" &&
           response.data !== null
         ) {
-          const data = response.data as any;
+          // Unwrap the data property if it exists (standard API envelope)
+          const responseData = (response.data as any).data || response.data;
+
+          const data = responseData as any;
           // Convert percentageRead strings to numbers in storyProgress
-          if (data.storyProgress?.percentageRead && typeof data.storyProgress.percentageRead === "string") {
-            data.storyProgress.percentageRead = parseFloat(data.storyProgress.percentageRead);
+          if (
+            data.storyProgress?.percentageRead &&
+            typeof data.storyProgress.percentageRead === "string"
+          ) {
+            data.storyProgress.percentageRead = parseFloat(
+              data.storyProgress.percentageRead
+            );
           }
           // Convert percentageRead in episode/chapter progress arrays
           data.episodeProgress?.forEach((ep: any) => {

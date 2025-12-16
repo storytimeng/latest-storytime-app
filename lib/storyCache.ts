@@ -8,7 +8,7 @@ import type { Chapter, Part, StoryFormData } from "@/types/story";
 
 // IndexedDB configuration
 const DB_NAME = "storytime_cache";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE_NAME = "story_cache";
 
 // Cache expiration from environment variable (in days, 0 = never expire)
@@ -27,6 +27,7 @@ export interface StoryCacheData {
 export interface CacheEntry {
   id: string; // storyId_type (e.g., "123_chapters", "123_episodes")
   storyId: string;
+  userId?: string; // Added for multi-user support
   type: "chapters" | "episodes" | "draft";
   data: Chapter[] | Part[] | Partial<StoryFormData>;
   timestamp: number;
@@ -56,6 +57,14 @@ const openDB = (): Promise<IDBDatabase> => {
         objectStore.createIndex("storyId", "storyId", { unique: false });
         objectStore.createIndex("type", "type", { unique: false });
         objectStore.createIndex("timestamp", "timestamp", { unique: false });
+        objectStore.createIndex("userId", "userId", { unique: false });
+      } else {
+        const objectStore = (
+          event.target as IDBOpenDBRequest
+        ).transaction!.objectStore(STORE_NAME);
+        if (!objectStore.indexNames.contains("userId")) {
+          objectStore.createIndex("userId", "userId", { unique: false });
+        }
       }
     };
   });
@@ -66,6 +75,7 @@ const openDB = (): Promise<IDBDatabase> => {
  */
 export const saveStoryDraft = async (
   storyId: string,
+  userId: string,
   formData: Partial<StoryFormData>
 ): Promise<void> => {
   try {
@@ -74,8 +84,9 @@ export const saveStoryDraft = async (
     const store = transaction.objectStore(STORE_NAME);
 
     const entry: CacheEntry = {
-      id: `${storyId}_draft`,
+      id: `${userId}_${storyId}_draft`,
       storyId,
+      userId,
       type: "draft",
       data: formData,
       timestamp: Date.now(),
@@ -103,6 +114,7 @@ export const saveStoryDraft = async (
  */
 export const saveChaptersCache = async (
   storyId: string,
+  userId: string,
   chapters: Chapter[]
 ): Promise<void> => {
   try {
@@ -111,8 +123,9 @@ export const saveChaptersCache = async (
     const store = transaction.objectStore(STORE_NAME);
 
     const entry: CacheEntry = {
-      id: `${storyId}_chapters`,
+      id: `${userId}_${storyId}_chapters`,
       storyId,
+      userId,
       type: "chapters",
       data: chapters,
       timestamp: Date.now(),
@@ -140,6 +153,7 @@ export const saveChaptersCache = async (
  */
 export const saveEpisodesCache = async (
   storyId: string,
+  userId: string,
   episodes: Part[]
 ): Promise<void> => {
   try {
@@ -148,8 +162,9 @@ export const saveEpisodesCache = async (
     const store = transaction.objectStore(STORE_NAME);
 
     const entry: CacheEntry = {
-      id: `${storyId}_episodes`,
+      id: `${userId}_${storyId}_episodes`,
       storyId,
+      userId,
       type: "episodes",
       data: episodes,
       timestamp: Date.now(),
@@ -176,13 +191,14 @@ export const saveEpisodesCache = async (
  * Get story draft from cache
  */
 export const getStoryDraft = async (
-  storyId: string
+  storyId: string,
+  userId: string
 ): Promise<Partial<StoryFormData> | null> => {
   try {
     const db = await openDB();
     const transaction = db.transaction([STORE_NAME], "readonly");
     const store = transaction.objectStore(STORE_NAME);
-    const request = store.get(`${storyId}_draft`);
+    const request = store.get(`${userId}_${storyId}_draft`);
 
     return new Promise((resolve, reject) => {
       request.onsuccess = () => {
@@ -220,13 +236,14 @@ export const getStoryDraft = async (
  * Get chapters from cache
  */
 export const getChaptersCache = async (
-  storyId: string
+  storyId: string,
+  userId: string
 ): Promise<Chapter[] | null> => {
   try {
     const db = await openDB();
     const transaction = db.transaction([STORE_NAME], "readonly");
     const store = transaction.objectStore(STORE_NAME);
-    const request = store.get(`${storyId}_chapters`);
+    const request = store.get(`${userId}_${storyId}_chapters`);
 
     return new Promise((resolve, reject) => {
       request.onsuccess = () => {
@@ -264,13 +281,14 @@ export const getChaptersCache = async (
  * Get episodes from cache
  */
 export const getEpisodesCache = async (
-  storyId: string
+  storyId: string,
+  userId: string
 ): Promise<Part[] | null> => {
   try {
     const db = await openDB();
     const transaction = db.transaction([STORE_NAME], "readonly");
     const store = transaction.objectStore(STORE_NAME);
-    const request = store.get(`${storyId}_episodes`);
+    const request = store.get(`${userId}_${storyId}_episodes`);
 
     return new Promise((resolve, reject) => {
       request.onsuccess = () => {
@@ -308,15 +326,19 @@ export const getEpisodesCache = async (
  * Clear cache for a specific story (after successful publish/save)
  * Only clears if explicitly confirmed by user or after successful save
  */
-export const clearStoryCache = async (storyId: string): Promise<void> => {
+export const clearStoryCache = async (
+  storyId: string,
+  userId: string
+): Promise<void> => {
   try {
     const db = await openDB();
     const transaction = db.transaction([STORE_NAME], "readwrite");
     const store = transaction.objectStore(STORE_NAME);
 
     // Delete chapters and episodes cache
-    store.delete(`${storyId}_chapters`);
-    store.delete(`${storyId}_episodes`);
+    store.delete(`${userId}_${storyId}_chapters`);
+    store.delete(`${userId}_${storyId}_episodes`);
+    store.delete(`${userId}_${storyId}_draft`);
 
     return new Promise((resolve, reject) => {
       transaction.oncomplete = () => {
@@ -338,7 +360,8 @@ export const clearStoryCache = async (storyId: string): Promise<void> => {
  * Check if there is cached data for a story
  */
 export const hasCachedData = async (
-  storyId: string
+  storyId: string,
+  userId: string
 ): Promise<{
   hasChapters: boolean;
   hasEpisodes: boolean;
@@ -348,8 +371,8 @@ export const hasCachedData = async (
     const transaction = db.transaction([STORE_NAME], "readonly");
     const store = transaction.objectStore(STORE_NAME);
 
-    const chaptersRequest = store.get(`${storyId}_chapters`);
-    const episodesRequest = store.get(`${storyId}_episodes`);
+    const chaptersRequest = store.get(`${userId}_${storyId}_chapters`);
+    const episodesRequest = store.get(`${userId}_${storyId}_episodes`);
 
     return new Promise((resolve, reject) => {
       const results = { hasChapters: false, hasEpisodes: false };

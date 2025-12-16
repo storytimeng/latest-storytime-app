@@ -52,7 +52,15 @@ const signupSchema = z.object({
   }),
 });
 
-export default function SignupView() {
+interface SignupViewProps {
+  onSuccess?: () => void;
+  onSwitchView?: (view: string) => void;
+}
+
+export default function SignupView({
+  onSuccess,
+  onSwitchView,
+}: SignupViewProps) {
   const router = useRouter();
   const { show: showLoading, hide: hideLoading } = useLoadingStore();
   // firstErrorRef removed (not used)
@@ -219,9 +227,13 @@ export default function SignupView() {
         message: "Account created — check your email",
         duration: 3000,
       });
-      router.push(
-        `/auth/otp?email=${encodeURIComponent(formData.email)}&type=signup`
-      );
+      if (onSuccess) {
+        onSuccess();
+      } else {
+        router.push(
+          `/auth/otp?email=${encodeURIComponent(formData.email)}&type=signup`
+        );
+      }
     } catch (err: any) {
       console.error("Signup error:", err);
       showToast({
@@ -490,12 +502,21 @@ export default function SignupView() {
       <div className="mt-6 text-center">
         <p className="body-text-small-regular text-grey-2">
           Already have an account?{" "}
-          <Link
-            href="/auth/login"
-            className="font-medium text-primary-colour hover:underline"
-          >
-            Login
-          </Link>
+          {onSwitchView ? (
+            <button
+              onClick={() => onSwitchView("login")}
+              className="font-medium text-primary-colour hover:underline"
+            >
+              Login
+            </button>
+          ) : (
+            <Link
+              href="/auth/login"
+              className="font-medium text-primary-colour hover:underline"
+            >
+              Login
+            </Link>
+          )}
         </p>
       </div>
     </div>

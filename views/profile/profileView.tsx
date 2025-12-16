@@ -34,7 +34,7 @@ const ProfileView = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const activeModal = searchParams.get("modal");
-  
+
   // Keep track of the last active modal to preserve content during exit animation
   const [lastActiveModal, setLastActiveModal] = useState<string | null>(null);
 
@@ -43,28 +43,63 @@ const ProfileView = () => {
       setLastActiveModal(activeModal);
     }
   }, [activeModal]);
-  
+
   // Fetch user data
   const { user } = useUserProfile();
   const { badges, certificates } = useUserAchievements();
   const { stats } = useApiUserStats();
 
   const profileOptions = [
-    { id: "certificate", label: "Certificate", icon: "📜", type: "modal" },
-    { id: "badges", label: "Badges", icon: "🏆", type: "modal" },
-    { id: "stories", label: "My Stories", icon: "📚", type: "page", path: "/pen" },
-    { id: "library", label: "My Library", icon: "📖", type: "page", path: "/library" },
-    { id: "drafts", label: "My Drafts", icon: "📝", type: "page", path: "/pen?tab=drafts" },
-    { id: "downloads", label: "My Downloads", icon: "⬇️", type: "page", path: "/downloads" },
+    {
+      id: "stories",
+      label: "My Stories",
+      icon: "📚",
+      type: "page",
+      path: "/pen",
+    },
+    {
+      id: "library",
+      label: "My Library",
+      icon: "📖",
+      type: "page",
+      path: "/library",
+    },
+    {
+      id: "drafts",
+      label: "My Drafts",
+      icon: "📝",
+      type: "page",
+      path: "/pen?tab=drafts",
+    },
+    {
+      id: "downloads",
+      label: "My Downloads",
+      icon: "⬇️",
+      type: "page",
+      path: "/downloads",
+    },
     { id: "reading", label: "Reading time", icon: "⏰", type: "modal" },
     { id: "writing", label: "Writing time", icon: "✍️", type: "modal" },
     { id: "leaderboard", label: "Leaderboard", icon: "🏅", type: "modal" },
-    { id: "history", label: "Reading History", icon: "📜", type: "page", path: "/library?tab=History" },
+    {
+      id: "history",
+      label: "Reading History",
+      icon: "📜",
+      type: "page",
+      path: "/library?tab=History",
+    },
   ];
 
   // Use user's favorite genres from profile, fallback to defaults
   const userGenres = user?.favoriteGenres || user?.genres || [];
-  const defaultGenres = ["Action", "Adventure", "Anthology", "Biography", "Classic", "Comedy"];
+  const defaultGenres = [
+    "Action",
+    "Adventure",
+    "Anthology",
+    "Biography",
+    "Classic",
+    "Comedy",
+  ];
   const genres = userGenres.length > 0 ? userGenres : defaultGenres;
 
   // Handle genre click - navigate to category page
@@ -72,7 +107,7 @@ const ProfileView = () => {
     router.push(`/category?genre=${encodeURIComponent(genre)}`);
   };
 
-  const handleOptionClick = (option: typeof profileOptions[0]) => {
+  const handleOptionClick = (option: (typeof profileOptions)[0]) => {
     if (option.type === "page" && option.path) {
       // Navigate to dedicated page
       router.push(option.path);
@@ -121,7 +156,7 @@ const ProfileView = () => {
       default:
         const option = profileOptions.find((opt) => opt.id === modalToRender);
         if (!option) return null;
-        
+
         return (
           <DefaultModal
             title={option?.label || "Details"}
@@ -151,24 +186,44 @@ const ProfileView = () => {
           <div className="relative z-20 -mb-16">
             <div className="bg-white rounded-lg p-[10px] shadow-lg">
               <div className="flex">
-                <div className="flex-1 text-center my-[4px]">
+                <div
+                  className="flex-1 text-center my-[4px] cursor-pointer"
+                  onClick={() =>
+                    router.push("?modal=badges", { scroll: false })
+                  }
+                >
                   <h3 className="mb-2 text-sm font-magnetik-medium text-primary-colour">
                     Badge
                   </h3>
-                  <div className="w-8 h-8 bg-[#f8951d] rounded-lg flex items-center justify-center mx-auto">
+                  <div className="w-8 h-8 bg-[#f8951d] rounded-lg flex items-center justify-center mx-auto relative">
                     <Shield className="w-6 h-6 text-white" />
+                    {badges.length > 0 && (
+                      <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white"></span>
+                    )}
                   </div>
-                  <p className="text-xs text-grey-3 mt-1">{badges.length || 0}</p>
+                  <p className="text-xs text-grey-3 mt-1">
+                    {badges.length || 0}
+                  </p>
                 </div>
                 <div className="w-px mx-4 bg-primary-shade-1"></div>
-                <div className="flex-1 text-center my-[4px]">
+                <div
+                  className="flex-1 text-center my-[4px] cursor-pointer"
+                  onClick={() =>
+                    router.push("?modal=certificate", { scroll: false })
+                  }
+                >
                   <h3 className="mb-2 text-sm font-magnetik-medium text-primary-colour">
                     Certificate
                   </h3>
-                  <div className="w-8 h-8 bg-[#f8951d] rounded-lg flex items-center justify-center mx-auto">
+                  <div className="w-8 h-8 bg-[#f8951d] rounded-lg flex items-center justify-center mx-auto relative">
                     <Award className="w-6 h-6 text-white" />
+                    {certificates.length > 0 && (
+                      <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white"></span>
+                    )}
                   </div>
-                  <p className="text-xs text-grey-3 mt-1">{certificates.length || 0}</p>
+                  <p className="text-xs text-grey-3 mt-1">
+                    {certificates.length || 0}
+                  </p>
                 </div>
               </div>
             </div>
@@ -187,8 +242,10 @@ const ProfileView = () => {
                 >
                   Genre
                 </h3>
-                <button 
-                  onClick={() => router.push("?modal=edit-genres", { scroll: false })}
+                <button
+                  onClick={() =>
+                    router.push("?modal=edit-genres", { scroll: false })
+                  }
                   className="text-primary-colour p-1"
                 >
                   <span className="text-xl">✎</span>

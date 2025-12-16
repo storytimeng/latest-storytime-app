@@ -24,7 +24,9 @@ interface OldCacheData {
 /**
  * Migrate all localStorage cache data to IndexedDB
  */
-export const migrateLocalStorageToIndexedDB = async (): Promise<{
+export const migrateLocalStorageToIndexedDB = async (
+  userId: string
+): Promise<{
   success: boolean;
   migratedCount: number;
   errors: string[];
@@ -37,6 +39,14 @@ export const migrateLocalStorageToIndexedDB = async (): Promise<{
       return { success: false, migratedCount: 0, errors: ["Not in browser"] };
     }
 
+    if (!userId) {
+      return {
+        success: false,
+        migratedCount: 0,
+        errors: ["User ID required for migration"],
+      };
+    }
+
     const allKeys = Object.keys(localStorage);
 
     // Migrate drafts
@@ -47,7 +57,7 @@ export const migrateLocalStorageToIndexedDB = async (): Promise<{
           const data = JSON.parse(localStorage.getItem(key) || "{}");
 
           if (data.formData) {
-            await saveStoryDraft(storyId, data.formData);
+            await saveStoryDraft(storyId, userId, data.formData);
             localStorage.removeItem(key);
             migratedCount++;
           }
@@ -65,7 +75,7 @@ export const migrateLocalStorageToIndexedDB = async (): Promise<{
           const data = JSON.parse(localStorage.getItem(key) || "{}");
 
           if (data.chapters && Array.isArray(data.chapters)) {
-            await saveChaptersCache(storyId, data.chapters);
+            await saveChaptersCache(storyId, userId, data.chapters);
             localStorage.removeItem(key);
             migratedCount++;
           }
@@ -83,7 +93,7 @@ export const migrateLocalStorageToIndexedDB = async (): Promise<{
           const data = JSON.parse(localStorage.getItem(key) || "{}");
 
           if (data.episodes && Array.isArray(data.episodes)) {
-            await saveEpisodesCache(storyId, data.episodes);
+            await saveEpisodesCache(storyId, userId, data.episodes);
             localStorage.removeItem(key);
             migratedCount++;
           }

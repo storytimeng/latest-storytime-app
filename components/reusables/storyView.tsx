@@ -1,6 +1,9 @@
 "use client";
 
-import React, { lazy, Suspense } from "react";
+import React, { lazy, Suspense, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuthStore } from "@/src/stores/useAuthStore";
+import { useAuthModalStore } from "@/src/stores/useAuthModalStore";
 import PageHeader from "@/components/reusables/customUI/pageHeader";
 import LoadingState from "@/components/reusables/customUI/LoadingState";
 import StoryViewErrorBoundary from "@/components/reusables/StoryViewErrorBoundary";
@@ -15,6 +18,17 @@ const StoryForm = lazy(() => import("@/components/reusables/form/storyForm"));
  * Implements code splitting and lazy loading for optimal performance
  */
 const StoryView: React.FC<StoryViewProps> = ({ mode, storyId }) => {
+  const router = useRouter();
+  const { openModal: openAuthModal } = useAuthModalStore();
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+
+  useEffect(() => {
+    if (!isAuthenticated()) {
+      openAuthModal("login");
+      router.push("/");
+    }
+  }, [isAuthenticated, openAuthModal, router]);
+
   const {
     initialData,
     createdStoryId,
