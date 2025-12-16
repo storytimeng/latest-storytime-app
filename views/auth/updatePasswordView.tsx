@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { PasswordField } from "@/components/reusables/form";
 import { Button } from "@/components/ui/button";
 import { z } from "zod";
@@ -11,8 +11,10 @@ import { useAuthStore } from "@/src/stores/useAuthStore";
 import PasswordTipsModal from "@/components/reusables/customUI/passwordTipsModal";
 import { useLoadingStore } from "@/src/stores/useLoadingStore";
 import { Check, X } from "lucide-react";
+import Link from "next/link";
 
 interface UpdatePasswordFormData {
+  currentPassword?: string;
   newPassword: string;
   confirmPassword: string;
   rememberMe: boolean;
@@ -27,6 +29,7 @@ interface PasswordRequirement {
 // Zod schema for update password validation
 const updatePasswordSchema = z
   .object({
+    currentPassword: z.string().optional(),
     newPassword: z
       .string()
       .min(8, "Password must be at least 8 characters")
@@ -44,8 +47,12 @@ const updatePasswordSchema = z
 
 export default function UpdatePasswordView() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { show: showLoading, hide: hideLoading } = useLoadingStore();
+  const isFromSettings = searchParams?.get("from") === "settings";
+
   const [formData, setFormData] = useState<UpdatePasswordFormData>({
+    currentPassword: "",
     newPassword: "",
     confirmPassword: "",
     rememberMe: false,
@@ -122,6 +129,18 @@ export default function UpdatePasswordView() {
   const validateForm = (): boolean => {
     try {
       updatePasswordSchema.parse(formData);
+      
+      // Additional validation for current password when from settings
+      if (isFromSettings && !formData.currentPassword) {
+        setErrors({ currentPassword: "Current password is required" });
+        showToast({
+          type: "error",
+          message: "Please enter your current password",
+          duration: 3000,
+        });
+        return false;
+      }
+      
       setErrors({});
       return true;
     } catch (error) {
@@ -163,9 +182,25 @@ export default function UpdatePasswordView() {
   const { trigger: resetTrigger } = useResetPassword();
 
   const handleSubmit = async () => {
+    const isValid = validateForm();
+    if (!isValid) return;
+
     showLoading("Updating your password...");
 
     try {
+      if (isFromSettings) {
+        // TODO: When backend adds change password endpoint, use it here
+        // For now, show message that user needs to use forgot password flow
+        showToast({
+          type: "info",
+          message: "Please use the Forgot Password link to reset your password",
+          duration: 4000,
+        });
+        hideLoading();
+        return;
+      }
+
+      // Forgot password flow with OTP
       const { resetEmail: email = "", resetOtp: otp = "" } =
         useAuthStore.getState();
 
@@ -193,11 +228,28 @@ export default function UpdatePasswordView() {
   return (
     <div className="w-full max-w-md mx-auto">
       <div className="text-center text-primary-colour body-text-big-bold-auto mb-[4.125rem]">
-        Update your password
+        {isFromSettings ? "Change your password" : "Update your password"}
       </div>
 
       {/* Form */}
       <form className="space-y-6">
+        {/* Current Password - Only show when from settings */}
+        {isFromSettings && (
+          <div data-error={!!errors.currentPassword}>
+            <PasswordField
+              PasswordText="Current Password"
+              placeholderText="Current Password"
+              passwordError={errors.currentPassword || ""}
+              value={formData.currentPassword || ""}
+              handlePasswordChange={(value: string) =>
+                handleInputChange("currentPassword", value)
+              }
+              showForgotPassword={false}
+              isRequired={true}
+            />
+          </div>
+        )}
+
         {/* New Password */}
         <div data-error={!!errors.newPassword}>
           <PasswordField
@@ -254,7 +306,7 @@ export default function UpdatePasswordView() {
           )}
         </div>
 
-        <div className="flex items-center justify-between mt-2.5 ">
+        <div className="flex items-center justify-between mt-2.5">
           <button
             type="button"
             onClick={() => setShowTipsModal(true)}
@@ -262,7 +314,17 @@ export default function UpdatePasswordView() {
           >
             Tips for creating a stronger password
           </button>
+          
+          {isFromSettings && (
+            <Link
+              href="/auth/forgot-password"
+              className="text-sm hover:text-grey-1 body-text-small-medium-auto transition-transform-colors text-primary-colour hover:underline"
+            >
+              Forgot Password?
+            </Link>
+          )}
         </div>
+        
         <div className="pt-36">
           <Button
             variant="large"

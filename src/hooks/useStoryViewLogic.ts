@@ -1,0 +1,461 @@
+import { useState, useCallback, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import {
+  useCreateStory,
+  useUpdateStory,
+  useFetchStory,
+  useCreateMultipleChapters,
+  useCreateMultipleEpisodes,
+} from "@/src/hooks/useStoryMutations";
+import { useUserProfile } from "@/src/hooks/useUserProfile";
+import { usersControllerGetProfile } from "@/src/client/sdk.gen";
+import { useUserStore } from "@/src/stores/useUserStore";
+import { showToast } from "@/lib/showNotification";
+import {
+  saveChaptersCache,
+  saveEpisodesCache,
+  clearStoryCache,
+  clearExpiredCaches,
+} from "@/lib/storyCache";
+import {
+  migrateLocalStorageToIndexedDB,
+  needsMigration,
+} from "@/lib/cacheMigration";
+import type { StoryFormData, Chapter, Part } from "@/types/story";
+import type { CreateStoryDto, UpdateStoryDto } from "@/src/client/types.gen";
+
+interface UseStoryViewLogicProps {
+  mode: "create" | "edit";
+  storyId?: string;
+}
+
+interface UseStoryViewLogicReturn {
+  initialData: Partial<StoryFormData> | undefined;
+  createdStoryId: string | null;
+  isCreating: boolean;
+  isUpdating: boolean;
+  isFetchingStory: boolean;
+  handleSubmit: (
+    formData: StoryFormData,
+    chapters?: Chapter[],
+    parts?: Part[]
+  ) => Promise<void>;
+  handleCancel: () => void;
+  pageTitle: string;
+  backLink: string;
+}
+
+/**
+ * Custom hook that encapsulates all business logic for StoryView component
+ * Handles story creation, editing, authorization, and cache management
+ */
+export function useStoryViewLogic({
+  mode,
+  storyId,
+}: UseStoryViewLogicProps): UseStoryViewLogicReturn {
+  const router = useRouter();
+  const { user: swrUser } = useUserProfile();
+  const { user: storeUser } = useUserStore();
+  const [initialData, setInitialData] = useState<
+    Partial<StoryFormData> | undefined
+  >();
+  const [createdStoryId, setCreatedStoryId] = useState<string | null>(
+    storyId || null
+  );
+
+  // Hooks for mutations
+  const { createStory, isCreating: isCreatingStory } = useCreateStory();
+  const { updateStory, isUpdating, error: updateError } = useUpdateStory();
+  const { createMultipleChapters, isCreating: isCreatingChapters } =
+    useCreateMultipleChapters();
+  const { createMultipleEpisodes, isCreating: isCreatingEpisodes } =
+    useCreateMultipleEpisodes();
+
+  const isCreating =
+    isCreatingStory || isCreatingChapters || isCreatingEpisodes;
+
+  // Fetch story data for edit mode
+  const { story, isLoading: isFetchingStory } = useFetchStory(
+    mode === "edit" ? storyId : undefined
+  );
+
+  // Initialize cache on mount
+  useEffect(() => {
+    const initCache = async () => {
+      if (storeUser?.id && needsMigration()) {
+        const result = await migrateLocalStorageToIndexedDB(storeUser.id);
+
+        if (result.success) {
+          showToast({
+            type: "success",
+            message: `Migrated ${result.migratedCount} cached items to IndexedDB`,
+          });
+        } else if (result.errors.length > 0) {
+          console.error("Migration errors:", result.errors);
+          showToast({
+            type: "warning",
+            message: "Some cached items failed to migrate",
+          });
+        }
+      }
+
+      await clearExpiredCaches();
+    };
+
+    if (storeUser?.id) {
+      initCache();
+    }
+  }, [storeUser?.id]);
+
+  // Authorization check for edit mode
+  useEffect(() => {
+    if (mode === "edit" && story && !isFetchingStory) {
+      const currentUser = storeUser || swrUser;
+
+      const storyAuthorId = story.authorId || story.author?.id || story.author;
+      const currentAuthorId = currentUser?.authorId || currentUser?.id;
+
+      const isAuthor =
+        currentAuthorId &&
+        storyAuthorId &&
+        (currentAuthorId === storyAuthorId ||
+          currentUser?.id === storyAuthorId);
+
+      if (!isAuthor) {
+        showToast({
+          type: "error",
+          message: "You are not authorized to edit this story.",
+        });
+        router.push(`/story/${storyId}`);
+      }
+    }
+  }, [mode, story, isFetchingStory, storeUser, swrUser, storyId, router]);
+
+  // Transform API story data to form data
+  useEffect(() => {
+    if (mode === "edit" && story) {
+      const capitalizeLanguage = (lang: string) => {
+        if (!lang) return "English";
+        return lang.charAt(0).toUpperCase() + lang.slice(1).toLowerCase();
+      };
+
+      setInitialData({
+        id: story.id,
+        title: story.title || "",
+        collaborate: story.collaborate?.join(", ") || "",
+        description: story.description || "",
+        content: story.content || "",
+        selectedGenres: story.genres || [],
+        language: capitalizeLanguage(story.language || "english"),
+        goAnonymous: story.anonymous || false,
+        onlyOnStorytime: story.onlyOnStorytime || false,
+        trigger: story.trigger || false,
+        copyright: story.copyright || false,
+        chapter: (story as any).chapter || false,
+        episodes: (story as any).episodes || false,
+        storyStatus:
+          story.storyStatus === "complete"
+            ? "Completed"
+            : story.storyStatus === "ongoing"
+              ? "In Progress"
+              : story.storyStatus === "drafts"
+                ? "Draft"
+                : "Draft",
+        coverImage: story.coverImage || story.cover || undefined,
+      });
+    }
+  }, [mode, story]);
+
+  // Handle form submission
+  const handleSubmit = useCallback(
+    async (formData: StoryFormData, _chapters?: Chapter[], _parts?: Part[]) => {
+      try {
+        // If we have a createdStoryId, this is publishing chapters/episodes
+        if (createdStoryId && (_chapters || _parts)) {
+          const hasChapters = formData.chapter === true;
+          const hasEpisodes = formData.episodes === true;
+
+          let publishSuccess = false;
+
+          // Bulk creation of chapters or episodes
+          if (hasChapters && _chapters && _chapters.length > 0) {
+            const chaptersPayload = _chapters.map((ch) => ({
+              title: ch.title,
+              body: ch.body,
+            }));
+            const result = await createMultipleChapters(
+              createdStoryId,
+              chaptersPayload
+            );
+            publishSuccess = result?.success === true;
+          } else if (hasEpisodes && _parts && _parts.length > 0) {
+            const episodesPayload = _parts.map((ep) => ({
+              title: ep.title,
+              body: ep.body,
+            }));
+            const result = await createMultipleEpisodes(
+              createdStoryId,
+              episodesPayload
+            );
+            publishSuccess = result?.success === true;
+          }
+
+          // Only clear cache after successful publish
+          if (publishSuccess) {
+            clearStoryCache(createdStoryId);
+
+            showToast({
+              type: "success",
+              message: hasChapters
+                ? "Chapters published successfully!"
+                : "Episodes published successfully!",
+            });
+
+            if (formData.storyStatus === "Draft") {
+              router.push("/my-stories?tab=drafts");
+            } else {
+              router.push(`/story/${createdStoryId}`);
+            }
+          } else {
+            showToast({
+              type: "error",
+              message: "Failed to publish. Your work is saved in cache.",
+            });
+          }
+          return;
+        }
+
+        // Get effective user
+        let effectiveUser = storeUser || swrUser;
+
+        // If missing, call profile API directly
+        if (!effectiveUser?.id) {
+          try {
+            const resp = await usersControllerGetProfile();
+            const apiUser = (resp?.data as any)?.user;
+            if (apiUser?.id) {
+              effectiveUser = apiUser;
+              useUserStore.getState().setUser(apiUser);
+            }
+          } catch (e) {
+            console.warn("[useStoryViewLogic] direct profile fetch failed", e);
+          }
+        }
+
+        if (!effectiveUser?.id) {
+          showToast({
+            type: "error",
+            message: "Please log in to publish your story.",
+          });
+          return;
+        }
+
+        // Validate description
+        const hasChapters = formData.chapter === true;
+        const hasEpisodes = formData.episodes === true;
+
+        const wordsCount = formData.description
+          .trim()
+          .split(/\s+/)
+          .filter(Boolean).length;
+        const descChars = formData.description.trim().length;
+
+        if (!formData.description.trim()) {
+          showToast({
+            type: "error",
+            message: "Description is required.",
+          });
+          return;
+        }
+
+        if (wordsCount < 50) {
+          showToast({
+            type: "error",
+            message: `Description needs at least 50 words. You have ${wordsCount} word${wordsCount !== 1 ? "s" : ""}.`,
+          });
+          return;
+        }
+
+        if (wordsCount > 100) {
+          showToast({
+            type: "error",
+            message: `Description cannot exceed 100 words. You have ${wordsCount} words.`,
+          });
+          return;
+        }
+
+        if (descChars < 50) {
+          showToast({
+            type: "error",
+            message: `Description needs at least 50 characters. You have ${descChars} character${descChars !== 1 ? "s" : ""}.`,
+          });
+          return;
+        }
+
+        // Content validation for stories without chapters/episodes
+        if (!hasChapters && !hasEpisodes && !formData.content?.trim()) {
+          showToast({
+            type: "error",
+            message:
+              "Story content is required when not using chapters or episodes.",
+          });
+          return;
+        }
+
+        const contentText =
+          hasChapters || hasEpisodes
+            ? formData.description
+            : formData.content ||
+              (_parts && _parts.length > 0
+                ? _parts.map((p) => `${p.title}\n${p.body}`).join("\n\n")
+                : formData.description);
+
+        if (mode === "edit" && storyId) {
+          // Update existing story
+          const updatePayload: UpdateStoryDto = {
+            title: formData.title,
+            content: contentText,
+            genres: formData.selectedGenres,
+            collaborate: formData.collaborate
+              ? formData.collaborate.split(",").map((c) => c.trim())
+              : [],
+            imageUrl: formData.coverImage || undefined,
+          };
+
+          const success = await updateStory(storyId, updatePayload);
+
+          if (success) {
+            showToast({
+              type: "success",
+              message: "Story updated successfully!",
+            });
+            router.push(`/story/${storyId}`);
+          } else {
+            const errorMessage =
+              updateError?.message ||
+              "Failed to update story. Please try again.";
+            showToast({
+              type: "error",
+              message: errorMessage,
+            });
+          }
+        } else {
+          // Create new story
+          const createPayload: CreateStoryDto = {
+            authorId: effectiveUser.id,
+            title: formData.title,
+            description: formData.description,
+            content: contentText,
+            genres: formData.selectedGenres,
+            collaborate: formData.collaborate
+              ? formData.collaborate.split(",").map((c) => c.trim())
+              : [],
+            language: formData.language.toLowerCase() as any,
+            anonymous: formData.goAnonymous,
+            onlyOnStorytime: formData.onlyOnStorytime,
+            trigger: formData.trigger,
+            copyright: formData.copyright,
+            chapter: hasChapters,
+            episodes: hasEpisodes,
+            storyStatus:
+              formData.storyStatus === "Completed"
+                ? "complete"
+                : formData.storyStatus === "In Progress"
+                  ? "ongoing"
+                  : ("drafts" as any),
+          };
+
+          const result = await createStory(createPayload);
+
+          if (result.success && result.id) {
+            const newStoryId = result.id;
+            setCreatedStoryId(newStoryId);
+
+            // Save chapters/episodes to cache for later bulk creation
+            if (
+              hasChapters &&
+              _chapters &&
+              _chapters.length > 0 &&
+              storeUser?.id
+            ) {
+              saveChaptersCache(newStoryId, storeUser.id, _chapters);
+            } else if (
+              hasEpisodes &&
+              _parts &&
+              _parts.length > 0 &&
+              storeUser?.id
+            ) {
+              saveEpisodesCache(newStoryId, storeUser.id, _parts);
+            }
+
+            showToast({
+              type: "success",
+              message:
+                hasChapters || hasEpisodes
+                  ? "Story created! You can now add chapters/episodes."
+                  : "Story created successfully!",
+            });
+
+            // If has chapters/episodes, stay on the page to allow adding them
+            if (!hasChapters && !hasEpisodes) {
+              if (formData.storyStatus === "Draft") {
+                router.push("/my-stories?tab=drafts");
+              } else {
+                router.push(`/story/${newStoryId}`);
+              }
+            }
+          } else {
+            showToast({
+              type: "error",
+              message: "Failed to create story. Please try again.",
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Failed to save story:", error);
+        showToast({
+          type: "error",
+          message: "An error occurred while saving the story.",
+        });
+      }
+    },
+    [
+      mode,
+      storyId,
+      storeUser,
+      swrUser,
+      createStory,
+      updateStory,
+      createMultipleChapters,
+      createMultipleEpisodes,
+      createdStoryId,
+      updateError,
+      router,
+    ]
+  );
+
+  // Handle cancel action
+  const handleCancel = useCallback(() => {
+    if (mode === "edit") {
+      router.push("/my-stories");
+    } else {
+      router.push("/pen");
+    }
+  }, [mode, router]);
+
+  // Determine page title and back link
+  const pageTitle = mode === "edit" ? "Edit Story" : "New Story";
+  const backLink = mode === "edit" ? "/my-stories" : "/pen";
+
+  return {
+    initialData,
+    createdStoryId,
+    isCreating,
+    isUpdating,
+    isFetchingStory,
+    handleSubmit,
+    handleCancel,
+    pageTitle,
+    backLink,
+  };
+}

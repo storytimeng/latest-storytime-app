@@ -44,7 +44,7 @@ export function useStories(options: UseStoriesOptions = {}) {
       }
 
       // Handle nested response structure like useGenres does
-      const responseData = (response.data as any)?.data || response.data;
+      const responseData = (response?.data as any)?.data || response?.data;
       console.log("✅ useStories: Processed data:", responseData);
 
       return responseData;

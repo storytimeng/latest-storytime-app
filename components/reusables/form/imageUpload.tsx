@@ -10,6 +10,7 @@ import {
 } from "@heroui/modal";
 import { Button } from "@heroui/button";
 import Image from "next/image";
+import { ImagePlus, X, FolderOpen, Link as LinkIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import FormField from "./formField";
 import { showToast } from "@/lib/showNotification";
@@ -117,6 +118,13 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
     onChange(null);
   }, [onChange]);
 
+  // Handle clear preview
+  const handleClearPreview = useCallback(() => {
+    setPreviewUrl(null);
+    setImageUrl("");
+    setIsValidUrl(false);
+  }, []);
+
   // Handle modal close
   const handleModalClose = useCallback(() => {
     setIsModalOpen(false);
@@ -165,7 +173,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
             {/* Change cover button - positioned like in the image */}
             <Button
               variant="solid"
-              className="absolute flex items-center gap-2 text-white bg-orange-500 shadow-lg bottom-4 right-4 hover:bg-orange-600"
+              className="absolute flex items-center gap-2 text-gray-700 bg-white shadow-lg bottom-4 right-4 hover:bg-gray-50"
               size="sm"
               onClick={(e) => {
                 e.stopPropagation(); // Prevent triggering the image click
@@ -173,7 +181,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
                 setIsModalOpen(true);
               }}
             >
-              <span className="text-sm">🖼️</span>
+              <ImagePlus size={18} />
               <span className="text-sm font-medium">Change cover image</span>
             </Button>
 
@@ -188,22 +196,22 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
                 handleRemoveImage();
               }}
             >
-              ✕
+              <X size={16} />
             </Button>
           </div>
         ) : (
-          // Display upload placeholder
-          <div className="flex items-center justify-center w-full h-full transition-colors rounded-lg cursor-pointer bg-accent-colour hover:bg-accent-colour/80">
-            <Button
-              variant="ghost"
-              className="flex items-center gap-2 text-complimentary-colour"
-              onClick={() => {
-                setModalMode("upload");
-                setIsModalOpen(true);
-              }}
-            >
-              <span className="font-medium">📷 {placeholder}</span>
-            </Button>
+          // Display upload placeholder - entire area is clickable
+          <div
+            className="flex items-center justify-center w-full h-full transition-colors rounded-lg cursor-pointer bg-accent-colour hover:bg-accent-colour/80"
+            onClick={() => {
+              setModalMode("upload");
+              setIsModalOpen(true);
+            }}
+          >
+            <div className="flex items-center gap-2 text-complimentary-colour">
+              <ImagePlus size={24} />
+              <span className="font-medium">{placeholder}</span>
+            </div>
           </div>
         )}
       </div>
@@ -214,9 +222,31 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
         onClose={handleModalClose}
         size={modalMode === "preview" ? "5xl" : "2xl"}
         scrollBehavior="inside"
+        placement="bottom"
+        motionProps={{
+          variants: {
+            enter: {
+              y: 0,
+              opacity: 1,
+              transition: {
+                duration: 0.3,
+                ease: "easeOut",
+              },
+            },
+            exit: {
+              y: "100%",
+              opacity: 0,
+              transition: {
+                duration: 0.2,
+                ease: "easeIn",
+              },
+            },
+          },
+        }}
         classNames={{
-          base: modalMode === "preview" ? "bg-black" : "",
+          base: modalMode === "preview" ? "bg-black" : "sm:mb-0 mb-0",
           backdrop: modalMode === "preview" ? "bg-black/90" : "",
+          wrapper: "items-end sm:items-center",
         }}
       >
         <ModalContent>
@@ -232,7 +262,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
                     className="text-white bg-orange-500 hover:bg-orange-600"
                     onClick={() => setModalMode("upload")}
                   >
-                    🖼️ Change Image
+                    <ImagePlus size={16} className="mr-1" /> Change Image
                   </Button>
                   <Button
                     variant="ghost"
@@ -240,7 +270,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
                     className="text-white hover:bg-white/10"
                     onClick={handleModalClose}
                   >
-                    ✕
+                    <X size={16} />
                   </Button>
                 </div>
               </ModalHeader>
@@ -268,75 +298,87 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
               </ModalHeader>
 
               <ModalBody className="space-y-6">
-                {/* File Upload Section */}
-                <div>
-                  <h4 className="mb-3 font-medium text-primary-colour">
-                    Upload from Device
-                  </h4>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleFileUpload}
-                    className="hidden"
-                  />
-                  <Button
-                    variant="bordered"
-                    className="w-full h-20 border-2 border-dashed border-complimentary-colour/50 text-complimentary-colour hover:bg-complimentary-colour/5"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    <div className="flex flex-col items-center gap-2">
-                      <span className="text-2xl">📁</span>
-                      <span>Click to upload image</span>
-                      <span className="text-xs opacity-70">
-                        PNG, JPG, GIF up to 10MB
-                      </span>
-                    </div>
-                  </Button>
-                </div>
-
-                {/* URL Input Section */}
-                <div>
-                  <h4 className="mb-3 font-medium text-primary-colour">
-                    Or Add from URL
-                  </h4>
-                  <div className="space-y-3">
-                    <FormField
-                      label=""
-                      type="url"
-                      id="imageUrl"
-                      placeholder="https://example.com/image.jpg"
-                      value={imageUrl}
-                      onValueChange={handleUrlChange}
-                      startContent="🔗"
-                      isInvalid={imageUrl ? !isValidUrl : false}
-                      errorMessage={
-                        imageUrl && !isValidUrl ? "Invalid image URL" : ""
-                      }
-                    />
-                    {isLoading && (
-                      <div className="text-sm text-grey-1">
-                        Validating image...
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Preview Section */}
-                {previewUrl && (
-                  <div>
-                    <h4 className="mb-3 font-medium text-primary-colour">
-                      Preview
-                    </h4>
-                    <div className="relative max-w-md mx-auto overflow-hidden rounded-lg aspect-video bg-light-grey-2">
+                {/* Preview replaces upload buttons when image is selected */}
+                {previewUrl ? (
+                  <div className="space-y-4">
+                    <div className="relative w-full overflow-hidden rounded-lg aspect-video bg-light-grey-2">
                       <Image
                         src={previewUrl}
                         alt="Preview"
                         fill
                         className="object-cover"
                       />
+                      {/* Close button to clear preview */}
+                      <Button
+                        isIconOnly
+                        variant="solid"
+                        size="sm"
+                        className="absolute text-white bg-red-500 shadow-lg top-2 right-2 hover:bg-red-600"
+                        onClick={handleClearPreview}
+                      >
+                        <X size={16} />
+                      </Button>
                     </div>
+                    <p className="text-sm text-center text-gray-500">
+                      Click the X to choose a different image
+                    </p>
                   </div>
+                ) : (
+                  <>
+                    {/* File Upload Section */}
+                    <div>
+                      <h4 className="mb-3 font-medium text-primary-colour">
+                        Upload from Device
+                      </h4>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileUpload}
+                        className="hidden"
+                      />
+                      <Button
+                        variant="bordered"
+                        className="w-full h-fit p-2 border-2 border-dashed border-complimentary-colour/50 text-complimentary-colour hover:bg-complimentary-colour/5"
+                        onPress={() => fileInputRef.current?.click()}
+                      >
+                        <div className="flex flex-col items-center gap-2">
+                          <FolderOpen size={32} />
+                          <span>Click to upload image</span>
+                          <span className="text-xs opacity-70">
+                            PNG, JPG, GIF up to 10MB
+                          </span>
+                        </div>
+                      </Button>
+                    </div>
+
+                    {/* URL Input Section */}
+                    <div>
+                      <h4 className="mb-3 font-medium text-primary-colour">
+                        Or Add from URL
+                      </h4>
+                      <div className="space-y-3">
+                        <FormField
+                          label=""
+                          type="url"
+                          id="imageUrl"
+                          placeholder="https://storytime.ng/images/placeholder.jpg"
+                          value={imageUrl}
+                          onValueChange={handleUrlChange}
+                          startContent={<LinkIcon size={16} />}
+                          isInvalid={imageUrl ? !isValidUrl : false}
+                          errorMessage={
+                            imageUrl && !isValidUrl ? "Invalid image URL" : ""
+                          }
+                        />
+                        {isLoading && (
+                          <div className="text-sm text-grey-1">
+                            Validating image...
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </>
                 )}
               </ModalBody>
 

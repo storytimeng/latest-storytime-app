@@ -8,9 +8,11 @@ import { useRouter } from "next/navigation";
 import { ThemeProvider as NextThemesProvider } from "next-themes";
 import { SWRConfig } from "swr";
 import Cookies from "js-cookie";
+import { ToastProvider } from "@heroui/toast";
+import { AuthModal } from "@/components/reusables/modals/AuthModal";
 
 // Hey-API client setup (runs immediately)
-import "../src/client/setup";
+import "../src/setup";
 import { getAuthToken } from "../src/stores/useAuthStore";
 
 export interface ProvidersProps {
@@ -32,6 +34,8 @@ export function Providers({ children, themeProps }: ProvidersProps) {
   return (
     <HeroUIProvider navigate={router.push}>
       <NextThemesProvider {...themeProps}>
+        <ToastProvider placement="top-center" />
+        <AuthModal />
         <SWRConfig
           value={{
             fetcher: async (resource: string, init?: RequestInit) => {

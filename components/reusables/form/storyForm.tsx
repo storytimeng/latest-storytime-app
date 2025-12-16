@@ -1,15 +1,32 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { Button } from "@heroui/button";
 import { Select, SelectItem } from "@heroui/select";
 import { Switch } from "@heroui/switch";
+import { ChevronRight, ChevronDown } from "lucide-react";
 // Icons will be replaced with text/emoji alternatives
 import { Magnetik_Bold, Magnetik_Medium, Magnetik_Regular } from "@/lib/font";
 import FormField from "./formField";
 import TextAreaField from "./textArea";
 import ImageUpload from "./imageUpload";
+import { CollaboratorInput } from "./CollaboratorInput";
 import { cn } from "@/lib/utils";
+import { showToast } from "@/lib/showNotification";
+import {
+  saveChaptersCache,
+  saveEpisodesCache,
+  getChaptersCache,
+  getEpisodesCache,
+  hasCachedData,
+  clearStoryCache,
+} from "@/lib/storyCache";
+import { CacheLoadingModal } from "@/components/reusables/customUI/CacheLoadingModal";
+import { useUnsavedChangesWarning } from "@/src/hooks/useUnsavedChangesWarning";
+// Custom hooks for refactored logic
+import { useStoryFormState } from "@/src/hooks/useStoryFormState";
+import { useStoryContent } from "@/src/hooks/useStoryContent";
+import { useUserStore } from "@/src/stores/useUserStore";
 import type {
   StoryFormData,
   StoryStructure,
@@ -28,6 +45,7 @@ const getInitialFormData = (
   title: "",
   collaborate: "",
   description: "",
+  content: "",
   selectedGenres: [],
   language: "English",
   goAnonymous: false,
@@ -37,6 +55,8 @@ const getInitialFormData = (
   storyStatus: "Draft",
   authorNote: "",
   giveConsent: false,
+  chapter: false,
+  episodes: false,
   ...initialData,
 });
 
@@ -88,6 +108,8 @@ const StoryBriefModal: React.FC<StoryBriefModalProps> = ({
                     setStructure((prev) => ({
                       ...prev,
                       hasChapters: Boolean(index),
+                      // If selecting Yes for chapters, set episodes to No
+                      hasEpisodes: index === 1 ? false : prev.hasEpisodes,
                     }))
                   }
                   className={cn(
@@ -122,6 +144,8 @@ const StoryBriefModal: React.FC<StoryBriefModalProps> = ({
                     setStructure((prev) => ({
                       ...prev,
                       hasEpisodes: Boolean(index),
+                      // If selecting Yes for episodes, set chapters to No
+                      hasChapters: index === 1 ? false : prev.hasChapters,
                     }))
                   }
                   className={cn(
@@ -141,7 +165,7 @@ const StoryBriefModal: React.FC<StoryBriefModalProps> = ({
             <p
               className={`text-complimentary-colour text-sm ${Magnetik_Regular.className}`}
             >
-              Note: You can change to chapters when you want in the story.
+              Note: A story can have either chapters or episodes, not both.
             </p>
           </div>
         </div>
@@ -243,83 +267,225 @@ const StoryForm: React.FC<StoryFormProps> = ({
   onSubmit,
   onCancel,
   isLoading = false,
+  createdStoryId,
 }) => {
-  // Form state
-  const [formData, setFormData] = useState<StoryFormData>(() =>
-    getInitialFormData(initialData)
-  );
-  const [formErrors, setFormErrors] = useState<
-    Partial<Record<keyof StoryFormData, string>>
-  >({});
+  const { user } = useUserStore();
+  const userId = user?.id;
 
-  // UI state
-  const [currentStep, setCurrentStep] = useState<
-    "form" | "structure" | "writing" | "additional"
-  >("form");
-  const [storyStructure, setStoryStructure] = useState<StoryStructure>({
-    hasChapters: false,
-    hasEpisodes: false,
+  // ============================================================================
+  // REFACTORED: Custom hooks (now active!)
+  // ============================================================================
+  const formStateHook = useStoryFormState({ initialData, mode });
+  const contentStateHook = useStoryContent({
+    storyStructure: formStateHook.storyStructure,
   });
 
-  // Content state
-  const [chapters, setChapters] = useState<Chapter[]>([
-    {
-      id: 1,
-      title: "Chapter 1",
-      body: "",
-      episodes: [{ id: 1, title: "Episode 1", body: "" }],
-    },
-  ]);
-  const [parts, setParts] = useState<Part[]>([
-    { id: 1, title: "Part 1", body: "" },
-  ]);
+  // Create aliases for backward compatibility - these reference hook state
+  const formData = formStateHook.formData;
+  const formErrors = formStateHook.formErrors;
+  const currentStep = formStateHook.currentStep;
+  const storyStructure = formStateHook.storyStructure;
+  const setFormData = formStateHook.setFormData;
+  const setFormErrors = formStateHook.setFormErrors;
+  const setCurrentStep = formStateHook.setCurrentStep;
+  const setStoryStructure = formStateHook.setStoryStructure;
+  const handleFieldChange = formStateHook.handleFieldChange;
+  const handleGenreToggle = formStateHook.handleGenreToggle;
+  const validateForm = formStateHook.validateForm;
+  const handleStructureNext = formStateHook.handleStructureNext;
 
-  // Form validation
-  const validateForm = useCallback((): boolean => {
-    const errors: Partial<Record<keyof StoryFormData, string>> = {};
+  // Content state from hooks
+  const chapters = contentStateHook.chapters;
+  const parts = contentStateHook.parts;
+  const setChapters = contentStateHook.setChapters;
+  const setParts = contentStateHook.setParts;
+  const addChapter = contentStateHook.addChapter;
+  const addPart = contentStateHook.addPart;
+  const toggleChapter = contentStateHook.toggleChapter;
+  const toggleEpisode = contentStateHook.toggleEpisode;
+  const expandedChapters = contentStateHook.expandedChapters;
+  const expandedEpisodes = contentStateHook.expandedEpisodes;
+  const setExpandedChapters = contentStateHook.setExpandedChapters;
+  const setExpandedEpisodes = contentStateHook.setExpandedEpisodes;
+  // ============================================================================
 
-    if (!formData.title.trim()) {
-      errors.title = "Story title is required";
+  // Cache loading modal state (not in hooks yet)
+  const [showCacheModal, setShowCacheModal] = useState(false);
+  const [pendingCacheType, setPendingCacheType] = useState<
+    "chapters" | "episodes" | null
+  >(null);
+  const [cacheChecked, setCacheChecked] = useState(false);
+
+  // Track unsaved changes
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const initialFormDataRef = React.useRef<string>("");
+
+  // Set initial data snapshot after component mounts
+  useEffect(() => {
+    if (!initialFormDataRef.current) {
+      initialFormDataRef.current = JSON.stringify({
+        formData,
+        chapters,
+        parts,
+        storyStructure,
+      });
     }
+  }, []);
 
-    if (!formData.description.trim()) {
-      errors.description = "Story description is required";
-    }
+  // Track changes
+  useEffect(() => {
+    if (!initialFormDataRef.current) return;
 
-    if (formData.selectedGenres.length === 0) {
-      errors.selectedGenres = "Please select at least one genre";
-    }
+    const currentData = JSON.stringify({
+      formData,
+      chapters,
+      parts,
+      storyStructure,
+    });
+    setHasUnsavedChanges(currentData !== initialFormDataRef.current);
+  }, [formData, chapters, parts, storyStructure]);
 
-    setFormErrors(errors);
-    return Object.keys(errors).length === 0;
-  }, [formData]);
-
-  // Handle form field changes
-  const handleFieldChange = useCallback(
-    (
-      field: keyof StoryFormData,
-      value: string | number | boolean | string[]
-    ) => {
-      setFormData((prev) => ({ ...prev, [field]: value }));
-      // Clear error when user starts typing
-      if (formErrors[field]) {
-        setFormErrors((prev) => ({ ...prev, [field]: undefined }));
+  // Unsaved changes warning with automatic caching
+  useUnsavedChangesWarning({
+    hasUnsavedChanges,
+    onSave: () => {
+      const storyId = createdStoryId || (mode === "edit" && initialData?.id);
+      if (storyId) {
+        if (storyStructure.hasChapters && chapters.length > 0) {
+          saveChaptersCache(storyId, chapters);
+        }
+        if (storyStructure.hasEpisodes && parts.length > 0) {
+          saveEpisodesCache(storyId, parts);
+        }
       }
     },
-    [formErrors]
-  );
+  });
 
-  // Handle genre selection
-  const handleGenreToggle = useCallback((genre: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      selectedGenres: prev.selectedGenres.includes(genre)
-        ? prev.selectedGenres.filter((g) => g !== genre)
-        : prev.selectedGenres.length < 3
-          ? [...prev.selectedGenres, genre]
-          : prev.selectedGenres, // Limit to 3 genres
-    }));
-  }, []);
+  // Check for cached data when story ID becomes available
+  useEffect(() => {
+    if (cacheChecked) return;
+
+    const storyId = createdStoryId || (mode === "edit" && initialData?.id);
+    if (!storyId) return;
+
+    const checkCache = async () => {
+      const cached = await hasCachedData(storyId);
+
+      if (cached.hasChapters && storyStructure.hasChapters) {
+        setPendingCacheType("chapters");
+        setShowCacheModal(true);
+        setCacheChecked(true);
+      } else if (cached.hasEpisodes && storyStructure.hasEpisodes) {
+        setPendingCacheType("episodes");
+        setShowCacheModal(true);
+        setCacheChecked(true);
+      } else {
+        setCacheChecked(true);
+      }
+    };
+
+    checkCache();
+  }, [createdStoryId, mode, initialData?.id, storyStructure, cacheChecked]);
+
+  // Handle loading cache
+  const handleLoadCache = useCallback(async () => {
+    const storyId = createdStoryId || (mode === "edit" && initialData?.id);
+    if (!storyId || !pendingCacheType) return;
+
+    if (pendingCacheType === "chapters") {
+      const cached = await getChaptersCache(storyId);
+      if (cached && cached.length > 0) {
+        setChapters(cached);
+        // Expand the first chapter
+        setExpandedChapters(new Set([cached[0].id]));
+        showToast({
+          type: "success",
+          message: `Loaded ${cached.length} cached chapter${cached.length > 1 ? "s" : ""}`,
+        });
+      }
+    } else if (pendingCacheType === "episodes") {
+      const cached = await getEpisodesCache(storyId);
+      if (cached && cached.length > 0) {
+        setParts(cached);
+        // Expand the first episode
+        setExpandedEpisodes(new Set([cached[0].id]));
+        showToast({
+          type: "success",
+          message: `Loaded ${cached.length} cached episode${cached.length > 1 ? "s" : ""}`,
+        });
+      }
+    }
+
+    setShowCacheModal(false);
+    setPendingCacheType(null);
+  }, [createdStoryId, mode, initialData?.id, pendingCacheType]);
+
+  // Handle discarding cache
+  const handleDiscardCache = useCallback(async () => {
+    const storyId = createdStoryId || (mode === "edit" && initialData?.id);
+    if (storyId) {
+      await clearStoryCache(storyId);
+      showToast({
+        type: "info",
+        message: "Cached data has been discarded",
+      });
+    }
+    setShowCacheModal(false);
+    setPendingCacheType(null);
+  }, [createdStoryId, mode, initialData?.id]);
+
+  // Accordion state and toggle functions are now handled by contentStateHook
+
+  // Auto-save chapters to cache when they change
+  useEffect(() => {
+    const storyId = createdStoryId || (mode === "edit" && initialData?.id);
+    if (storyId && chapters.length > 0 && storyStructure.hasChapters) {
+      saveChaptersCache(storyId, chapters);
+    }
+  }, [
+    chapters,
+    createdStoryId,
+    mode,
+    initialData?.id,
+    storyStructure.hasChapters,
+  ]);
+
+  // Auto-save episodes to cache when they change
+  useEffect(() => {
+    const storyId = createdStoryId || (mode === "edit" && initialData?.id);
+    if (storyId && parts.length > 0 && storyStructure.hasEpisodes) {
+      saveEpisodesCache(storyId, parts);
+    }
+  }, [
+    parts,
+    createdStoryId,
+    mode,
+    initialData?.id,
+    storyStructure.hasEpisodes,
+  ]);
+
+  // Update form data when initialData changes (for edit mode)
+  React.useEffect(() => {
+    if (mode === "edit" && initialData) {
+      setFormData(getInitialFormData(initialData));
+      // Update story structure if chapter/episodes flags are set
+      if (initialData.chapter || initialData.episodes) {
+        setStoryStructure({
+          hasChapters: initialData.chapter || false,
+          hasEpisodes: initialData.episodes || false,
+        });
+        // If story has structure (chapters/episodes), show writing interface
+        setCurrentStep("writing");
+      } else {
+        // For simple stories without chapters/episodes, stay on form
+        setCurrentStep("form");
+      }
+    }
+  }, [mode, initialData]);
+
+  // Form validation is now handled by formStateHook.validateForm
+  // handleFieldChange is now handled by formStateHook.handleFieldChange
+  // handleGenreToggle is now handled by formStateHook.handleGenreToggle
 
   // Handle form submission
   const handleSubmit = useCallback(() => {
@@ -329,6 +495,9 @@ const StoryForm: React.FC<StoryFormProps> = ({
       setCurrentStep("structure");
       return;
     }
+
+    // Reset unsaved changes flag before submit
+    setHasUnsavedChanges(false);
 
     // For edit mode or final submission
     const contentData = storyStructure.hasChapters ? chapters : undefined;
@@ -346,37 +515,16 @@ const StoryForm: React.FC<StoryFormProps> = ({
     parts,
   ]);
 
-  // Handle story structure selection
-  const handleStructureNext = useCallback((structure: StoryStructure) => {
-    setStoryStructure(structure);
-    setCurrentStep("writing");
-  }, []);
+  // handleStructureNext is now handled by formStateHook.handleStructureNext
 
-  // Handle content operations
-  const addChapter = useCallback(() => {
-    setChapters((prev) => [
-      ...prev,
-      {
-        id: prev.length + 1,
-        title: `Chapter ${prev.length + 1}`,
-        body: "",
-        episodes: storyStructure.hasEpisodes
-          ? [{ id: 1, title: "Episode 1", body: "" }]
-          : undefined,
-      },
-    ]);
-  }, [storyStructure.hasEpisodes]);
-
-  const addPart = useCallback(() => {
-    setParts((prev) => [
-      ...prev,
-      { id: prev.length + 1, title: `Part ${prev.length + 1}`, body: "" },
-    ]);
-  }, []);
+  // addChapter and addPart are now handled by contentStateHook
 
   // Handle additional info submission
   const handleAdditionalInfoSubmit = useCallback(
     (authorNote: string, giveConsent: boolean) => {
+      // Reset unsaved changes flag before submit
+      setHasUnsavedChanges(false);
+
       const finalData = { ...formData, authorNote, giveConsent };
       const contentData = storyStructure.hasChapters ? chapters : undefined;
       const partsData = !storyStructure.hasChapters ? parts : undefined;
@@ -407,7 +555,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
 
   // Render form fields
   const renderFormFields = () => (
-    <div className="space-y-6">
+    <div className="space-y-6 ">
       {/* Cover Image */}
       {renderCoverImage()}
 
@@ -422,17 +570,14 @@ const StoryForm: React.FC<StoryFormProps> = ({
         isRequired
         isInvalid={!!formErrors.title}
         errorMessage={formErrors.title}
+        className="pt-4"
         maxLen={100}
       />
 
       {/* Collaborate */}
-      <FormField
-        label="Collaborate (optional)"
-        type="text"
-        id="collaborate"
-        placeholder="@penname"
+      <CollaboratorInput
         value={formData.collaborate}
-        onValueChange={(value) => handleFieldChange("collaborate", value)}
+        onChange={(value) => handleFieldChange("collaborate", value)}
         className="mt-6"
       />
 
@@ -447,10 +592,84 @@ const StoryForm: React.FC<StoryFormProps> = ({
         isInvalid={!!formErrors.description}
         errorMessage={formErrors.description || ""}
         required
-        minLen={10}
-        maxLen={500}
+        minLen={50}
+        maxLen={1000}
         rows={4}
+        showWordCounter={true}
+        minWords={50}
+        maxWords={100}
+        className="max-h-[400px]"
       />
+
+      {/* Content Field */}
+      <TextAreaField
+        label="Story Content"
+        htmlFor="content"
+        id="content"
+        placeholder="Write your story content here..."
+        value={formData.content || ""}
+        onChange={(value) => handleFieldChange("content", value)}
+        isInvalid={!!formErrors.content}
+        errorMessage={formErrors.content || ""}
+        required={!storyStructure.hasChapters && !storyStructure.hasEpisodes}
+        rows={6}
+        className="max-h-[400px]"
+      />
+      {!storyStructure.hasChapters && !storyStructure.hasEpisodes && (
+        <p className="text-xs text-gray-500 -mt-4">
+          Content is required when your story doesn't have chapters or episodes.
+        </p>
+      )}
+
+      {/* Show Chapters/Episodes in Edit Mode */}
+      {mode === "edit" &&
+        (storyStructure.hasChapters || storyStructure.hasEpisodes) &&
+        chapters.length > 0 && (
+          <div className="space-y-2">
+            <label
+              className={`text-primary-colour text-base block ${Magnetik_Medium.className}`}
+            >
+              {storyStructure.hasChapters ? "Chapters" : "Episodes"}
+            </label>
+            <div className="max-h-[300px] overflow-y-auto space-y-2 border border-gray-200 rounded-lg p-3">
+              {chapters.slice(0, 5).map((chapter, index) => (
+                <button
+                  key={chapter.id}
+                  onClick={() => setCurrentStep("writing")}
+                  className="w-full flex items-center justify-between p-3 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg transition-colors"
+                >
+                  <div className="text-left">
+                    <p
+                      className={`text-primary-colour text-sm ${Magnetik_Medium.className}`}
+                    >
+                      {storyStructure.hasChapters
+                        ? `Chapter ${index + 1}`
+                        : `Episode ${index + 1}`}
+                    </p>
+                    <p className="text-gray-500 text-xs truncate max-w-[250px]">
+                      {chapter.title || "Untitled"}
+                    </p>
+                  </div>
+                  <ChevronRight size={20} className="text-gray-400" />
+                </button>
+              ))}
+              {chapters.length > 5 && (
+                <p className="text-xs text-center text-gray-500 py-2">
+                  +{chapters.length - 5} more{" "}
+                  {storyStructure.hasChapters ? "chapters" : "episodes"}
+                </p>
+              )}
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setCurrentStep("writing")}
+              className="w-full text-complimentary-colour"
+            >
+              Edit {storyStructure.hasChapters ? "Chapters" : "Episodes"}
+            </Button>
+          </div>
+        )}
 
       {/* Genre Selection */}
       <div>
@@ -528,7 +747,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
       {/* Story Language */}
       <div>
         <label
-          className={`text-primary-colour text-base mb-2 block ${Magnetik_Medium.className}`}
+          className={`mb-2 text-sm body-text-small-medium-auto text-grey-2 ${Magnetik_Medium.className}`}
         >
           Story Language
         </label>
@@ -539,6 +758,23 @@ const StoryForm: React.FC<StoryFormProps> = ({
             const value = Array.from(keys)[0] as string;
             handleFieldChange("language", value);
           }}
+          classNames={{
+            trigger:
+              "border-light-grey-2 hover:border-primary-colour data-[hover=true]:border-primary-colour",
+            value: "text-grey-2",
+          }}
+          popoverProps={{
+            classNames: {
+              content: "bg-accent-shade-2",
+            },
+          }}
+          listboxProps={{
+            itemClasses: {
+              base: "data-[hover=true]:bg-complimentary-colour/10 data-[focus=true]:bg-complimentary-colour/20 data-[selected=true]:bg-complimentary-colour/20",
+            },
+          }}
+          variant="bordered"
+          radius="lg"
         >
           {LANGUAGES.map((language) => (
             <SelectItem key={language}>{language}</SelectItem>
@@ -612,139 +848,220 @@ const StoryForm: React.FC<StoryFormProps> = ({
 
       {/* Content based on story structure */}
       {storyStructure.hasChapters ? (
-        <div className="space-y-6">
-          {chapters.map((chapter, index) => (
-            <div
-              key={chapter.id}
-              className="p-4 space-y-4 bg-white rounded-lg shadow-sm"
-            >
-              <FormField
-                label={`Chapter ${chapter.id} Title`}
-                type="text"
-                id={`chapter-${chapter.id}-title`}
-                placeholder={`Chapter ${chapter.id}`}
-                value={chapter.title}
-                onValueChange={(value) => {
-                  setChapters((prev) =>
-                    prev.map((ch) =>
-                      ch.id === chapter.id ? { ...ch, title: value } : ch
-                    )
-                  );
-                }}
-              />
+        <div className="space-y-4">
+          <div className="max-h-[600px] overflow-y-auto space-y-6 pr-2">
+            {chapters.map((chapter, index) => {
+              const isExpanded = expandedChapters.has(chapter.id);
 
-              {storyStructure.hasEpisodes &&
-                chapter.episodes?.map((episode) => (
-                  <div key={episode.id} className="ml-4">
-                    <FormField
-                      label={`Episode ${episode.id} Title`}
-                      type="text"
-                      id={`episode-${chapter.id}-${episode.id}-title`}
-                      placeholder={`Episode ${episode.id}`}
-                      value={episode.title}
-                      onValueChange={(value) => {
-                        setChapters((prev) =>
-                          prev.map((ch) =>
-                            ch.id === chapter.id
-                              ? {
-                                  ...ch,
-                                  episodes: ch.episodes?.map((ep) =>
-                                    ep.id === episode.id
-                                      ? { ...ep, title: value }
-                                      : ep
-                                  ),
-                                }
-                              : ch
-                          )
-                        );
-                      }}
+              return (
+                <div
+                  key={chapter.id}
+                  className="bg-white rounded-lg shadow-sm overflow-hidden"
+                >
+                  {/* Chapter Header - Always Visible */}
+                  <div
+                    className="flex items-center justify-between p-4 cursor-pointer hover:bg-accent-shade-1 transition-colors"
+                    onClick={() => toggleChapter(chapter.id)}
+                  >
+                    <h3
+                      className={cn(
+                        "text-base text-primary-colour font-medium",
+                        Magnetik_Medium.className
+                      )}
+                    >
+                      Chapter {chapter.id}:{" "}
+                      {chapter.title || `Chapter ${chapter.id}`}
+                    </h3>
+                    <ChevronDown
+                      className={cn(
+                        "w-5 h-5 text-primary-colour transition-transform",
+                        isExpanded ? "rotate-180" : ""
+                      )}
                     />
                   </div>
-                ))}
 
-              <TextAreaField
-                label="Content"
-                htmlFor={`chapter-${chapter.id}-body`}
-                id={`chapter-${chapter.id}-body`}
-                isInvalid={false}
-                errorMessage=""
-                placeholder="Write your story content here..."
-                value={chapter.body}
-                onChange={(value) => {
-                  setChapters((prev) =>
-                    prev.map((ch) =>
-                      ch.id === chapter.id ? { ...ch, body: value } : ch
-                    )
-                  );
-                }}
-                rows={12}
-              />
+                  {/* Chapter Content - Collapsible */}
+                  {isExpanded && (
+                    <div className="p-4 pt-0 space-y-4">
+                      <FormField
+                        label={`Chapter ${chapter.id} Title`}
+                        type="text"
+                        id={`chapter-${chapter.id}-title`}
+                        placeholder={`Chapter ${chapter.id}`}
+                        value={chapter.title}
+                        onValueChange={(value) => {
+                          setChapters((prev) =>
+                            prev.map((ch) =>
+                              ch.id === chapter.id
+                                ? { ...ch, title: value }
+                                : ch
+                            )
+                          );
+                        }}
+                      />
 
-              {index === chapters.length - 1 && (
-                <Button
-                  variant="ghost"
-                  className="flex items-center w-full gap-2 border border-dashed text-complimentary-colour border-complimentary-colour"
-                  onClick={addChapter}
+                      {storyStructure.hasEpisodes &&
+                        chapter.episodes?.map((episode) => (
+                          <div key={episode.id} className="ml-4">
+                            <FormField
+                              label={`Episode ${episode.id} Title`}
+                              type="text"
+                              id={`episode-${chapter.id}-${episode.id}-title`}
+                              placeholder={`Episode ${episode.id}`}
+                              value={episode.title}
+                              onValueChange={(value) => {
+                                setChapters((prev) =>
+                                  prev.map((ch) =>
+                                    ch.id === chapter.id
+                                      ? {
+                                          ...ch,
+                                          episodes: ch.episodes?.map((ep) =>
+                                            ep.id === episode.id
+                                              ? { ...ep, title: value }
+                                              : ep
+                                          ),
+                                        }
+                                      : ch
+                                  )
+                                );
+                              }}
+                            />
+                          </div>
+                        ))}
+
+                      <TextAreaField
+                        label="Content"
+                        htmlFor={`chapter-${chapter.id}-body`}
+                        id={`chapter-${chapter.id}-body`}
+                        isInvalid={false}
+                        errorMessage=""
+                        placeholder="Write your story content here..."
+                        value={chapter.body}
+                        onChange={(value) => {
+                          setChapters((prev) =>
+                            prev.map((ch) =>
+                              ch.id === chapter.id ? { ...ch, body: value } : ch
+                            )
+                          );
+                        }}
+                        rows={12}
+                      />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Add Chapter Button - Outside Accordion */}
+          <Button
+            variant="ghost"
+            className="flex items-center w-full gap-2 border border-dashed text-complimentary-colour border-complimentary-colour"
+            onClick={addChapter}
+          >
+            <span className={Magnetik_Medium.className}>+ Add Chapter</span>
+          </Button>
+        </div>
+      ) : storyStructure.hasEpisodes ? (
+        <div className="space-y-4">
+          <div className="max-h-[600px] overflow-y-auto space-y-6 pr-2">
+            {parts.map((part, index) => {
+              const isExpanded = expandedEpisodes.has(part.id);
+
+              return (
+                <div
+                  key={part.id}
+                  className="bg-white rounded-lg shadow-sm overflow-hidden"
                 >
-                  <span className={Magnetik_Medium.className}>
-                    + Add Chapter
-                  </span>
-                </Button>
-              )}
-            </div>
-          ))}
+                  {/* Episode Header - Always Visible */}
+                  <div
+                    className="flex items-center justify-between p-4 cursor-pointer hover:bg-accent-shade-1 transition-colors"
+                    onClick={() => toggleEpisode(part.id)}
+                  >
+                    <h3
+                      className={cn(
+                        "text-base text-primary-colour font-medium",
+                        Magnetik_Medium.className
+                      )}
+                    >
+                      Episode {part.id}: {part.title || `Episode ${part.id}`}
+                    </h3>
+                    <ChevronDown
+                      className={cn(
+                        "w-5 h-5 text-primary-colour transition-transform",
+                        isExpanded ? "rotate-180" : ""
+                      )}
+                    />
+                  </div>
+
+                  {/* Episode Content - Collapsible */}
+                  {isExpanded && (
+                    <div className="p-4 pt-0 space-y-4">
+                      <FormField
+                        label="Episode Title"
+                        type="text"
+                        id={`part-${part.id}-title`}
+                        placeholder={part.title}
+                        value={part.title}
+                        onValueChange={(value) => {
+                          setParts((prev) =>
+                            prev.map((p) =>
+                              p.id === part.id ? { ...p, title: value } : p
+                            )
+                          );
+                        }}
+                      />
+
+                      <TextAreaField
+                        label="Content"
+                        htmlFor={`part-${part.id}-body`}
+                        id={`part-${part.id}-body`}
+                        isInvalid={false}
+                        errorMessage=""
+                        placeholder="Write your episode content here..."
+                        value={part.body}
+                        onChange={(value) => {
+                          setParts((prev) =>
+                            prev.map((p) =>
+                              p.id === part.id ? { ...p, body: value } : p
+                            )
+                          );
+                        }}
+                        rows={12}
+                      />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Add Episode Button - Outside Accordion */}
+          <Button
+            variant="ghost"
+            className="flex items-center w-full gap-2 border border-dashed text-complimentary-colour border-complimentary-colour"
+            onClick={addPart}
+          >
+            <span className={Magnetik_Medium.className}>+ Add Episode</span>
+          </Button>
         </div>
       ) : (
-        <div className="space-y-6">
-          {parts.map((part, index) => (
-            <div
-              key={part.id}
-              className="p-4 space-y-4 bg-white rounded-lg shadow-sm"
-            >
-              <FormField
-                label="Part Title"
-                type="text"
-                id={`part-${part.id}-title`}
-                placeholder={part.title}
-                value={part.title}
-                onValueChange={(value) => {
-                  setParts((prev) =>
-                    prev.map((p) =>
-                      p.id === part.id ? { ...p, title: value } : p
-                    )
-                  );
-                }}
-              />
-
-              <TextAreaField
-                label="Content"
-                htmlFor={`part-${part.id}-body`}
-                id={`part-${part.id}-body`}
-                isInvalid={false}
-                errorMessage=""
-                placeholder="Write your story content here..."
-                value={part.body}
-                onChange={(value) => {
-                  setParts((prev) =>
-                    prev.map((p) =>
-                      p.id === part.id ? { ...p, body: value } : p
-                    )
-                  );
-                }}
-                rows={12}
-              />
-
-              {index === parts.length - 1 && (
-                <Button
-                  variant="ghost"
-                  className="flex items-center w-full gap-2 border border-dashed text-complimentary-colour border-complimentary-colour"
-                  onClick={addPart}
-                >
-                  <span className={Magnetik_Medium.className}>+ Add Part</span>
-                </Button>
-              )}
-            </div>
-          ))}
+        <div className="space-y-4">
+          <TextAreaField
+            label="Story Content"
+            htmlFor="content"
+            id="content"
+            isInvalid={false}
+            errorMessage=""
+            placeholder="Write your full story here..."
+            value={formData.content || ""}
+            onChange={(value) => handleFieldChange("content", value)}
+            rows={20}
+          />
+          <p className="text-xs text-gray-500">
+            Write your complete story in this field since you selected no
+            chapters or episodes.
+          </p>
         </div>
       )}
     </div>
@@ -759,6 +1076,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
             variant="bordered"
             className={`flex-1 border-light-grey-2 text-primary-colour ${Magnetik_Regular.className}`}
             onClick={() => {
+              setHasUnsavedChanges(false); // Reset flag before submit
               const draftData = { ...formData, storyStatus: "Draft" };
               onSubmit(
                 draftData,
@@ -772,7 +1090,21 @@ const StoryForm: React.FC<StoryFormProps> = ({
           </Button>
           <Button
             className={`flex-1 bg-primary-shade-6 text-universal-white ${Magnetik_Medium.className}`}
-            onClick={() => setCurrentStep("additional")}
+            onClick={() => {
+              setHasUnsavedChanges(false); // Reset flag before submit
+              // In edit mode, submit directly without modal
+              if (mode === "edit") {
+                const publishData = { ...formData, storyStatus: "Published" };
+                onSubmit(
+                  publishData,
+                  storyStructure.hasChapters ? chapters : undefined,
+                  !storyStructure.hasChapters ? parts : undefined
+                );
+              } else {
+                // In create mode, show additional info modal
+                setCurrentStep("additional");
+              }
+            }}
             disabled={isLoading}
           >
             Publish
@@ -828,15 +1160,27 @@ const StoryForm: React.FC<StoryFormProps> = ({
             isOpen={currentStep === "additional"}
             onClose={() => setCurrentStep("writing")}
             onSubmit={handleAdditionalInfoSubmit}
-            onSkip={() =>
+            onSkip={() => {
+              setHasUnsavedChanges(false); // Reset flag before submit
               onSubmit(
                 formData,
                 storyStructure.hasChapters ? chapters : undefined,
                 !storyStructure.hasChapters ? parts : undefined
-              )
-            }
+              );
+            }}
           />
         </>
+      )}
+
+      {/* Cache Loading Modal */}
+      {pendingCacheType && (
+        <CacheLoadingModal
+          isOpen={showCacheModal}
+          onLoadCache={handleLoadCache}
+          onDiscardCache={handleDiscardCache}
+          cacheType={pendingCacheType}
+          autoLoadDelay={30}
+        />
       )}
     </div>
   );

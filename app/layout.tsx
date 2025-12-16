@@ -5,6 +5,8 @@ import clsx from "clsx";
 import { APP_CONFIG } from "@/config/app";
 import { MaxWidthWrapper } from "@/lib/maxWidthWrapper";
 import { Providers } from "./providers";
+import { PWAProvider } from "@/components/PWAProvider";
+import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
 
 import { siteConfig } from "@/config/site";
 import { fontSans } from "@/config/fonts";
@@ -22,6 +24,15 @@ export const metadata: Metadata = {
   authors: [{ name: APP_CONFIG.siteName }],
   creator: APP_CONFIG.siteName,
   publisher: APP_CONFIG.siteName,
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: APP_CONFIG.name,
+  },
+  formatDetection: {
+    telephone: false,
+  },
   openGraph: {
     title: APP_CONFIG.name,
     description: APP_CONFIG.description,
@@ -47,10 +58,10 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "white" },
-    { media: "(prefers-color-scheme: dark)", color: "black" },
-  ],
+  themeColor: "#F8951D",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
 };
 
 export default function RootLayout({
@@ -60,8 +71,78 @@ export default function RootLayout({
 }) {
   return (
     <html suppressHydrationWarning lang="en">
-      <head />
+      <head>
+        {/* iOS Splash Screens */}
+        <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+        <link
+          rel="apple-touch-startup-image"
+          media="screen and (device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
+          href="/splash/apple-splash-1290-2796.png"
+        />
+        <link
+          rel="apple-touch-startup-image"
+          media="screen and (device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
+          href="/splash/apple-splash-1179-2556.png"
+        />
+        <link
+          rel="apple-touch-startup-image"
+          media="screen and (device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
+          href="/splash/apple-splash-1284-2778.png"
+        />
+        <link
+          rel="apple-touch-startup-image"
+          media="screen and (device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
+          href="/splash/apple-splash-1170-2532.png"
+        />
+        <link
+          rel="apple-touch-startup-image"
+          media="screen and (device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
+          href="/splash/apple-splash-1125-2436.png"
+        />
+        <link
+          rel="apple-touch-startup-image"
+          media="screen and (device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
+          href="/splash/apple-splash-828-1792.png"
+        />
+        <link
+          rel="apple-touch-startup-image"
+          media="screen and (device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
+          href="/splash/apple-splash-750-1334.png"
+        />
+        <link
+          rel="apple-touch-startup-image"
+          media="screen and (device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
+          href="/splash/apple-splash-640-1136.png"
+        />
+        {/* iPad splash screens */}
+        <link
+          rel="apple-touch-startup-image"
+          media="screen and (device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
+          href="/splash/apple-splash-2048-2732.png"
+        />
+        <link
+          rel="apple-touch-startup-image"
+          media="screen and (device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
+          href="/splash/apple-splash-1668-2388.png"
+        />
+        <link
+          rel="apple-touch-startup-image"
+          media="screen and (device-width: 834px) and (device-height: 1112px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
+          href="/splash/apple-splash-1668-2224.png"
+        />
+        <link
+          rel="apple-touch-startup-image"
+          media="screen and (device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
+          href="/splash/apple-splash-1620-2160.png"
+        />
+        <link
+          rel="apple-touch-startup-image"
+          media="screen and (device-width: 768px) and (device-height: 1024px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
+          href="/splash/apple-splash-1536-2048.png"
+        />
+      </head>
       <body
+        suppressHydrationWarning
         className={cn(
           "m-auto min-h-screen bg-background bg-center bg-no-repeat scroll-smooth antialiased",
           Magnetik_Medium.className,
@@ -69,12 +150,14 @@ export default function RootLayout({
         )}
       >
         <Providers themeProps={{ attribute: "class", defaultTheme: "light" }}>
-          <GenresPreloader />
-          <MaxWidthWrapper>{children}</MaxWidthWrapper>
-          <LoadingOverlay />
+          <PWAProvider>
+            <GenresPreloader />
+            <MaxWidthWrapper>{children}</MaxWidthWrapper>
+            <LoadingOverlay />
+            <PWAInstallPrompt />
+          </PWAProvider>
         </Providers>
       </body>
     </html>
   );
 }
-

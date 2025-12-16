@@ -18,6 +18,10 @@ interface TextFieldProps {
   minLen?: number;
   maxLen?: number;
   rows?: number;
+  showWordCounter?: boolean;
+  minWords?: number;
+  maxWords?: number;
+  className?: string;
 }
 
 const TextAreaField: React.FC<TextFieldProps> = ({
@@ -33,9 +37,56 @@ const TextAreaField: React.FC<TextFieldProps> = ({
   minLen,
   maxLen,
   rows = 4,
+  showWordCounter = false,
+  minWords,
+  maxWords,
+  className,
 }) => {
   const handleChange = (value: string) => {
     onChange(value);
+  };
+
+  // Calculate word count
+  const wordCount = value
+    ? value.trim().split(/\s+/).filter(Boolean).length
+    : 0;
+
+  // Determine counter color based on word count
+  const getCounterColor = () => {
+    if (!minWords || !maxWords) return "text-gray-500";
+
+    if (wordCount < minWords) {
+      // Below minimum - show red if close, yellow if very far
+      const progress = wordCount / minWords;
+      if (progress < 0.5) return "text-gray-500";
+      if (progress < 0.8) return "text-yellow-500";
+      return "text-red-500";
+    }
+
+    if (wordCount > maxWords) {
+      return "text-red-500"; // Over maximum - red
+    }
+
+    // Within range
+    const remaining = maxWords - wordCount;
+    if (remaining <= 5) return "text-yellow-500"; // Close to max - yellow
+    return "text-green-500"; // Good range - green
+  };
+
+  const getCounterText = () => {
+    if (!minWords || !maxWords) return `${wordCount} words`;
+
+    if (wordCount < minWords) {
+      const needed = minWords - wordCount;
+      return `${wordCount}/${minWords} words (${needed} more needed)`;
+    }
+
+    if (wordCount > maxWords) {
+      const excess = wordCount - maxWords;
+      return `${wordCount}/${maxWords} words (${excess} over limit)`;
+    }
+
+    return `${wordCount}/${maxWords} words`;
   };
 
   return (
@@ -55,6 +106,7 @@ const TextAreaField: React.FC<TextFieldProps> = ({
         rows={rows}
         radius="md"
         variant="bordered"
+        className={className}
         classNames={{
           inputWrapper: [
             "data-[hover=true]:border-primary group-data-[focus=true]:border-primary",
@@ -66,7 +118,14 @@ const TextAreaField: React.FC<TextFieldProps> = ({
           }
         }}
       />
-      {isInvalid && <div className="text-red-500">{errorMessage}</div>}
+      {showWordCounter && (
+        <div className={`text-xs font-medium ${getCounterColor()}`}>
+          {getCounterText()}
+        </div>
+      )}
+      {isInvalid && (
+        <div className="text-red-500 text-xs mt-1">{errorMessage}</div>
+      )}
     </div>
   );
 };

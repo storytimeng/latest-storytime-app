@@ -16,7 +16,11 @@ export function useUserProfile() {
       if (response.error) {
         throw response.error;
       }
-      return response.data as unknown as UserProfile;
+      // Unwrap nested payload: { data: { user: {...} } }
+      const payload = response?.data as any;
+      const user =  payload?.data?.user ?? payload?.user ;
+      console.log("useUserProfile: unwrapped user:", user);
+      return user as UserProfile;
     },
     {
       revalidateOnFocus: false,
@@ -27,6 +31,7 @@ export function useUserProfile() {
   // Sync SWR data with Zustand store
   useEffect(() => {
     if (data) {
+      console.log("useUserProfile: setting store user:", data);
       setUser(data);
     }
   }, [data, setUser]);
@@ -35,7 +40,7 @@ export function useUserProfile() {
   useEffect(() => {
     if (error) {
       // Optional: Check if error is 401 and logout?
-      // For now, just keeping the store in sync might be enough, 
+      // For now, just keeping the store in sync might be enough,
       // but usually we don't clear the user immediately on a transient error.
       // However, if we get a 401, useAuth handles logout usually.
     }

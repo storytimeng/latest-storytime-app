@@ -1,24 +1,7 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import {
-  Modal,
-  ModalContent,
-  ModalHeader,
-  ModalBody,
-  useDisclosure,
-} from "@heroui/modal";
-import { Switch } from "@heroui/switch";
-import {
-  ChevronRight,
-  Bell,
-  Shield,
-  Key,
-  HelpCircle,
-  Phone,
-  Trash2,
-  LogOut,
-} from "lucide-react";
+import React from "react";
+import { Modal, ModalContent, ModalHeader, ModalBody } from "@heroui/modal";
 import {
   PageHeader,
   ProfileCard,
@@ -26,121 +9,20 @@ import {
   FAQsModal,
   SupportModal,
   DeleteAccountModal,
+  ClearCacheModal,
+  SettingsList,
 } from "@/components/reusables/customUI";
 import { Magnetik_Bold, Magnetik_Regular } from "@/lib/font";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
+import { useModalNavigation } from "@/hooks/useModalNavigation";
+import { SETTINGS_OPTIONS } from "@/config/settings";
 
+/**
+ * SettingsView Component
+ * Main settings page with profile card and settings options
+ * Uses modal navigation via URL parameters for better UX
+ */
 const SettingsView = () => {
-  const { isOpen, onOpen, onClose } = useDisclosure();
-  const router = useRouter();
-  const [activeModal, setActiveModal] = useState<string | null>(null);
-
-  // Get search params from window.location (client-side only)
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      setActiveModal(params.get("modal"));
-    }
-  }, []);
-
-  const settingsOptions = [
-    {
-      id: "notifications",
-      label: "Notifications",
-      icon: <Bell size={20} />,
-      hasToggle: true,
-      isEnabled: true,
-    },
-    {
-      id: "security",
-      label: "Security",
-      icon: <Shield size={20} />,
-      hasToggle: false,
-      // No route, so modal is default
-    },
-    {
-      id: "change-password",
-      label: "Change password",
-      icon: <Key size={20} />,
-      hasToggle: false,
-      route: "/settings/change-password", // This navigates to a page
-    },
-    {
-      id: "faqs",
-      label: "FAQs",
-      icon: <HelpCircle size={20} />,
-      hasToggle: false,
-      // No route, so modal is default
-    },
-    {
-      id: "terms-policy",
-      label: "Terms & Policy",
-      icon: <Phone size={20} />,
-      hasToggle: false,
-      route: "/settings/terms-policy", // This navigates to a page
-    },
-    {
-      id: "support",
-      label: "Support",
-      icon: <Phone size={20} />,
-      hasToggle: false,
-      // No route, so modal is default
-    },
-    {
-      id: "delete-account",
-      label: "Delete Account",
-      icon: <Trash2 size={20} />,
-      hasToggle: false,
-      // No route, so modal is default
-      isDanger: true,
-    },
-    {
-      id: "logout",
-      label: "Log Out",
-      icon: <LogOut size={20} />,
-      hasToggle: false,
-      route: "/auth/login", // This navigates to a page
-      isDanger: true,
-    },
-  ];
-
-  // Handle modal state based on URL params
-  useEffect(() => {
-    if (activeModal) {
-      onOpen();
-    } else {
-      onClose();
-    }
-  }, [activeModal, onOpen, onClose]);
-
-  // Listen for URL changes
-  useEffect(() => {
-    const handleUrlChange = () => {
-      if (typeof window !== "undefined") {
-        const params = new URLSearchParams(window.location.search);
-        setActiveModal(params.get("modal"));
-      }
-    };
-
-    // Listen for popstate (browser back/forward)
-    window.addEventListener("popstate", handleUrlChange);
-    return () => window.removeEventListener("popstate", handleUrlChange);
-  }, []);
-
-  const handleOptionClick = (optionId: string) => {
-    const params = new URLSearchParams(window.location.search);
-    params.set("modal", optionId);
-    router.push(`?${params.toString()}`);
-    setActiveModal(optionId);
-  };
-
-  const handleModalClose = () => {
-    const params = new URLSearchParams(window.location.search);
-    params.delete("modal");
-    router.push(`?${params.toString()}`);
-    setActiveModal(null);
-  };
+  const { isOpen, activeModal, openModal, closeModal } = useModalNavigation();
 
   const renderModalContent = () => {
     switch (activeModal) {
@@ -155,6 +37,9 @@ const SettingsView = () => {
 
       case "delete-account":
         return <DeleteAccountModal />;
+
+      case "clear-cache":
+        return <ClearCacheModal />;
 
       default:
         return (
@@ -177,12 +62,12 @@ const SettingsView = () => {
   return (
     <div className="min-h-screen bg-accent-shade-1">
       {/* Header */}
-      <div className="px-4 pt-4 pb-6 ">
+      <div className="px-4 pt-4 pb-6">
         <PageHeader
           title="Settings"
           backLink="/profile"
-          titleClassName="text-lg font-medium text-grey-1"
-          backButtonClassName="text-grey-1"
+          titleClassName="text-lg font-medium text-primary-colour"
+          backButtonClassName="text-primary-colour"
           showBackButton={true}
         />
 
@@ -192,108 +77,18 @@ const SettingsView = () => {
             containerClassName="bg-transparent px-0 pb-0 mt-0"
             className="h-auto"
             textClassName="text-primary-colour"
+            useLiveData={true}
           />
         </div>
       </div>
 
       {/* Settings Options */}
-      <div className="px-4 pt-6">
-        <div className="overflow-hidden rounded-lg ">
-          {settingsOptions.map((option, index) => (
-            <div key={option.id}>
-              {option.hasToggle ? (
-                // Notification toggle option
-                <div className="flex items-center justify-between px-4 py-4">
-                  <div className="flex items-center gap-3">
-                    <div className="text-primary-colour">{option.icon}</div>
-                    <span
-                      className={`text-primary-colour ${Magnetik_Regular.className}`}
-                    >
-                      {option.label}
-                    </span>
-                  </div>
-                  <Switch
-                    defaultSelected={option.isEnabled}
-                    color="warning"
-                    size="sm"
-                  />
-                </div>
-              ) : option.route ? (
-                // Navigation option - has route so navigate to page
-                <Link href={option.route}>
-                  <div className="flex items-center justify-between px-4 py-4 transition-colors cursor-pointer hover:bg-light-grey-1">
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`${
-                          option.isDanger
-                            ? "text-red-500"
-                            : "text-primary-colour"
-                        }`}
-                      >
-                        {option.icon}
-                      </div>
-                      <span
-                        className={`${
-                          option.isDanger
-                            ? "text-red-500"
-                            : "text-primary-colour"
-                        } ${Magnetik_Regular.className}`}
-                      >
-                        {option.label}
-                      </span>
-                    </div>
-                    <ChevronRight
-                      size={16}
-                      className={`${
-                        option.isDanger ? "text-red-500" : "text-primary-colour"
-                      }`}
-                    />
-                  </div>
-                </Link>
-              ) : (
-                // Modal option - no route so open modal via URL params
-                <div
-                  onClick={() => handleOptionClick(option.id)}
-                  className="flex items-center justify-between px-4 py-4 transition-colors cursor-pointer hover:bg-light-grey-1"
-                >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`${
-                        option.isDanger ? "text-red" : "text-primary-colour"
-                      }`}
-                    >
-                      {option.icon}
-                    </div>
-                    <span
-                      className={`${
-                        option.isDanger ? "text-red" : "text-primary-colour"
-                      } ${Magnetik_Regular.className}`}
-                    >
-                      {option.label}
-                    </span>
-                  </div>
-                  <ChevronRight
-                    size={16}
-                    className={`${
-                      option.isDanger ? "text-red" : "text-grey-2"
-                    }`}
-                  />
-                </div>
-              )}
-
-              {/* Divider - not for last item */}
-              {index < settingsOptions.length - 1 && (
-                <div className="h-px mx-4 bg-light-grey-2" />
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
+      <SettingsList options={SETTINGS_OPTIONS} onOptionClick={openModal} />
 
       {/* Modal */}
       <Modal
         isOpen={isOpen}
-        onClose={handleModalClose}
+        onClose={closeModal}
         className="m-0"
         classNames={{
           wrapper: "items-end",

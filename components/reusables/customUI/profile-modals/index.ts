@@ -7,3 +7,6 @@ export { DownloadsModal } from "./DownloadsModal";
 export { ReadingModal } from "./ReadingModal";
 export { WritingModal } from "./WritingModal";
 export { DefaultModal } from "./DefaultModal";
+export { EditProfileModal } from "./EditProfileModal";
+export { EditGenresModal } from "./EditGenresModal";
+export { LeaderboardModal } from "./LeaderboardModal";

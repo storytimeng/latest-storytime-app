@@ -12,6 +12,8 @@ import PremiumBanner from "./PremiumBanner";
 import ProfileCard from "./ProfileCard";
 import PremiumButton from "./premiumButton";
 import PenStoryCard from "./penStoryCard";
+import SettingsOption from "./SettingsOption";
+import SettingsList from "./SettingsList";
 import { StoriesCarousel } from "./StoriesCarousel";
 
 export {
@@ -28,8 +30,11 @@ export {
   ProfileCard,
   PremiumButton,
   PenStoryCard,
+  SettingsOption,
+  SettingsList,
   StoriesCarousel,
 };
 
 export * from "./profile-modals";
 export * from "./settings-modals";
+export type { SettingOption } from "./SettingsOption";

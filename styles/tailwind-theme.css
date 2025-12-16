@@ -32,6 +32,8 @@
 
   /* Colors (brand + accents) - map to your CSS tokens defined in globals.css */
   --color-primary-colour: var(--primary-colour);
+    --color-primary: var(--primary-colour);
+
   --color-primary-shade-1: var(--primary-shade-1);
   --color-primary-shade-2: var(--primary-shade-2);
   --color-primary-shade-3: var(--primary-shade-3);
@@ -53,6 +55,8 @@
   --color-lightest-grey: var(--lightest-grey);
   --color-light-grey-1: var(--light-grey-1);
   --color-light-grey-2: var(--light-grey-2);
+    --color-light-grey-3: var(--light-grey-3);
+
   --color-grey-1: var(--grey-1);
   --color-grey-2: var(--grey-2);
 

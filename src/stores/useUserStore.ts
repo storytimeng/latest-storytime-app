@@ -8,8 +8,10 @@ export interface UserProfile {
   lastName?: string;
   penName?: string;
   profilePicture?: string;
+  avatar?: string; // Alternative to profilePicture
   bio?: string;
   genres?: string[];
+  favoriteGenres?: string[]; // User's favorite genres
   timeToRead?: string;
   timeToWrite?: string;
   reminder?: string;

@@ -1,16 +1,37 @@
 "use client";
 
 import { Card } from "@heroui/card";
-import { ThumbsUp, Pencil, Trash2 } from "lucide-react";
+import { ThumbsUp, Pencil, Trash2, Eye } from "lucide-react";
 import Image from "next/image";
 import React, { useState } from "react";
+import Link from "next/link";
 import { Magnetik_Regular } from "@/lib/font";
 import { cn } from "@/lib/utils";
 import { StoryResponseDto, AuthorDto } from "@/src/client/types.gen";
 
-// Use the generated type directly, or extend it if needed for UI-specific props
+// Extend AuthorDto to include fields that may be in the API response
+interface ExtendedAuthor extends AuthorDto {
+  firstName?: string;
+  lastName?: string;
+  penName?: string;
+}
+
+// Extend the generated type to match the actual API response
+interface ExtendedStory extends Omit<StoryResponseDto, "viewCount"> {
+  author: ExtendedAuthor;
+  anonymous?: boolean;
+  onlyOnStorytime?: boolean;
+  storyStatus?: string;
+  popularityScore?: number;
+  // Legacy fields that might still be used or needed for compatibility
+  status?: string;
+  rating?: number;
+  comments?: number;
+  viewCount?: number;
+}
+
 interface StoryCardProps {
-  story: StoryResponseDto;
+  story: ExtendedStory;
   className?: string;
   mode?: "default" | "pen";
   onEdit?: (storyId: string | number) => void;
@@ -33,37 +54,50 @@ const StoryCard = ({
   const handleCardClick = () => onClick?.(story.id);
   const handleEdit = (e: React.MouseEvent) => {
     e.stopPropagation();
+    e.preventDefault();
     onEdit?.(story.id);
   };
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
+    e.preventDefault();
     onDelete?.(story.id);
   };
 
-  // Safe access to author name - cast to any because generated AuthorDto might be missing penName
-  const authorName = (story.author as any)?.penName || story.author?.name || "Anonymous";
-  const displayImage = story.imageUrl || "/placeholder-image.jpg"; // Fallback image
+  // Safe access to author name - if story is anonymous, show "Anonymous"
+  const authorName = story.anonymous
+    ? "Anonymous"
+    : story.author?.penName ||
+      (story.author?.firstName && story.author?.lastName
+        ? `${story.author.firstName} ${story.author.lastName}`.trim()
+        : story.author?.firstName || story.author?.lastName) ||
+      story.author?.name ||
+      "Unknown Author";
+  const displayImage = story.imageUrl || "/images/storytime-fallback.png"; // Fallback image
   const displayGenre = story.genres?.[0] || "Uncategorized";
 
-  return (
+  const storyLink = `/story/${story.id}`;
+
+  const cardContent = (
     <Card
       className={cn(
         "flex-shrink-0 rounded-xl border-none bg-transparent shadow-none space-y-2 relative",
-        isPenMode ? "w-full cursor-pointer" : "w-[160px]",
+        isPenMode ? "w-full cursor-pointer" : "w-[160px] cursor-pointer",
         className
       )}
       onClick={isPenMode ? handleCardClick : undefined}
     >
       <div className="relative group">
         {imageError ? (
-          <div
+          <Image
+            src="/images/storytime-fallback.png"
+            alt={story.title}
+            width={200}
+            height={150}
             className={cn(
-              "w-full bg-muted flex items-center justify-center rounded-lg",
+              "w-full object-cover rounded-lg transition-transform group-hover:scale-[1.03]",
               isPenMode ? "aspect-[10/9]" : "h-28"
             )}
-          >
-            <span className="text-xs text-muted-foreground">No image</span>
-          </div>
+          />
         ) : (
           <Image
             src={displayImage}
@@ -125,15 +159,14 @@ const StoryCard = ({
           >
             {story.title}
           </h3>
-          {/* Note: storyStatus might not be available on all story objects depending on the endpoint */}
           <span
             className={cn(
               "text-xs px-2 py-0.5 rounded-full",
-              getStatusColor((story as any).storyStatus || (story as any).status),
+              getStatusColor(story.storyStatus || story.status),
               Magnetik_Regular.className
             )}
           >
-            ({(story as any).storyStatus || (story as any).status || "Unknown"})
+            ({story.storyStatus || story.status || "Unknown"})
           </span>
         </div>
 
@@ -153,27 +186,43 @@ const StoryCard = ({
           </>
         ) : (
           <>
-            {/* Likes + Comments */}
-            {/* Note: These fields might need to be added to StoryResponseDto or handled if missing */}
+            {/* Likes + Comments + Views */}
             <div className="flex items-center gap-3 text-xs text-[#361B17]">
               <div className="flex items-center gap-1">
                 <ThumbsUp className="w-3 h-3 fill-[#F8951D] text-[#F8951D]" />
                 <span className={Magnetik_Regular.className}>
-                  ({(story as any).rating || 0})
+                  ({story.likeCount ?? story.rating ?? 0})
                 </span>
               </div>
               <span className={Magnetik_Regular.className}>
-                {(story as any).comments || 0} Comments
+                {story.commentCount ?? story.comments ?? 0} Comments
               </span>
+              <div className="flex items-center gap-1">
+                <Eye className="w-3 h-3 text-[#361B17]" />
+                <span className={Magnetik_Regular.className}>
+                  {story.viewCount ?? 0}
+                </span>
+              </div>
             </div>
 
             {/* Author */}
             <div className="flex items-center gap-2">
-              <div className="w-4 h-4 bg-[#FFEBD0] rounded-full flex items-center justify-center">
-                <span className="text-[8px] text-[#361B17] font-bold">
-                  {getInitials(authorName)}
-                </span>
-              </div>
+              {story.author?.avatar ? (
+                <div className="relative w-4 h-4 overflow-hidden rounded-full">
+                  <Image
+                    src={story.author.avatar}
+                    alt={authorName}
+                    fill
+                    className="object-cover"
+                  />
+                </div>
+              ) : (
+                <div className="w-4 h-4 bg-[#FFEBD0] rounded-full flex items-center justify-center">
+                  <span className="text-[8px] text-[#361B17] font-bold">
+                    {getInitials(authorName)}
+                  </span>
+                </div>
+              )}
               <span
                 className={cn(
                   "text-[#361B17] text-xs",
@@ -187,6 +236,17 @@ const StoryCard = ({
         )}
       </div>
     </Card>
+  );
+
+  // Wrap in Link for default mode, return as-is for pen mode
+  if (isPenMode) {
+    return cardContent;
+  }
+
+  return (
+    <Link href={storyLink} className="block">
+      {cardContent}
+    </Link>
   );
 };
 

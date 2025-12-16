@@ -23,7 +23,7 @@ import type {
   AuthResponseDto,
   RegisterDto,
   RegisterResponseDto,
-  VerifyEmailDto,
+  VerifyEmailDto,AuthControllerVerifyEmailResponse,
   ResendOtpDto,
   ForgotPasswordDto,
   ResetPasswordDto,
@@ -148,7 +148,7 @@ export function useRegister() {
 export function useVerifyEmail() {
   const { mutate } = useSWRConfig();
 
-  return useAuthMutation<VerifyEmailDto, unknown>(
+  return useAuthMutation<VerifyEmailDto, AuthControllerVerifyEmailResponse>(
     async (verificationData) => {
       const response = await authControllerVerifyEmail({ body: verificationData });
 
