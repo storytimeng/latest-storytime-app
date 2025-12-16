@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   Modal,
   ModalContent,
@@ -36,6 +36,7 @@ type ExtendedStory = StoryResponseDto & {
   writingDate?: string;
   updatedAt?: string;
   status?: string;
+  storyStatus?: string;
 };
 
 type TabKey = "Recent" | "Ongoing" | "Published" | "Drafts";
