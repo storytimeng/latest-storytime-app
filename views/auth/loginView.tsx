@@ -31,10 +31,7 @@ interface LoginViewProps {
   onSwitchView?: (view: string) => void;
 }
 
-export default function LoginView({
-  onSuccess,
-  onSwitchView,
-}: LoginViewProps) {
+export default function LoginView({ onSuccess, onSwitchView }: LoginViewProps) {
   const router = useRouter();
   const { show: showLoading, hide: hideLoading } = useLoadingStore();
   const [formData, setFormData] = useState<LoginFormData>({
@@ -130,7 +127,7 @@ export default function LoginView({
           // API returns: { data: { data: { user: {...} } } }
           const payload = profileResponse.data as any;
           const user = payload?.user ?? payload?.data?.user;
-          
+
           if (user) {
             console.log("Setting user profile in store:", user);
             useUserStore.getState().setUser(user);
