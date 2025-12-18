@@ -1,8 +1,12 @@
-import React from "react";
+import React, { Suspense } from "react";
 import { ProfileView } from "@/views";
 
 const ProfilePage = () => {
-  return <ProfileView />;
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <ProfileView />
+    </Suspense>
+  );
 };
 
 export default ProfilePage;

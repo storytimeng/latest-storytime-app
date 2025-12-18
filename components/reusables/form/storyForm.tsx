@@ -350,12 +350,12 @@ const StoryForm: React.FC<StoryFormProps> = ({
     hasUnsavedChanges,
     onSave: () => {
       const storyId = createdStoryId || (mode === "edit" && initialData?.id);
-      if (storyId) {
+      if (storyId && userId) {
         if (storyStructure.hasChapters && chapters.length > 0) {
-          saveChaptersCache(storyId, chapters);
+          saveChaptersCache(storyId, userId, chapters);
         }
         if (storyStructure.hasEpisodes && parts.length > 0) {
-          saveEpisodesCache(storyId, parts);
+          saveEpisodesCache(storyId, userId, parts);
         }
       }
     },
@@ -366,10 +366,10 @@ const StoryForm: React.FC<StoryFormProps> = ({
     if (cacheChecked) return;
 
     const storyId = createdStoryId || (mode === "edit" && initialData?.id);
-    if (!storyId) return;
+    if (!storyId || !userId) return;
 
     const checkCache = async () => {
-      const cached = await hasCachedData(storyId);
+      const cached = await hasCachedData(storyId, userId);
 
       if (cached.hasChapters && storyStructure.hasChapters) {
         setPendingCacheType("chapters");
@@ -385,15 +385,22 @@ const StoryForm: React.FC<StoryFormProps> = ({
     };
 
     checkCache();
-  }, [createdStoryId, mode, initialData?.id, storyStructure, cacheChecked]);
+  }, [
+    createdStoryId,
+    mode,
+    initialData?.id,
+    storyStructure,
+    cacheChecked,
+    userId,
+  ]);
 
   // Handle loading cache
   const handleLoadCache = useCallback(async () => {
     const storyId = createdStoryId || (mode === "edit" && initialData?.id);
-    if (!storyId || !pendingCacheType) return;
+    if (!storyId || !pendingCacheType || !userId) return;
 
     if (pendingCacheType === "chapters") {
-      const cached = await getChaptersCache(storyId);
+      const cached = await getChaptersCache(storyId, userId);
       if (cached && cached.length > 0) {
         setChapters(cached);
         // Expand the first chapter
@@ -404,7 +411,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
         });
       }
     } else if (pendingCacheType === "episodes") {
-      const cached = await getEpisodesCache(storyId);
+      const cached = await getEpisodesCache(storyId, userId);
       if (cached && cached.length > 0) {
         setParts(cached);
         // Expand the first episode
@@ -418,13 +425,13 @@ const StoryForm: React.FC<StoryFormProps> = ({
 
     setShowCacheModal(false);
     setPendingCacheType(null);
-  }, [createdStoryId, mode, initialData?.id, pendingCacheType]);
+  }, [createdStoryId, mode, initialData?.id, pendingCacheType, userId]);
 
   // Handle discarding cache
   const handleDiscardCache = useCallback(async () => {
     const storyId = createdStoryId || (mode === "edit" && initialData?.id);
-    if (storyId) {
-      await clearStoryCache(storyId);
+    if (storyId && userId) {
+      await clearStoryCache(storyId, userId);
       showToast({
         type: "info",
         message: "Cached data has been discarded",
@@ -432,15 +439,20 @@ const StoryForm: React.FC<StoryFormProps> = ({
     }
     setShowCacheModal(false);
     setPendingCacheType(null);
-  }, [createdStoryId, mode, initialData?.id]);
+  }, [createdStoryId, mode, initialData?.id, userId]);
 
   // Accordion state and toggle functions are now handled by contentStateHook
 
   // Auto-save chapters to cache when they change
   useEffect(() => {
     const storyId = createdStoryId || (mode === "edit" && initialData?.id);
-    if (storyId && chapters.length > 0 && storyStructure.hasChapters) {
-      saveChaptersCache(storyId, chapters);
+    if (
+      storyId &&
+      userId &&
+      chapters.length > 0 &&
+      storyStructure.hasChapters
+    ) {
+      saveChaptersCache(storyId, userId, chapters);
     }
   }, [
     chapters,
@@ -448,13 +460,14 @@ const StoryForm: React.FC<StoryFormProps> = ({
     mode,
     initialData?.id,
     storyStructure.hasChapters,
+    userId,
   ]);
 
   // Auto-save episodes to cache when they change
   useEffect(() => {
     const storyId = createdStoryId || (mode === "edit" && initialData?.id);
-    if (storyId && parts.length > 0 && storyStructure.hasEpisodes) {
-      saveEpisodesCache(storyId, parts);
+    if (storyId && userId && parts.length > 0 && storyStructure.hasEpisodes) {
+      saveEpisodesCache(storyId, userId, parts);
     }
   }, [
     parts,
@@ -462,6 +475,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
     mode,
     initialData?.id,
     storyStructure.hasEpisodes,
+    userId,
   ]);
 
   // Update form data when initialData changes (for edit mode)

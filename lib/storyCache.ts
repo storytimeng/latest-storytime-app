@@ -38,12 +38,12 @@ export interface CacheEntry {
  */
 const openDB = (): Promise<IDBDatabase> => {
   return new Promise((resolve, reject) => {
-    if (typeof window === "undefined") {
+    if (typeof window === "undefined" || !window.indexedDB) {
       reject(new Error("IndexedDB is not available in SSR"));
       return;
     }
 
-    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    const request = window.indexedDB.open(DB_NAME, DB_VERSION);
 
     request.onerror = () => reject(request.error);
     request.onsuccess = () => resolve(request.result);

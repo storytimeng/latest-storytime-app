@@ -202,7 +202,9 @@ export function useStoryViewLogic({
 
           // Only clear cache after successful publish
           if (publishSuccess) {
-            clearStoryCache(createdStoryId);
+            if (storeUser?.id) {
+              clearStoryCache(createdStoryId, storeUser.id);
+            }
 
             showToast({
               type: "success",
