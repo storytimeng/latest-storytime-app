@@ -180,7 +180,7 @@ const HomeView = () => {
               <span
                 className={`text-primary font-bold ${Magnetik_Bold.className}`}
               >
-                {user?.penName || "Reader"}
+                {user?.penName || user?.firstName || "Reader"}
               </span>
             </span>
             <span className="text-xl">👋</span>
