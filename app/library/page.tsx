@@ -1,5 +1,6 @@
 import { Suspense, lazy } from "react";
 import { Skeleton } from "@heroui/skeleton";
+import { TabLayout } from "@/views";
 
 // Lazy load library view
 const NewLibraryView = lazy(() =>
@@ -8,6 +9,7 @@ const NewLibraryView = lazy(() =>
 
 const LibraryPage = () => {
   return (
+    <TabLayout>
     <Suspense
       fallback={
         <div className="min-h-screen bg-accent-shade-1 p-4 space-y-4">
@@ -19,6 +21,7 @@ const LibraryPage = () => {
     >
       <NewLibraryView />
     </Suspense>
+    </TabLayout>
   );
 };
 

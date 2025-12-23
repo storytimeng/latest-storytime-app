@@ -95,12 +95,13 @@ const NotificationView = () => {
     <div className="min-h-screen bg-accent-shade-1 max-w-[28rem] mx-auto px-4 pb-6">
       {/* Page Header */}
       <div className="flex items-center justify-between pt-4 mb-6">
+        {/**
         <PageHeader
           title="Notifications"
           backLink="/home"
           className="mb-0 pt-0"
         />
-        {unreadCount > 0 && (
+        */} {unreadCount > 0 && (
           <Button
             size="sm"
             variant="flat"

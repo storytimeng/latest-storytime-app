@@ -8,6 +8,7 @@ import Image from "next/image";
 import { Magnetik_Bold, Magnetik_Medium, Magnetik_Regular } from "@/lib/font";
 import { useSearchParams } from "next/navigation";
 import { useReadingHistory } from "@/src/hooks/useReadingHistory";
+import { PageHeader } from "@/components/reusables";
 
 interface LibraryItem {
   id: string;
@@ -59,14 +60,16 @@ const LibraryView = () => {
 
   return (
     <div className="min-h-screen bg-accent-shade-1 max-w-[28rem] mx-auto">
-      {/* Header */}
-      <div className="px-4 pt-5 pb-4">
+      {/* Header with PageHeader and Pen button */}
+      <div className="px-4 pt-4">
         <div className="flex items-center justify-between">
-          <h1
-            className={`text-xl text-primary-colour ${Magnetik_Bold.className}`}
-          >
-            📚 Library
-          </h1>
+          <PageHeader 
+            title="📚 Library" 
+            showBackButton 
+            backLink="/home"
+            titleClassName={`text-xl text-primary-colour ${Magnetik_Bold.className}`}
+            className="mb-0"
+          />
           <Link href="/pen">
             <Button
               className={`bg-primary-shade-6 text-universal-white px-6 py-2 rounded-full ${Magnetik_Medium.className}`}
