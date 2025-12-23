@@ -11,14 +11,13 @@ import Image from "next/image";
 export default function AuthView() {
   return (
     <div className="w-full max-w-md mx-auto">
-      <div className="text-center text-primary-colour body-text-big-bold-auto mb-[4.125rem]">
+      <div className="text-center text-primary-colour body-text-big-bold-auto mb-6">
         Welcome to Storytime
       </div>
 
-
       <div>
         <div
-          className={`w-full flex justify-center mb-8 h-[${ONBOARDING_CONFIG.layout.imageHeight}px]`}
+          className={`w-full flex justify-center mb-6 h-[${ONBOARDING_CONFIG.layout.imageHeight}px]`}
         >
           <AnimatePresence mode="wait">
             <motion.div
@@ -35,17 +34,18 @@ export default function AuthView() {
               <Image
                 src={"/images/onboarding1.png"}
                 alt="Auth Divider"
-                width={ONBOARDING_CONFIG.layout.imageHeight}
-                height={ONBOARDING_CONFIG.layout.imageHeight}
+                
+                width={260}
+                height={260}
                 className="object-contain"
               />
             </motion.div>
           </AnimatePresence>
         </div>
-        </div>
+      </div>
 
-      <div className="space-y-4">
-        <div className="flex flex-col gap-2.5">
+      <div className="space-y-3">
+        <div className="flex flex-col gap-2">
           <Link href="/auth/login">
             <Button variant="large">Log In</Button>
           </Link>
@@ -54,10 +54,8 @@ export default function AuthView() {
           </Link>
         </div>
 
-        
-
         {/* Divider */}
-        <div className="flex items-center my-6">
+        <div className="flex items-center my-4">
           <div className="flex-1 border-t border-light-grey-1"></div>
           <div className="px-4 body-text-small-regular text-[#708090] body-text-small-auto-regular">
             or
@@ -75,7 +73,7 @@ export default function AuthView() {
       </div>
 
       {/* Terms */}
-      <div className="text-center mt-8">
+      <div className="text-center mt-4">
         <p className="body-text-small-regular text-grey-2">
           By continuing, you agree to our{" "}
           <Link

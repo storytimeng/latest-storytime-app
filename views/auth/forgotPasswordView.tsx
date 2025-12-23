@@ -71,7 +71,7 @@ export default function ForgotPasswordView({
       if (onSuccess) {
         onSuccess(formData.email);
       } else {
-        router.push("/auth/email-sent");
+        router.push(`/auth/otp?email=${encodeURIComponent(formData.email)}&type=reset-password`);
       }
     } catch (err: any) {
       console.error("Password reset error:", err);
