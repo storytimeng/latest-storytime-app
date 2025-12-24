@@ -1,19 +1,13 @@
 "use client";
 
-import { Button } from "@heroui/button";
 import { Home, BookOpen, PenTool, Bell } from "lucide-react";
 import React from "react";
 import { Magnetik_Medium } from "@/lib/font";
-import { useRouter, usePathname } from "next/navigation";
+import { usePathname } from "next/navigation";
+import Link from "next/link";
 
 const Navbar = () => {
-  const router = useRouter();
   const pathname = usePathname();
-
-  const isActive = (path: string) => {
-    if (path === "/home") return pathname === "/home";
-    return pathname.startsWith(path);
-  };
 
   const navItems = [
     { path: "/home", icon: Home, label: "Home" },
@@ -21,6 +15,11 @@ const Navbar = () => {
     { path: "/pen", icon: PenTool, label: "Pen" },
     { path: "/notification", icon: Bell, label: "Notification" },
   ];
+
+  const isActive = (path: string) => {
+    if (path === "/home") return pathname === "/home";
+    return pathname.startsWith(path);
+  };
 
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-[#f8f7f7] border-t border-[#AFAFAF] w-full sm:max-w-md sm:mx-auto rounded-t-xl z-50 safe-area-bottom">
@@ -31,12 +30,11 @@ const Navbar = () => {
         {navItems.map(({ path, icon: Icon, label }) => {
           const active = isActive(path);
           return (
-            <Button
+            <Link
               key={path}
-              variant="ghost"
-              size="sm"
-              className="flex flex-col items-center border-0 gap-0.5 sm:gap-1 min-w-0 flex-1 px-1 sm:px-2"
-              onPress={() => router.push(path)}
+              href={path}
+              prefetch={true}
+              className="flex flex-col items-center gap-0.5 sm:gap-1 min-w-0 flex-1 px-1 sm:px-2"
               aria-label={label}
               aria-current={active ? "page" : undefined}
             >
@@ -56,7 +54,7 @@ const Navbar = () => {
               >
                 {label}
               </span>
-            </Button>
+            </Link>
           );
         })}
       </nav>
