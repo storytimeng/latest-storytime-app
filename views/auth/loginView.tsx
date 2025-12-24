@@ -150,6 +150,8 @@ export default function LoginView({ onSuccess, onSwitchView }: LoginViewProps) {
         router.push("/home");
       }
     } catch (err: any) {
+            hideLoading();
+
       console.error("Login error:", err);
       setErrors({ email: "Invalid email or password" });
       showToast({
