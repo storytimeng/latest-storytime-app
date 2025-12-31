@@ -150,7 +150,7 @@ export default function LoginView({ onSuccess, onSwitchView }: LoginViewProps) {
         router.push("/home");
       }
     } catch (err: any) {
-            hideLoading();
+      hideLoading();
 
       console.error("Login error:", err);
       setErrors({ email: "Invalid email or password" });
@@ -240,8 +240,7 @@ export default function LoginView({ onSuccess, onSwitchView }: LoginViewProps) {
         </div>
       </form>
 
-      {/* Divider */}
-      <div className="flex items-center my-5">
+      <div className="flex items-center invisible my-5">
         <div className="flex-1 border-t border-accent-color"></div>
         <div className="px-4 body-text-small-regular text-[#708090] body-text-small-auto-regular">
           or
@@ -249,11 +248,11 @@ export default function LoginView({ onSuccess, onSwitchView }: LoginViewProps) {
         <div className="flex-1 border-t border-accent-color"></div>
       </div>
 
-      {/* Social Login */}
       <div className="space-y-3">
         <Button
           variant="google"
           startContent={<div className="w-5 h-5 rounded bg-grey-1"></div>}
+          className="invisible"
         >
           Continue with Google
         </Button>

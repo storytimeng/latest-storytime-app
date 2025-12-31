@@ -182,7 +182,7 @@ export function useOfflineStories() {
               chapterNumber: item.number,
               title: item.title,
               content: item.content,
-              wordCount: item.content.split(/\s+/).length,
+              wordCount: item.content ? item.content.split(/\s+/).length : 0,
               downloadedAt,
               lastUpdatedAt: itemUpdatedAt,
             };
@@ -210,7 +210,7 @@ export function useOfflineStories() {
               chapterNumber: 1,
               title: item.title,
               content: item.content,
-              wordCount: item.content.split(/\s+/).length,
+              wordCount: item.content ? item.content.split(/\s+/).length : 0,
               downloadedAt,
               lastUpdatedAt: itemUpdatedAt,
             };
@@ -271,7 +271,7 @@ export function useOfflineStories() {
               chapterNumber: item.number,
               title: item.title,
               content: item.content,
-              wordCount: item.content.split(/\s+/).length,
+              wordCount: item.content ? item.content.split(/\s+/).length : 0,
               downloadedAt,
               lastUpdatedAt: itemUpdatedAt,
             };

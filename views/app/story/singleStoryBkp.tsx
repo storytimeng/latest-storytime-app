@@ -714,48 +714,30 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
   if (isLoading) {
     return (
       <div className="relative min-h-screen pb-20 bg-accent-shade-1">
-        {/* Hero Skeleton - Full-width image */}
-        <div className="relative w-full h-[55vh] min-h-[320px] max-h-[420px] overflow-hidden">
-          <Skeleton className="absolute inset-0 w-full h-full" />
-          <div className="absolute inset-0 bg-gradient-to-t from-accent-shade-1 via-accent-shade-1/40 to-transparent" />
-          {/* Header buttons skeleton */}
-          <div className="absolute top-0 left-0 right-0 z-20 px-4 pt-6">
-            <div className="flex items-center justify-between">
-              <Skeleton className="w-10 h-10 rounded-full" />
-              <div className="flex gap-2">
-                <Skeleton className="w-10 h-10 rounded-full" />
-                <Skeleton className="w-10 h-10 rounded-full" />
+        {/* Hero Skeleton */}
+        <div className="relative w-full h-[480px] overflow-hidden">
+          <Skeleton className="absolute inset-0 w-full h-full opacity-20" />
+          <div className="absolute inset-0 z-10 flex flex-col justify-end px-4 pb-8">
+            <div className="flex items-end gap-5">
+              <Skeleton className="flex-shrink-0 w-36 h-52 rounded-xl" />
+              <div className="flex-1 mb-1 space-y-3">
+                <Skeleton className="w-20 h-4 rounded-md" />
+                <Skeleton className="w-3/4 h-8 rounded-lg" />
+                <Skeleton className="w-1/2 h-4 rounded-md" />
+                <div className="flex gap-4 mt-2">
+                  <Skeleton className="w-16 h-6 rounded-md" />
+                  <Skeleton className="w-16 h-6 rounded-md" />
+                </div>
               </div>
+            </div>
+            <div className="mt-8">
+              <Skeleton className="w-full rounded-full h-14" />
             </div>
           </div>
         </div>
 
-        {/* Content Skeleton - Below hero */}
-        <div className="relative px-4 -mt-16 z-10">
-          {/* Badges */}
-          <div className="flex gap-2 mb-3">
-            <Skeleton className="w-24 h-6 rounded" />
-            <Skeleton className="w-20 h-6 rounded" />
-          </div>
-          {/* Title */}
-          <Skeleton className="w-3/4 h-8 rounded-lg mb-2" />
-          {/* CTA Button */}
-          <Skeleton className="w-full h-14 rounded-full my-4" />
-          {/* Stats Row */}
-          <div className="flex gap-2 mb-4">
-            <Skeleton className="w-20 h-6 rounded-md" />
-            <Skeleton className="w-16 h-6 rounded-md" />
-            <Skeleton className="w-16 h-6 rounded-md" />
-            <Skeleton className="w-20 h-6 rounded-md" />
-          </div>
-          {/* Description */}
-          <Skeleton className="w-full h-12 rounded-md mb-4" />
-          {/* Author */}
-          <Skeleton className="w-48 h-5 rounded-md mb-4" />
-        </div>
-
         {/* Tabs Skeleton */}
-        <div className="flex gap-8 px-4 py-4 border-b border-primary/5">
+        <div className="flex gap-8 px-4 py-4 border-b border-white/5">
           <Skeleton className="w-20 h-6 rounded-md" />
           <Skeleton className="w-16 h-6 rounded-md" />
           <Skeleton className="w-16 h-6 rounded-md" />
@@ -846,25 +828,25 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
         layoutId={`story-image-${storyId}`}
       />
 
-      {/* Full-Width Hero Image */}
-      <div className="relative w-full h-[55vh] min-h-[320px] max-h-[420px] overflow-hidden">
-        {/* Hero Background Image */}
-        <Image
-          src={displayImage}
-          alt={story.title}
-          fill
-          className="object-cover"
-          priority
-        />
-        {/* Gradient Overlay - fog at bottom for title area only */}
-        <div className="absolute inset-0 bg-gradient-to-t from-accent-shade-1 from-0% via-accent-shade-1/70 via-8% to-transparent to-15%" />
-        
-        {/* Header Navigation - Overlaid on image */}
+      {/* Hero Section */}
+      <div className="relative w-full h-[480px] overflow-hidden">
+        {/* Blurred Background */}
+        <div className="absolute inset-0 z-0">
+          <Image
+            src={displayImage}
+            alt={story.title}
+            fill
+            className="object-cover scale-110 blur-2xl opacity-40"
+            priority
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/40 to-accent-shade-1" />
+        </div>
+        {/* Header Navigation */}
         <div className="absolute top-0 left-0 right-0 z-20 px-4 pt-6">
           <div className="flex items-center justify-between">
             <Link
               href="/home"
-              className="p-2 transition-colors rounded-full bg-black/30 backdrop-blur-md hover:bg-black/40"
+              className="p-2 transition-colors rounded-full bg-white/10 backdrop-blur-md hover:bg-white/20"
             >
               <ArrowLeft size={24} className="text-white" />
             </Link>
@@ -872,7 +854,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
               {!isSingleStory ? (
                 <Dropdown>
                   <DropdownTrigger>
-                    <button className="p-2 transition-colors rounded-full bg-black/30 backdrop-blur-md hover:bg-black/40">
+                    <button className="p-2 transition-colors rounded-full bg-white/10 backdrop-blur-md hover:bg-white/20">
                       <Download size={24} className="text-white" />
                     </button>
                   </DropdownTrigger>
@@ -905,146 +887,129 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
                 <button
                   onClick={isDownloaded ? handleRemoveDownload : handleDownload}
                   disabled={isDownloading}
-                  className="p-2 transition-colors rounded-full bg-black/30 backdrop-blur-md hover:bg-black/40"
+                  className="p-2 transition-colors rounded-full bg-white/10 backdrop-blur-md hover:bg-white/20"
                 >
                   {isDownloading ? (
                     <div className="w-6 h-6 border-2 border-white rounded-full border-t-transparent animate-spin" />
                   ) : isDownloaded ? (
-                    <Check size={24} className="text-green-400" />
+                    <Check size={24} className="text-green-500" />
                   ) : (
                     <Download size={24} className="text-white" />
                   )}
                 </button>
               )}
-              <button className="p-2 transition-colors rounded-full bg-black/30 backdrop-blur-md hover:bg-black/40">
+              <button className="p-2 transition-colors rounded-full bg-white/10 backdrop-blur-md hover:bg-white/20">
                 <Share2 size={24} className="text-white" />
               </button>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Content Section - Below Hero */}
-      <div className="relative px-4 -mt-16 z-10">
-        {/* Badges Row */}
-        <div className="flex flex-wrap items-center gap-2 mb-3">
-          {isExclusive && (
-            <span className="inline-flex items-center bg-complimentary-colour text-white text-[10px] font-bold px-2.5 py-1 rounded uppercase tracking-wider shadow-sm">
-              #1 in {story.genres?.[0] || "Storytime"}
-            </span>
-          )}
-          <span className={cn(
-            "inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded uppercase tracking-wider",
-            status === "complete" 
-              ? "bg-green-500/20 text-green-500" 
-              : "bg-complimentary-colour/20 text-complimentary-colour"
-          )}>
-            {status === "complete" && <Check size={10} />}
-            {status === "complete" ? "Completed" : "Ongoing"}
-          </span>
-        </div>
-
-        {/* Title */}
-        <h1
-          className={cn(
-            "text-primary text-2xl font-bold leading-tight mb-2 ",
-            Magnetik_Bold.className
-          )}
-        >
-          {story.title}
-        </h1>
-
-        {/* CTA Button */}
-        <button
-          onClick={() => {
-            if (!isAuthenticated()) {
-              openAuthModal("login");
-              return;
-            }
-            const url = continueTarget
-              ? `/story/${storyId}/read?${structure === "chapters" ? "chapterId" : "episodeId"}=${continueTarget.id}`
-              : `/story/${storyId}/read${
-                  hasContent
-                    ? `?${structure === "chapters" ? "chapterId" : "episodeId"}=${contentList[0].id}`
-                    : ""
-                }`;
-            router.push(url);
-          }}
-          className="w-full bg-primary hover:bg-primary/90 text-white py-4 rounded-full font-bold text-base flex items-center justify-center gap-2.5 transition-all shadow-lg shadow-primary/25 active:scale-[0.98] my-4"
-        >
-          <Play size={20} className="fill-current" />
-          <span>
-            {continueTarget && storyProgress
-              ? `Play ${structure === "chapters" ? "Chap" : "Ep"}-${
-                  continueTarget.number ||
-                  (structure === "chapters"
-                    ? continueTarget.chapterNumber
-                    : continueTarget.episodeNumber)
-                }`
-              : isSingleStory
-                ? "Read Story"
-                    : `Play ${structure === "chapters" ? "Chap" : "Ep-"}1`}
-          </span>
-        </button>
-
-        {/* Stats Row */}
-        <div className="flex items-center gap-2 flex-wrap text-xs text-primary/70 mb-4">
-          <div className="flex items-center gap-1.5 bg-white/50 px-2 py-1 rounded-md">
-            <Eye size={12} className="text-primary/60" />
-            <span className="font-medium text-primary">
-              {viewCount >= 1000000
-                ? `${(viewCount / 1000000).toFixed(1)}M`
-                : viewCount >= 1000
-                  ? `${(viewCount / 1000).toFixed(1)}K`
-                  : viewCount} views
-            </span>
-          </div>
-          <div className="flex items-center gap-1.5 bg-white/50 px-2 py-1 rounded-md">
-            <Star size={12} className="fill-current text-complimentary-colour" />
-            <span className="font-medium text-primary">{displayLikeCount} likes</span>
-          </div>
-          <div className="flex items-center gap-1.5 bg-white/50 px-2 py-1 rounded-md">
-            <Star size={12} className="fill-current text-yellow-500" />
-            <span className="font-medium text-primary">{starRating.toFixed(1)}</span>
-          </div>
-          {story.genres?.[0] && (
-            <span className="bg-white/50 px-2 py-1 rounded-md font-medium text-primary">
-              {story.genres[0]}
-            </span>
-          )}
-         
-        </div>
-
-        {/* Description */}
-        <div className="mb-4">
-          <p className={cn(
-            "text-sm text-primary/70 leading-relaxed line-clamp-2",
-            Magnetik_Regular.className
-          )}>
-            {story.description}
-          </p>
-          {story.description && story.description.length > 100 && (
-            <button 
-              onClick={() => setActiveTab("details")}
-              className="text-complimentary-colour text-sm font-medium mt-1"
+        {/* Main Content */}
+        <div className="absolute inset-0 z-10 flex flex-col justify-end px-4 pb-8">
+          <div className="flex items-end gap-5">
+            <motion.div
+              className="relative flex-shrink-0 overflow-hidden border shadow-2xl cursor-pointer w-36 h-52 rounded-xl border-white/10 ring-1 ring-black/20"
+              onClick={onOpenImagePreview}
+              layoutId={`story-image-${storyId}`}
+              whileHover={{ scale: 1.05 }}
+              transition={{ duration: 0.3 }}
             >
-              More
-            </button>
-          )}
-        </div>
+              <Image
+                src={displayImage}
+                alt={story.title}
+                fill
+                className="object-cover"
+              />
+            </motion.div>
 
-        {/* Author Section */}
-        <button
-          onClick={onOpenCollaborators}
-          className="flex items-center gap-2 text-xs text-primary/50 uppercase tracking-wider mb-4 hover:text-primary/70 transition-colors"
-        >
-          <span className="font-medium">Show Writers & Cast</span>
-          <span className="text-primary/80 font-bold normal-case">
-            {author?.penName || author?.name || "Unknown"}
-            {collaborators && collaborators.length > 0 && ` and ${collaborators.length} more`}
-          </span>
-          <ChevronRight size={14} />
-        </button>
+            {/* Info */}
+            <div className="flex-1 space-y-2.5 mb-1">
+              {isExclusive && (
+                <span className="inline-block bg-complimentary-colour text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider shadow-sm">
+                  #1 in {story.genres?.[0] || "Storytime"}
+                </span>
+              )}
+              <h1
+                className={cn(
+                  "text-white text-2xl font-bold leading-tight line-clamp-2 drop-shadow-sm",
+                  Magnetik_Bold.className
+                )}
+              >
+                {story.title}
+              </h1>
+
+              <button
+                onClick={onOpenCollaborators}
+                className="flex items-center gap-2 text-xs transition-colors text-white/90 hover:text-white group"
+              >
+                <span className="font-medium transition-all border-b border-transparent group-hover:border-white/50">
+                  {author?.penName || author?.name || "Unknown"}
+                </span>
+                <Users
+                  size={12}
+                  className="transition-opacity opacity-60 group-hover:opacity-100"
+                />
+              </button>
+
+              <div className="flex items-center gap-2 text-xs text-white/70">
+                <span className="capitalize">{status}</span>
+                <span>•</span>
+                <span>{new Date(story.createdAt).getFullYear()}</span>
+              </div>
+
+              <div className="flex items-center gap-4 mt-1 text-xs text-white/60">
+                <div className="flex items-center gap-1.5 bg-white/5 px-2 py-1 rounded-md backdrop-blur-sm">
+                  <Eye size={10} />
+                  <span>
+                    {viewCount >= 1000
+                      ? `${(viewCount / 1000).toFixed(1)}K`
+                      : viewCount}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5 bg-white/5 px-2 py-1 rounded-md backdrop-blur-sm">
+                  <Star size={10} className="fill-current" />
+                  <span>{starRating.toFixed(1)}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Action Button */}
+          <div className="mt-8">
+            <button
+              onClick={() => {
+                if (!isAuthenticated()) {
+                  openAuthModal("login");
+                  return;
+                }
+                const url = continueTarget
+                  ? `/story/${storyId}/read?${structure === "chapters" ? "chapterId" : "episodeId"}=${continueTarget.id}`
+                  : `/story/${storyId}/read${
+                      hasContent
+                        ? `?${structure === "chapters" ? "chapterId" : "episodeId"}=${contentList[0].id}`
+                        : ""
+                    }`;
+                router.push(url);
+              }}
+              className="w-full bg-primary hover:bg-primary/90 text-white py-4 rounded-full font-bold text-base flex items-center justify-center gap-2.5 transition-all shadow-lg shadow-primary/25 active:scale-[0.98]"
+            >
+              <Play size={22} className="fill-current" />
+              <span>
+                {continueTarget && storyProgress
+                  ? `Continue ${structure === "chapters" ? "Chapter" : "Episode"} ${
+                      continueTarget.number ||
+                      (structure === "chapters"
+                        ? continueTarget.chapterNumber
+                        : continueTarget.episodeNumber)
+                    }`
+                  : isSingleStory
+                    ? "Read Story"
+                    : `Play ${structure === "chapters" ? "Chapter" : "Episode"} 1`}
+              </span>
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Tabs */}

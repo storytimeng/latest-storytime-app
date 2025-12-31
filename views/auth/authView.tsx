@@ -11,7 +11,7 @@ import Image from "next/image";
 export default function AuthView() {
   return (
     <div className="w-full max-w-md mx-auto">
-      <div className="text-center text-primary-colour body-text-big-bold-auto mb-6">
+      <div className="mb-6 text-center text-primary-colour body-text-big-bold-auto">
         Welcome to Storytime
       </div>
 
@@ -34,7 +34,6 @@ export default function AuthView() {
               <Image
                 src={"/images/onboarding1.png"}
                 alt="Auth Divider"
-                
                 width={260}
                 height={260}
                 className="object-contain"
@@ -50,12 +49,12 @@ export default function AuthView() {
             <Button variant="large">Log In</Button>
           </Link>
           <Link href="/auth/signup">
-            <Button variant="large">Sign Up</Button>
+            <Button variant="skip">Sign Up</Button>
           </Link>
         </div>
 
         {/* Divider */}
-        <div className="flex items-center my-4">
+        <div className="flex items-center invisible my-4">
           <div className="flex-1 border-t border-light-grey-1"></div>
           <div className="px-4 body-text-small-regular text-[#708090] body-text-small-auto-regular">
             or
@@ -63,29 +62,29 @@ export default function AuthView() {
           <div className="flex-1 border-t border-light-grey-1"></div>
         </div>
 
-        {/* Google Login */}
         <Button
           variant="google"
-          startContent={<div className="w-5 h-5 bg-grey-1 rounded"></div>}
+          startContent={<div className="w-5 h-5 rounded bg-grey-1"></div>}
+          className="invisible"
         >
           Continue with Google
         </Button>
       </div>
 
       {/* Terms */}
-      <div className="text-center mt-4">
+      <div className="mt-4 text-center">
         <p className="body-text-small-regular text-grey-2">
           By continuing, you agree to our{" "}
           <Link
             href="/terms"
-            className="text-primary-colour hover:underline font-bold"
+            className="font-bold text-primary-colour hover:underline"
           >
             Terms of Service
           </Link>{" "}
           and{" "}
           <Link
             href="/privacy"
-            className="text-primary-colour hover:underline font-bold"
+            className="font-bold text-primary-colour hover:underline"
           >
             Privacy Policy
           </Link>
