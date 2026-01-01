@@ -23,19 +23,19 @@ function OtpContent({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  
+
   const emailParam = searchParams.get("email");
   const typeParam = searchParams.get("type") as OtpViewProps["type"];
-  
+
   const [emailInput, setEmailInput] = useState("");
-  
+
   // Use URL param if available, otherwise fallback to input or default prop
   const effectiveEmail = emailParam || emailInput || defaultEmail;
   const effectiveType = typeParam || defaultType;
 
   const { trigger: verifyTrigger, isMutating: isVerifying } = useVerifyEmail();
   const { trigger: resendTrigger, isMutating: isResending } = useResendOtp();
-  
+
   // State for OTP value (single string now, handled by OtpField)
   const [otpValue, setOtpValue] = useState("");
   const [error, setError] = useState("");
@@ -63,7 +63,7 @@ function OtpContent({
 
   const handleConfirmEmail = () => {
     if (!emailInput) return;
-    
+
     // Update URL with email param to switch to display mode
     const params = new URLSearchParams(searchParams.toString());
     params.set("email", emailInput);
@@ -136,7 +136,7 @@ function OtpContent({
       setError("Please enter your email address to resend code");
       return;
     }
-    
+
     setError("");
 
     try {
@@ -153,63 +153,62 @@ function OtpContent({
     }
   };
 
-type MailProviderResponse = {
-  providerName?: string;
-  loginUrl?: string;
-};
+  type MailProviderResponse = {
+    providerName?: string;
+    loginUrl?: string;
+  };
 
-const localMailMap: Record<string, string> = {
-  "gmail.com": "https://mail.google.com",
-  "googlemail.com": "https://mail.google.com",
-  "outlook.com": "https://outlook.live.com",
-  "hotmail.com": "https://outlook.live.com",
-  "live.com": "https://outlook.live.com",
-  "msn.com": "https://outlook.live.com",
-  "yahoo.com": "https://mail.yahoo.com",
-  "ymail.com": "https://mail.yahoo.com",
-  "proton.me": "https://mail.proton.me",
-  "protonmail.com": "https://mail.proton.me",
-  "icloud.com": "https://www.icloud.com/mail",
-  "me.com": "https://www.icloud.com/mail",
-};
+  const localMailMap: Record<string, string> = {
+    "gmail.com": "https://mail.google.com",
+    "googlemail.com": "https://mail.google.com",
+    "outlook.com": "https://outlook.live.com",
+    "hotmail.com": "https://outlook.live.com",
+    "live.com": "https://outlook.live.com",
+    "msn.com": "https://outlook.live.com",
+    "yahoo.com": "https://mail.yahoo.com",
+    "ymail.com": "https://mail.yahoo.com",
+    "proton.me": "https://mail.proton.me",
+    "protonmail.com": "https://mail.proton.me",
+    "icloud.com": "https://www.icloud.com/mail",
+    "me.com": "https://www.icloud.com/mail",
+  };
 
-/**
- * Opens the correct mail URL for the given email.
- * Tries API detection, then local map, then mailto fallback.
- */
-async function handleOpenMailApp(effectiveEmail?: string) {
-  const defaultMailto = "mailto:";
+  /**
+   * Opens the correct mail URL for the given email.
+   * Tries API detection, then local map, then mailto fallback.
+   */
+  async function handleOpenMailApp(effectiveEmail?: string) {
+    const defaultMailto = "mailto:";
 
-  if (!effectiveEmail) {
-    window.open(defaultMailto, "_blank");
-    return;
-  }
-
-  // Ensure it's a string
-  const domain = (effectiveEmail || "").toString().split("@")[1]?.toLowerCase() ?? "";
-
-  try {
-    const apiRes = await fetch(
-      `https://api.emailproviderlookup.com/v1/lookup?email=${effectiveEmail}`
-    ).then((res) => res.json() as Promise<MailProviderResponse>);
-
-    if (apiRes?.loginUrl) {
-      window.open(apiRes.loginUrl, "_blank");
+    if (!effectiveEmail) {
+      window.open(defaultMailto, "_blank");
       return;
     }
-  } catch (error) {
-    console.warn("API lookup failed, falling back to local map", error);
+
+    // Ensure it's a string
+    const domain =
+      (effectiveEmail || "").toString().split("@")[1]?.toLowerCase() ?? "";
+
+    try {
+      const apiRes = await fetch(
+        `https://api.emailproviderlookup.com/v1/lookup?email=${effectiveEmail}`
+      ).then((res) => res.json() as Promise<MailProviderResponse>);
+
+      if (apiRes?.loginUrl) {
+        window.open(apiRes.loginUrl, "_blank");
+        return;
+      }
+    } catch (error) {
+      console.warn("API lookup failed, falling back to local map", error);
+    }
+
+    if (localMailMap[domain]) {
+      window.open(localMailMap[domain], "_blank");
+      return;
+    }
+
+    window.open(`${defaultMailto}${effectiveEmail}`, "_blank");
   }
-
-  if (localMailMap[domain]) {
-    window.open(localMailMap[domain], "_blank");
-    return;
-  }
-
-  window.open(`${defaultMailto}${effectiveEmail}`, "_blank");
-}
-
-
 
   const maskEmail = (email: string) => {
     if (!email) return "";
@@ -290,7 +289,7 @@ async function handleOpenMailApp(effectiveEmail?: string) {
                   transition={{ duration: 0.2 }}
                   className="w-full pt-3"
                 >
-                   <FormField
+                  <FormField
                     label="Email Address"
                     type="email"
                     id="email-otp"
@@ -304,7 +303,7 @@ async function handleOpenMailApp(effectiveEmail?: string) {
                         <Button
                           size="sm"
                           onPress={handleConfirmEmail}
-                          className="h-7 px-3 text-xs font-medium"
+                          className="px-3 text-xs font-medium h-7"
                         >
                           Confirm
                         </Button>
@@ -327,19 +326,25 @@ async function handleOpenMailApp(effectiveEmail?: string) {
                 className="w-full overflow-hidden"
               >
                 <div className="mt-6 space-y-3">
-                  <Button variant="large" onClick={handleVerify} disabled={isVerifying}>
+                  <Button
+                    variant="large"
+                    onClick={handleVerify}
+                    disabled={isVerifying}
+                  >
                     {isVerifying ? "Verifying..." : "Verify Code"}
                   </Button>
                   <Button
-                    variant="bordered"
-                    onPress={async() => await handleOpenMailApp(effectiveEmail)}
+                    variant="skip"
+                    onPress={async () =>
+                      await handleOpenMailApp(effectiveEmail)
+                    }
                   >
                     Go to email inbox
                   </Button>
                 </div>
 
                 {/* Send again / resend link */}
-                <div className="text-center mt-4 mb-4">
+                <div className="mt-4 mb-4 text-center">
                   <p className="text-sm text-grey-2">
                     Didn&apos;t get email?{" "}
                     <Button
@@ -379,22 +384,25 @@ function LoadingSkeleton() {
     <div className="flex flex-col h-full px-6">
       <div className="flex flex-col items-center flex-1 ">
         {/* Title Skeleton */}
-        <div className="h-8 w-64 bg-gray-200 rounded animate-pulse mb-2"></div>
-        
+        <div className="w-64 h-8 mb-2 bg-gray-200 rounded animate-pulse"></div>
+
         {/* Subtitle Skeleton */}
-        <div className="h-4 w-48 bg-gray-200 rounded animate-pulse mb-6"></div>
+        <div className="w-48 h-4 mb-6 bg-gray-200 rounded animate-pulse"></div>
 
         {/* OTP Boxes Skeleton */}
         <div className="w-full max-w-sm">
           <div className="flex justify-center gap-2 mb-6">
             {[...Array(6)].map((_, i) => (
-              <div key={i} className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-200 rounded-lg animate-pulse"></div>
+              <div
+                key={i}
+                className="w-10 h-10 bg-gray-200 rounded-lg sm:w-12 sm:h-12 animate-pulse"
+              ></div>
             ))}
           </div>
 
           {/* Email Input Skeleton */}
           <div className="w-full pt-3">
-            <div className="h-12 w-full bg-gray-200 rounded-lg animate-pulse"></div>
+            <div className="w-full h-12 bg-gray-200 rounded-lg animate-pulse"></div>
           </div>
         </div>
       </div>

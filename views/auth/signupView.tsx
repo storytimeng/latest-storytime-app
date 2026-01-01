@@ -479,8 +479,7 @@ export default function SignupView({
         </Button>
       </form>
 
-      {/* Divider */}
-      <div className="flex items-center my-6">
+      <div className="flex items-center invisible my-6">
         <div className="flex-1 border-t border-light-grey-1"></div>
         <div className="px-4 body-text-small-regular text-[#708090] body-text-small-auto-regular">
           or
@@ -488,11 +487,11 @@ export default function SignupView({
         <div className="flex-1 border-t border-light-grey-1"></div>
       </div>
 
-      {/* Social Login */}
       <div className="space-y-3">
         <Button
           variant="google"
           startContent={<div className="w-5 h-5 rounded bg-grey-1"></div>}
+          className="invisible"
         >
           Continue with Google
         </Button>
