@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { useMemo } from "react";
+import { useMemo, useEffect } from "react";
 import {
   GenreButton,
   StoryGroup,
@@ -30,6 +30,11 @@ const HomeView = () => {
   const { genres: apiGenres, isLoading: genresLoading } = useGenres();
   // Use API genres or fallback to empty array
   const genres = apiGenres || [];
+
+  // Clear filters on mount/reload
+  useEffect(() => {
+    useStoriesFilterStore.getState().clearGenres();
+  }, []);
 
   // Sort genres: selected ones first, then alphabetical
   const sortedGenres = useMemo(() => {
