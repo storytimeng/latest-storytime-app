@@ -46,6 +46,15 @@ try {
 
     // Check if it's a 401 Unauthorized error
     if (response.status === 401) {
+      // Skip token refresh for auth endpoints - these should return 401 normally for bad credentials
+      const url = new URL(response.url);
+      const isAuthEndpoint = url.pathname.includes('/auth');
+      
+      if (isAuthEndpoint) {
+        console.log("[Interceptor] 401 from auth endpoint, skipping refresh");
+        return response;
+      }
+
       console.log("[Interceptor] 401 detected, attempting token refresh...");
 
       // Clone the response to read the body (since it can only be read once)

@@ -343,29 +343,39 @@ export function useStoryViewLogic({
           }
         } else {
           // Create new story
+          // Parse collaborators - only include if there are actual values
+          const collaborators = formData.collaborate
+            ? formData.collaborate
+                .split(",")
+                .map((c) => c.trim())
+                .filter((c) => c.length > 0)
+            : [];
+
           const createPayload: CreateStoryDto = {
             authorId: effectiveUser.id,
             title: formData.title,
             description: formData.description,
             content: contentText,
             genres: formData.selectedGenres,
-            collaborate: formData.collaborate
-              ? formData.collaborate.split(",").map((c) => c.trim())
-              : [],
+            // Only include collaborate if there are collaborators
+            ...(collaborators.length > 0 && { collaborate: collaborators }),
             language: formData.language.toLowerCase() as any,
             anonymous: formData.goAnonymous,
             onlyOnStorytime: formData.onlyOnStorytime,
             trigger: formData.trigger,
             copyright: formData.copyright,
-            chapter: hasChapters,
-            episodes: hasEpisodes,
+            // IMPORTANT: API validation fails if both chapter and episodes are present (even when false)
+            // Because FormData serializes boolean `false` as string "false", the backend sees both fields as present
+            // Solution: Only include the field that is true, or neither if both are false
+            ...(hasChapters && { chapter: true }),
+            ...(hasEpisodes && { episodes: true }),
             storyStatus:
               formData.storyStatus === "Completed"
                 ? "complete"
                 : formData.storyStatus === "In Progress"
                   ? "ongoing"
                   : ("drafts" as any),
-          };
+          } as CreateStoryDto;
 
           const result = await createStory(createPayload);
 
