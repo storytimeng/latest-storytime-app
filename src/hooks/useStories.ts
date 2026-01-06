@@ -1,3 +1,4 @@
+import React from "react";
 import useSWR from "swr";
 import { storiesControllerFindAll } from "../client/sdk.gen";
 
@@ -10,60 +11,88 @@ interface UseStoriesOptions {
 }
 
 export function useStories(options: UseStoriesOptions = {}) {
-  const { page = 1, limit = 20, search, genre, status } = options;
+  const { limit = 20, search, genre, status } = options;
+  const [currentPage, setCurrentPage] = React.useState(options.page || 1);
+  const [allStories, setAllStories] = React.useState<any[]>([]);
+  const [hasMore, setHasMore] = React.useState(true);
 
   // Build query params for genres array
   const genres = genre ? [genre] : undefined;
-
-  // Create cache key from params
-  const cacheKey = `stories-${JSON.stringify({ page, limit, search, genres, status })}`;
+  
+  // Create cache key from params but exclude page to handle it internally
+  const cacheKey = `stories-${JSON.stringify({ limit, search, genres, status, page: currentPage })}`;
 
   const { data, error, isLoading, mutate } = useSWR(
     cacheKey,
     async () => {
       console.log("🔍 useStories: Calling storiesControllerFindAll with:", {
-        page,
+        page: currentPage,
         limit,
         genres,
       });
 
-      // Call SDK function with proper params structure
       const response = await storiesControllerFindAll({
         query: {
-          page,
+          page: currentPage,
           limit,
-          genres, // API expects genres as an array
+          genres,
         },
       });
 
-      console.log("📦 useStories: Raw response:", response);
-
       if (response.error) {
-        console.error("❌ useStories: Error in response:", response.error);
         throw response.error;
       }
 
-      // Handle nested response structure like useGenres does
       const responseData = (response?.data as any)?.data || response?.data;
-      console.log("✅ useStories: Processed data:", responseData);
-
       return responseData;
     },
     {
       revalidateOnFocus: false,
       shouldRetryOnError: false,
-      revalidateOnMount: true,
+      keepPreviousData: true,
     }
   );
 
+  // Update accumulated stories when new data arrives
+  React.useEffect(() => {
+    if (data?.stories) {
+      setAllStories((prev) => {
+        if (currentPage === 1) {
+          return data.stories;
+        }
+        // Avoid duplicates
+        const existingIds = new Set(prev.map((s: any) => s.id));
+        const newStories = data.stories.filter(
+          (s: any) => !existingIds.has(s.id)
+        );
+        return [...prev, ...newStories];
+      });
+
+      const totalPages = data.totalPages || 0;
+      setHasMore(currentPage < totalPages);
+    }
+  }, [data?.stories, currentPage]);
+
+  const loadMore = React.useCallback(() => {
+    if (!isLoading && hasMore) {
+      setCurrentPage((prev) => prev + 1);
+    }
+  }, [isLoading, hasMore]);
+
+  // Track initial loading separately from loading more
+  const isInitialLoading = isLoading && allStories.length === 0;
+
   return {
-    stories: data?.stories || [],
+    stories: allStories,
     total: data?.total || 0,
-    page: data?.page || page,
+    page: currentPage,
     limit: data?.limit || limit,
     totalPages: data?.totalPages || 0,
-    isLoading,
+    isLoading: isInitialLoading,
+    isLoadingMore: isLoading && currentPage > 1,
+    hasMore,
     error,
     mutate,
+    loadMore,
   };
 }

@@ -10,6 +10,7 @@ import {
   SupportModal,
   DeleteAccountModal,
   ClearCacheModal,
+  LogoutModal,
   SettingsList,
 } from "@/components/reusables/customUI";
 import { Magnetik_Bold, Magnetik_Regular } from "@/lib/font";
@@ -40,6 +41,9 @@ const SettingsView = () => {
 
       case "clear-cache":
         return <ClearCacheModal />;
+
+      case "logout":
+        return <LogoutModal onClose={closeModal} />;
 
       default:
         return (

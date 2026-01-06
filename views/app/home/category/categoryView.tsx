@@ -8,9 +8,10 @@ import {
   useRecentlyAddedStories,
   useTrendingStories,
   usePopularStories,
+  useOnlyOnStorytimeStories,
 } from "@/src/hooks/useStoryCategories";
 
-type CategoryType = "genre" | "recently-added" | "trending" | "popular";
+type CategoryType = "genre" | "recently-added" | "trending" | "popular" | "only-on-storytime";
 
 interface CategoryViewProps {
   categorySlug?: string;
@@ -22,6 +23,7 @@ const CATEGORY_TITLES: Record<string, string> = {
   "recently-added": "Recently Added Stories",
   trending: "Trending Now",
   popular: "Popular This Week",
+  "only-on-storytime": "Only on StoryTime",
 };
 
 const CategoryView = ({
@@ -35,7 +37,7 @@ const CategoryView = ({
   // Determine type from slug or prop
   const categoryType: CategoryType =
     propType ||
-    (["recently-added", "trending", "popular"].includes(categorySlug)
+    (["recently-added", "trending", "popular", "only-on-storytime"].includes(categorySlug)
       ? (categorySlug as CategoryType)
       : "genre");
 
@@ -72,6 +74,10 @@ const CategoryView = ({
     limit: 20,
   });
 
+  const exclusiveHook = useOnlyOnStorytimeStories({
+    limit: 20,
+  });
+
   // Select the right hook data based on type
   const hookData = (() => {
     switch (categoryType) {
@@ -81,6 +87,8 @@ const CategoryView = ({
         return trendingHook;
       case "popular":
         return popularHook;
+      case "only-on-storytime":
+        return exclusiveHook;
       default:
         return {
           stories: genreHook.stories,

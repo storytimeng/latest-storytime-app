@@ -78,7 +78,7 @@ export const SETTINGS_OPTIONS: SettingOption[] = [
     label: "Log Out",
     icon: <LogOut size={20} />,
     hasToggle: false,
-    route: "/auth/login",
     isDanger: true,
+    // No route, opens modal
   },
 ];
