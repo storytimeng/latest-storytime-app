@@ -628,6 +628,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
         required={!storyStructure.hasChapters && !storyStructure.hasEpisodes}
         rows={6}
         className="max-h-[400px]"
+        isRichText={true}
       />
       {!storyStructure.hasChapters && !storyStructure.hasEpisodes && (
         <p className="text-xs text-gray-500 -mt-4">
@@ -959,6 +960,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
                           );
                         }}
                         rows={12}
+                        isRichText={true}
                       />
                     </div>
                   )}
@@ -1042,6 +1044,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
                           );
                         }}
                         rows={12}
+                        isRichText={true}
                       />
                     </div>
                   )}
@@ -1071,6 +1074,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
             value={formData.content || ""}
             onChange={(value) => handleFieldChange("content", value)}
             rows={20}
+            isRichText={true}
           />
           <p className="text-xs text-gray-500">
             Write your complete story in this field since you selected no

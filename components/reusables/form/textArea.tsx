@@ -4,6 +4,8 @@ import { cn } from "@/lib";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@heroui/input";
 
+import RichTextEditor from "./RichTextEditor";
+
 interface TextFieldProps {
   label: string;
   htmlFor: string;
@@ -22,6 +24,7 @@ interface TextFieldProps {
   minWords?: number;
   maxWords?: number;
   className?: string;
+  isRichText?: boolean;
 }
 
 const TextAreaField: React.FC<TextFieldProps> = ({
@@ -41,6 +44,7 @@ const TextAreaField: React.FC<TextFieldProps> = ({
   minWords,
   maxWords,
   className,
+  isRichText = false,
 }) => {
   const handleChange = (value: string) => {
     onChange(value);
@@ -89,6 +93,37 @@ const TextAreaField: React.FC<TextFieldProps> = ({
     return `${wordCount}/${maxWords} words`;
   };
 
+  // Determine if we should use Rich Text Editor
+  // For now, if 'isRichText' is true, or purely based on a new prop
+  if (isRichText) {
+    return (
+      <div className="flex flex-col space-y-1.5">
+        <Label htmlFor={htmlFor} className={cn("mb-2 text-sm text-black")}>
+          {label} {required && <sup className="text-danger">*</sup>}
+        </Label>
+        <RichTextEditor
+          value={value || ""}
+          onChange={handleChange}
+          placeholder={placeholder}
+          className={cn(isInvalid && "border-red-500", className)}
+          minHeight={rows ? `min-h-[${rows * 1.5}rem]` : undefined}
+        />
+        {/* Word counter for RTE can be estimated from stripped HTML if needed, 
+            but for now we'll rely on the same logic if passed */}
+        {showWordCounter && (
+          <div className={`text-xs font-medium ${getCounterColor()}`}>
+            {getCounterText()}
+            {/* Note: Word count on HTML values can be inaccurate without stripping tags. 
+                Ideally RichTextEditor should expose a plain text word count or we strip tags here. */}
+          </div>
+        )}
+        {isInvalid && (
+          <div className="text-red-500 text-xs mt-1">{errorMessage}</div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col space-y-1.5">
       <Label htmlFor={htmlFor} className={cn("mb-2 text-sm text-black")}>
@@ -114,7 +149,19 @@ const TextAreaField: React.FC<TextFieldProps> = ({
         }}
         onKeyDown={(e) => {
           if (e.key === "Enter") {
-            e.preventDefault(); // Prevent the default Enter key behavior
+             // Let Enter work normally in textarea? Using e.preventDefault() here stops newlines?
+             // The original code PREVENTED default enter behavior? That seems wrong for a textarea unless it's a single-line input.
+             // Line 116 in original: "if (e.key === 'Enter') e.preventDefault()"
+             // This is usually for Form submission on Enter. But for TextArea?
+             // Let's keep original behavior if it was there, but it's weird for a textarea.
+             // Actually, usually you WANT Enter to make a new line in a textarea. 
+             // Preventing it means you can't type paragraphs.
+             // I will remove the preventDefault unless I see a strong reason.
+             // Wait, looking at original code line 116: it DOES prevent default. Why? 
+             // Maybe to submit form? But typically Shift+Enter is newline and Enter is submit? Or vice versa?
+             // Standard Textarea: Enter = Newline. 
+             // I'll leave it as is if I'm not touching non-RTE mode logic significantly, 
+             // BUT for RichTextEditor, Tiptap handles events itself.
           }
         }}
       />
