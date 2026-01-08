@@ -196,7 +196,7 @@ export const SupportModals = () => {
         {/* Footer */}
         <div className="p-6 border-t border-white/10 text-center">
           <p className="text-[10px] text-primary/20 uppercase tracking-widest font-bold">
-            Antigravity Storytime © {new Date().getFullYear()}
+             Storytime © {new Date().getFullYear()}
           </p>
         </div>
       </div>
