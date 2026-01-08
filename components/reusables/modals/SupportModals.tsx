@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { X, ExternalLink, Mail, Phone, MessageSquare } from "lucide-react";
+import React, { useEffect, useState, useMemo } from "react";
+import useSWR, { preload } from "swr";
+import { Mail, Phone, MessageSquare } from "lucide-react";
 import { useSupportStore, SupportViewType } from "@/src/stores/useSupportStore";
 import {
   faqsControllerFindAll,
@@ -11,46 +12,88 @@ import {
 } from "@/src/client";
 import { Magnetik_Bold, Magnetik_Medium, Magnetik_Regular } from "@/lib/font";
 import { Skeleton } from "@heroui/skeleton";
+import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from "@heroui/modal";
+import { Accordion, AccordionItem } from "@heroui/accordion";
 
 export const SupportModals = () => {
   const { isOpen, view, closeModal, setView } = useSupportStore();
-  const [data, setData] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(false);
 
+  const CACHE_TIME = 3 * 60 * 60 * 1000; // 3 hours in ms
+
+  // SWR Fetchers
+  const fetchFAQs = async () => {
+    const response = await faqsControllerFindAll() as any;
+    let result = response?.data?.data || response?.data;
+    if (result?.faqs) result = result.faqs;
+    return result;
+  };
+
+  const fetchTerms = async () => {
+    const response = await termsAndPolicyControllerGetTerms() as any;
+    return response?.data?.data || response?.data;
+  };
+
+  const fetchPrivacy = async () => {
+    const response = await termsAndPolicyControllerGetPrivacyPolicy() as any;
+    return response?.data?.data || response?.data;
+  };
+
+  const fetchSupport = async () => {
+    const response = await supportControllerFindActive() as any;
+    return response?.data?.data || response?.data;
+  };
+
+  // SWR Hooks
+  const { data: faqsData, isLoading: isLoadingFAQs } = useSWR(
+    isOpen ? "support-faqs" : null,
+    fetchFAQs,
+    { dedupingInterval: CACHE_TIME, revalidateOnFocus: false }
+  );
+
+  const { data: termsData, isLoading: isLoadingTerms } = useSWR(
+    isOpen ? "support-terms" : null,
+    fetchTerms,
+    { dedupingInterval: CACHE_TIME, revalidateOnFocus: false }
+  );
+
+  const { data: privacyData, isLoading: isLoadingPrivacy } = useSWR(
+    isOpen ? "support-privacy" : null,
+    fetchPrivacy,
+    { dedupingInterval: CACHE_TIME, revalidateOnFocus: false }
+  );
+
+  const { data: supportData, isLoading: isLoadingSupport } = useSWR(
+    isOpen ? "support-info" : null,
+    fetchSupport,
+    { dedupingInterval: CACHE_TIME, revalidateOnFocus: false }
+  );
+
+  // Prefetching logic
   useEffect(() => {
-    if (!isOpen) {
-      setData(null);
-      return;
+    if (isOpen) {
+      // Trigger prefetch for all tabs in parallel
+      preload("support-faqs", fetchFAQs);
+      preload("support-terms", fetchTerms);
+      preload("support-privacy", fetchPrivacy);
+      preload("support-info", fetchSupport);
     }
+  }, [isOpen]);
 
-    const fetchData = async () => {
-      setIsLoading(true);
-      try {
-        let response: any;
-        switch (view) {
-          case "faqs":
-            response = await faqsControllerFindAll();
-            break;
-          case "terms":
-            response = await termsAndPolicyControllerGetTerms();
-            break;
-          case "privacy":
-            response = await termsAndPolicyControllerGetPrivacyPolicy();
-            break;
-          case "support":
-            response = await supportControllerFindActive();
-            break;
-        }
-        setData(response?.data?.data || response?.data);
-      } catch (error) {
-        console.error(`Failed to fetch ${view}:`, error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [isOpen, view]);
+  // Map data and loading state based on current view
+  const { data, isLoading } = useMemo(() => {
+    switch (view) {
+      case "faqs":
+        return { data: faqsData, isLoading: isLoadingFAQs };
+      case "terms":
+        return { data: termsData, isLoading: isLoadingTerms };
+      case "privacy":
+        return { data: privacyData, isLoading: isLoadingPrivacy };
+      case "support":
+        return { data: supportData, isLoading: isLoadingSupport };
+      default:
+        return { data: null, isLoading: false };
+    }
+  }, [view, faqsData, termsData, privacyData, supportData, isLoadingFAQs, isLoadingTerms, isLoadingPrivacy, isLoadingSupport]);
 
   if (!isOpen) return null;
 
@@ -77,20 +120,31 @@ export const SupportModals = () => {
     switch (view) {
       case "faqs":
         return (
-          <div className="space-y-6">
-            {Array.isArray(data) ? (
-              data.map((faq: any) => (
-                <div key={faq.id} className="space-y-2">
-                  <h4 className={`text-lg font-bold text-primary ${Magnetik_Bold.className}`}>
-                    {faq.question}
-                  </h4>
-                  <p className={`text-sm text-primary/70 leading-relaxed ${Magnetik_Regular.className}`}>
+          <div className="space-y-4">
+            {Array.isArray(data) && data.length > 0 ? (
+              <Accordion 
+                variant="splitted"
+                className="px-0"
+                itemClasses={{
+                  base: "bg-white/5 border border-white/10 rounded-2xl mb-3",
+                  title: `text-primary font-bold ${Magnetik_Bold.className}`,
+                  content: `text-sm text-primary/70 leading-relaxed ${Magnetik_Regular.className}`,
+                  trigger: "py-4",
+                }}
+              >
+                {data.map((faq: any) => (
+                  <AccordionItem 
+                    key={faq.id} 
+                    title={faq.question}
+                  >
                     {faq.answer}
-                  </p>
-                </div>
-              ))
+                  </AccordionItem>
+                ))}
+              </Accordion>
             ) : (
-              <p className="text-sm text-primary/70">No FAQs found.</p>
+              <div className="text-center py-8">
+                <p className="text-sm text-primary/40">No FAQs found.</p>
+              </div>
             )}
           </div>
         );
@@ -158,48 +212,71 @@ export const SupportModals = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-md p-4">
-      <div 
-        className="bg-accent-shade-1 border border-white/10 rounded-3xl w-full max-w-2xl shadow-2xl relative animate-in fade-in zoom-in duration-300 flex flex-col max-h-[85vh]"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="p-6 border-b border-white/10 flex items-center justify-between">
-          <div className="flex gap-4 overflow-x-auto no-scrollbar pb-1">
-            {(["faqs", "terms", "privacy", "support"] as SupportViewType[]).map((t) => (
-              <button
-                key={t}
-                onClick={() => setView(t)}
-                className={`text-sm font-medium whitespace-nowrap px-4 py-2 rounded-full transition-all ${
-                  view === t 
-                    ? "bg-primary text-white shadow-lg shadow-primary/20" 
-                    : "text-primary/40 hover:text-primary hover:bg-white/5"
-                }`}
-              >
-                {t === "faqs" ? "FAQs" : t === "terms" ? "Terms" : t === "privacy" ? "Privacy" : "Support"}
-              </button>
-            ))}
-          </div>
-          <button
-            onClick={closeModal}
-            className="p-2 text-primary/40 hover:text-primary hover:bg-white/10 rounded-full transition-colors ml-4"
-          >
-            <X size={20} />
-          </button>
-        </div>
-
-        {/* Content */}
-        <div className="p-8 overflow-y-auto custom-scrollbar flex-1">
-          {renderContent()}
-        </div>
-
-        {/* Footer */}
-        <div className="p-6 border-t border-white/10 text-center">
-          <p className="text-[10px] text-primary/20 uppercase tracking-widest font-bold">
-             Storytime © {new Date().getFullYear()}
-          </p>
-        </div>
-      </div>
-    </div>
+    <Modal 
+      isOpen={isOpen} 
+      onClose={closeModal}
+      scrollBehavior="inside"
+      size="2xl"
+      placement="auto"
+      motionProps={{
+        variants: {
+          enter: {
+            y: 0,
+            opacity: 1,
+            transition: {
+              duration: 0.3,
+              ease: "easeOut",
+            },
+          },
+          exit: {
+            y: 20,
+            opacity: 0,
+            transition: {
+              duration: 0.2,
+              ease: "easeIn",
+            },
+          },
+        },
+      }}
+      classNames={{
+        base: "bg-accent-shade-1 border border-white/10 rounded-3xl m-0 sm:m-4 h-[50vh]",
+        header: "border-b border-white/10 p-4 sm:p-6",
+        body: "p-4 sm:p-8 custom-scrollbar",
+        footer: "border-t border-white/10 p-4 sm:p-6",
+        closeButton: "hover:bg-white/10 active:bg-white/20 mt-2 mr-2",
+      }}
+    >
+      <ModalContent>
+        {(onClose) => (
+          <>
+            <ModalHeader className="flex flex-col gap-1">
+              <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                {(["faqs", "terms", "privacy", "support"] as SupportViewType[]).map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => setView(t)}
+                    className={`text-xs sm:text-sm font-medium whitespace-nowrap px-3 sm:px-4 py-1.5 sm:py-2 rounded-full transition-all ${
+                      view === t 
+                        ? "bg-primary text-white shadow-lg shadow-primary/20" 
+                        : "text-primary/40 hover:text-primary hover:bg-white/5"
+                    }`}
+                  >
+                    {t === "faqs" ? "FAQs" : t === "terms" ? "Terms" : t === "privacy" ? "Privacy" : "Support"}
+                  </button>
+                ))}
+              </div>
+            </ModalHeader>
+            <ModalBody>
+              {renderContent()}
+            </ModalBody>
+            <ModalFooter className="justify-center">
+              <p className="text-[10px] text-primary/20 uppercase tracking-widest font-bold">
+                Storytime © {new Date().getFullYear()}
+              </p>
+            </ModalFooter>
+          </>
+        )}
+      </ModalContent>
+    </Modal>
   );
 };
