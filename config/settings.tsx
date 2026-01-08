@@ -54,9 +54,9 @@ export const SETTINGS_OPTIONS: SettingOption[] = [
   {
     id: "terms-policy",
     label: "Terms & Policy",
-    icon: <Phone size={20} />,
+    icon: <Shield size={20} />,
     hasToggle: false,
-    route: "/settings/terms-policy",
+    // No route, opens modal
   },
   {
     id: "support",

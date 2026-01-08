@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { Magnetik_Medium } from "@/lib/font";
 import LoadingOverlay from "@/components/reusables/customUI/loadingOverlay";
 import { GenresPreloader } from "@/components/preloaders/GenresPreloader";
+import { SupportModals } from "@/components/reusables/modals/SupportModals";
 
 export const metadata: Metadata = {
   metadataBase: new URL(APP_CONFIG.url),
@@ -155,6 +156,7 @@ export default function RootLayout({
             <MaxWidthWrapper>{children}</MaxWidthWrapper>
             <LoadingOverlay />
             <PWAInstallPrompt />
+            <SupportModals />
           </PWAProvider>
         </Providers>
       </body>

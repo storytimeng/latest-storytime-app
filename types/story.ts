@@ -60,6 +60,8 @@ export interface StoryFormProps {
   onCancel?: () => void;
   isLoading?: boolean;
   createdStoryId?: string | null;
+  initialChapters?: Chapter[];
+  initialParts?: Part[];
   // Lifted state props
   formData: StoryFormData;
   formErrors: Partial<Record<keyof StoryFormData, string>>;

@@ -37,6 +37,8 @@ const StoryView: React.FC<StoryViewProps> = ({ mode, storyId }) => {
     isFetchingStory,
     handleSubmit,
     handleCancel,
+    initialChapters,
+    initialParts,
     pageTitle,
     backLink,
     handleBack,
@@ -92,6 +94,8 @@ const StoryView: React.FC<StoryViewProps> = ({ mode, storyId }) => {
               onCancel={handleCancel}
               isLoading={isCreating || isUpdating}
               createdStoryId={createdStoryId}
+              initialChapters={initialChapters}
+              initialParts={initialParts}
               // Pass lifted state
               formData={formData}
               formErrors={formErrors}

@@ -270,6 +270,8 @@ const StoryForm: React.FC<StoryFormProps> = ({
   onCancel,
   isLoading = false,
   createdStoryId,
+  initialChapters,
+  initialParts,
   // Lifted state props
   formData,
   formErrors,
@@ -289,6 +291,8 @@ const StoryForm: React.FC<StoryFormProps> = ({
 
   const contentStateHook = useStoryContent({
     storyStructure: storyStructure,
+    initialChapters,
+    initialParts,
   });
 
   // Content state from hooks

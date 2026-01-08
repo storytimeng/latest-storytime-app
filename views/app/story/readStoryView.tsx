@@ -196,6 +196,7 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
 
   // Get comment creation function based on content type
   const {
+    comments: storyComments,
     createComment: createStoryComment,
     updateComment: updateStoryComment,
     deleteComment: deleteStoryComment,
@@ -222,7 +223,7 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
   );
 
   // Use comments from current content
-  const comments = currentComments || [];
+  const comments = structure === "single" ? storyComments : (currentComments || []);
   const displayCommentCount = comments.length;
 
   const handleCreateComment = async (text: string, parentId?: string) => {

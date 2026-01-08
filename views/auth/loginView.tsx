@@ -9,6 +9,7 @@ import { z } from "zod";
 import { showToast } from "@/lib/showNotification";
 import { useLogin } from "@/src/hooks/useAuth";
 import { useLoadingStore } from "@/src/stores/useLoadingStore";
+import { useSupportStore } from "@/src/stores/useSupportStore";
 
 interface LoginFormData {
   email: string;
@@ -19,8 +20,6 @@ interface LoginFormData {
 // Create zod schema for login validation
 const loginSchema = z.object({
   email: z
-    .string()
-    .min(1, "Email address is required")
     .email("Please enter a valid email address"),
   password: z.string().min(1, "Password is required"),
   rememberMe: z.boolean().optional(),
@@ -32,6 +31,7 @@ interface LoginViewProps {
 }
 
 export default function LoginView({ onSuccess, onSwitchView }: LoginViewProps) {
+  const openSupportModal = useSupportStore((state) => state.openModal);
   const router = useRouter();
   const { show: showLoading, hide: hideLoading } = useLoadingStore();
   const [formData, setFormData] = useState<LoginFormData>({
@@ -290,6 +290,25 @@ export default function LoginView({ onSuccess, onSwitchView }: LoginViewProps) {
             </Link>
           )}
         </p>
+      </div>
+
+      {/* Terms and Privacy Footer */}
+      <div className="mt-8 flex items-center justify-center gap-4 text-[10px] text-primary-colour/40">
+        <button
+          type="button"
+          onClick={() => openSupportModal("terms")}
+          className="hover:text-primary-colour transition-colors underline-offset-2 hover:underline"
+        >
+          Terms of Service
+        </button>
+        <div className="w-1 h-1 rounded-full bg-primary-colour/20" />
+        <button
+          type="button"
+          onClick={() => openSupportModal("privacy")}
+          className="hover:text-primary-colour transition-colors underline-offset-2 hover:underline"
+        >
+          Privacy Policy
+        </button>
       </div>
     </div>
   );

@@ -103,7 +103,7 @@ export function useUpdateStory() {
 
   const updateStory = async (
     storyId: string,
-    storyData: UpdateStoryDto
+    storyData: UpdateStoryDto & { storyStatus?: string }
   ): Promise<boolean> => {
     setIsUpdating(true);
     setError(null);
