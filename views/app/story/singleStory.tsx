@@ -17,6 +17,7 @@ import {
   Trash2,
   X,
   Eye,
+  Heart,
 } from "lucide-react";
 import Image from "next/image";
 import { Magnetik_Regular, Magnetik_Bold } from "@/lib";
@@ -45,6 +46,7 @@ import { useAuthModalStore } from "@/src/stores/useAuthModalStore";
 import { CollaboratorsModal } from "@/components/reusables/modals/CollaboratorsModal";
 import { ImagePreviewModal } from "@/components/reusables/modals/ImagePreviewModal";
 import { motion, AnimatePresence, useScroll } from "framer-motion";
+import { CommentsSection } from "@/views/app/story/components/CommentsSection";
 
 interface SingleStoryProps {
   storyId?: string;
@@ -66,7 +68,13 @@ const formatReadingTime = (seconds: number): string => {
 const SingleStory = ({ storyId }: SingleStoryProps) => {
   const { story, isLoading } = useStory(storyId);
   const { likeCount, isLiked, toggleLike } = useStoryLikes(storyId);
-  const { commentCount, comments, createComment } = useStoryComments(storyId);
+  const {
+    commentCount,
+    comments,
+    createComment,
+    updateComment,
+    deleteComment,
+  } = useStoryComments(storyId);
   const { aggregatedData, mutate: mutateProgress } =
     useAggregatedProgress(storyId);
   const { user: storeUser } = useUserStore();
@@ -801,7 +809,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
 
   // Calculate star rating from popularity score (0-100 scale to 0-5 stars)
   const calculateStarRating = (score: number): number => {
-    if (score === 0) return 4.5; // Default rating
+    if (score === 0) return 0; // Default rating
     // Divide by 20 to convert 0-100 scale to 0-5 stars
     const stars = score / 20;
     return Math.min(Math.max(stars, 0), 5); // Clamp between 0 and 5
@@ -916,6 +924,18 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
                   )}
                 </button>
               )}
+              <button 
+                onClick={toggleLike}
+                className="p-2 transition-colors rounded-full bg-black/30 backdrop-blur-md hover:bg-black/40"
+              >
+                <Heart 
+                  size={24} 
+                  className={cn(
+                    "transition-colors", 
+                    isLiked ? "fill-red-500 text-red-500" : "text-white"
+                  )} 
+                />
+              </button>
               <button className="p-2 transition-colors rounded-full bg-black/30 backdrop-blur-md hover:bg-black/40">
                 <Share2 size={24} className="text-white" />
               </button>
@@ -1553,63 +1573,28 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
             </div>
 
             <div className="space-y-6">
-              {comments && comments.length > 0 ? (
-                comments.map((comment: any) => (
-                  <div
-                    key={comment.id}
-                    className="p-4 space-y-3 bg-white/5 rounded-xl"
-                  >
-                    <div className="flex items-center gap-3">
-                      {comment.user?.avatar ? (
-                        <div className="relative flex-shrink-0 w-8 h-8 overflow-hidden rounded-full">
-                          <Image
-                            src={comment.user.avatar}
-                            alt={
-                              comment.user?.penName ||
-                              comment.user?.firstName ||
-                              "User"
-                            }
-                            fill
-                            className="object-cover"
-                          />
-                        </div>
-                      ) : (
-                        <div className="flex items-center justify-center flex-shrink-0 w-8 h-8 text-xs font-bold rounded-full bg-primary/10 text-primary">
-                          {(
-                            comment.user?.firstName?.[0] ||
-                            comment.user?.penName?.[0] ||
-                            "U"
-                          ).toUpperCase()}
-                        </div>
-                      )}
-                      <div>
-                        <p className="text-sm font-medium text-primary">
-                          {comment.user?.penName ||
-                            comment.user?.firstName ||
-                            "User"}
-                        </p>
-                        <p className="text-primary/40 text-[10px]">
-                          {new Date(comment.createdAt).toLocaleDateString()} at{" "}
-                          {new Date(comment.createdAt).toLocaleTimeString([], {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </p>
-                      </div>
-                    </div>
-                    <p className="text-sm leading-relaxed text-primary/80">
-                      {comment.content}
-                    </p>
-                  </div>
-                ))
-              ) : (
-                <div className="py-12 text-sm text-center text-primary/40">
-                  <div className="flex items-center justify-center w-16 h-16 mx-auto mb-4 rounded-full bg-white/5">
-                    <Star size={24} className="opacity-50" />
-                  </div>
-                  <p>No reviews yet. Be the first to review!</p>
-                </div>
-              )}
+              <CommentsSection
+                comments={comments || []}
+                onSubmitComment={createComment}
+                onUpdateComment={updateComment}
+                onDeleteComment={deleteComment}
+                isThreaded={true}
+                currentUser={
+                  currentUser
+                    ? {
+                        id: currentUser.id,
+                        penName:
+                          currentUser.penName ||
+                          currentUser.firstName ||
+                          "Anonymous",
+                        avatar:
+                          currentUser.avatar ||
+                          currentUser.profilePicture ||
+                          "",
+                      }
+                    : undefined
+                }
+              />
             </div>
           </div>
         )}

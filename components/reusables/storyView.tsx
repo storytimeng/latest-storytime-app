@@ -39,6 +39,20 @@ const StoryView: React.FC<StoryViewProps> = ({ mode, storyId }) => {
     handleCancel,
     pageTitle,
     backLink,
+    handleBack,
+    // Lifted state
+    formData,
+    formErrors,
+    currentStep,
+    storyStructure,
+    setFormData,
+    setFormErrors,
+    setCurrentStep,
+    setStoryStructure,
+    handleFieldChange,
+    handleGenreToggle,
+    validateForm,
+    handleStructureNext,
   } = useStoryViewLogic({ mode, storyId });
 
   // Show loading state while fetching data in edit mode
@@ -49,6 +63,7 @@ const StoryView: React.FC<StoryViewProps> = ({ mode, storyId }) => {
           title={pageTitle}
           backLink={backLink}
           className="px-4 pt-5 pb-4"
+          onBackPress={handleBack}
         />
         <LoadingState message="Loading story..." />
       </div>
@@ -64,6 +79,7 @@ const StoryView: React.FC<StoryViewProps> = ({ mode, storyId }) => {
           backLink={backLink}
           className="px-4 pt-5 pb-4"
           titleClassName="text-xl text-primary-colour font-bold"
+          onBackPress={handleBack}
         />
 
         {/* Story Form with Suspense for lazy loading */}
@@ -76,6 +92,19 @@ const StoryView: React.FC<StoryViewProps> = ({ mode, storyId }) => {
               onCancel={handleCancel}
               isLoading={isCreating || isUpdating}
               createdStoryId={createdStoryId}
+              // Pass lifted state
+              formData={formData}
+              formErrors={formErrors}
+              currentStep={currentStep}
+              storyStructure={storyStructure}
+              setFormData={setFormData}
+              setFormErrors={setFormErrors}
+              setCurrentStep={setCurrentStep}
+              setStoryStructure={setStoryStructure}
+              handleFieldChange={handleFieldChange}
+              handleGenreToggle={handleGenreToggle}
+              validateForm={validateForm}
+              handleStructureNext={handleStructureNext}
             />
           </Suspense>
         </div>

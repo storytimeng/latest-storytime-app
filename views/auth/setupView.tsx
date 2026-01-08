@@ -94,6 +94,8 @@ export default function SetupView() {
                 onImagePreviewToggle={setShowImagePreview}
                 onImageSelect={handleImageSelection}
                 onImageAccept={handleImageAccept}
+                onPreviewChange={setup.setImagePreview}
+                onUploadReady={setup.setUploadTrigger}
                 onNext={setup.goNext}
                 onSkip={setup.skipStep}
                 canContinue={setup.canContinue}

@@ -59,7 +59,20 @@ export interface StoryFormProps {
   onSubmit: (data: StoryFormData, chapters?: Chapter[], parts?: Part[]) => void;
   onCancel?: () => void;
   isLoading?: boolean;
-  createdStoryId?: string | null; // For caching chapters/episodes after story creation
+  createdStoryId?: string | null;
+  // Lifted state props
+  formData: StoryFormData;
+  formErrors: Partial<Record<keyof StoryFormData, string>>;
+  currentStep: "form" | "structure" | "writing" | "additional";
+  storyStructure: StoryStructure;
+  setFormData: React.Dispatch<React.SetStateAction<StoryFormData>>;
+  setFormErrors: React.Dispatch<React.SetStateAction<Partial<Record<keyof StoryFormData, string>>>>;
+  setCurrentStep: React.Dispatch<React.SetStateAction<"form" | "structure" | "writing" | "additional">>;
+  setStoryStructure: React.Dispatch<React.SetStateAction<StoryStructure>>;
+  handleFieldChange: (field: keyof StoryFormData, value: string | number | boolean | string[]) => void;
+  handleGenreToggle: (genre: string) => void;
+  validateForm: () => boolean;
+  handleStructureNext: (structure: StoryStructure) => void;
 }
 
 // Story View Types

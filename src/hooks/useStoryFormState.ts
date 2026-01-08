@@ -137,8 +137,11 @@ export function useStoryFormState({
   const validateForm = useCallback((): boolean => {
     const errors: Partial<Record<keyof StoryFormData, string>> = {};
 
+    const titleRegex = /^[a-zA-Z0-9\s.,'?!-]+$/;
     if (!formData.title.trim()) {
       errors.title = "Story title is required";
+    } else if (!titleRegex.test(formData.title)) {
+      errors.title = "Title contains invalid characters. Only letters, numbers, spaces, and basic punctuation are allowed.";
     }
 
     // Description: 50-100 words, at least 50 chars

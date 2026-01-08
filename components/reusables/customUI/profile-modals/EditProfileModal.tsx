@@ -78,6 +78,7 @@ export const EditProfileModal = () => {
                 aspectRatio="square"
                 placeholder="Upload Avatar"
                 className="rounded-full overflow-hidden"
+                autoUpload={true}
               />
             </div>
           </div>

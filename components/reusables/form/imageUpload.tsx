@@ -14,6 +14,7 @@ import { ImagePlus, X, FolderOpen, Link as LinkIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import FormField from "./formField";
 import { showToast } from "@/lib/showNotification";
+import { useImageUpload } from "@/src/hooks/useImageUpload";
 
 interface ImageUploadProps {
   value?: string;
@@ -21,6 +22,9 @@ interface ImageUploadProps {
   className?: string;
   aspectRatio?: "video" | "square" | "auto";
   placeholder?: string;
+  autoUpload?: boolean;
+  onUploadReady?: (uploadFn: () => Promise<string | null>) => void;
+  useUpload?: () => { upload: (file: File) => Promise<string | null>; isUploading: boolean };
 }
 
 const ImageUpload: React.FC<ImageUploadProps> = ({
@@ -29,6 +33,9 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
   className,
   aspectRatio = "video",
   placeholder = "Add cover image",
+  autoUpload = false,
+  onUploadReady,
+  useUpload = useImageUpload,
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<"preview" | "upload">("upload");
@@ -36,7 +43,10 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
   const [isValidUrl, setIsValidUrl] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const { upload, isUploading: isHookUploading } = useUpload();
 
   // Validate image URL
   const validateImageUrl = useCallback((url: string): Promise<boolean> => {
@@ -58,6 +68,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
     async (url: string) => {
       setImageUrl(url);
       setPreviewUrl(null);
+      setSelectedFile(null); // Clear selected file if user switches to URL
 
       if (url) {
         setIsLoading(true);
@@ -75,7 +86,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
   );
 
   // Handle file upload
-  const handleFileUpload = useCallback(
+  const handleFileSelect = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
       const file = event.target.files?.[0];
       if (file) {
@@ -89,12 +100,14 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
           return;
         }
 
+        setSelectedFile(file);
+
         // Create preview URL
         const reader = new FileReader();
         reader.onload = (e) => {
           const result = e.target?.result as string;
           setPreviewUrl(result);
-          setImageUrl(result);
+          setImageUrl(""); // Clear URL input if user switches to file
           setIsValidUrl(true);
         };
         reader.readAsDataURL(file);
@@ -104,14 +117,50 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
   );
 
   // Handle save image
-  const handleSaveImage = useCallback(() => {
-    if (isValidUrl && (previewUrl || imageUrl)) {
-      onChange(previewUrl || imageUrl);
+  const handleSaveImage = useCallback(async () => {
+    // Case 1: URL provided
+    if (imageUrl && isValidUrl) {
+      onChange(imageUrl);
       setIsModalOpen(false);
-      setImageUrl("");
-      setPreviewUrl(null);
+      return;
     }
-  }, [isValidUrl, previewUrl, imageUrl, onChange]);
+
+    // Case 2: File selected
+    if (selectedFile) {
+        // 2a: Auto upload enabled
+        if (autoUpload) {
+            try {
+                const uploadedUrl = await upload(selectedFile);
+                if (uploadedUrl) {
+                    onChange(uploadedUrl);
+                    setIsModalOpen(false);
+                }
+            } catch (error) {
+                // Error handling is done in hook
+            }
+        } else {
+            // 2b: Manual upload (pass blob URL and expose trigger)
+            if (previewUrl) {
+                onChange(previewUrl);
+                
+                if (onUploadReady) {
+                    onUploadReady(async () => {
+                       return await upload(selectedFile);
+                    });
+                }
+                setIsModalOpen(false);
+            }
+        }
+    }
+  }, [imageUrl, isValidUrl, selectedFile, autoUpload, upload, onChange, onUploadReady, previewUrl]);
+
+  // Reset state on close
+  const resetState = useCallback(() => {
+    setImageUrl("");
+    setPreviewUrl(null);
+    setIsValidUrl(false);
+    setSelectedFile(null);
+  }, []);
 
   // Handle remove image
   const handleRemoveImage = useCallback(() => {
@@ -120,18 +169,14 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
 
   // Handle clear preview
   const handleClearPreview = useCallback(() => {
-    setPreviewUrl(null);
-    setImageUrl("");
-    setIsValidUrl(false);
-  }, []);
+    resetState();
+  }, [resetState]);
 
   // Handle modal close
   const handleModalClose = useCallback(() => {
     setIsModalOpen(false);
-    setImageUrl("");
-    setPreviewUrl(null);
-    setIsValidUrl(false);
-  }, []);
+    resetState();
+  }, [resetState]);
 
   const aspectRatioClass = {
     video: "aspect-video",
@@ -139,20 +184,22 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
     auto: "aspect-auto min-h-[200px]",
   }[aspectRatio];
 
+  const isSaving = isLoading || isHookUploading;
+
   return (
     <>
       <div className={cn("relative", aspectRatioClass, className)}>
         {value ? (
           // Display selected image
-          <div className="relative w-full h-full overflow-hidden rounded-lg bg-light-grey-2 group">
-            {/* Clickable image for full-screen preview */}
-            <div
-              className="w-full h-full cursor-pointer"
-              onClick={() => {
+          <div 
+            className="relative w-full h-full overflow-hidden rounded-lg bg-light-grey-2 group cursor-pointer"
+            onClick={() => {
                 setModalMode("preview");
                 setIsModalOpen(true);
-              }}
-            >
+            }}
+          >
+            {/* Image for full-screen preview */}
+            <div className="w-full h-full">
               <Image
                 src={value}
                 alt="Cover image"
@@ -248,6 +295,8 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
           backdrop: modalMode === "preview" ? "bg-black/90" : "",
           wrapper: "items-end sm:items-center",
         }}
+        isDismissable={!isSaving}
+        hideCloseButton={isSaving}
       >
         <ModalContent>
           {modalMode === "preview" ? (
@@ -315,10 +364,16 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
                         size="sm"
                         className="absolute text-white bg-red-500 shadow-lg top-2 right-2 hover:bg-red-600"
                         onClick={handleClearPreview}
+                        isDisabled={isSaving}
                       >
                         <X size={16} />
                       </Button>
                     </div>
+                    {!autoUpload && (
+                        <p className="text-sm text-center text-gray-500">
+                        Image will be uploaded when you save changes.
+                        </p>
+                    )}
                     <p className="text-sm text-center text-gray-500">
                       Click the X to choose a different image
                     </p>
@@ -334,7 +389,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
                         ref={fileInputRef}
                         type="file"
                         accept="image/*"
-                        onChange={handleFileUpload}
+                        onChange={handleFileSelect}
                         className="hidden"
                       />
                       <Button
@@ -387,16 +442,17 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
                   variant="ghost"
                   onPress={handleModalClose}
                   className="text-primary-colour"
+                  isDisabled={isSaving}
                 >
                   Cancel
                 </Button>
                 <Button
                   className="bg-primary-shade-6 text-universal-white"
                   onPress={handleSaveImage}
-                  isDisabled={!isValidUrl}
-                  isLoading={isLoading}
+                  isDisabled={!isValidUrl || isSaving}
+                  isLoading={isSaving}
                 >
-                  {value ? "Update Image" : "Add Image"}
+                  {isSaving ? "Uploading..." : (value ? "Update Image" : "Add Image")}
                 </Button>
               </ModalFooter>
             </>

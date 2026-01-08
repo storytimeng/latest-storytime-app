@@ -13,6 +13,12 @@ import {
   storiesControllerCreateChapterComment,
   storiesControllerGetEpisodeComments,
   storiesControllerCreateEpisodeComment,
+  storiesControllerUpdateComment,
+  storiesControllerDeleteComment,
+  storiesControllerUpdateChapterComment,
+  storiesControllerDeleteChapterComment,
+  storiesControllerUpdateEpisodeComment,
+  storiesControllerDeleteEpisodeComment,
   storiesControllerGetChapterById,
   storiesControllerGetEpisodeById,
   storiesControllerGetStoryChapters,
@@ -181,7 +187,7 @@ export function useStoryComments(storyId: string | undefined) {
     if (!storyId || !content.trim()) return;
 
     try {
-      await storiesControllerCreateComment({
+      const response = await storiesControllerCreateComment({
         body: {
           storyId,
           content: content.trim(),
@@ -191,8 +197,37 @@ export function useStoryComments(storyId: string | undefined) {
 
       // Revalidate comments and count
       await Promise.all([mutate(), mutateCommentCount()]);
+      
+      // Return the new comment data
+      return (response.data as any)?.data || response.data;
     } catch (error) {
       console.error("Failed to create comment:", error);
+      throw error;
+    }
+  };
+
+  const updateComment = async (id: string, content: string) => {
+    if (!content.trim()) return;
+    try {
+      await storiesControllerUpdateComment({
+        path: { id },
+        body: { content: content.trim() },
+      });
+      await mutate();
+    } catch (error) {
+      console.error("Failed to update comment:", error);
+      throw error;
+    }
+  };
+
+  const deleteComment = async (id: string) => {
+    try {
+      await storiesControllerDeleteComment({
+        path: { id },
+      });
+      await Promise.all([mutate(), mutateCommentCount()]);
+    } catch (error) {
+      console.error("Failed to delete comment:", error);
       throw error;
     }
   };
@@ -204,6 +239,8 @@ export function useStoryComments(storyId: string | undefined) {
     error,
     mutate,
     createComment,
+    updateComment,
+    deleteComment,
   };
 }
 
@@ -340,15 +377,44 @@ export function useChapterComments(chapterId: string | undefined) {
     if (!chapterId || !content.trim()) return;
 
     try {
-      await storiesControllerCreateChapterComment({
+      const response = await storiesControllerCreateChapterComment({
         path: { chapterId },
         body: { content, parentCommentId } as any,
       });
 
       // Revalidate comments
       await mutate();
+      
+      // Return the new comment data
+      return (response.data as any)?.data || response.data;
     } catch (error) {
       console.error("Failed to create chapter comment:", error);
+      throw error;
+    }
+  };
+
+  const updateComment = async (commentId: string, content: string) => {
+    if (!content.trim()) return;
+    try {
+      await storiesControllerUpdateChapterComment({
+        path: { commentId },
+        body: { content: content.trim() } as any,
+      });
+      await mutate();
+    } catch (error) {
+      console.error("Failed to update chapter comment:", error);
+      throw error;
+    }
+  };
+
+  const deleteComment = async (commentId: string) => {
+    try {
+      await storiesControllerDeleteChapterComment({
+        path: { commentId },
+      });
+      await mutate();
+    } catch (error) {
+      console.error("Failed to delete chapter comment:", error);
       throw error;
     }
   };
@@ -359,6 +425,8 @@ export function useChapterComments(chapterId: string | undefined) {
     error,
     mutate,
     createComment,
+    updateComment,
+    deleteComment,
   };
 }
 
@@ -392,14 +460,43 @@ export function useEpisodeComments(episodeId: string | undefined) {
     if (!episodeId || !content.trim()) return;
 
     try {
-      await storiesControllerCreateEpisodeComment({
+      const response = await storiesControllerCreateEpisodeComment({
         path: { episodeId },
         body: { content, parentCommentId } as any,
       });
 
       await mutate();
+      
+      // Return the new comment data
+      return (response.data as any)?.data || response.data;
     } catch (error) {
       console.error("Failed to create episode comment:", error);
+      throw error;
+    }
+  };
+
+  const updateComment = async (commentId: string, content: string) => {
+    if (!content.trim()) return;
+    try {
+      await storiesControllerUpdateEpisodeComment({
+        path: { commentId },
+        body: { content: content.trim() } as any,
+      });
+      await mutate();
+    } catch (error) {
+      console.error("Failed to update episode comment:", error);
+      throw error;
+    }
+  };
+
+  const deleteComment = async (commentId: string) => {
+    try {
+      await storiesControllerDeleteEpisodeComment({
+        path: { commentId },
+      });
+      await mutate();
+    } catch (error) {
+      console.error("Failed to delete episode comment:", error);
       throw error;
     }
   };
@@ -410,6 +507,8 @@ export function useEpisodeComments(episodeId: string | undefined) {
     error,
     mutate,
     createComment,
+    updateComment,
+    deleteComment,
   };
 }
 

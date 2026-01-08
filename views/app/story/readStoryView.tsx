@@ -195,17 +195,27 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
       : "single";
 
   // Get comment creation function based on content type
-  const { createComment: createStoryComment } = useStoryComments(
-    structure === "single" ? storyId : undefined
-  );
+  const {
+    createComment: createStoryComment,
+    updateComment: updateStoryComment,
+    deleteComment: deleteStoryComment,
+  } = useStoryComments(structure === "single" ? storyId : undefined);
 
-  const { createComment: createChapterComment } = useChapterComments(
+  const {
+    createComment: createChapterComment,
+    updateComment: updateChapterComment,
+    deleteComment: deleteChapterComment,
+  } = useChapterComments(
     structure === "chapters" && selectedChapterId
       ? selectedChapterId
       : undefined
   );
 
-  const { createComment: createEpisodeComment } = useEpisodeComments(
+  const {
+    createComment: createEpisodeComment,
+    updateComment: updateEpisodeComment,
+    deleteComment: deleteEpisodeComment,
+  } = useEpisodeComments(
     structure === "episodes" && selectedChapterId
       ? selectedChapterId
       : undefined
@@ -217,11 +227,31 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
 
   const handleCreateComment = async (text: string, parentId?: string) => {
     if (structure === "chapters") {
-      await createChapterComment(text, parentId);
+      return await createChapterComment(text, parentId);
     } else if (structure === "episodes") {
-      await createEpisodeComment(text, parentId);
+      return await createEpisodeComment(text, parentId);
     } else {
-      await createStoryComment(text, parentId);
+      return await createStoryComment(text, parentId);
+    }
+  };
+
+  const handleUpdateComment = async (id: string, text: string) => {
+    if (structure === "chapters") {
+      await updateChapterComment(id, text);
+    } else if (structure === "episodes") {
+      await updateEpisodeComment(id, text);
+    } else {
+      await updateStoryComment(id, text);
+    }
+  };
+
+  const handleDeleteComment = async (id: string) => {
+    if (structure === "chapters") {
+      await deleteChapterComment(id);
+    } else if (structure === "episodes") {
+      await deleteEpisodeComment(id);
+    } else {
+      await deleteStoryComment(id);
     }
   };
 
@@ -479,6 +509,8 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
               <CommentsSection
                 comments={comments || []}
                 onSubmitComment={handleCreateComment}
+                onUpdateComment={handleUpdateComment}
+                onDeleteComment={handleDeleteComment}
                 isThreaded={true}
                 currentUser={
                   user

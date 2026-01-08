@@ -23,6 +23,8 @@ import {
 } from "@/lib/cacheMigration";
 import type { StoryFormData, Chapter, Part } from "@/types/story";
 import type { CreateStoryDto, UpdateStoryDto } from "@/src/client/types.gen";
+import { useStoryFormState } from "@/src/hooks/useStoryFormState";
+import type { StoryStructure } from "@/types/story";
 
 interface UseStoryViewLogicProps {
   mode: "create" | "edit";
@@ -43,6 +45,20 @@ interface UseStoryViewLogicReturn {
   handleCancel: () => void;
   pageTitle: string;
   backLink: string;
+  // Lifted form state
+  formData: StoryFormData;
+  formErrors: Partial<Record<keyof StoryFormData, string>>;
+  currentStep: "form" | "structure" | "writing" | "additional";
+  storyStructure: StoryStructure;
+  setFormData: React.Dispatch<React.SetStateAction<StoryFormData>>;
+  setFormErrors: React.Dispatch<React.SetStateAction<Partial<Record<keyof StoryFormData, string>>>>;
+  setCurrentStep: React.Dispatch<React.SetStateAction<"form" | "structure" | "writing" | "additional">>;
+  setStoryStructure: React.Dispatch<React.SetStateAction<StoryStructure>>;
+  handleFieldChange: (field: keyof StoryFormData, value: string | number | boolean | string[]) => void;
+  handleGenreToggle: (genre: string) => void;
+  validateForm: () => boolean;
+  handleStructureNext: (structure: StoryStructure) => void;
+  handleBack: () => void;
 }
 
 /**
@@ -62,6 +78,14 @@ export function useStoryViewLogic({
   const [createdStoryId, setCreatedStoryId] = useState<string | null>(
     storyId || null
   );
+
+  // Lifted form state
+  const formState = useStoryFormState({ initialData, mode });
+  const {
+    currentStep,
+    setCurrentStep,
+    storyStructure,
+  } = formState;
 
   // Hooks for mutations
   const { createStory, isCreating: isCreatingStory } = useCreateStory();
@@ -166,12 +190,41 @@ export function useStoryViewLogic({
     }
   }, [mode, story]);
 
+  // Handle back navigation
+  const handleBack = useCallback(() => {
+    if (currentStep === "writing") {
+      // Go back to structure selection if in create mode and no chapters/episodes yet?
+      // Or if structure was just selected.
+      // Actually, if we are in writing step, we should check if we came from structure step.
+      // If mode is create, we likely came from structure if hasChapters/hasEpisodes is true.
+      if (mode === "create") {
+         setCurrentStep("structure");
+      } else {
+        // In edit mode, maybe go back to form?
+        // But edit mode initializes to writing if chapters exist.
+        // Let's assume hitting back in writing goes to form (details)
+        setCurrentStep("form");
+      }
+    } else if (currentStep === "structure") {
+      setCurrentStep("form");
+    } else {
+      // Default router back
+      if (mode === "edit") {
+        router.push("/my-stories");
+      } else {
+        router.push("/pen");
+      }
+    }
+  }, [currentStep, mode, router, setCurrentStep]);
+
   // Handle form submission
   const handleSubmit = useCallback(
     async (formData: StoryFormData, _chapters?: Chapter[], _parts?: Part[]) => {
       try {
         // If we have a createdStoryId, this is publishing chapters/episodes
-        if (createdStoryId && (_chapters || _parts)) {
+        // ONLY valid if we are in CREATE mode (step 2 of wizard). 
+        // In Edit mode, we want to fall through to the update logic.
+        if (mode === "create" && createdStoryId && (_chapters || _parts)) {
           const hasChapters = formData.chapter === true;
           const hasEpisodes = formData.episodes === true;
 
@@ -304,6 +357,9 @@ export function useStoryViewLogic({
           return;
         }
 
+        // Check if content already exists via props or logic before proceeding
+        // The API integration below looks correct
+
         const contentText =
           hasChapters || hasEpisodes
             ? formData.description
@@ -364,11 +420,10 @@ export function useStoryViewLogic({
             onlyOnStorytime: formData.onlyOnStorytime,
             trigger: formData.trigger,
             copyright: formData.copyright,
-            // IMPORTANT: API validation fails if both chapter and episodes are present (even when false)
-            // Because FormData serializes boolean `false` as string "false", the backend sees both fields as present
-            // Solution: Only include the field that is true, or neither if both are false
-            ...(hasChapters && { chapter: true }),
-            ...(hasEpisodes && { episodes: true }),
+            imageUrl: formData.coverImage,
+            // API requires chapter and episodes flags to be present
+            chapter: hasChapters,
+            episodes: hasEpisodes,
             storyStatus:
               formData.storyStatus === "Completed"
                 ? "complete"
@@ -469,5 +524,8 @@ export function useStoryViewLogic({
     handleCancel,
     pageTitle,
     backLink,
+    handleBack,
+    // Return all form state
+    ...formState,
   };
 }

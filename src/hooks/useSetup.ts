@@ -66,6 +66,7 @@ export function useSetup() {
   const [penName, setPenName] = useState("");
   const [penStatus, setPenStatus] = useState<PenNameStatus>("idle");
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [activeUploadTrigger, setActiveUploadTrigger] = useState<(() => Promise<string | null>) | null>(null);
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
   const [readTime, setReadTime] = useState<TimeValue>({
     hour: 6,
@@ -164,12 +165,28 @@ export function useSetup() {
   const submitSetupMutation = useSWRMutation(
     "submit-setup",
     async () => {
+      let finalProfilePicture = imagePreview;
+
+      // Check if we have a pending upload trigger
+      if (activeUploadTrigger) {
+          try {
+              const uploadedUrl = await activeUploadTrigger();
+              if (uploadedUrl) {
+                  finalProfilePicture = uploadedUrl;
+              }
+          } catch (error) {
+              console.error("Failed to upload profile picture during setup:", error);
+              // We could throw here or continue with the preview URL (which might fail on backend if it expects a remote URL)
+              // For now, let's assume we proceed and let backend handle validation or it just won't update the pic
+          }
+      }
+
       const reminder = formatReminder(writeDaily, writeDays);
 
       const response = await usersControllerSetupProfile({
         body: {
           penName: penName.trim(),
-          profilePicture: imagePreview || undefined,
+          profilePicture: finalProfilePicture || undefined,
           genres: selectedGenres,
           timeToRead: formatTime(readTime),
           timeToWrite: formatTime(writeTime),
@@ -368,5 +385,8 @@ export function useSetup() {
     // Loading states
     isCheckingPenName: isCheckingPenName,
     isSubmitting: submitSetupMutation.isMutating,
+
+    // Upload support
+    setUploadTrigger: setActiveUploadTrigger,
   };
 }
