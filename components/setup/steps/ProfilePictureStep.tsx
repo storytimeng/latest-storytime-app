@@ -56,8 +56,7 @@ export default function ProfilePictureStep({
              <ImageUpload 
                 value={imagePreview || ""}
                 onChange={(url) => onPreviewChange(url)}
-                autoUpload={false}
-                onUploadReady={onUploadReady}
+                autoUpload={true}
                 aspectRatio="square"
                 className="rounded-full overflow-hidden w-full h-full"
                 placeholder="Upload Photo"

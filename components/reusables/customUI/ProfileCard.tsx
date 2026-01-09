@@ -48,7 +48,7 @@ const ProfileCard = ({
     : username || "@Anonymous";
   
   const displayImage = useLiveData && user
-    ? user.avatar || "/person-with-sunglasses-smiling.jpg"
+    ? user.profilePicture || user.avatar || "/person-with-sunglasses-smiling.jpg"
     : profileImage || "/person-with-sunglasses-smiling.jpg";
 
   if (useLiveData && isLoading) {

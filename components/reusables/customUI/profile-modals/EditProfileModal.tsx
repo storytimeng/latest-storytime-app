@@ -9,12 +9,15 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useUpdateProfile } from "@/src/hooks/useUpdateProfile";
 import { useUserProfile } from "@/src/hooks/useUserProfile";
 import ImageUpload from "@/components/reusables/form/imageUpload";
+import { useImageUpload } from "@/src/hooks/useImageUpload";
+import { UPLOAD_PATHS } from "@/src/config/uploadPaths";
 
 export const EditProfileModal = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useUserProfile();
   const { updateProfile, isUpdating } = useUpdateProfile();
+  const { upload: avatarUpload, isUploading: isAvatarUploading } = useImageUpload(UPLOAD_PATHS.USER_AVATAR);
 
   const [formData, setFormData] = useState({
     firstName: "",
@@ -22,6 +25,7 @@ export const EditProfileModal = () => {
     penName: "",
     bio: "",
     avatar: "",
+    profilePicture: "",
   });
 
   useEffect(() => {
@@ -31,7 +35,8 @@ export const EditProfileModal = () => {
         lastName: user.lastName || "",
         penName: user.penName || "",
         bio: user.bio || "",
-        avatar: user.avatar || "",
+        avatar: user.avatar || user.profilePicture || "",
+        profilePicture: user.profilePicture || user.avatar || "",
       });
     }
   }, [user]);
@@ -43,7 +48,13 @@ export const EditProfileModal = () => {
   };
 
   const handleChange = (field: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ 
+      ...prev, 
+      [field]: value,
+      // If updating one, update both for compatibility
+      ...(field === "avatar" ? { profilePicture: value } : {}),
+      ...(field === "profilePicture" ? { avatar: value } : {}),
+    }));
   };
 
   const handleSave = async () => {
@@ -53,6 +64,7 @@ export const EditProfileModal = () => {
       penName: formData.penName,
       bio: formData.bio,
       avatar: formData.avatar,
+      profilePicture: formData.profilePicture,
     });
 
     if (success) {
@@ -79,6 +91,8 @@ export const EditProfileModal = () => {
                 placeholder="Upload Avatar"
                 className="rounded-full overflow-hidden"
                 autoUpload={true}
+                uploadFn={avatarUpload}
+                isUploading={isAvatarUploading}
               />
             </div>
           </div>
