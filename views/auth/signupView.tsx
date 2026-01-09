@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormField, PasswordField } from "@/components/reusables/form";
@@ -81,6 +81,11 @@ export default function SignupView({
   >({});
   const [showPasswordRequirements, setShowPasswordRequirements] =
     useState(false);
+
+  useEffect(() => {
+    router.prefetch("/auth/otp");
+    router.prefetch("/home");
+  }, [router]);
   const [passwordRequirements, setPasswordRequirements] = useState<
     PasswordRequirement[]
   >([

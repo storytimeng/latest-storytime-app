@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormField, PasswordField } from "@/components/reusables/form";
@@ -40,6 +40,10 @@ export default function LoginView({ onSuccess, onSwitchView }: LoginViewProps) {
     rememberMe: false,
   });
   const [errors, setErrors] = useState<Partial<LoginFormData>>({});
+
+  useEffect(() => {
+    router.prefetch("/home");
+  }, [router]);
 
   const handleInputChange = (
     field: keyof LoginFormData,

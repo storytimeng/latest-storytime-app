@@ -57,6 +57,9 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
   useEffect(() => {
+    // Prefetch parent story route
+    router.prefetch(`/story/${storyId}`);
+
     if (!isAuthenticated()) {
       openAuthModal("login");
       router.push(`/story/${storyId}`);

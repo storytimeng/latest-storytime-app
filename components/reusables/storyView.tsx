@@ -23,6 +23,9 @@ const StoryView: React.FC<StoryViewProps> = ({ mode, storyId }) => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
   useEffect(() => {
+    // Prefetch home route as it's the most common redirect
+    router.prefetch("/");
+    
     if (!isAuthenticated()) {
       openAuthModal("login");
       router.push("/");

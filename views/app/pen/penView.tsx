@@ -47,6 +47,11 @@ const PenView = () => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
   useEffect(() => {
+    // Prefetch static routes
+    router.prefetch("/");
+    router.prefetch("/library");
+    router.prefetch("/new-story");
+
     if (!isAuthenticated()) {
       openAuthModal("login");
       router.push("/");

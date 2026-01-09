@@ -8,6 +8,13 @@ import { PageHeader } from "@/components/reusables/customUI";
 const AllGenres = () => {
   const router = useRouter();
 
+  // Prefetch all genre routes on mount
+  React.useEffect(() => {
+    allGenres.forEach((genre) => {
+      router.prefetch(`/all-genres/${encodeURIComponent(genre.toLowerCase())}`);
+    });
+  }, [router]);
+
   // Standard genre list to match the design
   const allGenres = [
     "Anonymous",

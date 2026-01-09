@@ -64,6 +64,23 @@ const NewLibraryView = () => {
   // Map reading history to library story format
   const libraryStories = history.map((item: any) => {
     const story = item.story;
+    
+    // Fallback for null story (e.g. deleted stories)
+    if (!story) {
+      return {
+        id: item.storyId || `deleted-${item.id}`,
+        title: "Unavailable Story",
+        description: "This story is no longer available.",
+        imageUrl: "/images/storytime-fallback.png",
+        coverImage: "/images/storytime-fallback.png",
+        author: { penName: "Former Author" },
+        genres: [],
+        status: "deleted",
+        progress: 0,
+        isDeleted: true
+      };
+    }
+
     return {
       id: story.id,
       title: story.title,
@@ -211,7 +228,7 @@ const NewLibraryView = () => {
               <div className="grid grid-cols-2 gap-4">
                 {currentStories.map((story: any) => (
                   <div key={story.id} className="relative">
-                    <StoryCard story={story} />
+                    <StoryCard story={story} hideStats={activeTab === "library"} />
                     {/* Show delete button for downloads */}
                     {activeTab === "downloads" && (
                       <button

@@ -109,6 +109,15 @@ export function useStoryViewLogic({
     mode === "edit" ? storyId : undefined
   );
 
+  // Prefetch common navigation routes
+  useEffect(() => {
+    router.prefetch("/my-stories");
+    router.prefetch("/pen");
+    if (storyId) {
+      router.prefetch(`/story/${storyId}`);
+    }
+  }, [router, storyId]);
+
   // Initialize cache on mount
   useEffect(() => {
     const initCache = async () => {

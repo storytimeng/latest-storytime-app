@@ -84,6 +84,7 @@
     "zustand": "^4.5.7"
   },
   "devDependencies": {
+    "@eslint/compat": "^2.0.0",
     "@hey-api/openapi-ts": "^0.88.0",
     "@next/eslint-plugin-next": "15.3.4",
     "@react-types/shared": "3.32.1",

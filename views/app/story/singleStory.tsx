@@ -103,6 +103,18 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
   const [showFab, setShowFab] = useState(false);
 
   useEffect(() => {
+    // Prefetch home route
+    router.prefetch("/home");
+    
+    // Prefetch genre routes if available
+    if (story?.genres) {
+      story.genres.forEach((genre: any) => {
+        router.prefetch(`/category?genre=${encodeURIComponent(genre)}`);
+      });
+    }
+  }, [router, story?.genres]);
+
+  useEffect(() => {
     return scrollY.on("change", (latest) => {
       setShowFab(latest > 400);
     });

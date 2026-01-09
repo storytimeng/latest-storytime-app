@@ -43,6 +43,10 @@ function OtpContent({
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
+    // Prefetch destination routes based on type
+    router.prefetch("/auth/setup");
+    router.prefetch("/auth/update-password");
+
     if (resendTimer > 0) {
       timerRef.current = setTimeout(() => {
         setResendTimer((prev) => prev - 1);
@@ -54,7 +58,7 @@ function OtpContent({
         clearTimeout(timerRef.current);
       }
     };
-  }, [resendTimer]);
+  }, [resendTimer, router]);
 
   const handleOtpChange = (value: string) => {
     setOtpValue(value);

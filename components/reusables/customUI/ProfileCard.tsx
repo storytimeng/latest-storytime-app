@@ -34,6 +34,10 @@ const ProfileCard = ({
   const router = useRouter();
   const { user, isLoading } = useUserProfile();
 
+  React.useEffect(() => {
+    router.prefetch("/settings");
+  }, [router]);
+
   // Use live data from API if enabled
   const displayName = useLiveData && user 
     ?  `${user.firstName || ""} ${user.lastName || ""}`.trim() || "User"
