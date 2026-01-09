@@ -61,6 +61,7 @@ export default function ProfilePictureStep({
                 aspectRatio="square"
                 className="rounded-full overflow-hidden w-full h-full"
                 placeholder="Upload Photo"
+                folder="profiles"
              />
           </div>
         </div>

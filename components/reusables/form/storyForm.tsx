@@ -559,10 +559,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
 
 
   // Define specialized upload hook for cover images
-  const useCoverUpload = React.useCallback(
-      () => useImageUpload(UPLOAD_PATHS.STORY_COVER),
-      []
-    );
+  const { upload: coverUpload, isUploading: isCoverUploading } = useImageUpload(UPLOAD_PATHS.STORY_COVER);
 
   // Render cover image section
   const renderCoverImage = () => (
@@ -573,7 +570,8 @@ const StoryForm: React.FC<StoryFormProps> = ({
       placeholder="Add cover image"
       className="w-full"
       autoUpload={true}
-      useUpload={useCoverUpload}
+      uploadFn={coverUpload}
+      isUploading={isCoverUploading}
     />
   );
 

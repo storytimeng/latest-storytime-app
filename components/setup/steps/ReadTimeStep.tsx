@@ -1,6 +1,6 @@
 import { Magnetik_Regular } from "@/lib/font";
 import StepContainer from "../shared/StepContainer";
-import TimePicker from "../shared/TimePicker";
+import { TimePicker } from "@/components/reusables/customUI/TimePicker";
 import type { StepComponentProps, TimeValue } from "../types";
 
 interface ReadTimeStepProps extends StepComponentProps {
@@ -23,10 +23,10 @@ export default function ReadTimeStep({
       canContinue={canContinue}
       isTransitioning={isTransitioning}
     >
-      <div className="flex items-center justify-center py-4">
+      <div className="flex items-center justify-center py-6">
         <TimePicker value={readTime} onChange={onReadTimeChange} />
       </div>
-      <p className={`text-grey-2 body-text-small-regular-auto mt-6 ${Magnetik_Regular.className}`}>
+      <p className={`text-grey-2 body-text-small-regular-auto mt-6 text-center ${Magnetik_Regular.className}`}>
         Note: You will always get a reminder
       </p>
     </StepContainer>

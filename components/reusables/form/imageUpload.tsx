@@ -24,7 +24,9 @@ interface ImageUploadProps {
   placeholder?: string;
   autoUpload?: boolean;
   onUploadReady?: (uploadFn: () => Promise<string | null>) => void;
-  useUpload?: () => { upload: (file: File) => Promise<string | null>; isUploading: boolean };
+  uploadFn?: (file: File) => Promise<string | null>;
+  isUploading?: boolean;
+  folder?: string;
 }
 
 const ImageUpload: React.FC<ImageUploadProps> = ({
@@ -35,7 +37,9 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
   placeholder = "Add cover image",
   autoUpload = false,
   onUploadReady,
-  useUpload = useImageUpload,
+  uploadFn: propUploadFn,
+  isUploading: propIsUploading,
+  folder = "general",
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<"preview" | "upload">("upload");
@@ -46,7 +50,11 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const { upload, isUploading: isHookUploading } = useUpload();
+  // Use internal hook if no prop provided
+  const { upload: internalUploadFn, isUploading: internalIsUploading } = useImageUpload(folder);
+  
+  const upload = propUploadFn || internalUploadFn;
+  const isHookUploading = propIsUploading !== undefined ? propIsUploading : internalIsUploading;
 
   // Validate image URL
   const validateImageUrl = useCallback((url: string): Promise<boolean> => {
