@@ -10,7 +10,7 @@ import {
 } from "@heroui/modal";
 import { Button } from "@heroui/button";
 import Image from "next/image";
-import { ImagePlus, X, FolderOpen, Link as LinkIcon } from "lucide-react";
+import { ImagePlus, X, FolderOpen, Link as LinkIcon, Pen } from "lucide-react";
 import { cn } from "@/lib/utils";
 import FormField from "./formField";
 import { showToast } from "@/lib/showNotification";
@@ -27,6 +27,7 @@ interface ImageUploadProps {
   uploadFn?: (file: File) => Promise<string | null>;
   isUploading?: boolean;
   folder?: string;
+  variant?: "default" | "profile";
 }
 
 const ImageUpload: React.FC<ImageUploadProps> = ({
@@ -40,6 +41,7 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
   uploadFn: propUploadFn,
   isUploading: propIsUploading,
   folder = "general",
+  variant = "default",
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<"preview" | "upload">("upload");
@@ -225,20 +227,36 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
               </div>
             </div>
 
-            {/* Change cover button - positioned like in the image */}
-            <Button
-              variant="solid"
-              className="absolute flex items-center gap-2 text-gray-700 bg-white shadow-lg bottom-4 right-4 hover:bg-gray-50"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation(); // Prevent triggering the image click
-                setModalMode("upload");
-                setIsModalOpen(true);
-              }}
-            >
-              <ImagePlus size={18} />
-              <span className="text-sm font-medium">Change cover image</span>
-            </Button>
+            {/* Case: Edit/Pen Icon overlay for profile variant */}
+            {variant === "profile" ? (
+              <Button
+                isIconOnly
+                variant="solid"
+                className="absolute flex items-center justify-center w-8 h-8 rounded-full -bottom-1 -right-1 bg-universal-white cursor-pointer hover:bg-gray-100 transition-colors shadow-md z-10"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setModalMode("upload");
+                  setIsModalOpen(true);
+                }}
+              >
+                <Pen className="w-4 h-4 text-primary-colour" />
+              </Button>
+            ) : (
+              /* Case: Change cover button for default variant */
+              <Button
+                variant="solid"
+                className="absolute flex items-center gap-2 text-gray-700 bg-white shadow-lg bottom-4 right-4 hover:bg-gray-50"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation(); // Prevent triggering the image click
+                  setModalMode("upload");
+                  setIsModalOpen(true);
+                }}
+              >
+                <ImagePlus size={18} />
+                <span className="text-sm font-medium">Change cover image</span>
+              </Button>
+            )}
 
             {/* Small remove button in top-right corner */}
             <Button

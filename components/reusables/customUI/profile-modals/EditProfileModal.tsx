@@ -93,6 +93,7 @@ export const EditProfileModal = () => {
                 autoUpload={true}
                 uploadFn={avatarUpload}
                 isUploading={isAvatarUploading}
+                variant="profile"
               />
             </div>
           </div>

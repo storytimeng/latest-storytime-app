@@ -61,6 +61,7 @@ export default function ProfilePictureStep({
                 className="rounded-full overflow-hidden w-full h-full"
                 placeholder="Upload Photo"
                 folder="profiles"
+                variant="profile"
              />
           </div>
         </div>
