@@ -5,7 +5,7 @@ import { Modal, ModalContent, ModalHeader, ModalBody } from "@heroui/modal";
 import { Button } from "@heroui/button";
 import { Slider } from "@heroui/slider";
 import { Autocomplete, AutocompleteItem } from "@heroui/autocomplete";
-import { X, RotateCcw, Mic } from "lucide-react";
+import { X, RotateCcw } from "lucide-react";
 import { Magnetik_Medium, Magnetik_Regular } from "@/lib/font";
 import { useTTSStore, PLAYBACK_RATES } from "@/src/stores/useTTSStore";
 import { PremiumGate } from "@/components/reusables/PremiumGate";
@@ -18,19 +18,6 @@ interface TTSSettingsModalProps {
   onVoiceChange: (voice: SpeechSynthesisVoice) => void;
 }
 
-// Group voices by type for better organization
-const categorizeVoice = (voice: SpeechSynthesisVoice): string => {
-  if (voice.name.includes("Online")) return "Online (Cloud)";
-  if (voice.name.includes("Microsoft")) return "Microsoft";
-  if (voice.name.includes("Google")) return "Google";
-  return "System";
-};
-
-// Check if voice is British English
-const isBritishEnglish = (voice: SpeechSynthesisVoice): boolean => {
-  return /en[-_]GB/i.test(voice.lang);
-};
-
 export const TTSSettingsModal: React.FC<TTSSettingsModalProps> = ({
   isOpen,
   onClose,
@@ -38,8 +25,14 @@ export const TTSSettingsModal: React.FC<TTSSettingsModalProps> = ({
   selectedVoice,
   onVoiceChange,
 }) => {
-  const { playbackRate, setPlaybackRate, pitch, setPitch, volume, setVolume } =
-    useTTSStore();
+  const {
+    playbackRate,
+    setPlaybackRate,
+    pitch,
+    setPitch,
+    volume,
+    setVolume,
+  } = useTTSStore();
 
   // Local state for sliders to avoid too many store updates
   const [localPitch, setLocalPitch] = useState(pitch);
@@ -73,36 +66,18 @@ export const TTSSettingsModal: React.FC<TTSSettingsModalProps> = ({
     setLocalVolume(1);
   };
 
-  // Prepare voice items for autocomplete, sorted with British English first
-  const voiceItems = useMemo(() => {
-    return availableVoices
-      .map((voice) => ({
-        voice,
-        key: voice.voiceURI,
-        label: voice.name,
-        description: `${voice.lang} | ${categorizeVoice(voice)}`,
-        isBritish: isBritishEnglish(voice),
-        isOnline: voice.name.includes("Online"),
-      }))
-      .sort((a, b) => {
-        // Sort: Online British > British > Online > Others
-        if (a.isBritish && a.isOnline && !(b.isBritish && b.isOnline)) return -1;
-        if (b.isBritish && b.isOnline && !(a.isBritish && a.isOnline)) return 1;
-        if (a.isBritish && !b.isBritish) return -1;
-        if (b.isBritish && !a.isBritish) return 1;
-        if (a.isOnline && !b.isOnline) return -1;
-        if (b.isOnline && !a.isOnline) return 1;
-        return a.label.localeCompare(b.label);
-      });
+  // Group voices by language for potential future categorization
+  // and prioritize the current selected voice at the top
+  const sortedVoices = useMemo(() => {
+    return [...availableVoices].sort((a, b) => {
+      // Prioritize English
+      const aEn = a.lang.startsWith('en');
+      const bEn = b.lang.startsWith('en');
+      if (aEn && !bEn) return -1;
+      if (!aEn && bEn) return 1;
+      return a.name.localeCompare(b.name);
+    });
   }, [availableVoices]);
-
-  const handleVoiceSelect = (key: React.Key | null) => {
-    if (!key) return;
-    const voice = availableVoices.find((v) => v.voiceURI === key);
-    if (voice) {
-      onVoiceChange(voice);
-    }
-  };
 
   return (
     <Modal
@@ -112,9 +87,9 @@ export const TTSSettingsModal: React.FC<TTSSettingsModalProps> = ({
       placement="bottom"
       backdrop="blur"
       classNames={{
-        base: "bg-accent-shade-1 max-h-[85vh]",
+        base: "bg-accent-shade-1 max-h-[80vh]",
         header: "border-b border-light-grey-2",
-        body: "py-4 overflow-y-auto",
+        body: "py-4",
       }}
     >
       <ModalContent>
@@ -122,64 +97,58 @@ export const TTSSettingsModal: React.FC<TTSSettingsModalProps> = ({
           <span className={`text-primary-colour ${Magnetik_Medium.className}`}>
             TTS Settings
           </span>
-          
+          <Button
+            isIconOnly
+            variant="light"
+            size="sm"
+            onPress={onClose}
+            className="text-grey-1"
+          >
+            <X className="w-4 h-4" />
+          </Button>
         </ModalHeader>
 
         <ModalBody className="space-y-6">
           {/* Voice Selection with Autocomplete */}
           <div className="space-y-2">
             <label
-              className={`text-sm text-primary-shade-4 ${Magnetik_Medium.className} flex items-center gap-2`}
+              className={`text-sm text-primary-shade-4 ${Magnetik_Medium.className}`}
             >
-              <Mic className="w-4 h-4" />
               Voice
             </label>
             <PremiumGate feature="advancedVoices" lockedMessage="Premium voices">
               <Autocomplete
-                label="Select a voice"
-                placeholder="Search voices..."
-                defaultSelectedKey={selectedVoice?.voiceURI}
-                onSelectionChange={handleVoiceSelect}
+                aria-label="Select Voice"
+                defaultItems={sortedVoices}
+                selectedKey={selectedVoice?.voiceURI}
+                onSelectionChange={(key) => {
+                  if (key) {
+                    const voice = availableVoices.find(v => v.voiceURI === key);
+                    if (voice) onVoiceChange(voice);
+                  }
+                }}
+                variant="bordered"
                 size="sm"
                 classNames={{
-                  base: "w-full",
-                  listboxWrapper: "max-h-[200px]",
+                   base: "w-full",
+                   listboxWrapper: "max-h-[300px]",
+                   selectorButton: "text-primary-shade-4"
                 }}
                 inputProps={{
                   classNames: {
                     input: `${Magnetik_Regular.className} text-primary-colour`,
-                    inputWrapper: "bg-white border border-light-grey-2",
-                  },
-                }}
-                listboxProps={{
-                  emptyContent: "No voices found",
+                    inputWrapper: "bg-white border-light-grey-2"
+                  }
                 }}
               >
-                {voiceItems.map((item) => (
-                  <AutocompleteItem
-                    key={item.key}
-                    textValue={item.label}
-                    className="py-2"
-                  >
+                {(voice) => (
+                  <AutocompleteItem key={voice.voiceURI} textValue={voice.name}>
                     <div className="flex flex-col">
-                      <span
-                        className={`text-sm text-primary-shade-5 ${Magnetik_Medium.className}`}
-                      >
-                        {item.label}
-                        {item.isBritish && item.isOnline && (
-                          <span className="ml-2 text-xs text-complimentary-colour">
-                            ★ Recommended
-                          </span>
-                        )}
-                      </span>
-                      <span
-                        className={`text-xs text-grey-1 ${Magnetik_Regular.className}`}
-                      >
-                        {item.description}
-                      </span>
+                      <span className="text-small">{voice.name}</span>
+                      <span className="text-tiny text-default-400">{voice.lang}</span>
                     </div>
                   </AutocompleteItem>
-                ))}
+                )}
               </Autocomplete>
             </PremiumGate>
           </div>
@@ -239,6 +208,7 @@ export const TTSSettingsModal: React.FC<TTSSettingsModalProps> = ({
                   filler: "bg-complimentary-colour",
                   thumb: "bg-complimentary-colour",
                 }}
+                aria-label="Pitch"
               />
             </PremiumGate>
           </div>
@@ -263,6 +233,7 @@ export const TTSSettingsModal: React.FC<TTSSettingsModalProps> = ({
                 filler: "bg-complimentary-colour",
                 thumb: "bg-complimentary-colour",
               }}
+              aria-label="Volume"
             />
           </div>
 

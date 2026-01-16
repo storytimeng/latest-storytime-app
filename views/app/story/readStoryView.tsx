@@ -27,6 +27,7 @@ import { useUserStore } from "@/src/stores/useUserStore";
 import { useAuthStore } from "@/src/stores/useAuthStore";
 import { useAuthModalStore } from "@/src/stores/useAuthModalStore";
 import { useTTSStore } from "@/src/stores/useTTSStore";
+import { TTSProvider } from "@/components/providers/TTSProvider";
 
 // Component imports
 import { OfflineBanner } from "./components/OfflineBanner";
@@ -46,24 +47,12 @@ interface ReadStoryViewProps {
   storyId: string;
 }
 
-// TTS controls interface
-interface TTSControls {
-  isPlaying: boolean;
-  isPaused: boolean;
-  start: () => void;
-  pause: () => void;
-  stop: () => void;
-}
-
 export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialChapterId = searchParams.get("chapterId");
   const initialEpisodeId = searchParams.get("episodeId");
   const initialContentId = initialChapterId || initialEpisodeId;
-
-  // TTS Controls state
-  const [ttsControls, setTTSControls] = useState<TTSControls | undefined>();
 
   // Auth check
   const { openModal: openAuthModal } = useAuthModalStore();
@@ -453,114 +442,113 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
   }
 
   return (
-    <div
-      ref={contentContainerRef}
-      className="min-h-screen bg-accent-shade-1 relative overflow-hidden max-w-[28rem] mx-auto"
-    >
-      {/* Offline Mode Banner */}
-      {isUsingOfflineData && <OfflineBanner />}
+    <TTSProvider>
+      <div
+        ref={contentContainerRef}
+        className="min-h-screen bg-accent-shade-1 relative overflow-hidden max-w-[28rem] mx-auto"
+      >
+        {/* Offline Mode Banner */}
+        {isUsingOfflineData && <OfflineBanner />}
 
-      {/* Story Header */}
-      <StoryHeader
-        storyId={storyId}
-        currentTitle={currentTitle}
-        storyTitle={activeStory.title}
-        isVisible={isNavVisible}
-        showDropdown={showDropdown}
-        onToggleDropdown={() => setShowDropdown(!showDropdown)}
-        isOffline={isUsingOfflineData}
-      />
-
-      {/* Chapter Selector */}
-      {hasNavigation && navigationList && (
-        <ChapterSelector
-          navigationList={navigationList}
-          selectedChapterId={selectedChapterId}
-          onChapterChange={handleChapterChange}
+        {/* Story Header */}
+        <StoryHeader
+          storyId={storyId}
+          currentTitle={currentTitle}
+          storyTitle={activeStory.title}
           isVisible={isNavVisible}
+          showDropdown={showDropdown}
+          onToggleDropdown={() => setShowDropdown(!showDropdown)}
+          isOffline={isUsingOfflineData}
         />
-      )}
 
-      {/* Story Content */}
-      {isContentLoading ? (
-        <div className="px-4 py-8">
-          <Skeleton className="w-full rounded-lg h-96" />
-        </div>
-      ) : currentContent && (
-      <React.Fragment>
-          <div ref={storyContentRef}>
-            <StoryContent
-              content={currentContent}
-              authorName={
-                activeStory.anonymous
-                  ? "Anonymous"
-                  : activeStory.author?.penName || "Unknown Author"
-              }
-              authorAvatar={activeStory.author?.avatar}
-              hasNavigation={hasNavigation}
-              description={activeStory.description}
-              onTTSStateChange={setTTSControls}
-            />
+        {/* Chapter Selector */}
+        {hasNavigation && navigationList && (
+          <ChapterSelector
+            navigationList={navigationList}
+            selectedChapterId={selectedChapterId}
+            onChapterChange={handleChapterChange}
+            isVisible={isNavVisible}
+          />
+        )}
+
+        {/* Story Content */}
+        {isContentLoading ? (
+          <div className="px-4 py-8">
+            <Skeleton className="w-full rounded-lg h-96" />
           </div>
-
-          {/* Interaction Section (only when online) */}
-          {isOnline && (
-            <div className="px-4 pb-6">
-              <InteractionSection
-                likeCount={displayLikeCount}
-                commentCount={displayCommentCount}
-                isLiked={isLiked || false}
-                showComments={true}
-                onToggleLike={toggleLike}
-                onToggleComments={() => {}}
+        ) : currentContent && (
+        <React.Fragment>
+            <div ref={storyContentRef}>
+              <StoryContent
+                content={currentContent}
+                authorName={
+                  activeStory.anonymous
+                    ? "Anonymous"
+                    : activeStory.author?.penName || "Unknown Author"
+                }
+                authorAvatar={activeStory.author?.avatar}
+                hasNavigation={hasNavigation}
+                description={activeStory.description}
               />
-
-              {/* Comments Section */}
-              <div ref={commentsSectionRef} className="pb-24">
-                <Suspense
-                  fallback={
-                    <div className="py-4">
-                      <Skeleton className="w-full h-20 rounded-lg" />
-                    </div>
-                  }
-                >
-                  <CommentsSection
-                    comments={comments || []}
-                    onSubmitComment={handleCreateComment}
-                    onUpdateComment={handleUpdateComment}
-                    onDeleteComment={handleDeleteComment}
-                    isThreaded={true}
-                    currentUser={
-                      user
-                        ? {
-                            id: user.id,
-                            penName: user.penName || user.firstName || "Anonymous",
-                            avatar: user.avatar || user.profilePicture || "",
-                          }
-                        : undefined
-                    }
-                  />
-                </Suspense>
-              </div>
             </div>
-          )}
 
-          {/* Navigation Bar */}
-          {hasNavigation && navigationList && (
-            <NavigationBar
-              currentIndex={currentIndex}
-              total={navigationList.length}
-              onPrevious={handlePrevious}
-              onNext={handleNext}
-              isVisible={isNavVisible}
-              navigationList={navigationList}
-              selectedChapterId={selectedChapterId}
-              ttsControls={ttsControls}
-              storyContent={currentContent}
-            />
-          )}
-        </React.Fragment>
-      )}
-    </div>
+            {/* Interaction Section (only when online) */}
+            {isOnline && (
+              <div className="px-4 pb-6">
+                <InteractionSection
+                  likeCount={displayLikeCount}
+                  commentCount={displayCommentCount}
+                  isLiked={isLiked || false}
+                  showComments={true}
+                  onToggleLike={toggleLike}
+                  onToggleComments={() => {}}
+                />
+
+                {/* Comments Section */}
+                <div ref={commentsSectionRef} className="pb-24">
+                  <Suspense
+                    fallback={
+                      <div className="py-4">
+                        <Skeleton className="w-full h-20 rounded-lg" />
+                      </div>
+                    }
+                  >
+                    <CommentsSection
+                      comments={comments || []}
+                      onSubmitComment={handleCreateComment}
+                      onUpdateComment={handleUpdateComment}
+                      onDeleteComment={handleDeleteComment}
+                      isThreaded={true}
+                      currentUser={
+                        user
+                          ? {
+                              id: user.id,
+                              penName: user.penName || user.firstName || "Anonymous",
+                              avatar: user.avatar || user.profilePicture || "",
+                            }
+                          : undefined
+                      }
+                    />
+                  </Suspense>
+                </div>
+              </div>
+            )}
+
+            {/* Navigation Bar */}
+            {hasNavigation && navigationList && (
+              <NavigationBar
+                currentIndex={currentIndex}
+                total={navigationList.length}
+                onPrevious={handlePrevious}
+                onNext={handleNext}
+                isVisible={isNavVisible}
+                navigationList={navigationList}
+                selectedChapterId={selectedChapterId}
+              />
+            )}
+          </React.Fragment>
+        )}
+      </div>
+    </TTSProvider>
   );
 };
