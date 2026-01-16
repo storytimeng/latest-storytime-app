@@ -3,16 +3,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTTSStore, estimateReadingDuration } from "@/src/stores/useTTSStore";
 
-export interface TTSOptions {
-  text: string;
-  onSentenceChange?: (index: number) => void;
-  onWordChange?: (index: number) => void;
-  onEnd?: () => void;
-  onError?: (error: Error) => void;
-}
-
 export interface Sentence {
   text: string;
+  index: number;
+  startOffset: number;
+  endOffset: number;
+  html?: string;
+}
+
+export interface TTSSegment {
+  text: string;
+  html?: string;
   index: number;
   startOffset: number;
   endOffset: number;
@@ -31,7 +32,7 @@ export const parseSentences = (text: string): Sentence[] => {
     .replace(/\s+/g, " ")
     .trim();
 
-  // Split by sentence-ending punctuation 
+  // Split by sentence-ending punctuation
   const sentenceRegex = /[^.!?\n]+[.!?\n]+|[^.!?\n]+$/g;
   const matches = plainText.match(sentenceRegex) || [plainText];
 
@@ -53,12 +54,15 @@ export const parseSentences = (text: string): Sentence[] => {
 };
 
 export const countWords = (text: string): number => {
-  const plainText = text.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+  const plainText = text
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
   return plainText.split(/\s+/).filter((w) => w.length > 0).length;
 };
 
 export interface UseTTSReturn {
-  sentences: Sentence[];
+  sentences: (Sentence | TTSSegment)[];
   isPlaying: boolean;
   isPaused: boolean;
   currentSentenceIndex: number;
@@ -84,60 +88,90 @@ export interface UseTTSReturn {
   isSpeaking: boolean;
 }
 
-export const useTTS = (content: string): UseTTSReturn => {
+type StopReason = "manual" | "auto" | "seek" | "settings-change";
+
+export const useTTS = (content: string | TTSSegment[]): UseTTSReturn => {
   const store = useTTSStore();
-  const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [availableVoices, setAvailableVoices] = useState<
+    SpeechSynthesisVoice[]
+  >([]);
   const [isSpeaking, setIsSpeaking] = useState(false);
-  
+
+  // Refs for stable state access in callbacks
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const elapsedTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const stopReasonRef = useRef<StopReason>("manual");
+  const pendingSeekIndexRef = useRef<number | null>(null);
+  const currentSentenceRef = useRef<number>(0);
 
   const isSupported = useMemo(() => {
     return typeof window !== "undefined" && "speechSynthesis" in window;
   }, []);
 
-  const sentences = useMemo(() => parseSentences(content), [content]);
+  // Determine segments
+  const sentences = useMemo(() => {
+    if (Array.isArray(content)) {
+      return content.map((s, i) => ({ ...s, index: i }));
+    }
+    return parseSentences(content);
+  }, [content]);
 
-  const wordCount = useMemo(() => countWords(content), [content]);
+  // Handle plain text conversion for Duration estimation
+  const fullText = useMemo(() => {
+    return sentences.map((s) => s.text).join(" ");
+  }, [sentences]);
+
+  const wordCount = useMemo(() => countWords(fullText), [fullText]);
   const estimatedDuration = useMemo(
     () => estimateReadingDuration(wordCount, store.playbackRate),
     [wordCount, store.playbackRate]
   );
 
+  // Update store with sentence count and duration - using getState to avoid dependency issues
   useEffect(() => {
-    store.setTotalSentences(sentences.length);
-    store.setEstimatedDuration(estimatedDuration);
+    const currentStore = useTTSStore.getState();
+    if (currentStore.totalSentences !== sentences.length) {
+      useTTSStore.getState().setTotalSentences(sentences.length);
+    }
+    if (currentStore.estimatedDurationSeconds !== estimatedDuration) {
+      useTTSStore.getState().setEstimatedDuration(estimatedDuration);
+    }
   }, [sentences.length, estimatedDuration]);
 
   // Smart voice selection logic
   const findBestVoice = useCallback((voices: SpeechSynthesisVoice[]) => {
     if (!voices.length) return null;
 
-    const libby = voices.find(v => v.name.includes("Libby") && v.name.includes("Microsoft"));
+    const libby = voices.find(
+      (v) => v.name.includes("Libby") && v.name.includes("Microsoft")
+    );
     if (libby) return libby;
 
-    const msNatural = voices.find(v => 
-      v.name.includes("Microsoft") && 
-      v.name.includes("Online") && 
-      v.name.includes("Natural") &&
-      v.lang.startsWith("en")
+    const msNatural = voices.find(
+      (v) =>
+        v.name.includes("Microsoft") &&
+        v.name.includes("Online") &&
+        v.name.includes("Natural") &&
+        v.lang.startsWith("en")
     );
     if (msNatural) return msNatural;
 
-    const sonia = voices.find(v => v.name.includes("Sonia"));
+    const sonia = voices.find((v) => v.name.includes("Sonia"));
     if (sonia) return sonia;
 
-    const britishOnline = voices.find(v => 
-      v.lang === "en-GB" && 
-      (v.name.includes("Online") || v.localService === false)
+    const britishOnline = voices.find(
+      (v) =>
+        v.lang === "en-GB" &&
+        (v.name.includes("Online") || v.localService === false)
     );
     if (britishOnline) return britishOnline;
 
-    const british = voices.find(v => v.lang === "en-GB");
+    const british = voices.find((v) => v.lang === "en-GB");
     if (british) return british;
 
-    return voices.find(v => v.default && v.lang.startsWith("en")) || voices[0];
+    return (
+      voices.find((v) => v.default && v.lang.startsWith("en")) || voices[0]
+    );
   }, []);
 
   useEffect(() => {
@@ -147,14 +181,16 @@ export const useTTS = (content: string): UseTTSReturn => {
       const voices = window.speechSynthesis.getVoices();
       if (voices.length > 0) {
         setAvailableVoices(voices);
-        
+
         const currentUri = useTTSStore.getState().selectedVoiceURI;
-        const currentVoiceExists = voices.some(v => v.voiceURI === currentUri);
-        
+        const currentVoiceExists = voices.some(
+          (v) => v.voiceURI === currentUri
+        );
+
         if (!currentUri || !currentVoiceExists) {
           const bestVoice = findBestVoice(voices);
           if (bestVoice) {
-            store.setSelectedVoiceURI(bestVoice.voiceURI);
+            useTTSStore.getState().setSelectedVoiceURI(bestVoice.voiceURI);
           }
         }
       }
@@ -162,26 +198,36 @@ export const useTTS = (content: string): UseTTSReturn => {
 
     loadVoices();
     window.speechSynthesis.addEventListener("voiceschanged", loadVoices);
-    
-    // Safety fallback
-    const safetyTimer = setInterval(loadVoices, 1000);
 
     return () => {
       window.speechSynthesis.removeEventListener("voiceschanged", loadVoices);
-      clearInterval(safetyTimer);
     };
-  }, [isSupported, findBestVoice, store]);
+  }, [isSupported, findBestVoice]);
 
   const selectedVoice = useMemo(() => {
     if (!store.selectedVoiceURI) return null;
-    return availableVoices.find((v) => v.voiceURI === store.selectedVoiceURI) || null;
+    return (
+      availableVoices.find((v) => v.voiceURI === store.selectedVoiceURI) || null
+    );
   }, [availableVoices, store.selectedVoiceURI]);
 
+  // Elapsed timer with speed adjustment
   const startElapsedTimer = useCallback(() => {
     if (elapsedTimerRef.current) clearInterval(elapsedTimerRef.current);
+
+    const updateInterval = 200; // Update every 200ms for smooth progress
+
     elapsedTimerRef.current = setInterval(() => {
-      store.setElapsedSeconds(store.elapsedSeconds + 1);
-    }, 1000);
+      const currentState = useTTSStore.getState();
+      if (currentState.isPlaying && !currentState.isPaused) {
+        const increment = (updateInterval / 1000) * currentState.playbackRate;
+        const newElapsed = Math.min(
+          currentState.elapsedSeconds + increment,
+          currentState.estimatedDurationSeconds
+        );
+        store.setElapsedSeconds(newElapsed);
+      }
+    }, updateInterval);
   }, [store]);
 
   const stopElapsedTimer = useCallback(() => {
@@ -191,140 +237,231 @@ export const useTTS = (content: string): UseTTSReturn => {
     }
   }, []);
 
+  // Core speak function - using ref to break circular dependency
+  const speakSentenceRef = useRef<(index: number) => void>(() => {});
+
   const speakSentence = useCallback(
     (sentenceIndex: number) => {
-      if (!isSupported || sentenceIndex >= sentences.length) {
+      if (
+        !isSupported ||
+        sentenceIndex >= sentences.length ||
+        sentenceIndex < 0
+      ) {
         store.stop();
         stopElapsedTimer();
+        setIsSpeaking(false);
         return;
       }
 
+      // Cancel any ongoing speech
       window.speechSynthesis.cancel();
 
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
-      
-      timeoutRef.current = setTimeout(() => {
-        const sentence = sentences[sentenceIndex];
-        if (!sentence) return;
+      const sentence = sentences[sentenceIndex];
+      if (!sentence) return;
 
-        const utterance = new SpeechSynthesisUtterance(sentence.text);
-        utterance.rate = store.playbackRate;
-        utterance.pitch = store.pitch;
-        utterance.volume = store.volume;
+      // Track current sentence in ref for onend handler
+      currentSentenceRef.current = sentenceIndex;
 
-        if (selectedVoice) {
-          utterance.voice = selectedVoice;
+      // Get fresh state for settings
+      const currentState = useTTSStore.getState();
+
+      const utterance = new SpeechSynthesisUtterance(sentence.text);
+      utterance.rate = currentState.playbackRate;
+      utterance.pitch = currentState.pitch;
+      utterance.volume = currentState.volume;
+
+      if (selectedVoice) {
+        utterance.voice = selectedVoice;
+      }
+
+      utterance.onstart = () => {
+        setIsSpeaking(true);
+        store.setCurrentSentenceIndex(sentenceIndex);
+        store.setPlaying(true);
+        store.setPaused(false);
+        startElapsedTimer();
+      };
+
+      utterance.onend = () => {
+        const reason = stopReasonRef.current;
+        const currentIdx = currentSentenceRef.current;
+
+        // Handle seek - jump to pending index
+        if (reason === "seek" && pendingSeekIndexRef.current !== null) {
+          const targetIndex = pendingSeekIndexRef.current;
+          pendingSeekIndexRef.current = null;
+          stopReasonRef.current = "auto";
+          speakSentenceRef.current(targetIndex);
+          return;
         }
 
-        utterance.onstart = () => {
-          setIsSpeaking(true);
-          store.setCurrentSentenceIndex(sentenceIndex);
-          startElapsedTimer();
-        };
+        // Handle settings change - restart from current sentence
+        if (reason === "settings-change") {
+          stopReasonRef.current = "auto";
+          speakSentenceRef.current(currentIdx);
+          return;
+        }
 
-        utterance.onend = () => {
-          const currentState = useTTSStore.getState();
-          if (currentState.isPlaying && !currentState.isPaused) {
-            if (sentenceIndex < sentences.length - 1) {
-              speakSentence(sentenceIndex + 1);
-            } else {
-              store.stop();
-              stopElapsedTimer();
-              setIsSpeaking(false);
-            }
+        // Normal end - continue to next sentence
+        const freshState = useTTSStore.getState();
+        if (reason === "auto" && freshState.isPlaying && !freshState.isPaused) {
+          if (currentIdx < sentences.length - 1) {
+            speakSentenceRef.current(currentIdx + 1);
           } else {
+            // Finished all sentences
+            store.stop();
+            stopElapsedTimer();
             setIsSpeaking(false);
           }
-        };
-
-        utterance.onerror = (event) => {
-          console.error("TTS Error:", event);
+        } else {
           setIsSpeaking(false);
-          if (event.error !== 'interrupted' && event.error !== 'canceled') {
-              setTimeout(() => {
-                  if (store.isPlaying) speakSentence(sentenceIndex + 1);
-              }, 500);
-          }
-        };
+        }
+      };
 
-        utteranceRef.current = utterance;
+      utterance.onerror = (event) => {
+        // Ignore interrupted/canceled errors (happens during seek/settings change)
+        if (event.error === "interrupted" || event.error === "canceled") {
+          return;
+        }
+        console.error("TTS Error:", event);
+        setIsSpeaking(false);
+      };
+
+      utteranceRef.current = utterance;
+      stopReasonRef.current = "auto";
+
+      // Small delay to ensure cancel() completed
+      setTimeout(() => {
         window.speechSynthesis.speak(utterance);
       }, 50);
     },
-    [isSupported, sentences, selectedVoice, store, startElapsedTimer, stopElapsedTimer]
+    [
+      isSupported,
+      sentences,
+      selectedVoice,
+      store,
+      startElapsedTimer,
+      stopElapsedTimer,
+    ]
   );
 
+  // Update ref when speakSentence changes
+  useEffect(() => {
+    speakSentenceRef.current = speakSentence;
+  }, [speakSentence]);
+
+  // Public API
   const play = useCallback(() => {
     if (!isSupported) return;
-    store.play();
-    speakSentence(store.currentSentenceIndex);
+
+    const currentState = useTTSStore.getState();
+    store.setPlaying(true);
+    store.setPaused(false);
+
+    speakSentence(currentState.currentSentenceIndex);
   }, [isSupported, store, speakSentence]);
 
   const pause = useCallback(() => {
     if (!isSupported) return;
-    store.pause();
-    window.speechSynthesis.pause();
+
+    stopReasonRef.current = "manual";
+    window.speechSynthesis.cancel();
+    store.setPaused(true);
+    store.setPlaying(false);
     stopElapsedTimer();
     setIsSpeaking(false);
   }, [isSupported, store, stopElapsedTimer]);
 
   const resume = useCallback(() => {
-    if (!isSupported) return;
-    store.play();
-    if (window.speechSynthesis.paused) {
-      window.speechSynthesis.resume();
-      startElapsedTimer();
-      setIsSpeaking(true);
-    } else {
-      speakSentence(store.currentSentenceIndex);
-    }
-  }, [isSupported, store, startElapsedTimer, speakSentence]);
+    play();
+  }, [play]);
 
   const stop = useCallback(() => {
     if (!isSupported) return;
+
+    stopReasonRef.current = "manual";
     window.speechSynthesis.cancel();
     store.stop();
     stopElapsedTimer();
     setIsSpeaking(false);
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
   }, [isSupported, store, stopElapsedTimer]);
 
   const seekToSentence = useCallback(
     (index: number) => {
       if (!isSupported || index < 0 || index >= sentences.length) return;
 
-      store.seekToSentence(index);
-      const averageSecondsPerSentence = estimatedDuration / (sentences.length || 1);
-      store.setElapsedSeconds(Math.floor(index * averageSecondsPerSentence));
+      const currentState = useTTSStore.getState();
 
-      if (store.isPlaying) {
-        speakSentence(index);
+      // Update store immediately
+      useTTSStore.getState().setCurrentSentenceIndex(index);
+      currentSentenceRef.current = index;
+
+      // Calculate elapsed time based on sentence position
+      const averageSecondsPerSentence =
+        currentState.estimatedDurationSeconds / (sentences.length || 1);
+      useTTSStore
+        .getState()
+        .setElapsedSeconds(Math.floor(index * averageSecondsPerSentence));
+
+      // If playing, seek by stopping and restarting at new position
+      if (currentState.isPlaying && !currentState.isPaused) {
+        stopReasonRef.current = "seek";
+        pendingSeekIndexRef.current = index;
+        window.speechSynthesis.cancel();
       }
     },
-    [isSupported, sentences.length, estimatedDuration, store, speakSentence]
+    [isSupported, sentences.length]
   );
 
-  const setSelectedVoice = useCallback(
-    (voice: SpeechSynthesisVoice) => {
-      store.setSelectedVoiceURI(voice.voiceURI);
-      if (store.isPlaying) {
-        speakSentence(store.currentSentenceIndex);
+  const setSelectedVoice = useCallback((voice: SpeechSynthesisVoice) => {
+    useTTSStore.getState().setSelectedVoiceURI(voice.voiceURI);
+
+    const currentState = useTTSStore.getState();
+    if (currentState.isPlaying && !currentState.isPaused) {
+      stopReasonRef.current = "settings-change";
+      window.speechSynthesis.cancel();
+    }
+  }, []);
+
+  // Handle playback rate changes mid-speech
+  const prevRateRef = useRef(store.playbackRate);
+  useEffect(() => {
+    if (prevRateRef.current !== store.playbackRate) {
+      prevRateRef.current = store.playbackRate;
+      const currentState = useTTSStore.getState();
+      if (currentState.isPlaying && !currentState.isPaused && isSpeaking) {
+        stopReasonRef.current = "settings-change";
+        window.speechSynthesis.cancel();
       }
-    },
-    [store, speakSentence]
-  );
-  
+    }
+  }, [store.playbackRate, isSpeaking]);
+
+  // Handle pitch changes mid-speech
+  const prevPitchRef = useRef(store.pitch);
+  useEffect(() => {
+    if (prevPitchRef.current !== store.pitch) {
+      prevPitchRef.current = store.pitch;
+      const currentState = useTTSStore.getState();
+      if (currentState.isPlaying && !currentState.isPaused && isSpeaking) {
+        stopReasonRef.current = "settings-change";
+        window.speechSynthesis.cancel();
+      }
+    }
+  }, [store.pitch, isSpeaking]);
+
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (isSupported) window.speechSynthesis.cancel();
       stopElapsedTimer();
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
   }, [isSupported, stopElapsedTimer]);
 
   const progress = useMemo(() => {
     if (sentences.length <= 1) return 0;
-    return Math.round((store.currentSentenceIndex / (sentences.length - 1)) * 100);
+    return Math.round(
+      (store.currentSentenceIndex / (sentences.length - 1)) * 100
+    );
   }, [store.currentSentenceIndex, sentences.length]);
 
   return {

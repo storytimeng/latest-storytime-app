@@ -18,7 +18,11 @@ import {
 } from "lucide-react";
 import { Magnetik_Medium, Magnetik_Regular } from "@/lib/font";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useTTSStore, formatDuration, PLAYBACK_RATES } from "@/src/stores/useTTSStore";
+import {
+  useTTSStore,
+  formatDuration,
+  PLAYBACK_RATES,
+} from "@/src/stores/useTTSStore";
 import { useTTSContext } from "@/components/providers/TTSProvider";
 import { TTSSettingsModal } from "./TTSSettingsModal";
 import { PremiumGate } from "@/components/reusables/PremiumGate";
@@ -44,35 +48,39 @@ export const NavigationBar = React.memo(
   }: NavigationBarProps) => {
     const router = useRouter();
     const searchParams = useSearchParams();
-    
+
     // TTS State & Controls
     const store = useTTSStore();
-    const { play, pause, stop, availableVoices } = useTTSContext();
+    const { play, pause, stop, seekToSentence, availableVoices } =
+      useTTSContext();
 
     // Local UI State
     const [showSettings, setShowSettings] = useState(false);
     const [showSpeedPopover, setShowSpeedPopover] = useState(false);
 
     // Chapter Navigation
-    const updateUrl = useCallback((direction: number) => {
-      const newIndex = currentIndex + direction;
-      if (newIndex < 0 || newIndex >= total) return;
+    const updateUrl = useCallback(
+      (direction: number) => {
+        const newIndex = currentIndex + direction;
+        if (newIndex < 0 || newIndex >= total) return;
 
-      const item = navigationList[newIndex];
-      if (!item) return;
+        const item = navigationList[newIndex];
+        if (!item) return;
 
-      const params = new URLSearchParams(searchParams.toString());
-      params.delete("chapterId");
-      params.delete("episodeId");
+        const params = new URLSearchParams(searchParams.toString());
+        params.delete("chapterId");
+        params.delete("episodeId");
 
-      if ("chapterNumber" in item) {
-        params.set("chapterId", item.id);
-      } else if ("episodeNumber" in item) {
-        params.set("episodeId", item.id);
-      }
+        if ("chapterNumber" in item) {
+          params.set("chapterId", item.id);
+        } else if ("episodeNumber" in item) {
+          params.set("episodeId", item.id);
+        }
 
-      router.replace(`?${params.toString()}`, { scroll: false });
-    }, [currentIndex, total, navigationList, searchParams, router]);
+        router.replace(`?${params.toString()}`, { scroll: false });
+      },
+      [currentIndex, total, navigationList, searchParams, router]
+    );
 
     const handlePreviousChapter = useCallback(() => {
       stop();
@@ -100,23 +108,51 @@ export const NavigationBar = React.memo(
       store.setVolume(newVolume);
     }, [store]);
 
-    // Seeker (Note: Library limitations might make precise seeking hard, 
-    // but we can at least show progress)
-    const handleSeek = (value: number | number[]) => {
-       // Disabled for now as react-text-to-speech doesn't expose easy seek
-       // to character index. 
-    };
-    
-    // Selected Voice Object
-    const selectedVoice = availableVoices.find((v: SpeechSynthesisVoice) => v.voiceURI === store.selectedVoiceURI) || null;
+    // Skip forward/backward by sentences
+    const handleSkipBack = useCallback(() => {
+      const newIndex = Math.max(0, store.currentSentenceIndex - 1);
+      seekToSentence(newIndex);
+    }, [store.currentSentenceIndex, seekToSentence]);
 
-    if (!isVisible) return null;
+    const handleSkipForward = useCallback(() => {
+      const newIndex = Math.min(
+        store.totalSentences - 1,
+        store.currentSentenceIndex + 1
+      );
+      seekToSentence(newIndex);
+    }, [store.currentSentenceIndex, store.totalSentences, seekToSentence]);
+
+    // Seeker Logic - convert time position to sentence index
+    const handleSeek = useCallback(
+      (value: number | number[]) => {
+        const seconds = Array.isArray(value) ? value[0] : value;
+
+        // Calculate index from seconds
+        if (store.estimatedDurationSeconds > 0 && store.totalSentences > 0) {
+          const percent = seconds / store.estimatedDurationSeconds;
+          const targetIndex = Math.floor(percent * store.totalSentences);
+          const safeIndex = Math.min(
+            Math.max(0, targetIndex),
+            store.totalSentences - 1
+          );
+
+          seekToSentence(safeIndex);
+        }
+      },
+      [store.estimatedDurationSeconds, store.totalSentences, seekToSentence]
+    );
+
+    // Selected Voice Object
+    const selectedVoice =
+      availableVoices.find(
+        (v: SpeechSynthesisVoice) => v.voiceURI === store.selectedVoiceURI
+      ) || null;
 
     return (
       <>
         <div
-          className={`fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[28rem] bg-accent-shade-1/95 backdrop-blur-md z-40 transition-all duration-300 border-t border-light-grey-2 shadow-lg ${
-            isVisible ? "translate-y-0" : "translate-y-full"
+          className={`fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[28rem] bg-accent-shade-1/95 backdrop-blur-md z-40 transition-transform duration-300 ease-in-out border-t border-light-grey-2 shadow-lg ${
+            isVisible ? "translate-y-0" : "translate-y-full pointer-events-none"
           }`}
         >
           <div className="px-4 pt-3 pb-4 space-y-3">
@@ -138,9 +174,9 @@ export const NavigationBar = React.memo(
                 <Button
                   isIconOnly
                   variant="light"
-                  className="text-primary-shade-4"
-                  // Skip Back 10s or sentence? Library limitation.
-                  isDisabled
+                  className="text-primary-shade-4 hover:text-primary-colour"
+                  onPress={handleSkipBack}
+                  isDisabled={store.currentSentenceIndex === 0}
                 >
                   <SkipBack className="w-5 h-5" />
                 </Button>
@@ -165,8 +201,11 @@ export const NavigationBar = React.memo(
                 <Button
                   isIconOnly
                   variant="light"
-                  className="text-primary-shade-4"
-                  isDisabled
+                  className="text-primary-shade-4 hover:text-primary-colour"
+                  onPress={handleSkipForward}
+                  isDisabled={
+                    store.currentSentenceIndex >= store.totalSentences - 1
+                  }
                 >
                   <SkipForward className="w-5 h-5" />
                 </Button>
@@ -186,95 +225,111 @@ export const NavigationBar = React.memo(
 
             {/* Middle Row: Progress */}
             <div className="flex items-center gap-3">
-               <span className={`text-xs text-primary-shade-4 w-10 text-right ${Magnetik_Regular.className}`}>
-                 {formatDuration(store.elapsedSeconds)}
-               </span>
-               <Slider 
-                 size="sm"
-                 value={store.elapsedSeconds} 
-                 maxValue={Math.max(store.estimatedDurationSeconds, 1)}
-                 step={1}
-                 aria-label="Reading Progress"
-                 isDisabled // Read-only for now due to library constraints
-                 classNames={{
-                   track: "bg-light-grey-2 h-1 cursor-default",
-                   filler: "bg-complimentary-colour",
-                   thumb: "w-0 h-0 group-hover:w-2 group-hover:h-2 bg-complimentary-colour transition-all"
-                 }}
-               />
-               <span className={`text-xs text-primary-shade-4 w-10 ${Magnetik_Regular.className}`}>
-                 {formatDuration(store.estimatedDurationSeconds)}
-               </span>
+              <span
+                className={`text-xs text-primary-shade-4 w-10 text-right ${Magnetik_Regular.className}`}
+              >
+                {formatDuration(store.elapsedSeconds)}
+              </span>
+              <Slider
+                size="sm"
+                value={store.elapsedSeconds}
+                maxValue={Math.max(store.estimatedDurationSeconds, 1)}
+                step={1}
+                aria-label="Reading Progress"
+                onChange={handleSeek} // Seek while dragging for real-time feedback
+                classNames={{
+                  base: "cursor-pointer",
+                  track: "bg-light-grey-2 h-1.5 cursor-pointer",
+                  filler: "bg-complimentary-colour",
+                  thumb:
+                    "w-3 h-3 bg-complimentary-colour shadow-md after:bg-white after:w-1.5 after:h-1.5 transition-all cursor-grab active:cursor-grabbing",
+                }}
+              />
+              <span
+                className={`text-xs text-primary-shade-4 w-10 ${Magnetik_Regular.className}`}
+              >
+                {formatDuration(store.estimatedDurationSeconds)}
+              </span>
             </div>
 
             {/* Bottom Row: Settings & Extras */}
             <div className="flex items-center justify-between">
-               {/* Speed Selector */}
-               <PremiumGate feature="playbackSpeedControl" hideWhenLocked={false}>
-                 <Popover 
-                   isOpen={showSpeedPopover} 
-                   onOpenChange={setShowSpeedPopover}
-                   placement="top"
-                 >
-                   <PopoverTrigger>
-                     <Button 
-                       size="sm" 
-                       variant="light" 
-                       className={`text-xs text-primary-shade-4 ${Magnetik_Medium.className}`}
-                     >
-                       {store.playbackRate}x
-                     </Button>
-                   </PopoverTrigger>
-                   <PopoverContent className="p-2 flex-row gap-1">
-                     {PLAYBACK_RATES.map(rate => (
-                       <Button
-                         key={rate}
-                         size="sm"
-                         variant={rate === store.playbackRate ? "solid" : "ghost"}
-                         className={`min-w-0 px-2 h-8 ${rate === store.playbackRate ? "bg-complimentary-colour text-white" : ""}`}
-                         onPress={() => {
-                           store.setPlaybackRate(rate);
-                           setShowSpeedPopover(false);
-                         }}
-                       >
-                         {rate}x
-                       </Button>
-                     ))}
-                   </PopoverContent>
-                 </Popover>
-               </PremiumGate>
-               
-               {/* Chapter Info */}
-               <div className="flex-1 text-center px-4 truncate">
-                 <span className={`text-xs text-primary-shade-4 ${Magnetik_Regular.className}`}>
-                    Chapter {currentIndex + 1} / {total}
-                 </span>
-               </div>
-               
-               {/* Right Side Controls */}
-               <div className="flex items-center gap-1">
-                 <Button
-                   isIconOnly
-                   variant="light"
-                   size="sm"
-                   onPress={handleVolumeToggle}
-                   className="text-primary-shade-4"
-                 >
-                   {store.volume === 0 ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-                 </Button>
-                 
-                 <Button
-                   isIconOnly
-                   variant="light"
-                   size="sm"
-                   onPress={() => setShowSettings(true)}
-                   className="text-primary-shade-4"
-                 >
-                   <Settings className="w-4 h-4" />
-                 </Button>
-               </div>
-            </div>
+              {/* Speed Selector */}
+              <PremiumGate
+                feature="playbackSpeedControl"
+                hideWhenLocked={false}
+              >
+                <Popover
+                  isOpen={showSpeedPopover}
+                  onOpenChange={setShowSpeedPopover}
+                  placement="top"
+                >
+                  <PopoverTrigger>
+                    <Button
+                      size="sm"
+                      variant="light"
+                      className={`text-xs text-primary-shade-4 ${Magnetik_Medium.className}`}
+                    >
+                      {store.playbackRate}x
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="p-2 flex-row gap-1">
+                    {PLAYBACK_RATES.map((rate) => (
+                      <Button
+                        key={rate}
+                        size="sm"
+                        variant={
+                          rate === store.playbackRate ? "solid" : "ghost"
+                        }
+                        className={`min-w-0 px-2 h-8 ${rate === store.playbackRate ? "bg-complimentary-colour text-white" : ""}`}
+                        onPress={() => {
+                          store.setPlaybackRate(rate);
+                          setShowSpeedPopover(false);
+                        }}
+                      >
+                        {rate}x
+                      </Button>
+                    ))}
+                  </PopoverContent>
+                </Popover>
+              </PremiumGate>
 
+              {/* Chapter Info */}
+              <div className="flex-1 text-center px-4 truncate">
+                <span
+                  className={`text-xs text-primary-shade-4 ${Magnetik_Regular.className}`}
+                >
+                  Chapter {currentIndex + 1} / {total}
+                </span>
+              </div>
+
+              {/* Right Side Controls */}
+              <div className="flex items-center gap-1">
+                <Button
+                  isIconOnly
+                  variant="light"
+                  size="sm"
+                  onPress={handleVolumeToggle}
+                  className="text-primary-shade-4"
+                >
+                  {store.volume === 0 ? (
+                    <VolumeX className="w-4 h-4" />
+                  ) : (
+                    <Volume2 className="w-4 h-4" />
+                  )}
+                </Button>
+
+                <Button
+                  isIconOnly
+                  variant="light"
+                  size="sm"
+                  onPress={() => setShowSettings(true)}
+                  className="text-primary-shade-4"
+                >
+                  <Settings className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
 

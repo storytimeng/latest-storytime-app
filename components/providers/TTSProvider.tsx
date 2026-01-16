@@ -8,6 +8,7 @@ interface TTSControls {
   pause: () => void;
   stop: () => void;
   replay: () => void;
+  seekToSentence: (index: number) => void;
 }
 
 interface TTSContextValue {
@@ -16,6 +17,7 @@ interface TTSContextValue {
   play: () => void;
   pause: () => void;
   stop: () => void;
+  seekToSentence: (index: number) => void;
   availableVoices: SpeechSynthesisVoice[];
 }
 
@@ -24,20 +26,18 @@ const TTSContext = createContext<TTSContextValue | null>(null);
 export const TTSProvider = ({ children }: { children: ReactNode }) => {
   const controlsRef = useRef<TTSControls | null>(null);
   const store = useTTSStore();
-  // We need to access voices here to pass them down, even if StoryContent uses them too.
-  // Actually, StoryContent receives voices via useVoices, but NavigationBar needs them via Context.
-  // BUT useVoices is a hook using window.speechSynthesis. 
-  // We can just use the hook here too properly.
   const [voices, setVoices] = React.useState<SpeechSynthesisVoice[]>([]);
 
   React.useEffect(() => {
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
       const updateVoices = () => {
-         setVoices(window.speechSynthesis.getVoices());
+        setVoices(window.speechSynthesis.getVoices());
       };
       updateVoices();
       window.speechSynthesis.onvoiceschanged = updateVoices;
-      return () => { window.speechSynthesis.onvoiceschanged = null; };
+      return () => {
+        window.speechSynthesis.onvoiceschanged = null;
+      };
     }
   }, []);
 
@@ -46,11 +46,8 @@ export const TTSProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const play = () => {
-    if (store.isPaused) {
-       controlsRef.current?.play(); 
-    } else {
-       controlsRef.current?.play();
-    }
+    // The hook's play() already handles pause resume logic
+    controlsRef.current?.play();
   };
 
   const pause = () => {
@@ -61,6 +58,10 @@ export const TTSProvider = ({ children }: { children: ReactNode }) => {
     controlsRef.current?.stop();
   };
 
+  const seekToSentence = (index: number) => {
+    controlsRef.current?.seekToSentence(index);
+  };
+
   return (
     <TTSContext.Provider
       value={{
@@ -69,7 +70,8 @@ export const TTSProvider = ({ children }: { children: ReactNode }) => {
         play,
         pause,
         stop,
-        availableVoices: voices
+        seekToSentence,
+        availableVoices: voices,
       }}
     >
       {children}

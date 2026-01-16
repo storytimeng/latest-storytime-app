@@ -25,37 +25,39 @@ export const TTSSettingsModal: React.FC<TTSSettingsModalProps> = ({
   selectedVoice,
   onVoiceChange,
 }) => {
-  const {
-    playbackRate,
-    setPlaybackRate,
-    pitch,
-    setPitch,
-    volume,
-    setVolume,
-  } = useTTSStore();
+  const { playbackRate, setPlaybackRate, pitch, setPitch, volume, setVolume } =
+    useTTSStore();
 
-  // Local state for sliders to avoid too many store updates
+  // Local state for sliders - now synced with actual values
   const [localPitch, setLocalPitch] = useState(pitch);
   const [localVolume, setLocalVolume] = useState(volume);
+
+  // Sync local state when modal opens or values change externally
+  React.useEffect(() => {
+    setLocalPitch(pitch);
+    setLocalVolume(volume);
+  }, [pitch, volume, isOpen]);
 
   const handlePitchChange = (value: number | number[]) => {
     const val = Array.isArray(value) ? value[0] : value;
     setLocalPitch(val);
+    // Apply immediately for real-time feedback
+    setPitch(val);
   };
 
   const handlePitchChangeEnd = (value: number | number[]) => {
-    const val = Array.isArray(value) ? value[0] : value;
-    setPitch(val);
+    // Already applied in onChange
   };
 
   const handleVolumeChange = (value: number | number[]) => {
     const val = Array.isArray(value) ? value[0] : value;
     setLocalVolume(val);
+    // Apply immediately for real-time feedback
+    setVolume(val);
   };
 
   const handleVolumeChangeEnd = (value: number | number[]) => {
-    const val = Array.isArray(value) ? value[0] : value;
-    setVolume(val);
+    // Already applied in onChange
   };
 
   const handleReset = () => {
@@ -71,8 +73,8 @@ export const TTSSettingsModal: React.FC<TTSSettingsModalProps> = ({
   const sortedVoices = useMemo(() => {
     return [...availableVoices].sort((a, b) => {
       // Prioritize English
-      const aEn = a.lang.startsWith('en');
-      const bEn = b.lang.startsWith('en');
+      const aEn = a.lang.startsWith("en");
+      const bEn = b.lang.startsWith("en");
       if (aEn && !bEn) return -1;
       if (!aEn && bEn) return 1;
       return a.name.localeCompare(b.name);
@@ -116,36 +118,51 @@ export const TTSSettingsModal: React.FC<TTSSettingsModalProps> = ({
             >
               Voice
             </label>
-            <PremiumGate feature="advancedVoices" lockedMessage="Premium voices">
+            <PremiumGate
+              feature="advancedVoices"
+              lockedMessage="Premium voices"
+            >
               <Autocomplete
                 aria-label="Select Voice"
                 defaultItems={sortedVoices}
                 selectedKey={selectedVoice?.voiceURI}
                 onSelectionChange={(key) => {
                   if (key) {
-                    const voice = availableVoices.find(v => v.voiceURI === key);
+                    const voice = availableVoices.find(
+                      (v) => v.voiceURI === key
+                    );
                     if (voice) onVoiceChange(voice);
                   }
                 }}
                 variant="bordered"
                 size="sm"
                 classNames={{
-                   base: "w-full",
-                   listboxWrapper: "max-h-[300px]",
-                   selectorButton: "text-primary-shade-4"
+                  base: "w-full",
+                  listboxWrapper: "max-h-[300px]",
+                  selectorButton: "text-primary-shade-4",
+                  popoverContent: "p-0",
+                }}
+                listboxProps={{
+                  itemClasses: {
+                    base: "py-3 px-3 min-h-[52px] data-[hover=true]:bg-accent-shade-1",
+                  },
                 }}
                 inputProps={{
                   classNames: {
                     input: `${Magnetik_Regular.className} text-primary-colour`,
-                    inputWrapper: "bg-white border-light-grey-2"
-                  }
+                    inputWrapper: "bg-white border-light-grey-2 min-h-[44px]",
+                  },
                 }}
               >
                 {(voice) => (
                   <AutocompleteItem key={voice.voiceURI} textValue={voice.name}>
-                    <div className="flex flex-col">
-                      <span className="text-small">{voice.name}</span>
-                      <span className="text-tiny text-default-400">{voice.lang}</span>
+                    <div className="flex flex-col gap-0.5 py-1">
+                      <span className="text-sm leading-tight text-primary-colour">
+                        {voice.name}
+                      </span>
+                      <span className="text-xs text-primary-shade-4">
+                        {voice.lang}
+                      </span>
                     </div>
                   </AutocompleteItem>
                 )}
