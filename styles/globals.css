@@ -490,4 +490,43 @@
   .animate-slide-up {
     animation: slide-up 0.3s ease-out;
   }
+
+  /* === TTS STYLES === */
+  .tts-sentence {
+    transition: background-color 0.2s ease, padding 0.2s ease;
+    border-radius: 2px;
+  }
+
+  .tts-sentence--active {
+    background-color: var(--complimentary-shade-1);
+    padding: 2px 0;
+    border-radius: 4px;
+  }
+
+  .tts-context-menu {
+    animation: fade-in 0.15s ease-out;
+  }
+
+  /* TTS Progress bar custom styles */
+  .tts-progress-track {
+    cursor: pointer;
+  }
+
+  .tts-progress-track:hover .tts-progress-thumb {
+    transform: scale(1.2);
+  }
+
+  /* TTS Audio waveform animation for playing state */
+  @keyframes tts-pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.7;
+    }
+  }
+
+  .tts-playing-indicator {
+    animation: tts-pulse 1.5s ease-in-out infinite;
+  }
 }
