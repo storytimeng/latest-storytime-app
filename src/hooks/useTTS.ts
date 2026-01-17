@@ -237,6 +237,15 @@ export const useTTS = (content: string | TTSSegment[]): UseTTSReturn => {
     }
   }, []);
 
+  // Directives State
+  const directiveStateRef = useRef({
+    rate: null as number | null,
+    pitch: null as number | null,
+    volume: null as number | null,
+    delay: 0,
+    skip: false,
+  });
+
   // Core speak function - using ref to break circular dependency
   const speakSentenceRef = useRef<(index: number) => void>(() => {});
 
@@ -262,13 +271,86 @@ export const useTTS = (content: string | TTSSegment[]): UseTTSReturn => {
       // Track current sentence in ref for onend handler
       currentSentenceRef.current = sentenceIndex;
 
+      // Parse Directives
+      let textToSpeak = sentence.text;
+      
+      // Regex to find all directives [[key=value]]
+      const directiveRegex = /\[\[(.*?)=(.*?)\]\]/g;
+      let match;
+      
+      // Reset temporary one-shot directives like delay? 
+      // User docs: "The effect of a directive applies to the content that follows it."
+      // "This means a directive in one chunk can affect subsequent chunks if not overridden."
+      // So rate/pitch/volume persist. skip persists.
+      // Delay? "Introduces a pause before the subsequent content is processed."
+      // Usually delay is one-time for that spot. But if it's "before content", does it mean every sentence? 
+      // "This will have a [[delay=500]] half-second pause." -> Pause then text.
+      // If I have [[delay=500]] Sentence 1. Sentence 2.
+      // Should Sentence 2 also delay? Probably not. Delay is usually an event.
+      // I will treat delay as one-shot for the current sentence (if found).
+      
+      let localDelay = 0;
+
+      // Reset one-shot directives from previous state if any? No, only delay is one-shot.
+      
+      // We process directives found in THIS sentence.
+      // Note: If a directive is "at the end" of previous sentence, it might have been attached to that previous sentence text.
+      // My splitter attaches everything to the sentence.
+      
+      while ((match = directiveRegex.exec(sentence.text)) !== null) {
+          const key = match[1].trim();
+          const value = match[2].trim();
+          
+          if (key === "rate") {
+              if (value === "default") directiveStateRef.current.rate = null;
+              else {
+                  const num = parseFloat(value);
+                  if (!isNaN(num)) directiveStateRef.current.rate = num;
+              }
+          } else if (key === "pitch") {
+              if (value === "default") directiveStateRef.current.pitch = null;
+              else {
+                  const num = parseFloat(value);
+                  if (!isNaN(num)) directiveStateRef.current.pitch = num;
+              }
+          } else if (key === "volume") {
+             if (value === "default") directiveStateRef.current.volume = null;
+             else {
+                 const num = parseFloat(value);
+                 if (!isNaN(num)) directiveStateRef.current.volume = num;
+             }
+          } else if (key === "delay") {
+              const num = parseInt(value);
+              if (!isNaN(num)) localDelay = num;
+          } else if (key === "skip") {
+              if (value === "true") directiveStateRef.current.skip = true;
+              else if (value === "false") directiveStateRef.current.skip = false;
+          }
+      }
+      
+      // Remove directives from spoken text
+      textToSpeak = textToSpeak.replace(/\[\[.*?\]\]/g, "").trim();
+
+      // Check for SKIP
+      if (directiveStateRef.current.skip) {
+          // Move to next immediately
+           const nextIdx = sentenceIndex + 1;
+           // We use setTimeout to avoid recursion limit
+           setTimeout(() => {
+               speakSentenceRef.current(nextIdx);
+           }, 10);
+           return;
+      }
+
       // Get fresh state for settings
       const currentState = useTTSStore.getState();
 
-      const utterance = new SpeechSynthesisUtterance(sentence.text);
-      utterance.rate = currentState.playbackRate;
-      utterance.pitch = currentState.pitch;
-      utterance.volume = currentState.volume;
+      const utterance = new SpeechSynthesisUtterance(textToSpeak);
+      
+      // Apply directives or fall back to store
+      utterance.rate = directiveStateRef.current.rate !== null ? directiveStateRef.current.rate : currentState.playbackRate;
+      utterance.pitch = directiveStateRef.current.pitch !== null ? directiveStateRef.current.pitch : currentState.pitch;
+      utterance.volume = directiveStateRef.current.volume !== null ? directiveStateRef.current.volume : currentState.volume;
 
       if (selectedVoice) {
         utterance.voice = selectedVoice;
@@ -330,10 +412,19 @@ export const useTTS = (content: string | TTSSegment[]): UseTTSReturn => {
       utteranceRef.current = utterance;
       stopReasonRef.current = "auto";
 
-      // Small delay to ensure cancel() completed
-      setTimeout(() => {
-        window.speechSynthesis.speak(utterance);
-      }, 50);
+      // Apply Delay if needed
+      if (localDelay > 0) {
+          setTimeout(() => {
+              if (stopReasonRef.current === "auto" || stopReasonRef.current === "seek") {
+                  window.speechSynthesis.speak(utterance);
+              }
+          }, localDelay);
+      } else {
+          // Small delay to ensure cancel() completed
+          setTimeout(() => {
+            window.speechSynthesis.speak(utterance);
+          }, 50);
+      }
     },
     [
       isSupported,
@@ -344,6 +435,9 @@ export const useTTS = (content: string | TTSSegment[]): UseTTSReturn => {
       stopElapsedTimer,
     ]
   );
+  
+  // Pause/Resume needs to handle delay?
+  // If paused during delay, it just sits there. Cancel handles it.
 
   // Update ref when speakSentence changes
   useEffect(() => {

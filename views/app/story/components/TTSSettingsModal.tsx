@@ -4,9 +4,9 @@ import React, { useState, useMemo } from "react";
 import { Modal, ModalContent, ModalHeader, ModalBody } from "@heroui/modal";
 import { Button } from "@heroui/button";
 import { Slider } from "@heroui/slider";
-import { Autocomplete, AutocompleteItem } from "@heroui/autocomplete";
-import { X, RotateCcw } from "lucide-react";
-import { Magnetik_Medium, Magnetik_Regular } from "@/lib/font";
+import { Autocomplete, AutocompleteItem, AutocompleteSection } from "@heroui/autocomplete";
+import { RotateCcw, Star } from "lucide-react";
+import { Magnetik_Medium, Magnetik_Regular, Magnetik_Bold } from "@/lib/font";
 import { useTTSStore, PLAYBACK_RATES } from "@/src/stores/useTTSStore";
 import { PremiumGate } from "@/components/reusables/PremiumGate";
 
@@ -68,16 +68,73 @@ export const TTSSettingsModal: React.FC<TTSSettingsModalProps> = ({
     setLocalVolume(1);
   };
 
-  // Group voices by language for potential future categorization
-  // and prioritize the current selected voice at the top
-  const sortedVoices = useMemo(() => {
-    return [...availableVoices].sort((a, b) => {
-      // Prioritize English
-      const aEn = a.lang.startsWith("en");
-      const bEn = b.lang.startsWith("en");
-      if (aEn && !bEn) return -1;
-      if (!aEn && bEn) return 1;
-      return a.name.localeCompare(b.name);
+  // Helper to determine if a voice is "Recommended" (High quality/Premium-like)
+  const isRecommended = (voice: SpeechSynthesisVoice) => {
+    const lowerName = voice.name.toLowerCase();
+    return (
+      voice.lang.startsWith("en") &&
+      (lowerName.includes("online") || lowerName.includes("natural"))
+    );
+  };
+
+  // Group voices by Language
+  const groupedVoices = useMemo(() => {
+    const groups: Record<string, SpeechSynthesisVoice[]> = {};
+    const langNames = new Intl.DisplayNames(['en'], { type: 'language' });
+
+    availableVoices.forEach((voice) => {
+      // Get readable language name
+      let langName = voice.lang;
+      try {
+        // Handle "en-US", "en-GB" etc.
+        // We might want to group all "English" together or separate by region?
+        // User asked for "en-gb or en-us online models".
+        // Let's use full readable name: "English (United States)"
+        // Intl.DisplayNames usually gives "English" for "en". For "en-US" it might give "American English".
+        const regionNames = new Intl.DisplayNames(['en'], { type: 'region' });
+        
+        const langCode = voice.lang.split('-')[0];
+        const regionCode = voice.lang.split('-')[1]; // US, GB
+        
+        const baseLang = langNames.of(langCode) || langCode;
+        if (regionCode) {
+           const region = regionNames.of(regionCode) || regionCode;
+           langName = `${baseLang} (${region})`;
+        } else {
+           langName = baseLang;
+        }
+      } catch (e) {
+        langName = voice.lang;
+      }
+
+      if (!groups[langName]) {
+        groups[langName] = [];
+      }
+      groups[langName].push(voice);
+    });
+
+    // Sort groups: English first, then alphabetical
+    const sortedGroupKeys = Object.keys(groups).sort((a, b) => {
+       const aEn = a.includes("English");
+       const bEn = b.includes("English");
+       if (aEn && !bEn) return -1;
+       if (!aEn && bEn) return 1;
+       return a.localeCompare(b);
+    });
+
+    return sortedGroupKeys.map(groupTitle => {
+        const voices = groups[groupTitle].sort((a, b) => {
+            // Sort recommended first within group
+            const aRec = isRecommended(a);
+            const bRec = isRecommended(b);
+            if (aRec && !bRec) return -1;
+            if (!aRec && bRec) return 1;
+            return a.name.localeCompare(b.name);
+        });
+        return {
+            title: groupTitle,
+            items: voices
+        };
     });
   }, [availableVoices]);
 
@@ -99,15 +156,6 @@ export const TTSSettingsModal: React.FC<TTSSettingsModalProps> = ({
           <span className={`text-primary-colour ${Magnetik_Medium.className}`}>
             TTS Settings
           </span>
-          <Button
-            isIconOnly
-            variant="light"
-            size="sm"
-            onPress={onClose}
-            className="text-grey-1"
-          >
-            <X className="w-4 h-4" />
-          </Button>
         </ModalHeader>
 
         <ModalBody className="space-y-6">
@@ -124,7 +172,7 @@ export const TTSSettingsModal: React.FC<TTSSettingsModalProps> = ({
             >
               <Autocomplete
                 aria-label="Select Voice"
-                defaultItems={sortedVoices}
+                placeholder="Select a voice"
                 selectedKey={selectedVoice?.voiceURI}
                 onSelectionChange={(key) => {
                   if (key) {
@@ -138,13 +186,13 @@ export const TTSSettingsModal: React.FC<TTSSettingsModalProps> = ({
                 size="sm"
                 classNames={{
                   base: "w-full",
-                  listboxWrapper: "max-h-[300px]",
+                  listboxWrapper: "max-h-[300px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100",
                   selectorButton: "text-primary-shade-4",
                   popoverContent: "p-0",
                 }}
                 listboxProps={{
                   itemClasses: {
-                    base: "py-3 px-3 min-h-[52px] data-[hover=true]:bg-accent-shade-1",
+                    base: "py-2 px-3 data-[hover=true]:bg-accent-shade-1",
                   },
                 }}
                 inputProps={{
@@ -154,18 +202,48 @@ export const TTSSettingsModal: React.FC<TTSSettingsModalProps> = ({
                   },
                 }}
               >
-                {(voice) => (
-                  <AutocompleteItem key={voice.voiceURI} textValue={voice.name}>
-                    <div className="flex flex-col gap-0.5 py-1">
-                      <span className="text-sm leading-tight text-primary-colour">
-                        {voice.name}
-                      </span>
-                      <span className="text-xs text-primary-shade-4">
-                        {voice.lang}
-                      </span>
-                    </div>
-                  </AutocompleteItem>
-                )}
+                {groupedVoices.map((group) => (
+                  <AutocompleteSection 
+                    key={group.title} 
+                    title={group.title}
+                    classNames={{
+                        heading: `text-xs font-semibold text-gray-500 uppercase px-3 py-2 bg-transparent`
+                    }}
+                  >
+                    {group.items.map((voice) => {
+                       const recommended = isRecommended(voice);
+                       return (
+                        <AutocompleteItem 
+                           key={voice.voiceURI} 
+                           textValue={voice.name}
+                           classNames={{
+                               base: "h-auto py-2", // Allow auto height
+                           }}
+                        >
+                          <div className="flex flex-col gap-0.5">
+                             <div className="flex items-center gap-2">
+                                <span className={`text-sm leading-tight ${recommended ? "text-amber-600 font-medium" : "text-primary-colour"}`}>
+                                  {voice.name.replace(/Microsoft |Online \(Natural\) - /g, "")}
+                                </span>
+                                {recommended && (
+                                   <div className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-amber-100 border border-amber-200">
+                                      <Star className="w-2.5 h-2.5 fill-amber-500 text-amber-500" />
+                                      <span className="text-[10px] font-medium text-amber-700 uppercase tracking-wider">Premium</span>
+                                   </div>
+                                )}
+                             </div>
+                            {/* Detailed full name or extra info if needed */}
+                            {recommended && false && (
+                                <span className="text-[10px] text-amber-600/80">
+                                    High Quality Neural Voice
+                                </span>
+                            )}
+                          </div>
+                        </AutocompleteItem>
+                       );
+                    })}
+                  </AutocompleteSection>
+                ))}
               </Autocomplete>
             </PremiumGate>
           </div>

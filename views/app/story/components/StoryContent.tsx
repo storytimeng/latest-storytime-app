@@ -1,24 +1,21 @@
 "use client";
 
-import React, {
-  useState,
-  useRef,
-  useCallback,
-  useMemo,
-  useEffect,
-} from "react";
-import { Avatar } from "@heroui/avatar";
-import { Button } from "@heroui/button";
-import { Magnetik_Regular, Magnetik_Medium } from "@/lib/font";
-import DOMPurify from "dompurify";
-import { Play, X } from "lucide-react";
+import { Magnetik_Medium, Magnetik_Regular } from "@/lib/font";
 import { useTTSStore } from "@/src/stores/useTTSStore";
+import { Avatar } from "@heroui/avatar";
+import DOMPurify from "dompurify";
+import { Play } from "lucide-react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 // Custom TTS Hook
+import { useTTSContext } from "@/components/providers/TTSProvider";
 import { useTTS } from "@/src/hooks/useTTS";
 import { useSmartVoice } from "@/src/hooks/useVoiceUtils";
-import { useTTSContext } from "@/components/providers/TTSProvider";
-import { PremiumGate } from "@/components/reusables/PremiumGate";
-import { usePremiumFeatures } from "@/src/hooks/usePremiumFeatures";
 
 interface StoryContentProps {
   content: string;
@@ -103,6 +100,7 @@ export const StoryContent = React.memo(
       const segments: {
         text: string;
         html: string;
+        displayHtml: string; // New field for identifying HTML without directives
         index: number;
       }[] = [];
 
@@ -110,20 +108,16 @@ export const StoryContent = React.memo(
       let currentHtml = "";
       let currentIndex = globalStartIndex;
 
-      // Simple sentence splitter regex: ends with . ! ? followed by whitespace or end of string
-      // But we need to be careful not to split abbreviations.
-      // For now, we'll traverse nodes and accumulate.
-      
       const flushSegment = () => {
         if (currentText.trim()) {
+           // Create display HTML by removing directives pattern [[...]]
+           // We use a regex to strip them.
+           const displayHtml = currentHtml.replace(/\[\[.*?\]\]/g, "");
+           
            segments.push({
              text: currentText.trim(),
-             html: currentHtml.trim(), // We might need to close/open tags if we split across them, but for now assuming block-level split logic handles most.
-                                       // Actually, splitting HTML *correctly* across tags is very hard. 
-                                       // A simpler approach for "Rich Text" that is mostly text:
-                                       // If we encounter a block tag, we likely already handled it in the parent loop.
-                                       // So here we are inside a <p> or <h1>. 
-                                       // We can just accumulate node HTML.
+             html: currentHtml.trim(),
+             displayHtml: displayHtml.trim(),
              index: currentIndex++
            });
         }
@@ -135,28 +129,45 @@ export const StoryContent = React.memo(
       const traverse = (node: Node) => {
         if (node.nodeType === Node.TEXT_NODE) {
            const text = node.textContent || "";
-           // Check for sentence boundaries in this text node
-           // This regex looks for punctuation that usually ends a sentence
-           const parts = text.split(/([.!?]+(?:\s+|$))/g);
+           
+           // Split by punctuation, but respect ellipses and directives
+           // Strategy: Match potential delimiters sequences: . ! ? 
+           // We'll iterate through matches.
+           
+           const regex = /([.!?]+)(?=\s|$)|(\[\[.*?\]\])/g;
+           // We want to capture delimiters to include them OR check them.
+           // Actually, splitting by regex with capture gives us parts.
+           
+           // Improved manual scanning might be safer for ellipses check
+           // Let's iterate character by character or use a smarter split.
+           
+           // Let's use split but include delimiters.
+           // regex: /([.!?]+(?:(?=\s)|$))/
+           
+           const delimRegex = /([.!?]+(?:(?=\s)|$))/g;
+           const parts = text.split(delimRegex);
            
            for (let i = 0; i < parts.length; i++) {
               const part = parts[i];
-              // If part is just delimiter, append to current and flush?
-              // The split keeps delimiters if captured. 
-              // With capture group: ["Hello", ". ", "World", "?", ""]
-              
               if (!part) continue;
-
-              // Append to current accumulation
-              currentText += part;
-              currentHtml += part ; // Text node content is safe to append as is (browser handles escaping usually if we used innerHTML, but here wait..)
-                                    // Actually we need to escape HTML special chars if we append text to HTML string.
               
-              // If this part *is* a delimiter (or contains one at end), we might flush.
-              // Regex checking:
-              if (/[.!?]+(?:\s+|$)/.test(part)) {
-                 // It's a terminator.
-                 flushSegment();
+              const isDelimiter = /^[.!?]+$/.test(part);
+              
+              if (isDelimiter) {
+                  // Check for ellipsis (2 or more dots)
+                  if (part.indexOf('..') !== -1) {
+                      // It is an ellipsis (or ..), treat as text
+                      currentText += part;
+                      currentHtml += part;
+                  } else {
+                      // It is a real sentence end (., !, ?)
+                      currentText += part;
+                      currentHtml += part;
+                      flushSegment();
+                  }
+              } else {
+                  currentText += part;
+                  currentHtml += part;
               }
            }
         } else if (node.nodeType === Node.ELEMENT_NODE) {
@@ -164,22 +175,20 @@ export const StoryContent = React.memo(
           if (el.tagName === 'BR') {
              currentText += "\n";
              currentHtml += "<br>";
-             // Br often acts as a pause but maybe not a hard sentence break unless visual? 
-             // Let's treat it as part of flow.
           } else {
              // For inline elements like <b>, <i>, <a>
-             // We want to keep them intact. 
-             // Complexity: What if a sentence ends INSIDE a <b>? 
-             // "This is <b>bold!</b> And this is not."
-             // If we just append outerHTML, we treat the whole <b>...</b> as one unit.
-             // This avoids breaking tags. It's a compromise.
+             // Atomic handling
              currentText += el.textContent;
              currentHtml += el.outerHTML;
              
-             // Check if the element ITSELF ends with punctuation? 
-             // "<b>Bold sentence!</b>" -> textContent "Bold sentence!" -> ends with !
-             if (/[.!?]+\s*$/.test(el.textContent || "")) {
-                flushSegment();
+             // Check end of content ensuring we ignore ellipses
+             const content = el.textContent || "";
+             const match = content.match(/([.!?]+)\s*$/);
+             if (match) {
+                 const punct = match[1];
+                 if (punct.indexOf('..') === -1) {
+                     flushSegment();
+                 }
              }
           }
         }
@@ -199,14 +208,14 @@ export const StoryContent = React.memo(
 
       const blocks: {
         tagName: string;
-        sentences: { text: string; html: string; index: number }[];
+        sentences: { text: string; html: string; displayHtml: string; index: number }[];
       }[] = [];
       
       const flatSentences: { text: string; index: number; startOffset: number; endOffset: number; html?: string }[] = [];
       
       let globalIndex = 0;
 
-      // 1. Initial rough split by visual blocks/paragraphs to preserve layout
+      // 1. Initial rough split by visual blocks/paragraphs
       const div = document.createElement("div");
       div.innerHTML = sanitizedContent;
       
@@ -216,9 +225,6 @@ export const StoryContent = React.memo(
          const isBlock = ['p', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li'].includes(tagName);
          
          if (isBlock || (node.nodeType === Node.TEXT_NODE && node.textContent?.trim())) {
-             // It's a block. 
-             // Extract content to parse into sentences.
-             // If it's a Text Node at root, wrap in P implicit? Or just treat as block.
              
              let innerHTML = "";
              let effectiveTagName = tagName;
@@ -230,102 +236,29 @@ export const StoryContent = React.memo(
                  innerHTML = el.innerHTML;
              }
 
-             // Now split this block's content into sentences
-             // We need a sophisticated splitter that can handle "Blah <b>blah</b>."
-             // Re-using the logic defined above (but we need to move it inside or use closure)
+             // Use the helper to split
+             const blockSegments = splitHtmlIntoSentences(innerHTML, globalIndex);
              
-             const tempDiv = document.createElement('div');
-             tempDiv.innerHTML = innerHTML;
+             // Update global index based on segments count
+             globalIndex += blockSegments.length;
              
-             const blockSentences: { text: string; html: string; index: number }[] = [];
+             // Map to structures
+             const blockSentences = blockSegments.map(s => ({
+                 text: s.text,
+                 html: s.html,
+                 displayHtml: s.displayHtml,
+                 index: s.index
+             }));
              
-             let currentText = "";
-             let currentHtml = "";
-             
-             const flush = () => {
-                 if (currentText.trim()) {
-                     const idx = globalIndex++;
-                     blockSentences.push({
-                         text: currentText.trim(),
-                         html: currentHtml.trim(),
-                         index: idx
-                     });
-                     flatSentences.push({
-                         text: currentText.trim(),
-                         index: idx,
-                         startOffset: 0, 
-                         endOffset: 0,
-                         html: currentHtml.trim()
-                     });
-                 }
-                 currentText = "";
-                 currentHtml = "";
-             };
-             
-             const traverseInfo = (n: Node) => {
-                 if (n.nodeType === Node.TEXT_NODE) {
-                     const val = n.textContent || "";
-                     // Split by punctuation
-                     // Simple regex: look for sequence of .!? followed by whitespace or EOF
-                     const pd = /([.!?]+(?:\s+|$))/g;
-                     const parts = val.split(pd);
-                     
-                     for (let i = 0; i < parts.length; i++) {
-                         const part = parts[i];
-                         if (!part) continue;
-                         
-                         // If it matches delimiter, append and flush check
-                         if (part.match(/^[.!?]+(?:\s+|$)$/)) {
-                             currentText += part;
-                             currentHtml += part;
-                             flush(); // Delimiter ends the sentence
-                         } else {
-                             // Regular text
-                             currentText += part;
-                             currentHtml += part;
-                         }
-                     }
-                 } else if (n.nodeType === Node.ELEMENT_NODE) {
-                     const elem = n as Element;
-                     if (elem.tagName === 'BR') {
-                         currentHtml += "<br>";
-                         currentText += " "; // Treat br as space for TTS text
-                     } else {
-                         // Element like <b>, <i>..
-                         // Treat as indivisible unit to avoid breaking tags
-                         // CAUTION: "This is <b>Great.</b>" -> The period is inside the B.
-                         // If we don't look inside, we miss the split.
-                         
-                         // Recursive strategy??
-                         // If we recurse, we can't easily perform "currentHtml += <b" .. "</b>" 
-                         // unless we rebuild the tree.
-                         
-                         // Compromise: For specific formatting tags, we recurse? 
-                         // Complex.
-                         
-                         // Simpler Compromise: Treat inline tags as atomic. 
-                         // If a sentence ends inside a tag, the Whole Tag belongs to that sentence.
-                         // "This is <b>awesome.</b>" -> Sentence: "This is <b>awesome.</b>" (Correct)
-                         // "One. <b>Two.</b>" -> "One." then "<b>Two.</b>" (Correct)
-                         // "Start <b>Middle. End</b>" -> "Start <b>Middle. End</b>" (Incorrect merge)
-                         
-                         // Given typical blog content, nested sentences inside styling are rare 
-                         // OR usually the styling wraps the whole sentence or phrase.
-                         // Let's stick to atomic inline tags for robustness against invalid HTML.
-                         
-                         currentText += elem.textContent;
-                         currentHtml += elem.outerHTML;
-                         
-                         // Check if atomic element ended with punctuation
-                         if (/[.!?]+\s*$/.test(elem.textContent || "")) {
-                             flush();
-                         }
-                     }
-                 }
-             };
-             
-             Array.from(tempDiv.childNodes).forEach(traverseInfo);
-             flush(); // Flush remainder
+             blockSegments.forEach(s => {
+                 flatSentences.push({
+                     text: s.text,
+                     index: s.index,
+                     startOffset: 0,
+                     endOffset: 0,
+                     html: s.html // TTS needs directives? Yes.
+                 });
+             });
              
              if (blockSentences.length > 0) {
                  blocks.push({
@@ -334,8 +267,6 @@ export const StoryContent = React.memo(
                  });
              }
          } else if (node.nodeType === Node.ELEMENT_NODE) {
-             // Recurse into non-block containers? Or just flatten?
-             // If we have a div wrapping Ps, typical.
              Array.from(node.childNodes).forEach(processBlockNode);
          }
       };
@@ -344,7 +275,7 @@ export const StoryContent = React.memo(
 
       return { displayBlocks: blocks, allSentences: flatSentences };
       
-    }, [sanitizedContent]);
+    }, [sanitizedContent, splitHtmlIntoSentences]);
 
     // Initialize TTS
     // If segments are empty (e.g. initial render or empty content), pass empty array or content string
@@ -564,38 +495,38 @@ export const StoryContent = React.memo(
                  return (
                    <div key={bIdx} className="mb-4">
                       <Tag className="block mb-2">
-                        {block.sentences.map((sent) => {
-                           const isActive = storeIsPlaying && sent.index === storeCurrentIndex;
-                           const isPausedAt = storeIsPaused && sent.index === storeCurrentIndex;
-                           
-                           return (
-                             <span
-                               key={sent.index}
-                               data-sentence-index={sent.index}
-                               onClick={(e) => handleSegmentClick(e, sent.index)}
-                               onDoubleClick={(e) => handleSegmentDoubleClick(e, sent.index)}
-                               onTouchStart={(e) => handleTouchStart(e, sent.index)}
-                               onTouchEnd={handleTouchEnd}
-                               onTouchMove={handleTouchMove}
-                               className={`transition-all duration-200 rounded px-1 -mx-1 cursor-pointer
-                                 ${
-                                   isActive
-                                     ? "bg-complimentary-colour/20 text-black shadow-sm font-medium"
-                                     : isPausedAt
-                                       ? "bg-primary-colour/15 text-black"
-                                       : "hover:bg-accent-colour/20"
-                                 }`}
-                             >
-                               <span dangerouslySetInnerHTML={{ __html: sent.html }} />
-                               {/* Add a generic space after sentence to prevent running together visually if split stripped it? 
-                                   Our parsing logic usually keeps the space in the sentence.
-                               */}
-                             </span>
-                           );
-                        })}
-                      </Tag>
-                   </div>
-                 );
+                       {block.sentences.map((sent) => {
+                          const isActive = storeIsPlaying && sent.index === storeCurrentIndex;
+                          const isPausedAt = storeIsPaused && sent.index === storeCurrentIndex;
+                          
+                          return (
+                            <span
+                              key={sent.index}
+                              data-sentence-index={sent.index}
+                              onClick={(e) => handleSegmentClick(e, sent.index)}
+                              onDoubleClick={(e) => handleSegmentDoubleClick(e, sent.index)}
+                              onTouchStart={(e) => handleTouchStart(e, sent.index)}
+                              onTouchEnd={handleTouchEnd}
+                              onTouchMove={handleTouchMove}
+                              className={`transition-all duration-200 rounded px-1 -mx-1 cursor-pointer
+                                ${
+                                  isActive
+                                    ? "bg-complimentary-colour/20 text-black shadow-sm font-medium"
+                                    : isPausedAt
+                                      ? "bg-primary-colour/15 text-black"
+                                      : "hover:bg-accent-colour/20"
+                                }`}
+                            >
+                              <span dangerouslySetInnerHTML={{ __html: sent.displayHtml }} />
+                              {/* Add a generic space after sentence to prevent running together visually if split stripped it? 
+                                  Our parsing logic usually keeps the space in the sentence.
+                              */}
+                            </span>
+                          );
+                       })}
+                     </Tag>
+                  </div>
+                );
               })
             ) : (
               <div dangerouslySetInnerHTML={{ __html: sanitizedContent }} />

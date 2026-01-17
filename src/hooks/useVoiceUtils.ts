@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo } from "react";
-import type { useVoices } from "react-text-to-speech";
 
 export const getBestVoice = (voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | undefined => {
   if (!voices.length) return undefined;

@@ -16,8 +16,10 @@ import {
   Undo,
   Redo,
   Strikethrough,
+  Mic,
 } from "lucide-react";
 import { Button } from "@heroui/button";
+import { Popover, PopoverTrigger, PopoverContent } from "@heroui/popover";
 import { cn } from "@/lib/utils";
 import { Magnetik_Regular, Magnetik_Medium } from "@/lib/font";
 import React, { useEffect, useRef } from "react";
@@ -196,13 +198,67 @@ const RichTextEditor = ({
         >
           <Undo size={18} />
         </MenuButton>
-        <MenuButton
+      <MenuButton
           onClick={() => editor.chain().focus().redo().run()}
           disabled={!editor.can().redo()}
           title="Redo"
         >
           <Redo size={18} />
         </MenuButton>
+
+        <div className="w-px h-5 mx-1 bg-gray-300" />
+
+        {/* TTS Directives Menu */}
+        <Popover placement="bottom">
+          <PopoverTrigger>
+            <button
+              type="button"
+              className="p-1.5 rounded-md transition-colors hover:bg-gray-100 text-gray-600 focus:outline-none"
+              title="TTS Directives"
+            >
+              <Mic size={18} />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="p-2 w-48">
+             <div className="flex flex-col gap-2">
+                <span className={`text-xs text-gray-400 font-medium ${Magnetik_Medium.className}`}>TTS Controls</span>
+                
+                <div className="space-y-1">
+                   <p className="text-[10px] text-gray-400 uppercase">Pause</p>
+                   <div className="flex gap-1">
+                      <Button size="sm" variant="flat" className="h-6 text-xs w-full" onPress={() => editor.chain().focus().insertContent(' [[delay=500]] ').run()}>0.5s</Button>
+                      <Button size="sm" variant="flat" className="h-6 text-xs w-full" onPress={() => editor.chain().focus().insertContent(' [[delay=1000]] ').run()}>1s</Button>
+                   </div>
+                </div>
+
+                <div className="space-y-1">
+                   <p className="text-[10px] text-gray-400 uppercase">Speed</p>
+                   <div className="flex gap-1">
+                      <Button size="sm" variant="flat" className="h-6 text-xs w-full" onPress={() => editor.chain().focus().insertContent(' [[rate=0.75]] ').run()}>0.75x</Button>
+                      <Button size="sm" variant="flat" className="h-6 text-xs w-full" onPress={() => editor.chain().focus().insertContent(' [[rate=default]] ').run()}>Normal</Button>
+                      <Button size="sm" variant="flat" className="h-6 text-xs w-full" onPress={() => editor.chain().focus().insertContent(' [[rate=1.25]] ').run()}>1.25x</Button>
+                   </div>
+                </div>
+
+                <div className="space-y-1">
+                   <p className="text-[10px] text-gray-400 uppercase">Volume</p>
+                   <div className="flex gap-1">
+                      <Button size="sm" variant="flat" className="h-6 text-xs w-full" onPress={() => editor.chain().focus().insertContent(' [[volume=0.5]] ').run()}>Low</Button>
+                      <Button size="sm" variant="flat" className="h-6 text-xs w-full" onPress={() => editor.chain().focus().insertContent(' [[volume=default]] ').run()}>Normal</Button>
+                   </div>
+                </div>
+                
+                <div className="space-y-1">
+                   <p className="text-[10px] text-gray-400 uppercase">Skip</p>
+                   <div className="flex gap-1">
+                      <Button size="sm" variant="flat" className="h-6 text-xs w-full" onPress={() => editor.chain().focus().insertContent(' [[skip=true]] ').run()}>Start</Button>
+                      <Button size="sm" variant="flat" className="h-6 text-xs w-full" onPress={() => editor.chain().focus().insertContent(' [[skip=false]] ').run()}>End</Button>
+                   </div>
+                </div>
+
+             </div>
+          </PopoverContent>
+        </Popover>
       </div>
 
       <EditorContent editor={editor} />
