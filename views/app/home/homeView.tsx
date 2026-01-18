@@ -23,9 +23,12 @@ import {
   usePopularStories,
 } from "@/src/hooks/useStoryCategories";
 import { useStories } from "@/src/hooks/useStories";
+import { useOnlineStatus } from "@/src/hooks/useOnlineStatus";
+import { OfflineIndicator } from "@/components/OfflineIndicator";
 
 const HomeView = () => {
   const { user } = useUserStore();
+  const isOnline = useOnlineStatus();
   const { selectedGenres, toggleGenre } = useStoriesFilterStore();
   const { genres: apiGenres, isLoading: genresLoading } = useGenres();
   // Use API genres or fallback to empty array
@@ -35,6 +38,11 @@ const HomeView = () => {
   useEffect(() => {
     useStoriesFilterStore.getState().clearGenres();
   }, []);
+
+  // Show offline indicator when offline
+  if (!isOnline) {
+    return <OfflineIndicator />;
+  }
 
   // Sort genres: selected ones first, then alphabetical
   const sortedGenres = useMemo(() => {

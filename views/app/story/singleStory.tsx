@@ -47,6 +47,7 @@ import { CollaboratorsModal } from "@/components/reusables/modals/CollaboratorsM
 import { ImagePreviewModal } from "@/components/reusables/modals/ImagePreviewModal";
 import { motion, AnimatePresence, useScroll } from "framer-motion";
 import { CommentsSection } from "@/views/app/story/components/CommentsSection";
+import { shareStory } from "@/lib/share";
 
 interface SingleStoryProps {
   storyId?: string;
@@ -948,7 +949,21 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
                   )} 
                 />
               </button>
-              <button className="p-2 transition-colors rounded-full bg-black/30 backdrop-blur-md hover:bg-black/40">
+              <button 
+                onClick={async () => {
+                  const success = await shareStory(
+                    storyId || "",
+                    story.title,
+                    story.description
+                  );
+                  if (success) {
+                    showToast({ message: "Link copied to clipboard!", type: "success" });
+                  } else {
+                    showToast({ message: "Failed to share story", type: "error" });
+                  }
+                }}
+                className="p-2 transition-colors rounded-full bg-black/30 backdrop-blur-md hover:bg-black/40"
+              >
                 <Share2 size={24} className="text-white" />
               </button>
             </div>

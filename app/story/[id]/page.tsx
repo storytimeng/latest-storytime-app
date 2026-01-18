@@ -1,29 +1,61 @@
-"use client";
+import { Metadata } from "next";
+import StoryPageClient from "./StoryPageClient";
+import { storiesControllerFindOne } from "@/src/client/sdk.gen";
 
-import { useParams } from "next/navigation";
-import { Suspense, lazy } from "react";
-import { Skeleton } from "@heroui/skeleton";
+type Props = {
+  params: Promise<{ id: string }>;
+};
 
-// Lazy load SingleStory for code splitting
-const SingleStory = lazy(() =>
-  import("@/views").then((mod) => ({ default: mod.SingleStory }))
-);
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { id } = await params;
 
-export default function StoryPage() {
-  const params = useParams();
-  const id = params.id as string;
+  try {
+    const response = await storiesControllerFindOne({
+      path: { id },
+    });
 
-  return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen bg-accent-shade-1 p-4 space-y-4">
-          <Skeleton className="w-full h-64 rounded-lg" />
-          <Skeleton className="w-full h-32 rounded-lg" />
-          <Skeleton className="w-3/4 h-8 rounded-lg" />
-        </div>
-      }
-    >
-      <SingleStory storyId={id} />
-    </Suspense>
-  );
+    if (!response.error && response.data) {
+      const story = response.data as any;
+      const title = story.title || "Story";
+      const description = story.description || "Read this amazing story on Storytime";
+      const imageUrl = story.imageUrl || story.coverImage || "/images/storytime-fallback.png";
+      const authorName = story.author?.penName || "Unknown Author";
+
+      return {
+        title: `${title} - ${authorName} | Storytime`,
+        description: description.slice(0, 160),
+        openGraph: {
+          title,
+          description: description.slice(0, 160),
+          images: [
+            {
+              url: imageUrl,
+              width: 1200,
+              height: 630,
+              alt: title,
+            },
+          ],
+          type: "article",
+        },
+        twitter: {
+          card: "summary_large_image",
+          title,
+          description: description.slice(0, 160),
+          images: [imageUrl],
+        },
+      };
+    }
+  } catch (error) {
+    console.error("Error generating metadata:", error);
+  }
+
+  return {
+    title: "Story | Storytime",
+    description: "Read amazing stories on Storytime",
+  };
+}
+
+export default async function Page({ params }: Props) {
+  const { id } = await params;
+  return <StoryPageClient id={id} />;
 }

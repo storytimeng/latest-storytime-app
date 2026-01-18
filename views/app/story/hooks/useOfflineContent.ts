@@ -3,7 +3,7 @@ import {
   storiesStore,
   chaptersStore,
   episodesStore,
-} from "@/lib/offline/indexedDB";
+} from "@/lib/offline/db";
 import { useUserStore } from "@/src/stores/useUserStore";
 
 export function useOfflineContent(

@@ -6,16 +6,27 @@ import { Magnetik_Bold, Magnetik_Medium, Magnetik_Regular } from "@/lib/font";
 import { StoryCard } from "@/components/reusables";
 import { useReadingHistory } from "@/src/hooks/useReadingHistory";
 import { useOfflineStories } from "@/src/hooks/useOfflineStories";
-import { formatBytes } from "@/lib/offline/indexedDB";
+import { formatBytes } from "@/lib/offline/db";
 import { usersControllerGetAllReadingProgress } from "@/src/client/sdk.gen";
+import { useSearchParams } from "next/navigation";
 
 const NewLibraryView = () => {
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get("tab");
+  
   const [activeTab, setActiveTab] = useState<"library" | "downloads">(
-    "library"
+    tabParam === "downloads" ? "downloads" : "library"
   );
   const [page, setPage] = useState(1);
   const [readingProgress, setReadingProgress] = useState<Record<string, number>>({});
   const observerTarget = useRef<HTMLDivElement>(null);
+
+  // Update tab if URL param changes
+  useEffect(() => {
+    if (tabParam === "downloads") {
+      setActiveTab("downloads");
+    }
+  }, [tabParam]);
 
   // Fetch reading history with pagination
   const { history, isLoading, totalPages } = useReadingHistory(page, 20);

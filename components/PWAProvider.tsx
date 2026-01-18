@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { SplashScreen } from "@/components/SplashScreen";
 import { showToast } from "@/lib/showNotification";
+import { requestPersistentStorage } from "@/lib/backgroundSync";
 
 interface PWAProviderProps {
   children: React.ReactNode;
@@ -43,28 +44,40 @@ export const PWAProvider = ({ children }: PWAProviderProps) => {
     // Mark app as ready after hydration (next tick)
     setIsAppReady(true);
 
-    // Register service worker update handler
+    // Register Serwist service worker
     if (typeof window !== "undefined" && "serviceWorker" in navigator) {
-      navigator.serviceWorker.ready.then((registration) => {
-        registration.addEventListener("updatefound", () => {
-          const newWorker = registration.installing;
-          if (newWorker) {
-            newWorker.addEventListener("statechange", () => {
-              if (
-                newWorker.state === "installed" &&
-                navigator.serviceWorker.controller
-              ) {
-                // New content is available
-                showToast({
-                  type: "info",
-                  message: "New version available! Refresh to update.",
-                  duration: 5000,
-                });
-              }
-            });
-          }
+      // Register the service worker
+      navigator.serviceWorker
+        .register("/sw.js")
+        .then((registration) => {
+          console.log("Service Worker registered:", registration);
+
+          // Request persistent storage to prevent data eviction
+          requestPersistentStorage();
+
+          // Handle updates
+          registration.addEventListener("updatefound", () => {
+            const newWorker = registration.installing;
+            if (newWorker) {
+              newWorker.addEventListener("statechange", () => {
+                if (
+                  newWorker.state === "installed" &&
+                  navigator.serviceWorker.controller
+                ) {
+                  // New content is available
+                  showToast({
+                    type: "info",
+                    message: "New version available! Refresh to update.",
+                    duration: 5000,
+                  });
+                }
+              });
+            }
+          });
+        })
+        .catch((error) => {
+          console.error("Service Worker registration failed:", error);
         });
-      });
 
       // Handle controller change (when new SW takes over)
       navigator.serviceWorker.addEventListener("controllerchange", () => {

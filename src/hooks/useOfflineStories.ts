@@ -7,7 +7,7 @@ import {
   OfflineChapter,
   OfflineEpisode,
   getStorageEstimate,
-} from "@/lib/offline/indexedDB";
+} from "@/lib/offline/db";
 import { showToast } from "@/lib/showNotification";
 import { useUserStore } from "@/src/stores/useUserStore";
 
