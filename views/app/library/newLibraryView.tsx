@@ -13,12 +13,14 @@ import { useSearchParams } from "next/navigation";
 const NewLibraryView = () => {
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
-  
+
   const [activeTab, setActiveTab] = useState<"library" | "downloads">(
-    tabParam === "downloads" ? "downloads" : "library"
+    tabParam === "downloads" ? "downloads" : "library",
   );
   const [page, setPage] = useState(1);
-  const [readingProgress, setReadingProgress] = useState<Record<string, number>>({});
+  const [readingProgress, setReadingProgress] = useState<
+    Record<string, number>
+  >({});
   const observerTarget = useRef<HTMLDivElement>(null);
 
   // Update tab if URL param changes
@@ -38,12 +40,12 @@ const NewLibraryView = () => {
         const response = await usersControllerGetAllReadingProgress({
           query: { page: 1, limit: 100 },
         });
-        
+
         if (!response.error && response.data) {
           // @ts-ignore
           const progressData = response.data?.data || response.data;
           const progressMap: Record<string, number> = {};
-          
+
           if (Array.isArray(progressData)) {
             progressData.forEach((item: any) => {
               if (item.storyId && item.percentageRead !== undefined) {
@@ -51,11 +53,11 @@ const NewLibraryView = () => {
               }
             });
           }
-          
+
           setReadingProgress(progressMap);
         }
       } catch (error) {
-        console.error('Error fetching reading progress:', error);
+        console.error("Error fetching reading progress:", error);
       }
     };
 
@@ -75,7 +77,7 @@ const NewLibraryView = () => {
   // Map reading history to library story format
   const libraryStories = history.map((item: any) => {
     const story = item.story;
-    
+
     // Fallback for null story (e.g. deleted stories)
     if (!story) {
       return {
@@ -88,7 +90,7 @@ const NewLibraryView = () => {
         genres: [],
         status: "deleted",
         progress: 0,
-        isDeleted: true
+        isDeleted: true,
       };
     }
 
@@ -129,7 +131,7 @@ const NewLibraryView = () => {
         setPage((prev) => prev + 1);
       }
     },
-    [isLoading, page, totalPages]
+    [isLoading, page, totalPages],
   );
 
   useEffect(() => {
@@ -239,7 +241,10 @@ const NewLibraryView = () => {
               <div className="grid grid-cols-2 gap-4">
                 {currentStories.map((story: any) => (
                   <div key={story.id} className="relative">
-                    <StoryCard story={story} hideStats={activeTab === "library"} />
+                    <StoryCard
+                      story={story}
+                      hideStats={activeTab === "library"}
+                    />
                     {/* Show delete button for downloads */}
                     {activeTab === "downloads" && (
                       <button
@@ -257,7 +262,7 @@ const NewLibraryView = () => {
                   </div>
                 ))}
               </div>
-              
+
               {/* Infinite scroll trigger */}
               {activeTab === "library" && page < totalPages && (
                 <div ref={observerTarget} className="py-4 flex justify-center">

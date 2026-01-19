@@ -27,13 +27,16 @@ export default function OfflinePage() {
         </div>
 
         {/* Title */}
-        <h1 className={`${Magnetik_Bold.className} text-2xl text-primary-colour mb-3`}>
+        <h1
+          className={`${Magnetik_Bold.className} text-2xl text-primary-colour mb-3`}
+        >
           You're Offline
         </h1>
 
         {/* Description */}
         <p className={`${Magnetik_Medium.className} text-grey-1 text-sm mb-8`}>
-          It looks like you've lost your internet connection. Some features may be limited.
+          It looks like you've lost your internet connection. Some features may
+          be limited.
         </p>
 
         {/* Actions */}
@@ -45,7 +48,7 @@ export default function OfflinePage() {
           >
             Try Again
           </Button>
-          
+
           <Button
             onClick={() => router.push("/library?tab=downloads")}
             variant="bordered"
@@ -59,7 +62,8 @@ export default function OfflinePage() {
         {/* Helpful tip */}
         <div className="mt-8 p-4 bg-primary-colour/5 rounded-lg">
           <p className={`${Magnetik_Medium.className} text-xs text-grey-2`}>
-            💡 Tip: Download stories while online to read them anytime, even without internet!
+            💡 Tip: Download stories while online to read them anytime, even
+            without internet!
           </p>
         </div>
       </div>

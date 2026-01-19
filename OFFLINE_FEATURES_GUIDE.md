@@ -9,12 +9,8 @@ import { useOnlineStatus } from "@/src/hooks/useOnlineStatus";
 
 function MyComponent() {
   const isOnline = useOnlineStatus();
-  
-  return (
-    <div>
-      {isOnline ? "Connected" : "Offline"}
-    </div>
-  );
+
+  return <div>{isOnline ? "Connected" : "Offline"}</div>;
 }
 ```
 
@@ -26,10 +22,10 @@ import { useProfileCache } from "@/src/hooks/useProfileCache";
 function ProfileComponent() {
   const userId = "user-123";
   const { profile, isLoading, error, isOnline } = useProfileCache(userId);
-  
+
   if (isLoading) return <div>Loading...</div>;
   if (error) return <div>Error loading profile</div>;
-  
+
   return (
     <div>
       <h1>{profile?.name}</h1>
@@ -55,7 +51,7 @@ function WriteComponent() {
     unsyncedCount,
     isOnline,
   } = useDraftQueue(userId);
-  
+
   const handleSave = async () => {
     await saveDraft({
       title: "My Story",
@@ -63,13 +59,11 @@ function WriteComponent() {
       synced: false,
     });
   };
-  
+
   return (
     <div>
       {unsyncedCount > 0 && (
-        <button onClick={syncAllDrafts}>
-          Sync {unsyncedCount} drafts
-        </button>
+        <button onClick={syncAllDrafts}>Sync {unsyncedCount} drafts</button>
       )}
       <button onClick={handleSave}>Save Draft</button>
     </div>
@@ -84,13 +78,13 @@ import { getDB, STORES } from "@/lib/offline/db";
 
 async function cacheUserData(userId: string, data: any) {
   const db = await getDB();
-  
+
   await db.put(STORES.USER_DATA, {
     id: userId,
     userId,
     data,
     cachedAt: Date.now(),
-    expiresAt: Date.now() + (30 * 60 * 1000), // 30 minutes
+    expiresAt: Date.now() + 30 * 60 * 1000, // 30 minutes
   });
 }
 
@@ -107,22 +101,14 @@ import { shareStory, shareChapter } from "@/lib/share";
 
 function StoryComponent({ story }) {
   const handleShare = async () => {
-    const success = await shareStory(
-      story.id,
-      story.title,
-      story.description
-    );
-    
+    const success = await shareStory(story.id, story.title, story.description);
+
     if (success) {
       console.log("Shared successfully!");
     }
   };
-  
-  return (
-    <button onClick={handleShare}>
-      Share Story
-    </button>
-  );
+
+  return <button onClick={handleShare}>Share Story</button>;
 }
 ```
 
@@ -135,7 +121,7 @@ async function setupOfflineSupport() {
   // Request persistent storage
   const isPersistent = await requestPersistentStorage();
   console.log("Persistent storage:", isPersistent);
-  
+
   // Register background sync
   await syncDrafts();
 }
@@ -147,7 +133,7 @@ The following IndexedDB stores are available:
 
 - `STORES.STORIES` - Offline story data
 - `STORES.CHAPTERS` - Chapter content
-- `STORES.EPISODES` - Episode content  
+- `STORES.EPISODES` - Episode content
 - `STORES.METADATA` - General metadata
 - `STORES.USER_DATA` - Cached user data
 - `STORES.PROFILE` - Cached profile data
@@ -248,19 +234,19 @@ useEffect(() => {
 ```tsx
 async function fetchWithOfflineSupport(userId: string) {
   const db = await getDB();
-  
+
   // Try cache first
   const cached = await db.get(STORES.USER_DATA, userId);
-  
+
   if (cached && Date.now() - cached.cachedAt < 30 * 60 * 1000) {
     return cached.data;
   }
-  
+
   // Try network
   try {
     const response = await fetch(`/api/users/${userId}`);
     const data = await response.json();
-    
+
     // Update cache
     await db.put(STORES.USER_DATA, {
       id: userId,
@@ -268,7 +254,7 @@ async function fetchWithOfflineSupport(userId: string) {
       data,
       cachedAt: Date.now(),
     });
-    
+
     return data;
   } catch (error) {
     // Network failed, return cached data if available
@@ -286,7 +272,7 @@ async function fetchWithOfflineSupport(userId: string) {
 function useAutoSaveDraft() {
   const { saveDraft } = useDraftQueue(userId);
   const isOnline = useOnlineStatus();
-  
+
   const autoSave = useCallback(
     debounce(async (content) => {
       await saveDraft({
@@ -294,15 +280,15 @@ function useAutoSaveDraft() {
         content: content.body,
         synced: false, // Will sync when online
       });
-      
+
       if (isOnline) {
         // Trigger immediate sync if online
         await syncDrafts();
       }
     }, 2000),
-    [saveDraft, isOnline]
+    [saveDraft, isOnline],
   );
-  
+
   return { autoSave };
 }
 ```
@@ -348,7 +334,7 @@ function useAutoSaveDraft() {
 
 ### Test IndexedDB
 
-1. Open DevTools  
+1. Open DevTools
 2. Go to Application tab
 3. Check IndexedDB section
 4. Verify data is being stored

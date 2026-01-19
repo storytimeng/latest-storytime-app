@@ -17,8 +17,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     if (!response.error && response.data) {
       const story = response.data as any;
       const title = story.title || "Story";
-      const description = story.description || "Read this amazing story on Storytime";
-      const imageUrl = story.imageUrl || story.coverImage || "/images/storytime-fallback.png";
+      const description =
+        story.description || "Read this amazing story on Storytime";
+      const imageUrl =
+        story.imageUrl || story.coverImage || "/images/storytime-fallback.png";
       const authorName = story.author?.penName || "Unknown Author";
 
       return {

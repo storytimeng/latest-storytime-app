@@ -5,7 +5,7 @@ import { Skeleton } from "@heroui/skeleton";
 
 // Lazy load SingleStory for code splitting
 const SingleStory = lazy(() =>
-  import("@/views").then((mod) => ({ default: mod.SingleStory }))
+  import("@/views").then((mod) => ({ default: mod.SingleStory })),
 );
 
 type Props = {

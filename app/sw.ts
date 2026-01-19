@@ -1,7 +1,13 @@
 /// <reference lib="webworker" />
 
 import type { PrecacheEntry, SerwistGlobalConfig } from "serwist";
-import { Serwist, CacheFirst, NetworkFirst, NetworkOnly, StaleWhileRevalidate } from "serwist";
+import {
+  Serwist,
+  CacheFirst,
+  NetworkFirst,
+  NetworkOnly,
+  StaleWhileRevalidate,
+} from "serwist";
 import { CacheableResponsePlugin } from "@serwist/cacheable-response";
 import { ExpirationPlugin } from "@serwist/expiration";
 
@@ -60,7 +66,7 @@ const serwist = new Serwist({
     },
     // Cache JS/CSS with StaleWhileRevalidate
     {
-      matcher: ({ request }: MatcherContext) => 
+      matcher: ({ request }: MatcherContext) =>
         request.destination === "script" || request.destination === "style",
       handler: new StaleWhileRevalidate({
         cacheName: "static-resources",

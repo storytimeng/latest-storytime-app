@@ -8,7 +8,7 @@ import { useState, useEffect } from "react";
  */
 export function useOnlineStatus() {
   const [isOnline, setIsOnline] = useState(
-    typeof window !== "undefined" ? navigator.onLine : true
+    typeof window !== "undefined" ? navigator.onLine : true,
   );
 
   useEffect(() => {

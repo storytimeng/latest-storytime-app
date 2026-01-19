@@ -30,6 +30,7 @@ pnpm start
 ### 2. Verify Installation
 
 Open Chrome DevTools:
+
 - Go to **Application** > **Service Workers**
 - Verify `sw.js` is registered and running
 - Go to **Application** > **IndexedDB**
@@ -48,30 +49,34 @@ Open Chrome DevTools:
 
 ```json
 {
-  "@serwist/next": "^9.5.0",  // PWA service worker
-  "serwist": "^9.5.0",         // Service worker runtime
-  "idb": "^8.0.3"              // Better IndexedDB API
+  "@serwist/next": "^9.5.0", // PWA service worker
+  "serwist": "^9.5.0", // Service worker runtime
+  "idb": "^8.0.3" // Better IndexedDB API
 }
 ```
 
 ### New Files
 
 **Hooks:**
+
 - `src/hooks/useOnlineStatus.ts` - Online/offline detection
 - `src/hooks/useProfileCache.ts` - Profile data caching
 - `src/hooks/useDraftQueue.ts` - Draft queue management
 
 **Libraries:**
+
 - `lib/offline/db.ts` - Enhanced IndexedDB with idb
 - `lib/share.ts` - Native share functionality
 - `lib/backgroundSync.ts` - Background sync utilities
 
 **Components:**
+
 - `components/OfflineIndicator.tsx` - Offline UI indicator
 - `app/sw.ts` - Service worker configuration
 - `app/story/[id]/StoryPageClient.tsx` - Client component for SEO
 
 **Documentation:**
+
 - `OFFLINE_PWA_IMPLEMENTATION_PLAN.md` - Implementation plan
 - `OFFLINE_PWA_IMPLEMENTATION_SUMMARY.md` - Detailed summary
 - `OFFLINE_FEATURES_GUIDE.md` - Developer guide
@@ -96,7 +101,7 @@ import { useOnlineStatus } from "@/src/hooks/useOnlineStatus";
 
 function MyComponent() {
   const isOnline = useOnlineStatus();
-  
+
   return isOnline ? "Online" : "Offline";
 }
 ```
@@ -108,7 +113,7 @@ import { useProfileCache } from "@/src/hooks/useProfileCache";
 
 function ProfilePage() {
   const { profile, isOnline } = useProfileCache(userId);
-  
+
   return (
     <div>
       <h1>{profile?.name}</h1>
@@ -125,13 +130,11 @@ import { useDraftQueue } from "@/src/hooks/useDraftQueue";
 
 function WritePage() {
   const { saveDraft, unsyncedCount, syncAllDrafts } = useDraftQueue(userId);
-  
+
   return (
     <div>
       {unsyncedCount > 0 && (
-        <button onClick={syncAllDrafts}>
-          Sync {unsyncedCount} drafts
-        </button>
+        <button onClick={syncAllDrafts}>Sync {unsyncedCount} drafts</button>
       )}
     </div>
   );
@@ -150,13 +153,13 @@ async function handleShare() {
 
 ## 📊 Caching Strategy
 
-| Resource | Strategy | Duration |
-|----------|----------|----------|
-| Fonts | CacheFirst | 1 year |
-| Images | StaleWhileRevalidate | 30 days |
-| JS/CSS | StaleWhileRevalidate | 24 hours |
-| API Calls | NetworkFirst | 5 minutes |
-| Pages | NetworkFirst | 24 hours |
+| Resource  | Strategy             | Duration  |
+| --------- | -------------------- | --------- |
+| Fonts     | CacheFirst           | 1 year    |
+| Images    | StaleWhileRevalidate | 30 days   |
+| JS/CSS    | StaleWhileRevalidate | 24 hours  |
+| API Calls | NetworkFirst         | 5 minutes |
+| Pages     | NetworkFirst         | 24 hours  |
 
 ## 🗄️ IndexedDB Schema
 
@@ -220,24 +223,24 @@ pnpm start
 
 ```javascript
 // In browser console
-navigator.serviceWorker.getRegistrations().then(registrations => {
-  console.log('Registered:', registrations);
+navigator.serviceWorker.getRegistrations().then((registrations) => {
+  console.log("Registered:", registrations);
 });
 
 // Check caches
-caches.keys().then(keys => console.log('Cache keys:', keys));
+caches.keys().then((keys) => console.log("Cache keys:", keys));
 ```
 
 ### Clearing Cache
 
 ```javascript
 // Clear all caches
-caches.keys().then(keys => {
-  keys.forEach(key => caches.delete(key));
+caches.keys().then((keys) => {
+  keys.forEach((key) => caches.delete(key));
 });
 
 // Clear IndexedDB
-indexedDB.deleteDatabase('StorytimeOfflineDB');
+indexedDB.deleteDatabase("StorytimeOfflineDB");
 ```
 
 ## 📱 PWA Installation
@@ -272,12 +275,14 @@ indexedDB.deleteDatabase('StorytimeOfflineDB');
 ## 🎨 User Experience
 
 ### Online
+
 - Normal app behavior
 - Fresh data from API
 - Immediate updates
 - Full functionality
 
 ### Offline
+
 - Offline indicator on home
 - Access to downloads
 - Draft queue for writing
@@ -285,6 +290,7 @@ indexedDB.deleteDatabase('StorytimeOfflineDB');
 - Sync pending badge
 
 ### Transition (Offline → Online)
+
 - Automatic sync triggers
 - Drafts upload
 - Cache refreshes
@@ -304,6 +310,7 @@ indexedDB.deleteDatabase('StorytimeOfflineDB');
 **Problem**: Service worker fails to register
 
 **Solutions**:
+
 1. Ensure using HTTPS or localhost
 2. Check `/sw.js` is accessible
 3. Verify Serwist config in `next.config.js`
@@ -314,6 +321,7 @@ indexedDB.deleteDatabase('StorytimeOfflineDB');
 **Problem**: Data not saving to IndexedDB
 
 **Solutions**:
+
 1. Check browser support
 2. Clear old database version
 3. Check for quota exceeded
@@ -324,6 +332,7 @@ indexedDB.deleteDatabase('StorytimeOfflineDB');
 **Problem**: App doesn't work offline
 
 **Solutions**:
+
 1. Build production bundle (`pnpm build`)
 2. Verify service worker registered
 3. Check cache contains assets
@@ -334,6 +343,7 @@ indexedDB.deleteDatabase('StorytimeOfflineDB');
 **Problem**: Seeing old content
 
 **Solutions**:
+
 1. Clear cache in DevTools
 2. Unregister service worker
 3. Hard refresh (Ctrl+Shift+R)

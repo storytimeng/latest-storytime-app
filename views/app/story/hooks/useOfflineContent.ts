@@ -1,15 +1,11 @@
 import { useState, useEffect } from "react";
-import {
-  storiesStore,
-  chaptersStore,
-  episodesStore,
-} from "@/lib/offline/db";
+import { storiesStore, chaptersStore, episodesStore } from "@/lib/offline/db";
 import { useUserStore } from "@/src/stores/useUserStore";
 
 export function useOfflineContent(
   isOnline: boolean,
   storyId: string,
-  updateLastRead: (id: string) => Promise<void>
+  updateLastRead: (id: string) => Promise<void>,
 ) {
   const { user } = useUserStore();
   const userId = user?.id;
@@ -23,7 +19,7 @@ export function useOfflineContent(
       const loadOfflineData = async () => {
         try {
           const offlineStoryData = await storiesStore.get(
-            `${userId}_${storyId}`
+            `${userId}_${storyId}`,
           );
           if (offlineStoryData) {
             setOfflineStory(offlineStoryData);
@@ -36,24 +32,24 @@ export function useOfflineContent(
             if (offlineStoryData.structure === "chapters") {
               const offlineChapters = await chaptersStore.getByIndex(
                 "storyId",
-                storyId
+                storyId,
               );
               const userChapters = offlineChapters.filter(
-                (c) => c.userId === userId
+                (c) => c.userId === userId,
               );
               setOfflineContent(
-                userChapters.sort((a, b) => a.chapterNumber - b.chapterNumber)
+                userChapters.sort((a, b) => a.chapterNumber - b.chapterNumber),
               );
             } else {
               const offlineEpisodes = await episodesStore.getByIndex(
                 "storyId",
-                storyId
+                storyId,
               );
               const userEpisodes = offlineEpisodes.filter(
-                (e) => e.userId === userId
+                (e) => e.userId === userId,
               );
               setOfflineContent(
-                userEpisodes.sort((a, b) => a.episodeNumber - b.episodeNumber)
+                userEpisodes.sort((a, b) => a.episodeNumber - b.episodeNumber),
               );
             }
           }

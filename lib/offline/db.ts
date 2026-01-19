@@ -1,7 +1,7 @@
 /**
  * Enhanced IndexedDB wrapper using idb library
  * Provides better error handling and cleaner API
- * 
+ *
  * IMPORTANT: This module should only be used in client-side code.
  * All functions check for browser environment before accessing IndexedDB.
  */
@@ -12,7 +12,8 @@ const DB_NAME = "StorytimeOfflineDB";
 const DB_VERSION = 4; // Updated to avoid conflicts
 
 // Check if we're in a browser environment
-const isBrowser = typeof window !== "undefined" && typeof indexedDB !== "undefined";
+const isBrowser =
+  typeof window !== "undefined" && typeof indexedDB !== "undefined";
 
 // Store names
 export const STORES = {
@@ -380,7 +381,7 @@ export function formatBytes(bytes: number, decimals = 2): string {
 export async function clearStore(storeName: keyof typeof STORES) {
   const db = await getDB();
   if (!db) return;
-  
+
   const storeKey = STORES[storeName];
   await db.clear(storeKey as any);
 }
@@ -391,7 +392,7 @@ export async function clearStore(storeName: keyof typeof STORES) {
 export async function clearAllData() {
   const db = await getDB();
   if (!db) return;
-  
+
   const storeNames = Object.values(STORES);
 
   for (const storeName of storeNames) {
@@ -463,9 +464,15 @@ export class IndexedDBStore<T> {
  * Store instances for backward compatibility
  */
 export const storiesStore = new IndexedDBStore<OfflineStory>(STORES.STORIES);
-export const chaptersStore = new IndexedDBStore<OfflineChapter>(STORES.CHAPTERS);
-export const episodesStore = new IndexedDBStore<OfflineEpisode>(STORES.EPISODES);
-export const metadataStore = new IndexedDBStore<OfflineMetadata>(STORES.METADATA);
+export const chaptersStore = new IndexedDBStore<OfflineChapter>(
+  STORES.CHAPTERS,
+);
+export const episodesStore = new IndexedDBStore<OfflineEpisode>(
+  STORES.EPISODES,
+);
+export const metadataStore = new IndexedDBStore<OfflineMetadata>(
+  STORES.METADATA,
+);
 
 /**
  * Get storage usage estimate
@@ -475,7 +482,10 @@ export async function getStorageEstimate(): Promise<{
   quota: number;
   percentUsed: number;
 }> {
-  if (!isBrowser || !("storage" in navigator && "estimate" in navigator.storage)) {
+  if (
+    !isBrowser ||
+    !("storage" in navigator && "estimate" in navigator.storage)
+  ) {
     return { usage: 0, quota: 0, percentUsed: 0 };
   }
 

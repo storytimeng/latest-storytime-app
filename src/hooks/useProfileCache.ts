@@ -31,7 +31,10 @@ export function useProfileCache(userId: string | null) {
           const cached = await db.get(STORES.PROFILE, userId);
 
           // If we have cached data and it's not expired, use it (especially when offline)
-          if (cached && (!isOnline || Date.now() - cached.cachedAt < CACHE_DURATION)) {
+          if (
+            cached &&
+            (!isOnline || Date.now() - cached.cachedAt < CACHE_DURATION)
+          ) {
             setProfile(cached.profile);
             setIsLoading(false);
             return;
@@ -41,10 +44,12 @@ export function useProfileCache(userId: string | null) {
         // If online, try to fetch fresh data
         if (isOnline) {
           // Import the API call dynamically to avoid circular dependencies
-          const { usersControllerGetProfile } = await import("@/src/client/sdk.gen");
-          
+          const { usersControllerGetProfile } = await import(
+            "@/src/client/sdk.gen"
+          );
+
           const response = await usersControllerGetProfile();
-          
+
           if (!response.error && response.data) {
             const profileData = response.data;
             setProfile(profileData);

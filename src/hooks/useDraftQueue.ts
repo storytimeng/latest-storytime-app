@@ -29,11 +29,11 @@ export function useDraftQueue(userId: string | null) {
         setIsLoading(false);
         return;
       }
-      
+
       const allDrafts = await db.getAllFromIndex(
         STORES.DRAFTS,
         "userId",
-        userId
+        userId,
       );
       setDrafts(allDrafts.sort((a, b) => b.updatedAt - a.updatedAt));
       setIsLoading(false);
@@ -54,11 +54,11 @@ export function useDraftQueue(userId: string | null) {
 
       const db = await getDB();
       if (!db) throw new Error("IndexedDB not available");
-      
+
       const now = Date.now();
-      
+
       const draftId = draft.storyId || generateId();
-      
+
       const newDraft: Draft = {
         id: draftId,
         userId,
@@ -77,7 +77,7 @@ export function useDraftQueue(userId: string | null) {
 
       return draftId;
     },
-    [userId, isOnline, loadDrafts]
+    [userId, isOnline, loadDrafts],
   );
 
   // Update existing draft
@@ -85,7 +85,7 @@ export function useDraftQueue(userId: string | null) {
     async (draftId: string, updates: Partial<Draft>) => {
       const db = await getDB();
       if (!db) throw new Error("IndexedDB not available");
-      
+
       const existing = await db.get(STORES.DRAFTS, draftId);
 
       if (!existing) throw new Error("Draft not found");
@@ -104,7 +104,7 @@ export function useDraftQueue(userId: string | null) {
         syncDraft(draftId);
       }
     },
-    [isOnline, loadDrafts]
+    [isOnline, loadDrafts],
   );
 
   // Delete draft
@@ -112,50 +112,53 @@ export function useDraftQueue(userId: string | null) {
     async (draftId: string) => {
       const db = await getDB();
       if (!db) throw new Error("IndexedDB not available");
-      
+
       await db.delete(STORES.DRAFTS, draftId);
       await loadDrafts();
     },
-    [loadDrafts]
+    [loadDrafts],
   );
 
   // Sync a specific draft
-  const syncDraft = useCallback(async (draftId: string) => {
-    if (!isOnline) {
-      console.log("Cannot sync draft: offline");
-      return false;
-    }
-
-    try {
-      const db = await getDB();
-      if (!db) {
-        console.warn("IndexedDB not available for syncing");
+  const syncDraft = useCallback(
+    async (draftId: string) => {
+      if (!isOnline) {
+        console.log("Cannot sync draft: offline");
         return false;
       }
-      
-      const draft = await db.get(STORES.DRAFTS, draftId);
 
-      if (!draft || draft.synced) return false;
+      try {
+        const db = await getDB();
+        if (!db) {
+          console.warn("IndexedDB not available for syncing");
+          return false;
+        }
 
-      // TODO: Implement actual API call to upload draft
-      // For now, we'll just mark it as synced after a delay
-      console.log("Syncing draft:", draftId);
+        const draft = await db.get(STORES.DRAFTS, draftId);
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+        if (!draft || draft.synced) return false;
 
-      // Mark as synced
-      draft.synced = true;
-      draft.updatedAt = Date.now();
-      await db.put(STORES.DRAFTS, draft);
-      await loadDrafts();
+        // TODO: Implement actual API call to upload draft
+        // For now, we'll just mark it as synced after a delay
+        console.log("Syncing draft:", draftId);
 
-      return true;
-    } catch (error) {
-      console.error("Error syncing draft:", error);
-      return false;
-    }
-  }, [isOnline, loadDrafts]);
+        // Simulate API call
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+
+        // Mark as synced
+        draft.synced = true;
+        draft.updatedAt = Date.now();
+        await db.put(STORES.DRAFTS, draft);
+        await loadDrafts();
+
+        return true;
+      } catch (error) {
+        console.error("Error syncing draft:", error);
+        return false;
+      }
+    },
+    [isOnline, loadDrafts],
+  );
 
   // Sync all unsynced drafts
   const syncAllDrafts = useCallback(async () => {
@@ -168,7 +171,7 @@ export function useDraftQueue(userId: string | null) {
 
     try {
       const unsyncedDrafts = drafts.filter((d) => !d.synced);
-      
+
       for (const draft of unsyncedDrafts) {
         await syncDraft(draft.id);
       }

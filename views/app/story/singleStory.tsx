@@ -106,7 +106,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
   useEffect(() => {
     // Prefetch home route
     router.prefetch("/home");
-    
+
     // Prefetch genre routes if available
     if (story?.genres) {
       story.genres.forEach((genre: any) => {
@@ -170,10 +170,10 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
     structure === "episodes" && !storyData?.episodes?.length && !isLoading;
 
   const { chapters: fetchedChapters } = useStoryChapters(
-    shouldFetchChapters ? storyId : undefined
+    shouldFetchChapters ? storyId : undefined,
   );
   const { episodes: fetchedEpisodes } = useStoryEpisodes(
-    shouldFetchEpisodes ? storyId : undefined
+    shouldFetchEpisodes ? storyId : undefined,
   );
 
   const chapters = storyData?.chapters?.length
@@ -199,7 +199,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
   const [isDownloaded, setIsDownloaded] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadingItems, setDownloadingItems] = useState<Set<string>>(
-    new Set()
+    new Set(),
   );
   const longPressTimer = React.useRef<NodeJS.Timeout | null>(null);
 
@@ -272,7 +272,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
         await downloadAdditionalContent(
           storyId!,
           structure as any,
-          contentToDownload
+          contentToDownload,
         );
       }
 
@@ -294,10 +294,10 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
   // Selection Mode State
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedContentIds, setSelectedContentIds] = useState<Set<string>>(
-    new Set()
+    new Set(),
   );
   const [downloadedContentIds, setDownloadedContentIds] = useState<Set<string>>(
-    new Set()
+    new Set(),
   );
 
   // Check downloaded content status
@@ -306,7 +306,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
       if (storyId && structure !== "single") {
         const downloadedItems = await getDownloadedContent(
           storyId,
-          structure as any
+          structure as any,
         );
         const ids = new Set(downloadedItems.map((item: any) => item.id));
         setDownloadedContentIds(ids);
@@ -410,7 +410,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
               updatedAt: item.updatedAt,
             };
           }
-        }
+        },
       );
 
       const content = await Promise.all(contentPromises);
@@ -464,10 +464,10 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
         const itemProgress =
           structure === "episodes"
             ? aggregatedData?.episodeProgress?.find(
-                (ep: any) => ep.episodeId === item.id
+                (ep: any) => ep.episodeId === item.id,
               )
             : aggregatedData?.chapterProgress?.find(
-                (ch: any) => ch.chapterId === item.id
+                (ch: any) => ch.chapterId === item.id,
               );
         return !itemProgress?.isCompleted;
       });
@@ -480,7 +480,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
 
     // Filter out already downloaded
     itemsToDownload = itemsToDownload.filter(
-      (item: any) => !downloadedContentIds.has(item.id)
+      (item: any) => !downloadedContentIds.has(item.id),
     );
 
     if (itemsToDownload.length === 0) {
@@ -500,7 +500,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
 
     if (!storyId || selectedContentIds.size === 0) return;
     const itemsToDownload = contentList.filter((item: any) =>
-      selectedContentIds.has(item.id)
+      selectedContentIds.has(item.id),
     );
     await performBatchDownload(itemsToDownload);
   };
@@ -514,7 +514,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
         await deleteOfflineContent(
           storyId,
           id,
-          structure === "chapters" ? "chapter" : "episode"
+          structure === "chapters" ? "chapter" : "episode",
         );
       }
 
@@ -639,7 +639,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
     const itemProgress = progressList?.find((p: any) =>
       structure === "chapters"
         ? p.chapterId === lastReadItem.id
-        : p.episodeId === lastReadItem.id
+        : p.episodeId === lastReadItem.id,
     );
 
     if (itemProgress?.isCompleted && lastReadIndex < contentList.length) {
@@ -879,7 +879,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
         />
         {/* Gradient Overlay - fog at bottom for title area only */}
         <div className="absolute inset-0 bg-gradient-to-t from-accent-shade-1 from-0% via-accent-shade-1/70 via-8% to-transparent to-15%" />
-        
+
         {/* Header Navigation - Overlaid on image */}
         <div className="absolute top-0 left-0 right-0 z-20 px-4 pt-6">
           <div className="flex items-center justify-between">
@@ -937,29 +937,35 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
                   )}
                 </button>
               )}
-              <button 
+              <button
                 onClick={toggleLike}
                 className="p-2 transition-colors rounded-full bg-black/30 backdrop-blur-md hover:bg-black/40"
               >
-                <Heart 
-                  size={24} 
+                <Heart
+                  size={24}
                   className={cn(
-                    "transition-colors", 
-                    isLiked ? "fill-red-500 text-red-500" : "text-white"
-                  )} 
+                    "transition-colors",
+                    isLiked ? "fill-red-500 text-red-500" : "text-white",
+                  )}
                 />
               </button>
-              <button 
+              <button
                 onClick={async () => {
                   const success = await shareStory(
                     storyId || "",
                     story.title,
-                    story.description
+                    story.description,
                   );
                   if (success) {
-                    showToast({ message: "Link copied to clipboard!", type: "success" });
+                    showToast({
+                      message: "Link copied to clipboard!",
+                      type: "success",
+                    });
                   } else {
-                    showToast({ message: "Failed to share story", type: "error" });
+                    showToast({
+                      message: "Failed to share story",
+                      type: "error",
+                    });
                   }
                 }}
                 className="p-2 transition-colors rounded-full bg-black/30 backdrop-blur-md hover:bg-black/40"
@@ -980,12 +986,14 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
               #1 in {story.genres?.[0] || "Storytime"}
             </span>
           )}
-          <span className={cn(
-            "inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded uppercase tracking-wider",
-            status === "complete" 
-              ? "bg-green-500/20 text-green-500" 
-              : "bg-complimentary-colour/20 text-complimentary-colour"
-          )}>
+          <span
+            className={cn(
+              "inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded uppercase tracking-wider",
+              status === "complete"
+                ? "bg-green-500/20 text-green-500"
+                : "bg-complimentary-colour/20 text-complimentary-colour",
+            )}
+          >
             {status === "complete" && <Check size={10} />}
             {status === "complete" ? "Completed" : "Ongoing"}
           </span>
@@ -995,7 +1003,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
         <h1
           className={cn(
             "text-primary text-2xl font-bold leading-tight mb-2 ",
-            Magnetik_Bold.className
+            Magnetik_Bold.className,
           )}
         >
           {story.title}
@@ -1030,7 +1038,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
                 }`
               : isSingleStory
                 ? "Read Story"
-                    : `Play ${structure === "chapters" ? "Chap" : "Ep-"}1`}
+                : `Play ${structure === "chapters" ? "Chap" : "Ep-"}1`}
           </span>
         </button>
 
@@ -1043,35 +1051,44 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
                 ? `${(viewCount / 1000000).toFixed(1)}M`
                 : viewCount >= 1000
                   ? `${(viewCount / 1000).toFixed(1)}K`
-                  : viewCount} views
+                  : viewCount}{" "}
+              views
             </span>
           </div>
           <div className="flex items-center gap-1.5 bg-white/50 px-2 py-1 rounded-md">
-            <Star size={12} className="fill-current text-complimentary-colour" />
-            <span className="font-medium text-primary">{displayLikeCount} likes</span>
+            <Star
+              size={12}
+              className="fill-current text-complimentary-colour"
+            />
+            <span className="font-medium text-primary">
+              {displayLikeCount} likes
+            </span>
           </div>
           <div className="flex items-center gap-1.5 bg-white/50 px-2 py-1 rounded-md">
             <Star size={12} className="fill-current text-yellow-500" />
-            <span className="font-medium text-primary">{starRating.toFixed(1)}</span>
+            <span className="font-medium text-primary">
+              {starRating.toFixed(1)}
+            </span>
           </div>
           {story.genres?.[0] && (
             <span className="bg-white/50 px-2 py-1 rounded-md font-medium text-primary">
               {story.genres[0]}
             </span>
           )}
-         
         </div>
 
         {/* Description */}
         <div className="mb-4">
-          <p className={cn(
-            "text-sm text-primary/70 leading-relaxed line-clamp-2",
-            Magnetik_Regular.className
-          )}>
+          <p
+            className={cn(
+              "text-sm text-primary/70 leading-relaxed line-clamp-2",
+              Magnetik_Regular.className,
+            )}
+          >
             {story.description}
           </p>
           {story.description && story.description.length > 100 && (
-            <button 
+            <button
               onClick={() => setActiveTab("details")}
               className="text-complimentary-colour text-sm font-medium mt-1"
             >
@@ -1088,7 +1105,9 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
           <span className="font-medium">Show Writers & Cast</span>
           <span className="text-primary/80 font-bold normal-case">
             {author?.penName || author?.name || "Unknown"}
-            {collaborators && collaborators.length > 0 && ` and ${collaborators.length} more`}
+            {collaborators &&
+              collaborators.length > 0 &&
+              ` and ${collaborators.length} more`}
           </span>
           <ChevronRight size={14} />
         </button>
@@ -1104,7 +1123,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
                 "py-4 text-sm font-medium whitespace-nowrap border-b-2 transition-colors relative",
                 activeTab === "episodes"
                   ? "text-primary border-complimentary-colour"
-                  : "text-primary/40 border-transparent hover:text-primary/60"
+                  : "text-primary/40 border-transparent hover:text-primary/60",
               )}
             >
               {structure === "chapters" ? "Chapters" : "Episodes"}
@@ -1119,7 +1138,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
               "py-4 text-sm font-medium whitespace-nowrap border-b-2 transition-colors",
               activeTab === "details"
                 ? "text-primary border-complimentary-colour"
-                : "text-primary/40 border-transparent hover:text-primary/60"
+                : "text-primary/40 border-transparent hover:text-primary/60",
             )}
           >
             Details
@@ -1130,7 +1149,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
               "py-4 text-sm font-medium whitespace-nowrap border-b-2 transition-colors",
               activeTab === "reviews"
                 ? "text-primary border-complimentary-colour"
-                : "text-primary/40 border-transparent hover:text-primary/60"
+                : "text-primary/40 border-transparent hover:text-primary/60",
             )}
           >
             Reviews
@@ -1234,10 +1253,10 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
               const itemProgress =
                 structure === "episodes"
                   ? aggregatedData?.episodeProgress?.find(
-                      (ep: any) => ep.episodeId === item.id
+                      (ep: any) => ep.episodeId === item.id,
                     )
                   : aggregatedData?.chapterProgress?.find(
-                      (ch: any) => ch.chapterId === item.id
+                      (ch: any) => ch.chapterId === item.id,
                     );
 
               const percentageRead = itemProgress
@@ -1255,7 +1274,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
                     isSelected
                       ? "bg-primary/10 border border-primary/20"
                       : "hover:bg-white/5",
-                    isRead && !isSelected ? "opacity-50" : ""
+                    isRead && !isSelected ? "opacity-50" : "",
                   )}
                   onClick={() =>
                     isSelectionMode && toggleItemSelection(item.id)
@@ -1277,7 +1296,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
                         "w-6 h-6 rounded-md border-2 flex items-center justify-center transition-colors",
                         isSelected
                           ? "bg-primary border-primary text-white"
-                          : "border-white/20"
+                          : "border-white/20",
                       )}
                     >
                       {isSelected && <Check size={14} />}
@@ -1296,7 +1315,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
                         ? "bg-green-500/20 text-green-500"
                         : percentageRead > 0
                           ? "bg-complimentary-colour/20 text-complimentary-colour"
-                          : "bg-primary/10 text-primary/60 group-hover:bg-complimentary-colour group-hover:text-white"
+                          : "bg-primary/10 text-primary/60 group-hover:bg-complimentary-colour group-hover:text-white",
                     )}
                   >
                     {isCompleted ? (
@@ -1512,7 +1531,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
                 "flex items-center justify-center gap-2 w-full py-4 rounded-xl border transition-colors font-medium",
                 isDownloaded
                   ? "border-green-500/30 text-green-500 bg-green-500/5"
-                  : "border-primary/20 text-primary hover:bg-primary/5"
+                  : "border-primary/20 text-primary hover:bg-primary/5",
               )}
             >
               {isDownloading ? (

@@ -20,8 +20,8 @@ export default function Error({
   }, [error]);
 
   // Check if this is a network/offline error
-  const isNetworkError = 
-    error.message?.includes("fetch") || 
+  const isNetworkError =
+    error.message?.includes("fetch") ||
     error.message?.includes("network") ||
     error.message?.includes("timeout") ||
     !navigator.onLine;
@@ -43,13 +43,15 @@ export default function Error({
         </div>
 
         {/* Title */}
-        <h1 className={`${Magnetik_Bold.className} text-2xl text-primary-colour mb-3`}>
+        <h1
+          className={`${Magnetik_Bold.className} text-2xl text-primary-colour mb-3`}
+        >
           {isNetworkError ? "You're Offline" : "Something Went Wrong"}
         </h1>
 
         {/* Description */}
         <p className={`${Magnetik_Medium.className} text-grey-1 text-sm mb-8`}>
-          {isNetworkError 
+          {isNetworkError
             ? "Please check your internet connection and try again."
             : "We encountered an unexpected error. Please try refreshing the page."}
         </p>
@@ -63,7 +65,7 @@ export default function Error({
           >
             Try Again
           </Button>
-          
+
           <Button
             onClick={() => router.push("/")}
             variant="bordered"
@@ -77,7 +79,9 @@ export default function Error({
         {/* Error details in dev mode */}
         {process.env.NODE_ENV === "development" && (
           <details className="mt-8 text-left">
-            <summary className={`${Magnetik_Medium.className} text-xs text-grey-1 cursor-pointer`}>
+            <summary
+              className={`${Magnetik_Medium.className} text-xs text-grey-1 cursor-pointer`}
+            >
               Error Details (Dev Only)
             </summary>
             <pre className="mt-2 p-3 bg-black/5 rounded text-xs text-red-500 overflow-auto">

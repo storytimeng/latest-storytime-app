@@ -2,7 +2,7 @@
 
 ## What Changed?
 
-Your Storytime app is now a **Progressive Web App (PWA)** that works offline! 
+Your Storytime app is now a **Progressive Web App (PWA)** that works offline!
 
 ## Key Features Added ✨
 
@@ -29,11 +29,13 @@ pnpm build && pnpm start
 ## How It Works 🔧
 
 ### When Online
+
 - Normal app behavior
 - Fresh data from API
 - Automatic caching
 
 ### When Offline
+
 - Home shows offline message
 - Downloads accessible
 - Can write drafts (syncs later)
@@ -42,15 +44,17 @@ pnpm build && pnpm start
 ## For Users 👤
 
 ### Installing
+
 1. Visit the website
 2. Tap install prompt
 3. Add to home screen
 4. Launch like native app
 
 ### Using Offline
+
 1. Download stories when online
 2. Go offline
-3. Tap "View My Downloads" 
+3. Tap "View My Downloads"
 4. Read and write offline
 5. Everything syncs when back online
 
@@ -90,6 +94,7 @@ const data = await db.get(STORES.STORIES, id);
 ## Files to Know 📁
 
 ### Code
+
 - `src/hooks/useOnlineStatus.ts` - Detect online/offline
 - `src/hooks/useProfileCache.ts` - Cache user profile
 - `src/hooks/useDraftQueue.ts` - Manage drafts
@@ -99,6 +104,7 @@ const data = await db.get(STORES.STORIES, id);
 - `components/OfflineIndicator.tsx` - Offline UI
 
 ### Docs (Read These!)
+
 - `OFFLINE_README.md` - Main documentation
 - `OFFLINE_FEATURES_GUIDE.md` - How to use offline features
 - `PWA_MIGRATION_CHECKLIST.md` - Testing checklist
@@ -107,19 +113,22 @@ const data = await db.get(STORES.STORIES, id);
 ## Common Tasks 📝
 
 ### Test Offline
+
 1. `pnpm build`
 2. `pnpm start`
 3. DevTools > Network > Offline
 4. Navigate the app
 
 ### Clear Cache
+
 ```javascript
 // In browser console
-caches.keys().then(keys => keys.forEach(k => caches.delete(k)));
-indexedDB.deleteDatabase('StorytimeOfflineDB');
+caches.keys().then((keys) => keys.forEach((k) => caches.delete(k)));
+indexedDB.deleteDatabase("StorytimeOfflineDB");
 ```
 
 ### Check Service Worker
+
 - DevTools > Application > Service Workers
 - Should see `sw.js` registered and running
 
@@ -144,6 +153,7 @@ indexedDB.deleteDatabase('StorytimeOfflineDB');
 ## Storage 💿
 
 App uses **IndexedDB** for offline storage with 11 stores:
+
 - Stories, Chapters, Episodes
 - User Data, Profile, Settings
 - Reading Progress, Drafts
@@ -156,6 +166,7 @@ App uses **IndexedDB** for offline storage with 11 stores:
 **After**: Full offline capability, ~100KB added
 
 **Benefits**:
+
 - ⚡ Faster repeat visits (cached)
 - 📴 Works completely offline
 - 💾 Smart data persistence
@@ -172,12 +183,14 @@ App uses **IndexedDB** for offline storage with 11 stores:
 ## What's Next? 🎯
 
 ### Must Do
+
 - [ ] Test on production server
 - [ ] Test on real mobile devices
 - [ ] Integrate draft queue in write pages
 - [ ] Add offline blocking for password changes
 
 ### Nice to Have
+
 - [ ] Cache management UI
 - [ ] Storage usage indicator
 - [ ] Sync progress bar
@@ -202,12 +215,14 @@ pnpm dev
 ## Browser Support 🌐
 
 ### Full Support
+
 - ✅ Chrome (desktop/mobile)
 - ✅ Edge
 - ✅ Firefox
 - ✅ Safari (iOS/macOS)
 
 ### Partial Support
+
 - ⚠️ Background Sync (not all browsers)
 - ⚠️ Web Share API (mobile only)
 

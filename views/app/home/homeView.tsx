@@ -104,7 +104,7 @@ const HomeView = () => {
   const popularStories = useMemo(() => {
     if (!popularStoriesData) return [];
     return [...popularStoriesData].sort(
-      (a: any, b: any) => (b.popularityScore || 0) - (a.popularityScore || 0)
+      (a: any, b: any) => (b.popularityScore || 0) - (a.popularityScore || 0),
     );
   }, [popularStoriesData]);
 
@@ -309,7 +309,7 @@ const HomeView = () => {
             {selectedGenres.map((genre) => (
               <GenreSection key={genre} genre={genre} />
             ))}
-            
+
             {/* Show clear filters button if needed */}
             <div className="flex justify-center pt-4">
               <Button

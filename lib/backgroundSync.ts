@@ -5,7 +5,11 @@
 
 export interface SyncTask {
   id: string;
-  type: "draft_upload" | "profile_update" | "settings_change" | "reading_progress";
+  type:
+    | "draft_upload"
+    | "profile_update"
+    | "settings_change"
+    | "reading_progress";
   payload: any;
   createdAt: number;
   retryCount: number;

@@ -21,24 +21,28 @@
 ### High Priority
 
 - [ ] **Test Service Worker Registration**
+
   - Build production bundle: `pnpm build`
   - Start production server: `pnpm start`
   - Verify `/sw.js` is accessible
   - Check DevTools > Application > Service Workers
 
 - [ ] **Implement Pen/Write Offline Queue**
+
   - Integrate `useDraftQueue` in pen/write pages
   - Show unsynced indicator
   - Add manual sync button
   - Test draft saving offline
 
 - [ ] **Profile & Settings Offline**
+
   - Block password changes when offline
   - Block profile edits when offline
   - Show appropriate offline messages
   - Use `useProfileCache` in profile pages
 
 - [ ] **Reading Progress Offline**
+
   - Cache reading progress in IndexedDB
   - Sync progress when online
   - Handle conflicts
@@ -52,16 +56,19 @@
 ### Medium Priority
 
 - [ ] **SEO for Chapter/Episode Pages**
+
   - Add metadata generation for `/story/[id]/read`
   - Include episode/chapter info in meta tags
   - Test social media sharing
 
 - [ ] **Background Sync Implementation**
+
   - Test background sync for drafts
   - Implement sync handlers in service worker
   - Test sync on network restoration
 
 - [ ] **Notifications Offline**
+
   - Cache notifications in IndexedDB
   - Display cached notifications offline
   - Sync when online
@@ -74,12 +81,14 @@
 ### Low Priority
 
 - [ ] **Enhanced Offline UX**
+
   - Add "You're back online" toast
   - Show sync progress indicator
   - Display storage usage
   - Add cache management UI
 
 - [ ] **Performance Optimization**
+
   - Analyze bundle size
   - Optimize service worker caching
   - Test cache eviction strategies
@@ -94,6 +103,7 @@
 ## 📋 Testing Checklist
 
 ### Service Worker
+
 - [ ] Service worker registers successfully
 - [ ] Static assets are cached
 - [ ] API responses are cached
@@ -102,6 +112,7 @@
 - [ ] Cache invalidation works
 
 ### Offline Functionality
+
 - [ ] Home page shows offline indicator
 - [ ] Downloads are accessible offline
 - [ ] Stories can be read offline
@@ -110,6 +121,7 @@
 - [ ] Settings load from cache
 
 ### Online/Offline Transitions
+
 - [ ] App detects going offline
 - [ ] App detects coming back online
 - [ ] Queued actions sync when online
@@ -117,6 +129,7 @@
 - [ ] No data loss during transitions
 
 ### SEO & Sharing
+
 - [ ] Story pages have correct meta tags
 - [ ] Open Graph tags working
 - [ ] Twitter Cards working
@@ -124,6 +137,7 @@
 - [ ] Share button fallback works on desktop
 
 ### Cross-Browser Testing
+
 - [ ] Chrome/Edge (desktop)
 - [ ] Firefox (desktop)
 - [ ] Safari (desktop)
@@ -131,6 +145,7 @@
 - [ ] Safari (iOS)
 
 ### PWA Installation
+
 - [ ] Install prompt appears
 - [ ] App installs successfully
 - [ ] Icons display correctly
@@ -151,17 +166,20 @@ None at the moment. Please report any issues found during testing.
 ## 🎯 Next Steps
 
 1. **Build & Test**
+
    ```bash
    pnpm build
    pnpm start
    ```
 
 2. **Verify Service Worker**
+
    - Open DevTools > Application > Service Workers
    - Check registration status
    - Verify caching strategies
 
 3. **Test Offline**
+
    - Go offline in DevTools
    - Navigate the app
    - Verify cached content loads
@@ -182,6 +200,7 @@ None at the moment. Please report any issues found during testing.
 ## 🆘 Need Help?
 
 Refer to:
+
 - `OFFLINE_PWA_IMPLEMENTATION_SUMMARY.md` - Full implementation details
 - `OFFLINE_FEATURES_GUIDE.md` - Developer guide for using offline features
 - `OFFLINE_PWA_IMPLEMENTATION_PLAN.md` - Original implementation plan

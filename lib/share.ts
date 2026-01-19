@@ -52,7 +52,7 @@ export async function shareContent(data: ShareData): Promise<boolean> {
 export async function shareStory(
   storyId: string,
   title: string,
-  description?: string
+  description?: string,
 ): Promise<boolean> {
   const url = `${window.location.origin}/story/${storyId}`;
   const text = description
@@ -74,7 +74,7 @@ export async function shareChapter(
   contentId: string,
   storyTitle: string,
   chapterTitle: string,
-  isChapter: boolean = true
+  isChapter: boolean = true,
 ): Promise<boolean> {
   const url = `${window.location.origin}/story/${storyId}/read?${isChapter ? "chapterId" : "episodeId"}=${contentId}`;
   const contentType = isChapter ? "Chapter" : "Episode";
