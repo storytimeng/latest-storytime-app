@@ -7,7 +7,7 @@ import {
   OfflineChapter,
   OfflineEpisode,
   getStorageEstimate,
-} from "@/lib/offline/indexedDB";
+} from "@/lib/offline/db";
 import { showToast } from "@/lib/showNotification";
 import { useUserStore } from "@/src/stores/useUserStore";
 
@@ -78,7 +78,7 @@ export function useOfflineStories() {
         return false;
       }
     },
-    [userId]
+    [userId],
   );
 
   // Get downloaded chapters/episodes for a story
@@ -102,7 +102,7 @@ export function useOfflineStories() {
         return [];
       }
     },
-    [userId]
+    [userId],
   );
 
   // Download a story with its content
@@ -114,7 +114,7 @@ export function useOfflineStories() {
         title: string;
         content: string;
         number: number;
-      }>
+      }>,
     ) => {
       if (!userId) {
         showToast({
@@ -182,7 +182,7 @@ export function useOfflineStories() {
               chapterNumber: item.number,
               title: item.title,
               content: item.content,
-              wordCount: item.content.split(/\s+/).length,
+              wordCount: item.content ? item.content.split(/\s+/).length : 0,
               downloadedAt,
               lastUpdatedAt: itemUpdatedAt,
             };
@@ -210,7 +210,7 @@ export function useOfflineStories() {
               chapterNumber: 1,
               title: item.title,
               content: item.content,
-              wordCount: item.content.split(/\s+/).length,
+              wordCount: item.content ? item.content.split(/\s+/).length : 0,
               downloadedAt,
               lastUpdatedAt: itemUpdatedAt,
             };
@@ -237,7 +237,7 @@ export function useOfflineStories() {
         return false;
       }
     },
-    [loadOfflineStories, userId]
+    [loadOfflineStories, userId],
   );
 
   // Download additional chapters/episodes
@@ -250,7 +250,7 @@ export function useOfflineStories() {
         title: string;
         content: string;
         number: number;
-      }>
+      }>,
     ) => {
       if (!userId) return false;
 
@@ -271,7 +271,7 @@ export function useOfflineStories() {
               chapterNumber: item.number,
               title: item.title,
               content: item.content,
-              wordCount: item.content.split(/\s+/).length,
+              wordCount: item.content ? item.content.split(/\s+/).length : 0,
               downloadedAt,
               lastUpdatedAt: itemUpdatedAt,
             };
@@ -307,7 +307,7 @@ export function useOfflineStories() {
         return false;
       }
     },
-    [userId]
+    [userId],
   );
 
   // Delete a downloaded story
@@ -352,7 +352,7 @@ export function useOfflineStories() {
         return false;
       }
     },
-    [loadOfflineStories, userId]
+    [loadOfflineStories, userId],
   );
 
   // Delete specific downloaded content (chapter/episode)
@@ -395,7 +395,7 @@ export function useOfflineStories() {
         return false;
       }
     },
-    [loadOfflineStories, userId]
+    [loadOfflineStories, userId],
   );
 
   // Update last read time
@@ -412,7 +412,7 @@ export function useOfflineStories() {
         console.error("Failed to update last read:", error);
       }
     },
-    [userId]
+    [userId],
   );
 
   // Sync story metadata if it has been updated on server
@@ -462,7 +462,7 @@ export function useOfflineStories() {
         return false;
       }
     },
-    []
+    [],
   );
 
   // Sync chapter if it has been updated on server
@@ -503,7 +503,7 @@ export function useOfflineStories() {
         return false;
       }
     },
-    []
+    [],
   );
 
   // Sync episode if it has been updated on server
@@ -543,7 +543,7 @@ export function useOfflineStories() {
         return false;
       }
     },
-    []
+    [],
   );
 
   // Sync all chapters for a story
@@ -555,7 +555,7 @@ export function useOfflineStories() {
         for (const serverChapter of serverChapters) {
           const wasUpdated = await syncChapterIfNeeded(
             serverChapter.id,
-            serverChapter
+            serverChapter,
           );
           if (wasUpdated) updatedCount++;
         }
@@ -573,7 +573,7 @@ export function useOfflineStories() {
         return 0;
       }
     },
-    [syncChapterIfNeeded]
+    [syncChapterIfNeeded],
   );
 
   // Sync all episodes for a story
@@ -585,7 +585,7 @@ export function useOfflineStories() {
         for (const serverEpisode of serverEpisodes) {
           const wasUpdated = await syncEpisodeIfNeeded(
             serverEpisode.id,
-            serverEpisode
+            serverEpisode,
           );
           if (wasUpdated) updatedCount++;
         }
@@ -603,7 +603,7 @@ export function useOfflineStories() {
         return 0;
       }
     },
-    [syncEpisodeIfNeeded]
+    [syncEpisodeIfNeeded],
   );
 
   return {
@@ -631,7 +631,7 @@ export function useOfflineStories() {
  */
 export function useOnlineStatus() {
   const [isOnline, setIsOnline] = useState(
-    typeof navigator !== "undefined" ? navigator.onLine : true
+    typeof navigator !== "undefined" ? navigator.onLine : true,
   );
 
   useEffect(() => {

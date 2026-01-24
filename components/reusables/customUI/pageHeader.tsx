@@ -13,6 +13,7 @@ interface PageHeaderProps {
   backButtonClassName?: string;
   showBackButton?: boolean;
   iconSize?: number;
+  onBackPress?: () => void;
 }
 
 const PageHeader = ({
@@ -23,24 +24,39 @@ const PageHeader = ({
   backButtonClassName = "text-primary-colour",
   showBackButton = true,
   iconSize = 18,
+  onBackPress,
 }: PageHeaderProps) => {
   return (
     <div
       className={cn(
-        "flex items-center justify-center relative mb-6" ,
+        "flex items-center justify-center relative mb-6",
         className
       )}
     >
       {showBackButton && (
-        <Link
-          href={backLink}
-          className={cn(
-            "absolute left-0 text-primary-colour pl-3",
-            backButtonClassName
+        <>
+          {onBackPress ? (
+            <button
+              onClick={onBackPress}
+              className={cn(
+                "absolute left-0 text-primary-colour pl-3",
+                backButtonClassName
+              )}
+            >
+              <ArrowLeft size={iconSize} className="" />
+            </button>
+          ) : (
+            <Link
+              href={backLink}
+              className={cn(
+                "absolute left-0 text-primary-colour pl-3",
+                backButtonClassName
+              )}
+            >
+              <ArrowLeft size={iconSize} className="" />
+            </Link>
           )}
-        >
-          <ArrowLeft size={iconSize} className="" />
-        </Link>
+        </>
       )}
       {title && <h1 className={cn(titleClassName)}>{title}</h1>}
     </div>

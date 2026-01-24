@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormField, PasswordField } from "@/components/reusables/form";
@@ -11,6 +11,7 @@ import { useRegister } from "@/src/hooks/useAuth";
 import { Check, X } from "lucide-react";
 import { useLoadingStore } from "@/src/stores/useLoadingStore";
 import { Select, SelectItem } from "@heroui/select";
+import { useSupportStore } from "@/src/stores/useSupportStore";
 
 interface SignupFormData {
   firstName: string;
@@ -61,6 +62,7 @@ export default function SignupView({
   onSuccess,
   onSwitchView,
 }: SignupViewProps) {
+  const openSupportModal = useSupportStore((state) => state.openModal);
   const router = useRouter();
   const { show: showLoading, hide: hideLoading } = useLoadingStore();
   // firstErrorRef removed (not used)
@@ -79,6 +81,11 @@ export default function SignupView({
   >({});
   const [showPasswordRequirements, setShowPasswordRequirements] =
     useState(false);
+
+  useEffect(() => {
+    router.prefetch("/auth/otp");
+    router.prefetch("/home");
+  }, [router]);
   const [passwordRequirements, setPasswordRequirements] = useState<
     PasswordRequirement[]
   >([
@@ -442,19 +449,21 @@ export default function SignupView({
             className="body-text-small-regular text-grey-2"
           >
             Yes, I understand and agree to the Storytime, including the{" "}
-            <Link
-              href="/terms"
+            <button
+              type="button"
+              onClick={() => openSupportModal("terms")}
               className="font-bold text-primary-colour hover:underline"
             >
               User Agreement
-            </Link>{" "}
+            </button>{" "}
             and{" "}
-            <Link
-              href="/privacy"
+            <button
+              type="button"
+              onClick={() => openSupportModal("privacy")}
               className="font-bold text-primary-colour hover:underline"
             >
               Privacy Policy
-            </Link>
+            </button>
           </label>
           {errors.agreeToTerms && (
             <div className="flex items-center gap-1 mt-1">
@@ -479,8 +488,7 @@ export default function SignupView({
         </Button>
       </form>
 
-      {/* Divider */}
-      <div className="flex items-center my-6">
+      <div className="flex items-center invisible my-6">
         <div className="flex-1 border-t border-light-grey-1"></div>
         <div className="px-4 body-text-small-regular text-[#708090] body-text-small-auto-regular">
           or
@@ -488,11 +496,11 @@ export default function SignupView({
         <div className="flex-1 border-t border-light-grey-1"></div>
       </div>
 
-      {/* Social Login */}
       <div className="space-y-3">
         <Button
           variant="google"
           startContent={<div className="w-5 h-5 rounded bg-grey-1"></div>}
+          className="invisible"
         >
           Continue with Google
         </Button>

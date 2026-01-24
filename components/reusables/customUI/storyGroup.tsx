@@ -7,6 +7,7 @@ import { Magnetik_Bold } from "@/lib/font";
 import { cn } from "@/lib/utils";
 import StoryCard from "./storyCard";
 import { useInfiniteScroll } from "@/src/hooks/useInfiniteScroll";
+import Link from "next/link";
 
 import { StoryResponseDto } from "@/src/client/types.gen";
 
@@ -91,14 +92,18 @@ const StoryGroup = React.memo(
             <h2 className={`body-text-small-medium-auto text-black`}>
               {title}
             </h2>
+             
             {showSeeAll && categorySlug && (
+                          <Link prefetch={true} href={`/category/${categorySlug}`}>
+
               <Button
                 variant="ghost"
                 className={`text-grey-2 body-text-smallest-medium-auto`}
-                onPress={() => router.push(`/category/${categorySlug}`)}
+                 
               >
                 See all
               </Button>
+               </Link>
             )}
           </div>
         )}

@@ -10,11 +10,13 @@ import {
   SupportModal,
   DeleteAccountModal,
   ClearCacheModal,
+  LogoutModal,
   SettingsList,
 } from "@/components/reusables/customUI";
 import { Magnetik_Bold, Magnetik_Regular } from "@/lib/font";
 import { useModalNavigation } from "@/hooks/useModalNavigation";
 import { SETTINGS_OPTIONS } from "@/config/settings";
+import { useSupportStore, SupportViewType } from "@/src/stores/useSupportStore";
 
 /**
  * SettingsView Component
@@ -23,6 +25,19 @@ import { SETTINGS_OPTIONS } from "@/config/settings";
  */
 const SettingsView = () => {
   const { isOpen, activeModal, openModal, closeModal } = useModalNavigation();
+  const openSupportModal = useSupportStore((state) => state.openModal);
+
+  const handleOptionClick = (id: string) => {
+    if (id === "faqs") {
+      openSupportModal("faqs");
+    } else if (id === "terms-policy") {
+      openSupportModal("terms");
+    } else if (id === "support") {
+      openSupportModal("support");
+    } else {
+      openModal(id);
+    }
+  };
 
   const renderModalContent = () => {
     switch (activeModal) {
@@ -40,6 +55,9 @@ const SettingsView = () => {
 
       case "clear-cache":
         return <ClearCacheModal />;
+
+      case "logout":
+        return <LogoutModal onClose={closeModal} />;
 
       default:
         return (
@@ -83,7 +101,7 @@ const SettingsView = () => {
       </div>
 
       {/* Settings Options */}
-      <SettingsList options={SETTINGS_OPTIONS} onOptionClick={openModal} />
+      <SettingsList options={SETTINGS_OPTIONS} onOptionClick={handleOptionClick} />
 
       {/* Modal */}
       <Modal

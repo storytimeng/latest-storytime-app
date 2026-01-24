@@ -102,6 +102,25 @@ const ProfileView = () => {
   ];
   const genres = userGenres.length > 0 ? userGenres : defaultGenres;
 
+  useEffect(() => {
+    if (activeModal) {
+      setLastActiveModal(activeModal);
+    }
+    
+    // Prefetch common routes
+    router.prefetch("/home");
+    router.prefetch("/pen");
+    router.prefetch("/library");
+    router.prefetch("/downloads");
+    
+    // Prefetch user's favorite genres
+    if (userGenres.length > 0) {
+      userGenres.forEach(genre => {
+        router.prefetch(`/category?genre=${encodeURIComponent(genre)}`);
+      });
+    }
+  }, [activeModal, router, userGenres]);
+
   // Handle genre click - navigate to category page
   const handleGenreClick = (genre: string) => {
     router.push(`/category?genre=${encodeURIComponent(genre)}`);

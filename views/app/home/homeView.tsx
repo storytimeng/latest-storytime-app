@@ -2,13 +2,14 @@
 
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { useMemo } from "react";
+import { useMemo, useEffect } from "react";
 import {
   GenreButton,
   StoryGroup,
   PremiumBanner,
   StoriesCarousel,
 } from "@/components/reusables";
+import GenreSection from "./GenreSection";
 import { Magnetik_Medium, Magnetik_Bold, Magnetik_Regular } from "@/lib/font";
 import { Search } from "lucide-react";
 import { useGenres } from "@/src/hooks/useGenres";
@@ -22,13 +23,26 @@ import {
   usePopularStories,
 } from "@/src/hooks/useStoryCategories";
 import { useStories } from "@/src/hooks/useStories";
+import { useOnlineStatus } from "@/src/hooks/useOnlineStatus";
+import { OfflineIndicator } from "@/components/OfflineIndicator";
 
 const HomeView = () => {
   const { user } = useUserStore();
+  const isOnline = useOnlineStatus();
   const { selectedGenres, toggleGenre } = useStoriesFilterStore();
   const { genres: apiGenres, isLoading: genresLoading } = useGenres();
   // Use API genres or fallback to empty array
   const genres = apiGenres || [];
+
+  // Clear filters on mount/reload
+  useEffect(() => {
+    useStoriesFilterStore.getState().clearGenres();
+  }, []);
+
+  // Show offline indicator when offline
+  if (!isOnline) {
+    return <OfflineIndicator />;
+  }
 
   // Sort genres: selected ones first, then alphabetical
   const sortedGenres = useMemo(() => {
@@ -90,7 +104,7 @@ const HomeView = () => {
   const popularStories = useMemo(() => {
     if (!popularStoriesData) return [];
     return [...popularStoriesData].sort(
-      (a: any, b: any) => (b.popularityScore || 0) - (a.popularityScore || 0)
+      (a: any, b: any) => (b.popularityScore || 0) - (a.popularityScore || 0),
     );
   }, [popularStoriesData]);
 
@@ -149,8 +163,8 @@ const HomeView = () => {
   }, [popularStories, hasMorePopular, isLoadingMorePopular, loadMorePopular]);
 
   return (
-    <div className="min-h-screen px-4 pt-4 space-y-4 bg-accent-shade-1">
-      <div className="sticky top-0 z-50 flex items-center justify-between py-2 bg-accent-shade-1">
+    <div className="min-h-screen px-4 pt-4 space-y-4 bg-accent-shade-1 relative">
+      <div className="relative flex items-center justify-between py-2 bg-accent-shade-1">
         <div className="flex items-center gap-3">
           <Link href="/profile" aria-label="Go to profile">
             <Avatar
@@ -180,7 +194,7 @@ const HomeView = () => {
               <span
                 className={`text-primary font-bold ${Magnetik_Bold.className}`}
               >
-                {user?.penName || "Reader"}
+                {user?.penName || user?.firstName || "Reader"}
               </span>
             </span>
             <span className="text-xl">👋</span>
@@ -205,7 +219,7 @@ const HomeView = () => {
             <h2 className={`body-text-small-medium-auto primary-colour`}>
               Only on Storytime
             </h2>
-            <Link href={`/all-genres`}>
+            <Link href={`/category/only-on-storytime`}>
               <Button
                 variant="ghost"
                 className={`text-grey-2 body-text-smallest-medium-auto`}
@@ -230,7 +244,7 @@ const HomeView = () => {
       )}
 
       {/* Genre Pick */}
-      <div className="mb-6 ">
+      <div className="mb-6 sticky top-[72px] z-40 bg-accent-shade-1 py-2">
         <div className="flex items-center justify-between">
           <h2 className={`body-text-small-medium-auto primary-colour`}>
             Genre Pick
@@ -291,38 +305,21 @@ const HomeView = () => {
           </div>
         ) : selectedGenres.length > 0 ? (
           <>
-            {/* Show filtered results */}
-            {filteredStories.length > 0 ? (
-              <StoryGroup
-                title={`${selectedGenres.join(", ")} Stories (${filteredStories.length})`}
-                stories={filteredStories}
-                categorySlug="filtered"
-              />
-            ) : (
-              <div className="py-12 text-center">
-                <div className="mb-4 text-6xl">📚</div>
-                <h3
-                  className={`text-lg font-bold text-grey-3 mb-2 ${Magnetik_Bold.className}`}
-                >
-                  No stories found
-                </h3>
-                <p
-                  className={`text-sm text-grey-2 mb-4 ${Magnetik_Regular.className}`}
-                >
-                  No stories match the selected genres:{" "}
-                  <span className="font-semibold">
-                    {selectedGenres.join(", ")}
-                  </span>
-                </p>
-                <Button
-                  variant="secondary"
-                  onClick={() => useStoriesFilterStore.getState().clearGenres()}
-                  className={`${Magnetik_Medium.className}`}
-                >
-                  Clear filters
-                </Button>
-              </div>
-            )}
+            {/* Show filtered results - separate section for each selected genre */}
+            {selectedGenres.map((genre) => (
+              <GenreSection key={genre} genre={genre} />
+            ))}
+
+            {/* Show clear filters button if needed */}
+            <div className="flex justify-center pt-4">
+              <Button
+                variant="secondary"
+                onClick={() => useStoriesFilterStore.getState().clearGenres()}
+                className={`${Magnetik_Medium.className}`}
+              >
+                Clear filters
+              </Button>
+            </div>
           </>
         ) : (
           <>

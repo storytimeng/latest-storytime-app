@@ -1,9 +1,8 @@
 import { useRef } from "react";
 import { Magnetik_Medium } from "@/lib/font";
 import StepContainer from "../shared/StepContainer";
-import ImagePickerModal from "../shared/ImagePickerModal";
-import ImagePreviewModal from "../shared/ImagePreviewModal";
 import type { StepComponentProps } from "../types";
+import ImageUpload from "@/components/reusables/form/imageUpload";
 
 interface ProfilePictureStepProps extends StepComponentProps {
   imagePreview: string | null;
@@ -13,6 +12,7 @@ interface ProfilePictureStepProps extends StepComponentProps {
   onImagePreviewToggle: (show: boolean) => void;
   onImageSelect: (file: File | null) => void;
   onImageAccept: () => void;
+  onPreviewChange: (url: string | null) => void;
 }
 
 export default function ProfilePictureStep({
@@ -23,11 +23,13 @@ export default function ProfilePictureStep({
   onImagePreviewToggle,
   onImageSelect,
   onImageAccept,
+  onPreviewChange,
+  onUploadReady,
   onNext,
   onSkip,
   canContinue,
   isTransitioning,
-}: ProfilePictureStepProps) {
+}: ProfilePictureStepProps & { onUploadReady: (fn: () => Promise<string | null>) => void }) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -50,63 +52,52 @@ export default function ProfilePictureStep({
         showSkip
       >
         <div className="flex flex-col items-center gap-4">
-          <div className="w-28 h-28 rounded-full bg-accent-shade-1 flex items-center justify-center overflow-hidden">
-            {imagePreview ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={imagePreview}
-                alt="Preview"
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="w-12 h-12 rounded-full border-2 border-primary-colour flex items-center justify-center text-primary-colour">
-                👤
-              </div>
-            )}
+          <div className="w-48 h-48">
+             <ImageUpload 
+                value={imagePreview || ""}
+                onChange={(url) => onPreviewChange(url)}
+                autoUpload={true}
+                aspectRatio="square"
+                className="rounded-full overflow-hidden w-full h-full"
+                placeholder="Upload Photo"
+                folder="profiles"
+                variant="profile"
+             />
           </div>
-          <button
-            type="button"
-            className={`text-primary-colour underline ${Magnetik_Medium.className}`}
-            onClick={() => onImagePickerToggle(true)}
-          >
-            Tap to change
-          </button>
         </div>
       </StepContainer>
 
-      {/* Hidden file inputs */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={(e) => handleImageSelection(e.target.files?.[0] ?? null)}
-      />
-      <input
-        ref={cameraInputRef}
-        type="file"
-        accept="image/*"
-        capture="user"
-        className="hidden"
-        onChange={(e) => handleImageSelection(e.target.files?.[0] ?? null)}
-      />
-
-      <ImagePickerModal
-        isOpen={showImagePicker}
-        onClose={() => onImagePickerToggle(false)}
-        onSelectCamera={() => cameraInputRef.current?.click()}
-        onSelectGallery={() => fileInputRef.current?.click()}
-      />
-
-      <ImagePreviewModal
-        isOpen={showImagePreview}
-        imageUrl={imagePreview}
-        onAccept={() => {
-          onImageAccept();
-          onImagePreviewToggle(false);
-        }}
-        onCancel={() => onImagePreviewToggle(false)}
-      />
+       {/* We can remove the hidden inputs and custom modals if we fully switch to ImageUpload 
+           For now, to strictly follow the plan which said "Update handleImageSelection", 
+           I should actually be updating SetupView to pass the props down.
+           Wait, the current ProfilePictureStep uses hidden inputs. 
+           The implementation plan said "Update handleImageSelection to pass the File object".
+           
+           Let's look at `setupView.tsx`.
+           
+           The user asked for: "add an auto uplaod setting... if auto is set... uploaded... if not... manually trigger".
+           
+           In `useSetup.ts`, I added `activeUploadTrigger`.
+           
+           The `ProfilePictureStep` is currently using custom UI (`StepContainer` + `div` with img tag + hidden inputs).
+           It is NOT using `ImageUpload` component.
+           
+           My plan said: 
+           "Views -> setupView.tsx -> Update handleImageSelection to pass the File object..."
+           
+           But `useSetup` doesn't have a `profileImageFile` state anymore, instead I added `activeUploadTrigger`.
+           
+           So I need to change `ProfilePictureStep` to use `ImageUpload` component? 
+           Or modify `ProfilePictureStep` to basically reimplement what `ImageUpload` does but with the existing UI?
+           
+           The request was "add an auto uplaod setting to image uplaode compenet".
+           And "setup upload endpoint hook then use it there [profile set, profile editing...]".
+           
+           So for Profile Setup, I should USE `ImageUpload` component instead of the custom UI, OR update the existing UI to use the hook.
+           Using `ImageUpload` component seems cleaner and more consistent.
+           
+           Let's REPLACE the custom UI in `ProfilePictureStep` with `ImageUpload`.
+       */}
     </>
   );
 }

@@ -15,7 +15,7 @@ export default function AuthLayoutView({
 }: AuthLayoutViewProps) {
   return (
     <div
-      className={`relative w-full h-screen flex flex-col overflow-hidden  ${className}`}
+      className={`relative w-full h-screen flex flex-col overflow-y-auto  ${className}`}
     >
       <div className="mt-8 px-5 flex items-center justify-center">
         <Image

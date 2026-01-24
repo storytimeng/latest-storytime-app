@@ -12,7 +12,7 @@ import {
   usersControllerCheckPenNameAvailability,
   usersControllerSetupProfile,
 } from "../client/sdk.gen";
-import { SETUP_CONFIG } from "@/config/setup";
+import { SETUP_CONFIG, SETUP_STEPS } from "@/config/setup";
 import type {
   TimeValue,
   AnimationDirection,
@@ -62,10 +62,51 @@ export function useSetup() {
   const [direction, setDirection] = useState<AnimationDirection>("forward");
   const [isTransitioning, setIsTransitioning] = useState(false);
 
+  // Hash management
+  const getStepFromHash = useCallback(() => {
+    if (typeof window === "undefined") return 1;
+    const hash = window.location.hash.slice(1);
+    const foundStep = SETUP_STEPS.find((s) => s.hashId === hash);
+    return foundStep ? foundStep.id : 1;
+  }, []);
+
+  const updateHash = useCallback((stepId: number) => {
+    const s = SETUP_STEPS.find((s) => s.id === stepId);
+    if (s && typeof window !== "undefined") {
+      window.history.replaceState(null, "", `#${s.hashId}`);
+    }
+  }, []);
+
+
+  // Sync with hash on mount and on hash change
+  useEffect(() => {
+    const s = getStepFromHash();
+    if (s !== step) {
+      setStep(s);
+    }
+    // Set initial hash if empty
+    if (typeof window !== "undefined" && !window.location.hash) {
+      updateHash(1);
+    }
+  }, []);
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      const newStep = getStepFromHash();
+      if (newStep !== step) {
+        setDirection(newStep > step ? "forward" : "backward");
+        setStep(newStep);
+      }
+    };
+    window.addEventListener("hashchange", handleHashChange);
+    return () => window.removeEventListener("hashchange", handleHashChange);
+  }, [step, getStepFromHash]);
+
   // Form data
   const [penName, setPenName] = useState("");
   const [penStatus, setPenStatus] = useState<PenNameStatus>("idle");
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [activeUploadTrigger, setActiveUploadTrigger] = useState<(() => Promise<string | null>) | null>(null);
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
   const [readTime, setReadTime] = useState<TimeValue>({
     hour: 6,
@@ -164,12 +205,28 @@ export function useSetup() {
   const submitSetupMutation = useSWRMutation(
     "submit-setup",
     async () => {
+      // If we have a preview URL that's a blob, it shouldn't be sent to the backend
+      let finalProfilePicture = imagePreview?.startsWith("blob:") ? undefined : imagePreview;
+
+      // Check if we have a pending upload trigger
+      if (activeUploadTrigger) {
+          try {
+              const uploadedUrl = await activeUploadTrigger();
+              if (uploadedUrl) {
+                  finalProfilePicture = uploadedUrl;
+              }
+          } catch (error) {
+              console.error("Failed to upload profile picture during setup:", error);
+              // If upload fails and we don't have a previous remote URL, we should probably not send the blob
+          }
+      }
+
       const reminder = formatReminder(writeDaily, writeDays);
 
       const response = await usersControllerSetupProfile({
         body: {
           penName: penName.trim(),
-          profilePicture: imagePreview || undefined,
+          profilePicture: finalProfilePicture || undefined,
           genres: selectedGenres,
           timeToRead: formatTime(readTime),
           timeToWrite: formatTime(writeTime),
@@ -226,6 +283,19 @@ export function useSetup() {
       if (penStatus === "taken") return;
     }
 
+    // Step navigation (modified to sync hash)
+    const nextStepFunc = async () => {
+      setDirection("forward");
+      setIsTransitioning(true);
+      await new Promise((resolve) => setTimeout(resolve, 150));
+      if (step < 6) {
+        const nextStep = step + 1;
+        setStep(nextStep);
+        updateHash(nextStep);
+      }
+      setIsTransitioning(false);
+    };
+
     // Step 6: Submit setup
     if (step === 6) {
       try {
@@ -249,12 +319,8 @@ export function useSetup() {
     }
 
     // Normal step progression
-    setDirection("forward");
-    setIsTransitioning(true);
-    await new Promise((resolve) => setTimeout(resolve, 150));
-    if (step < 6) setStep(step + 1);
-    setIsTransitioning(false);
-  }, [step, penName, penStatus, checkPenName, submitSetupMutation]);
+    await nextStepFunc();
+  }, [step, penName, penStatus, checkPenName, submitSetupMutation, updateHash]);
 
   /**
    * Navigate to previous step
@@ -264,10 +330,12 @@ export function useSetup() {
       setDirection("backward");
       setIsTransitioning(true);
       await new Promise((resolve) => setTimeout(resolve, 150));
-      setStep(step - 1);
+      const prevStep = step - 1;
+      setStep(prevStep);
+      updateHash(prevStep);
       setIsTransitioning(false);
     }
-  }, [step]);
+  }, [step, updateHash]);
 
   /**
    * Skip current step (for optional steps)
@@ -276,9 +344,30 @@ export function useSetup() {
     setDirection("forward");
     setIsTransitioning(true);
     await new Promise((resolve) => setTimeout(resolve, 150));
-    if (step < 6) setStep(step + 1);
+    if (step < 6) {
+      const nextStep = step + 1;
+      setStep(nextStep);
+      updateHash(nextStep);
+    }
     setIsTransitioning(false);
-  }, [step]);
+  }, [step, updateHash]);
+
+  const goToStep = useCallback(
+    async (stepId: number) => {
+      // Only allow going back or to next step if current step is validated
+      // For now, let's keep it simple and allow going back freely
+      if (stepId === step) return;
+      if (stepId > step && !canContinue()) return;
+
+      setDirection(stepId > step ? "forward" : "backward");
+      setIsTransitioning(true);
+      await new Promise((resolve) => setTimeout(resolve, 150));
+      setStep(stepId);
+      updateHash(stepId);
+      setIsTransitioning(false);
+    },
+    [step, updateHash, canContinue]
+  );
 
   /**
    * Complete setup and navigate to home
@@ -337,6 +426,7 @@ export function useSetup() {
     goNext,
     goBack,
     skipStep,
+    goToStep,
     completeSetup,
     canContinue: canContinue(),
     handleKeyDown,
@@ -368,5 +458,8 @@ export function useSetup() {
     // Loading states
     isCheckingPenName: isCheckingPenName,
     isSubmitting: submitSetupMutation.isMutating,
+
+    // Upload support
+    setUploadTrigger: setActiveUploadTrigger,
   };
 }

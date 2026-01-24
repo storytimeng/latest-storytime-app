@@ -34,6 +34,7 @@ interface StoryCardProps {
   story: ExtendedStory;
   className?: string;
   mode?: "default" | "pen";
+  hideStats?: boolean;
   onEdit?: (storyId: string | number) => void;
   onDelete?: (storyId: string | number) => void;
   onClick?: (storyId: string | number) => void;
@@ -43,6 +44,7 @@ const StoryCard = ({
   story,
   className,
   mode = "default",
+  hideStats = false,
   onEdit,
   onDelete,
   onClick,
@@ -187,23 +189,25 @@ const StoryCard = ({
         ) : (
           <>
             {/* Likes + Comments + Views */}
-            <div className="flex items-center gap-3 text-xs text-[#361B17]">
-              <div className="flex items-center gap-1">
-                <ThumbsUp className="w-3 h-3 fill-[#F8951D] text-[#F8951D]" />
+            {!hideStats && (
+              <div className="flex items-center gap-3 text-xs text-[#361B17]">
+                <div className="flex items-center gap-1">
+                  <ThumbsUp className="w-3 h-3 fill-[#F8951D] text-[#F8951D]" />
+                  <span className={Magnetik_Regular.className}>
+                    ({story.likeCount ?? story.rating ?? 0})
+                  </span>
+                </div>
                 <span className={Magnetik_Regular.className}>
-                  ({story.likeCount ?? story.rating ?? 0})
+                  {story.commentCount ?? story.comments ?? 0} Comments
                 </span>
+                <div className="flex items-center gap-1">
+                  <Eye className="w-3 h-3 text-[#361B17]" />
+                  <span className={Magnetik_Regular.className}>
+                    {story.viewCount ?? 0}
+                  </span>
+                </div>
               </div>
-              <span className={Magnetik_Regular.className}>
-                {story.commentCount ?? story.comments ?? 0} Comments
-              </span>
-              <div className="flex items-center gap-1">
-                <Eye className="w-3 h-3 text-[#361B17]" />
-                <span className={Magnetik_Regular.className}>
-                  {story.viewCount ?? 0}
-                </span>
-              </div>
-            </div>
+            )}
 
             {/* Author */}
             <div className="flex items-center gap-2">

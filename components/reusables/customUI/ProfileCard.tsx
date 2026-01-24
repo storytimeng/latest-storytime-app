@@ -34,6 +34,10 @@ const ProfileCard = ({
   const router = useRouter();
   const { user, isLoading } = useUserProfile();
 
+  React.useEffect(() => {
+    router.prefetch("/settings");
+  }, [router]);
+
   // Use live data from API if enabled
   const displayName = useLiveData && user 
     ?  `${user.firstName || ""} ${user.lastName || ""}`.trim() || "User"
@@ -44,7 +48,7 @@ const ProfileCard = ({
     : username || "@Anonymous";
   
   const displayImage = useLiveData && user
-    ? user.avatar || "/person-with-sunglasses-smiling.jpg"
+    ? user.profilePicture || user.avatar || "/person-with-sunglasses-smiling.jpg"
     : profileImage || "/person-with-sunglasses-smiling.jpg";
 
   if (useLiveData && isLoading) {

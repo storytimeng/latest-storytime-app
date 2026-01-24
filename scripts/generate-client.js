@@ -1,4 +1,5 @@
 const { execSync } = require("child_process");
+require("dotenv").config({ path: ".env.local" });
 
 try {
   execSync('npx "@hey-api/openapi-ts" -c "@hey-api/client-next"', {

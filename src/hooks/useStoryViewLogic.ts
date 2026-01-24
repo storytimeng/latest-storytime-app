@@ -23,6 +23,8 @@ import {
 } from "@/lib/cacheMigration";
 import type { StoryFormData, Chapter, Part } from "@/types/story";
 import type { CreateStoryDto, UpdateStoryDto } from "@/src/client/types.gen";
+import { useStoryFormState } from "@/src/hooks/useStoryFormState";
+import type { StoryStructure } from "@/types/story";
 
 interface UseStoryViewLogicProps {
   mode: "create" | "edit";
@@ -31,6 +33,8 @@ interface UseStoryViewLogicProps {
 
 interface UseStoryViewLogicReturn {
   initialData: Partial<StoryFormData> | undefined;
+  initialChapters: Chapter[] | undefined;
+  initialParts: Part[] | undefined;
   createdStoryId: string | null;
   isCreating: boolean;
   isUpdating: boolean;
@@ -43,6 +47,20 @@ interface UseStoryViewLogicReturn {
   handleCancel: () => void;
   pageTitle: string;
   backLink: string;
+  // Lifted form state
+  formData: StoryFormData;
+  formErrors: Partial<Record<keyof StoryFormData, string>>;
+  currentStep: "form" | "structure" | "writing" | "additional";
+  storyStructure: StoryStructure;
+  setFormData: React.Dispatch<React.SetStateAction<StoryFormData>>;
+  setFormErrors: React.Dispatch<React.SetStateAction<Partial<Record<keyof StoryFormData, string>>>>;
+  setCurrentStep: React.Dispatch<React.SetStateAction<"form" | "structure" | "writing" | "additional">>;
+  setStoryStructure: React.Dispatch<React.SetStateAction<StoryStructure>>;
+  handleFieldChange: (field: keyof StoryFormData, value: string | number | boolean | string[]) => void;
+  handleGenreToggle: (genre: string) => void;
+  validateForm: () => boolean;
+  handleStructureNext: (structure: StoryStructure) => void;
+  handleBack: () => void;
 }
 
 /**
@@ -59,9 +77,21 @@ export function useStoryViewLogic({
   const [initialData, setInitialData] = useState<
     Partial<StoryFormData> | undefined
   >();
+  const [initialChapters, setInitialChapters] = useState<
+    Chapter[] | undefined
+  >();
+  const [initialParts, setInitialParts] = useState<Part[] | undefined>();
   const [createdStoryId, setCreatedStoryId] = useState<string | null>(
     storyId || null
   );
+
+  // Lifted form state
+  const formState = useStoryFormState({ initialData, mode });
+  const {
+    currentStep,
+    setCurrentStep,
+    storyStructure,
+  } = formState;
 
   // Hooks for mutations
   const { createStory, isCreating: isCreatingStory } = useCreateStory();
@@ -78,6 +108,15 @@ export function useStoryViewLogic({
   const { story, isLoading: isFetchingStory } = useFetchStory(
     mode === "edit" ? storyId : undefined
   );
+
+  // Prefetch common navigation routes
+  useEffect(() => {
+    router.prefetch("/my-stories");
+    router.prefetch("/pen");
+    if (storyId) {
+      router.prefetch(`/story/${storyId}`);
+    }
+  }, [router, storyId]);
 
   // Initialize cache on mount
   useEffect(() => {
@@ -163,15 +202,68 @@ export function useStoryViewLogic({
                 : "Draft",
         coverImage: story.coverImage || story.cover || undefined,
       });
+
+      // Populate initial chapters and parts
+      if (story.chapters && story.chapters.length > 0) {
+        setInitialChapters(
+          story.chapters.map((ch: any) => ({
+            id: ch.chapterNumber || ch.id,
+            title: ch.title,
+            body: ch.content || ch.body || "",
+            // If the API returns real IDs, they are likely in ch.id and ch._id
+            // Chapter interface currently uses numeric id. 
+            // We should ideally support string IDs in types/story.ts but let's stick to this for now.
+          }))
+        );
+      }
+
+      if (story.episodes && story.episodes.length > 0) {
+        setInitialParts(
+          story.episodes.map((ep: any) => ({
+            id: ep.episodeNumber || ep.id,
+            title: ep.title,
+            body: ep.content || ep.body || "",
+          }))
+        );
+      }
     }
   }, [mode, story]);
+
+  // Handle back navigation
+  const handleBack = useCallback(() => {
+    if (currentStep === "writing") {
+      // Go back to structure selection if in create mode and no chapters/episodes yet?
+      // Or if structure was just selected.
+      // Actually, if we are in writing step, we should check if we came from structure step.
+      // If mode is create, we likely came from structure if hasChapters/hasEpisodes is true.
+      if (mode === "create") {
+         setCurrentStep("structure");
+      } else {
+        // In edit mode, maybe go back to form?
+        // But edit mode initializes to writing if chapters exist.
+        // Let's assume hitting back in writing goes to form (details)
+        setCurrentStep("form");
+      }
+    } else if (currentStep === "structure") {
+      setCurrentStep("form");
+    } else {
+      // Default router back
+      if (mode === "edit") {
+        router.push("/my-stories");
+      } else {
+        router.push("/pen");
+      }
+    }
+  }, [currentStep, mode, router, setCurrentStep]);
 
   // Handle form submission
   const handleSubmit = useCallback(
     async (formData: StoryFormData, _chapters?: Chapter[], _parts?: Part[]) => {
       try {
         // If we have a createdStoryId, this is publishing chapters/episodes
-        if (createdStoryId && (_chapters || _parts)) {
+        // ONLY valid if we are in CREATE mode (step 2 of wizard). 
+        // In Edit mode, we want to fall through to the update logic.
+        if (mode === "create" && createdStoryId && (_chapters || _parts)) {
           const hasChapters = formData.chapter === true;
           const hasEpisodes = formData.episodes === true;
 
@@ -304,6 +396,9 @@ export function useStoryViewLogic({
           return;
         }
 
+        // Check if content already exists via props or logic before proceeding
+        // The API integration below looks correct
+
         const contentText =
           hasChapters || hasEpisodes
             ? formData.description
@@ -314,7 +409,7 @@ export function useStoryViewLogic({
 
         if (mode === "edit" && storyId) {
           // Update existing story
-          const updatePayload: UpdateStoryDto = {
+          const updatePayload = {
             title: formData.title,
             content: contentText,
             genres: formData.selectedGenres,
@@ -322,9 +417,17 @@ export function useStoryViewLogic({
               ? formData.collaborate.split(",").map((c) => c.trim())
               : [],
             imageUrl: formData.coverImage || undefined,
+            storyStatus:
+              formData.storyStatus === "Published" ||
+              formData.storyStatus === "Completed"
+                ? "complete"
+                : formData.storyStatus === "In Progress" ||
+                    formData.storyStatus === "On Hold"
+                  ? "ongoing"
+                  : "drafts",
           };
 
-          const success = await updateStory(storyId, updatePayload);
+          const success = await updateStory(storyId, updatePayload as any);
 
           if (success) {
             showToast({
@@ -343,29 +446,42 @@ export function useStoryViewLogic({
           }
         } else {
           // Create new story
+          // Parse collaborators - only include if there are actual values
+          const collaborators = formData.collaborate
+            ? formData.collaborate
+                .split(",")
+                .map((c) => c.trim())
+                .filter((c) => c.length > 0)
+            : [];
+
+          const apiStatus =
+            formData.storyStatus === "Published" ||
+            formData.storyStatus === "Completed"
+              ? (hasChapters || hasEpisodes ? "ongoing" : "complete")
+              : formData.storyStatus === "In Progress" ||
+                  formData.storyStatus === "On Hold"
+                ? "ongoing"
+                : "drafts";
+
           const createPayload: CreateStoryDto = {
             authorId: effectiveUser.id,
             title: formData.title,
             description: formData.description,
             content: contentText,
             genres: formData.selectedGenres,
-            collaborate: formData.collaborate
-              ? formData.collaborate.split(",").map((c) => c.trim())
-              : [],
+            // Only include collaborate if there are collaborators
+            ...(collaborators.length > 0 && { collaborate: collaborators }),
             language: formData.language.toLowerCase() as any,
             anonymous: formData.goAnonymous,
             onlyOnStorytime: formData.onlyOnStorytime,
             trigger: formData.trigger,
             copyright: formData.copyright,
+            imageUrl: formData.coverImage,
+            // API requires chapter and episodes flags to be present
             chapter: hasChapters,
             episodes: hasEpisodes,
-            storyStatus:
-              formData.storyStatus === "Completed"
-                ? "complete"
-                : formData.storyStatus === "In Progress"
-                  ? "ongoing"
-                  : ("drafts" as any),
-          };
+            storyStatus: apiStatus as any,
+          } as CreateStoryDto;
 
           const result = await createStory(createPayload);
 
@@ -398,8 +514,51 @@ export function useStoryViewLogic({
                   : "Story created successfully!",
             });
 
-            // If has chapters/episodes, stay on the page to allow adding them
-            if (!hasChapters && !hasEpisodes) {
+            // If has chapters/episodes, immediately attempt to publish them
+            if (hasChapters || hasEpisodes) {
+              let publishSuccess = false;
+
+              if (hasChapters && _chapters && _chapters.length > 0) {
+                const chaptersPayload = _chapters.map((ch) => ({
+                  title: ch.title,
+                  body: ch.body,
+                }));
+                const result = await createMultipleChapters(
+                  newStoryId,
+                  chaptersPayload
+                );
+                publishSuccess = result?.success === true;
+              } else if (hasEpisodes && _parts && _parts.length > 0) {
+                const episodesPayload = _parts.map((ep) => ({
+                  title: ep.title,
+                  body: ep.body,
+                }));
+                const result = await createMultipleEpisodes(
+                  newStoryId,
+                  episodesPayload
+                );
+                publishSuccess = result?.success === true;
+              }
+
+              if (publishSuccess) {
+                if (storeUser?.id) {
+                  clearStoryCache(newStoryId, storeUser.id);
+                }
+                showToast({
+                  type: "success",
+                  message: hasChapters
+                    ? "Story and chapters published successfully!"
+                    : "Story and episodes published successfully!",
+                });
+                router.push(`/story/${newStoryId}`);
+              } else {
+                showToast({
+                  type: "warning",
+                  message: "Story details saved, but content failed to publish. Check cache.",
+                });
+                setCurrentStep("writing");
+              }
+            } else {
               if (formData.storyStatus === "Draft") {
                 router.push("/my-stories?tab=drafts");
               } else {
@@ -451,6 +610,8 @@ export function useStoryViewLogic({
 
   return {
     initialData,
+    initialChapters,
+    initialParts,
     createdStoryId,
     isCreating,
     isUpdating,
@@ -459,5 +620,8 @@ export function useStoryViewLogic({
     handleCancel,
     pageTitle,
     backLink,
+    handleBack,
+    // Return all form state
+    ...formState,
   };
 }

@@ -31,9 +31,12 @@ export default function OnboardingView() {
   };
 
   useEffect(() => {
+    router.prefetch(ONBOARDING_CONFIG.routes.onComplete);
+    router.prefetch(ONBOARDING_CONFIG.routes.onSkip);
+
     const stepFromHash = getStepFromHash();
     setCurrentStep(stepFromHash);
-  }, []);
+  }, [router]);
 
   useEffect(() => {
     const handleHashChange = () => {

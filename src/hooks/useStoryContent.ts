@@ -3,6 +3,8 @@ import type { Chapter, Part, StoryStructure } from "@/types/story";
 
 interface UseStoryContentProps {
   storyStructure: StoryStructure;
+  initialChapters?: Chapter[];
+  initialParts?: Part[];
 }
 
 interface UseStoryContentReturn {
@@ -26,20 +28,30 @@ interface UseStoryContentReturn {
  */
 export function useStoryContent({
   storyStructure,
+  initialChapters,
+  initialParts,
 }: UseStoryContentProps): UseStoryContentReturn {
   // Content state - Initialize with empty defaults first
-  const [chapters, setChapters] = useState<Chapter[]>([
-    {
-      id: 1,
-      title: "Chapter 1",
-      body: "",
-      episodes: [{ id: 1, title: "Episode 1", body: "" }],
-    },
-  ]);
+  const [chapters, setChapters] = useState<Chapter[]>(() => {
+    if (initialChapters && initialChapters.length > 0) {
+      return initialChapters;
+    }
+    return [
+      {
+        id: 1,
+        title: "Chapter 1",
+        body: "",
+        episodes: [{ id: 1, title: "Episode 1", body: "" }],
+      },
+    ];
+  });
 
-  const [parts, setParts] = useState<Part[]>([
-    { id: 1, title: "Part 1", body: "" },
-  ]);
+  const [parts, setParts] = useState<Part[]>(() => {
+    if (initialParts && initialParts.length > 0) {
+      return initialParts;
+    }
+    return [{ id: 1, title: "Part 1", body: "" }];
+  });
 
   // Accordion state for collapsing chapters/episodes
   const [expandedChapters, setExpandedChapters] = useState<Set<number>>(

@@ -62,10 +62,21 @@ async function proxyRequest(
   let parsedBody = undefined;
   if (method !== "GET" && method !== "DELETE") {
     try {
-      body = await request.text();
-      parsedBody = body ? JSON.parse(body) : undefined;
+      const contentType = request.headers.get("content-type");
+      if (contentType?.includes("application/json")) {
+        const text = await request.text();
+        body = text;
+        parsedBody = text ? JSON.parse(text) : undefined;
+      } else {
+        // For multipart/form-data or binary, use arrayBuffer
+        const buffer = await request.arrayBuffer();
+        body = buffer;
+        // Optionally try to parse if it's possible it's JSON hidden without header
+        // but for now let's be strict
+      }
     } catch (e) {
-      // No body or not JSON
+      // No body or error parsing
+      console.error("[PROXY BODY ERROR]", e);
     }
   }
 
@@ -126,7 +137,12 @@ async function proxyRequest(
     }
 
     // Create response - let Next.js handle it properly
-    const nextResponse = parsedResponse
+    const nextResponse = (response.status === 204 || response.status === 205 || response.status === 304)
+      ? new NextResponse(null, {
+          status: response.status,
+          statusText: response.statusText,
+        })
+      : parsedResponse
       ? NextResponse.json(parsedResponse, {
           status: response.status,
           statusText: response.statusText,

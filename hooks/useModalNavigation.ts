@@ -20,7 +20,9 @@ export const useModalNavigation = () => {
       const params = new URLSearchParams(window.location.search);
       setActiveModal(params.get("modal"));
     }
-  }, []);
+    // Prefetch common routes that might be accessed via modals
+    router.prefetch("/settings");
+  }, [router]);
 
   // Handle modal state based on URL params
   useEffect(() => {

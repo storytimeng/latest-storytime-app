@@ -1,7 +1,7 @@
 import { defineConfig } from "@hey-api/openapi-ts";
 
 export default defineConfig({
-  input: "https://end.digitalcoresystem.com/api-json",
+  input: `${process.env.NEXT_PUBLIC_API_DOCS_URL}-json`,
   output: "src/client",
   plugins: [
     {

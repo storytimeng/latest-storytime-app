@@ -13,6 +13,12 @@ import {
   storiesControllerCreateChapterComment,
   storiesControllerGetEpisodeComments,
   storiesControllerCreateEpisodeComment,
+  storiesControllerUpdateComment,
+  storiesControllerDeleteComment,
+  storiesControllerUpdateChapterComment,
+  storiesControllerDeleteChapterComment,
+  storiesControllerUpdateEpisodeComment,
+  storiesControllerDeleteEpisodeComment,
   storiesControllerGetChapterById,
   storiesControllerGetEpisodeById,
   storiesControllerGetStoryChapters,
@@ -26,6 +32,19 @@ import {
   usersControllerGetAggregatedStoryProgress,
 } from "@/src/client";
 
+// Helper to unwrap API response
+const unwrap = (response: any) => {
+  if (
+    response &&
+    typeof response.data === "object" &&
+    response.data !== null &&
+    "data" in response.data
+  ) {
+    return (response.data as any).data;
+  }
+  return response.data;
+};
+
 // Hook to fetch a single story by ID
 export function useStory(storyId: string | undefined) {
   const { data, error, isLoading, mutate } = useSWR(
@@ -35,16 +54,7 @@ export function useStory(storyId: string | undefined) {
       const response = await storiesControllerFindOne({
         path: { id: storyId },
       });
-      // Unwrap the actual story object from the response
-      if (
-        response &&
-        typeof response.data === "object" &&
-        response.data !== null &&
-        "data" in response.data
-      ) {
-        return (response.data as any).data;
-      }
-      return response.data;
+      return unwrap(response);
     },
     {
       revalidateOnFocus: false,
@@ -72,7 +82,7 @@ export function useStoryLikes(storyId: string | undefined) {
       const response = await storiesControllerGetStoryLikeCount({
         path: { id: storyId },
       });
-      return response.data;
+      return unwrap(response);
     }
   );
 
@@ -85,7 +95,7 @@ export function useStoryLikes(storyId: string | undefined) {
         const response = await storiesControllerCheckUserLike({
           path: { id: storyId },
         });
-        return response.data;
+        return unwrap(response);
       } catch (error) {
         // User not authenticated or hasn't liked
         return { hasLiked: false };
@@ -154,16 +164,7 @@ export function useStoryComments(storyId: string | undefined) {
     const response = await storiesControllerGetStoryComments({
       path: { id: storyId },
     });
-    // Unwrap the data array from the response
-    if (
-      response &&
-      typeof response.data === "object" &&
-      response.data !== null &&
-      "data" in response.data
-    ) {
-      return (response.data as any).data;
-    }
-    return response.data;
+    return unwrap(response);
   });
 
   const { data: commentCountData, mutate: mutateCommentCount } = useSWR(
@@ -173,7 +174,7 @@ export function useStoryComments(storyId: string | undefined) {
       const response = await storiesControllerGetStoryCommentCount({
         path: { id: storyId },
       });
-      return response.data;
+      return unwrap(response);
     }
   );
 
@@ -181,7 +182,7 @@ export function useStoryComments(storyId: string | undefined) {
     if (!storyId || !content.trim()) return;
 
     try {
-      await storiesControllerCreateComment({
+      const response = await storiesControllerCreateComment({
         body: {
           storyId,
           content: content.trim(),
@@ -191,8 +192,37 @@ export function useStoryComments(storyId: string | undefined) {
 
       // Revalidate comments and count
       await Promise.all([mutate(), mutateCommentCount()]);
+      
+      // Return the new comment data
+      return (response.data as any)?.data || response.data;
     } catch (error) {
       console.error("Failed to create comment:", error);
+      throw error;
+    }
+  };
+
+  const updateComment = async (id: string, content: string) => {
+    if (!content.trim()) return;
+    try {
+      await storiesControllerUpdateComment({
+        path: { id },
+        body: { content: content.trim() },
+      });
+      await mutate();
+    } catch (error) {
+      console.error("Failed to update comment:", error);
+      throw error;
+    }
+  };
+
+  const deleteComment = async (id: string) => {
+    try {
+      await storiesControllerDeleteComment({
+        path: { id },
+      });
+      await Promise.all([mutate(), mutateCommentCount()]);
+    } catch (error) {
+      console.error("Failed to delete comment:", error);
       throw error;
     }
   };
@@ -204,6 +234,8 @@ export function useStoryComments(storyId: string | undefined) {
     error,
     mutate,
     createComment,
+    updateComment,
+    deleteComment,
   };
 }
 
@@ -216,7 +248,7 @@ export function useStoryChapters(storyId: string | undefined) {
       const response = await storiesControllerGetStoryChapters({
         path: { id: storyId },
       });
-      return response.data;
+      return unwrap(response);
     }
   );
 
@@ -236,7 +268,7 @@ export function useStoryEpisodes(storyId: string | undefined) {
       const response = await storiesControllerGetStoryEpisodes({
         path: { id: storyId },
       });
-      return response.data;
+      return unwrap(response);
     }
   );
 
@@ -256,16 +288,7 @@ export function useChapter(chapterId: string | undefined) {
       const response = await storiesControllerGetChapterById({
         path: { chapterId },
       });
-      // Unwrap response if needed
-      if (
-        response &&
-        typeof response.data === "object" &&
-        response.data !== null &&
-        "data" in response.data
-      ) {
-        return (response.data as any).data;
-      }
-      return response.data;
+      return unwrap(response);
     }
   );
 
@@ -287,16 +310,7 @@ export function useEpisode(episodeId: string | undefined) {
       const response = await storiesControllerGetEpisodeById({
         path: { episodeId },
       });
-      // Unwrap response if needed
-      if (
-        response &&
-        typeof response.data === "object" &&
-        response.data !== null &&
-        "data" in response.data
-      ) {
-        return (response.data as any).data;
-      }
-      return response.data;
+      return unwrap(response);
     }
   );
 
@@ -323,16 +337,7 @@ export function useChapterComments(chapterId: string | undefined) {
       const response = await storiesControllerGetChapterComments({
         path: { chapterId },
       });
-      // Unwrap the data array from the response if needed
-      if (
-        response &&
-        typeof response.data === "object" &&
-        response.data !== null &&
-        "data" in response.data
-      ) {
-        return (response.data as any).data;
-      }
-      return response.data;
+      return unwrap(response);
     }
   );
 
@@ -340,15 +345,44 @@ export function useChapterComments(chapterId: string | undefined) {
     if (!chapterId || !content.trim()) return;
 
     try {
-      await storiesControllerCreateChapterComment({
+      const response = await storiesControllerCreateChapterComment({
         path: { chapterId },
         body: { content, parentCommentId } as any,
       });
 
       // Revalidate comments
       await mutate();
+      
+      // Return the new comment data
+      return (response.data as any)?.data || response.data;
     } catch (error) {
       console.error("Failed to create chapter comment:", error);
+      throw error;
+    }
+  };
+
+  const updateComment = async (commentId: string, content: string) => {
+    if (!content.trim()) return;
+    try {
+      await storiesControllerUpdateChapterComment({
+        path: { commentId },
+        body: { content: content.trim() } as any,
+      });
+      await mutate();
+    } catch (error) {
+      console.error("Failed to update chapter comment:", error);
+      throw error;
+    }
+  };
+
+  const deleteComment = async (commentId: string) => {
+    try {
+      await storiesControllerDeleteChapterComment({
+        path: { commentId },
+      });
+      await mutate();
+    } catch (error) {
+      console.error("Failed to delete chapter comment:", error);
       throw error;
     }
   };
@@ -359,6 +393,8 @@ export function useChapterComments(chapterId: string | undefined) {
     error,
     mutate,
     createComment,
+    updateComment,
+    deleteComment,
   };
 }
 
@@ -376,15 +412,7 @@ export function useEpisodeComments(episodeId: string | undefined) {
       const response = await storiesControllerGetEpisodeComments({
         path: { episodeId },
       });
-      if (
-        response &&
-        typeof response.data === "object" &&
-        response.data !== null &&
-        "data" in response.data
-      ) {
-        return (response.data as any).data;
-      }
-      return response.data;
+      return unwrap(response);
     }
   );
 
@@ -392,14 +420,43 @@ export function useEpisodeComments(episodeId: string | undefined) {
     if (!episodeId || !content.trim()) return;
 
     try {
-      await storiesControllerCreateEpisodeComment({
+      const response = await storiesControllerCreateEpisodeComment({
         path: { episodeId },
         body: { content, parentCommentId } as any,
       });
 
       await mutate();
+      
+      // Return the new comment data
+      return (response.data as any)?.data || response.data;
     } catch (error) {
       console.error("Failed to create episode comment:", error);
+      throw error;
+    }
+  };
+
+  const updateComment = async (commentId: string, content: string) => {
+    if (!content.trim()) return;
+    try {
+      await storiesControllerUpdateEpisodeComment({
+        path: { commentId },
+        body: { content: content.trim() } as any,
+      });
+      await mutate();
+    } catch (error) {
+      console.error("Failed to update episode comment:", error);
+      throw error;
+    }
+  };
+
+  const deleteComment = async (commentId: string) => {
+    try {
+      await storiesControllerDeleteEpisodeComment({
+        path: { commentId },
+      });
+      await mutate();
+    } catch (error) {
+      console.error("Failed to delete episode comment:", error);
       throw error;
     }
   };
@@ -410,6 +467,8 @@ export function useEpisodeComments(episodeId: string | undefined) {
     error,
     mutate,
     createComment,
+    updateComment,
+    deleteComment,
   };
 }
 

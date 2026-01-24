@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { FormField } from "@/components/reusables/form";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,12 @@ export default function ForgotPasswordView({
   });
 
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    router.prefetch("/auth/login");
+    router.prefetch("/auth/otp");
+  }, [router]);
+
   const { trigger: forgotTrigger, isMutating: isSubmitting } =
     useForgotPassword();
 
@@ -71,7 +77,7 @@ export default function ForgotPasswordView({
       if (onSuccess) {
         onSuccess(formData.email);
       } else {
-        router.push("/auth/email-sent");
+        router.push(`/auth/otp?email=${encodeURIComponent(formData.email)}&type=reset-password`);
       }
     } catch (err: any) {
       console.error("Password reset error:", err);

@@ -1,10 +1,16 @@
 /**
  * IndexedDB wrapper for offline story storage
  * Stores stories, chapters/episodes for offline reading
+ *
+ * IMPORTANT: This module should only be used in client-side code.
  */
 
 const DB_NAME = "StorytimeOfflineDB";
-const DB_VERSION = 2;
+const DB_VERSION = 4; // Updated to 4 to avoid conflict with db.ts (version 3)
+
+// Check if we're in a browser environment
+const isBrowser =
+  typeof window !== "undefined" && typeof indexedDB !== "undefined";
 
 // Store names
 export const STORES = {
@@ -67,11 +73,13 @@ export interface OfflineMetadata {
 
 /**
  * Initialize IndexedDB
+ * Returns null if not in browser environment
  */
-export function initDB(): Promise<IDBDatabase> {
+export function initDB(): Promise<IDBDatabase | null> {
   return new Promise((resolve, reject) => {
-    if (typeof window === "undefined" || !window.indexedDB) {
-      reject(new Error("IndexedDB is not available"));
+    if (!isBrowser) {
+      console.warn("IndexedDB is not available (not in browser environment)");
+      resolve(null);
       return;
     }
 
@@ -118,7 +126,7 @@ export function initDB(): Promise<IDBDatabase> {
           ["storyId", "chapterNumber"],
           {
             unique: false, // Changed to false because multiple users can have same story/chapter
-          }
+          },
         );
         chapterStore.createIndex("userId", "userId", { unique: false });
         chapterStore.createIndex("chapterId", "chapterId", { unique: false });
@@ -141,7 +149,7 @@ export function initDB(): Promise<IDBDatabase> {
             ["storyId", "chapterNumber"],
             {
               unique: false,
-            }
+            },
           );
         }
       }
@@ -157,7 +165,7 @@ export function initDB(): Promise<IDBDatabase> {
           ["storyId", "episodeNumber"],
           {
             unique: false, // Changed to false
-          }
+          },
         );
         episodeStore.createIndex("userId", "userId", { unique: false });
         episodeStore.createIndex("episodeId", "episodeId", { unique: false });
@@ -178,7 +186,7 @@ export function initDB(): Promise<IDBDatabase> {
             ["storyId", "episodeNumber"],
             {
               unique: false,
-            }
+            },
           );
         }
       }
@@ -197,11 +205,16 @@ export function initDB(): Promise<IDBDatabase> {
 export class IndexedDBStore<T> {
   constructor(
     private storeName: string,
-    private dbPromise: Promise<IDBDatabase> = initDB()
+    private dbPromise: Promise<IDBDatabase | null> = initDB(),
   ) {}
 
   async add(item: T): Promise<void> {
     const db = await this.dbPromise;
+    if (!db) {
+      console.warn("IndexedDB not available, cannot add item");
+      return;
+    }
+
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(this.storeName, "readwrite");
       const store = transaction.objectStore(this.storeName);
@@ -214,6 +227,11 @@ export class IndexedDBStore<T> {
 
   async put(item: T): Promise<void> {
     const db = await this.dbPromise;
+    if (!db) {
+      console.warn("IndexedDB not available, cannot put item");
+      return;
+    }
+
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(this.storeName, "readwrite");
       const store = transaction.objectStore(this.storeName);
@@ -226,6 +244,8 @@ export class IndexedDBStore<T> {
 
   async get(key: string): Promise<T | undefined> {
     const db = await this.dbPromise;
+    if (!db) return undefined;
+
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(this.storeName, "readonly");
       const store = transaction.objectStore(this.storeName);
@@ -238,6 +258,8 @@ export class IndexedDBStore<T> {
 
   async getAll(): Promise<T[]> {
     const db = await this.dbPromise;
+    if (!db) return [];
+
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(this.storeName, "readonly");
       const store = transaction.objectStore(this.storeName);
@@ -250,6 +272,11 @@ export class IndexedDBStore<T> {
 
   async delete(key: string): Promise<void> {
     const db = await this.dbPromise;
+    if (!db) {
+      console.warn("IndexedDB not available, cannot delete item");
+      return;
+    }
+
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(this.storeName, "readwrite");
       const store = transaction.objectStore(this.storeName);
@@ -262,6 +289,8 @@ export class IndexedDBStore<T> {
 
   async getByIndex(indexName: string, value: any): Promise<T[]> {
     const db = await this.dbPromise;
+    if (!db) return [];
+
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(this.storeName, "readonly");
       const store = transaction.objectStore(this.storeName);
@@ -275,6 +304,11 @@ export class IndexedDBStore<T> {
 
   async clear(): Promise<void> {
     const db = await this.dbPromise;
+    if (!db) {
+      console.warn("IndexedDB not available, cannot clear store");
+      return;
+    }
+
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(this.storeName, "readwrite");
       const store = transaction.objectStore(this.storeName);
@@ -291,13 +325,13 @@ export class IndexedDBStore<T> {
  */
 export const storiesStore = new IndexedDBStore<OfflineStory>(STORES.STORIES);
 export const chaptersStore = new IndexedDBStore<OfflineChapter>(
-  STORES.CHAPTERS
+  STORES.CHAPTERS,
 );
 export const episodesStore = new IndexedDBStore<OfflineEpisode>(
-  STORES.EPISODES
+  STORES.EPISODES,
 );
 export const metadataStore = new IndexedDBStore<OfflineMetadata>(
-  STORES.METADATA
+  STORES.METADATA,
 );
 
 /**
@@ -308,16 +342,19 @@ export async function getStorageEstimate(): Promise<{
   quota: number;
   percentUsed: number;
 }> {
-  if ("storage" in navigator && "estimate" in navigator.storage) {
-    const estimate = await navigator.storage.estimate();
-    const usage = estimate.usage || 0;
-    const quota = estimate.quota || 0;
-    const percentUsed = quota > 0 ? (usage / quota) * 100 : 0;
-
-    return { usage, quota, percentUsed };
+  if (
+    !isBrowser ||
+    !("storage" in navigator && "estimate" in navigator.storage)
+  ) {
+    return { usage: 0, quota: 0, percentUsed: 0 };
   }
 
-  return { usage: 0, quota: 0, percentUsed: 0 };
+  const estimate = await navigator.storage.estimate();
+  const usage = estimate.usage || 0;
+  const quota = estimate.quota || 0;
+  const percentUsed = quota > 0 ? (usage / quota) * 100 : 0;
+
+  return { usage, quota, percentUsed };
 }
 
 /**

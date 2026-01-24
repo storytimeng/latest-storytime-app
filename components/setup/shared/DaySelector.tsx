@@ -1,8 +1,21 @@
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Magnetik_Medium } from "@/lib/font";
+import { Button } from "@heroui/button";
+import { Switch } from "@heroui/switch";
+import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from "@heroui/modal";
+import { Magnetik_Medium, Magnetik_Regular, Magnetik_Bold } from "@/lib/font";
 import { DAYS_OF_WEEK } from "@/config/setup";
+import { ChevronRight } from "lucide-react";
 import type { DaySelectorProps } from "../types";
+
+const DAYS = [
+  { id: "Monday", short: "Mon" },
+  { id: "Tuesday", short: "Tue" },
+  { id: "Wednesday", short: "Wed" },
+  { id: "Thursday", short: "Thu" },
+  { id: "Friday", short: "Fri" },
+  { id: "Saturday", short: "Sat" },
+  { id: "Sunday", short: "Sun" },
+];
 
 export default function DaySelector({
   writeDaily,
@@ -12,7 +25,8 @@ export default function DaySelector({
   onDaysChange,
   onPresetChange,
 }: DaySelectorProps) {
-  const [showModal, setShowModal] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<"preset" | "custom">("preset");
 
   const toggleDay = (day: string) => {
     const newDays = writeDays.includes(day)
@@ -21,106 +35,144 @@ export default function DaySelector({
     onDaysChange(newDays);
   };
 
+  const handleOpenModal = () => {
+    setViewMode(dayPreset === "Custom" ? "custom" : "preset");
+    setIsModalOpen(true);
+  };
+
+  const handlePresetSelect = (preset: "Mon to Fri" | "Custom") => {
+    onPresetChange(preset);
+    if (preset === "Mon to Fri") {
+      onDaysChange(["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]);
+    } else {
+      setViewMode("custom");
+    }
+  };
+
   return (
-    <>
-      <div className="flex items-center justify-between mt-6">
-        <span className={`text-primary-colour ${Magnetik_Medium.className}`}>
+    <div className="mt-6 space-y-4">
+      {/* Daily Toggle */}
+      <div className="flex items-center justify-between py-2">
+        <label className={`text-base text-primary-colour ${Magnetik_Medium.className}`}>
           Daily
-        </span>
-        <button
-          className={`w-12 h-7 rounded-full relative transition-colors ${
-            writeDaily ? "bg-primary-colour" : "bg-light-grey-2"
-          }`}
-          onClick={() => onDailyChange(!writeDaily)}
-        >
-          <span
-            className={`absolute top-1 left-1 w-5 h-5 rounded-full bg-universal-white transition-transform ${
-              writeDaily ? "translate-x-5" : "translate-x-0"
-            }`}
-          />
-        </button>
+        </label>
+        <Switch
+          isSelected={writeDaily}
+          onValueChange={onDailyChange}
+          color="warning"
+          classNames={{
+            wrapper: "bg-grey-4 group-data-[selected=true]:bg-primary-colour",
+          }}
+        />
       </div>
 
+      {/* Custom Days Selection Row */}
       {!writeDaily && (
-        <div className="mt-4">
-          <Button
-            className="w-full bg-accent-shade-1 hover:bg-accent-shade-2 text-grey-1 py-4 rounded-lg transition-all duration-200 border border-primary-colour"
-            onClick={() => setShowModal(true)}
-          >
-            {dayPreset === "Mon to Fri"
-              ? "Mon to Fri"
-              : `${writeDays.length} day(s) selected`}
-          </Button>
+        <div 
+          onClick={handleOpenModal}
+          className="flex items-center justify-between p-4 border border-grey-4 rounded-xl cursor-pointer hover:bg-grey-5 transition-colors"
+        >
+          <span className={`text-base text-grey-2 ${Magnetik_Medium.className}`}>
+            {dayPreset === "Mon to Fri" ? "Mon to Fri" : "Custom"}
+          </span>
+          <ChevronRight className="w-5 h-5 text-grey-3" />
         </div>
       )}
 
-      {/* Days Modal */}
-      {showModal && (
-        <div className="fixed inset-0 z-50" role="dialog" aria-modal="true">
-          <div
-            className="absolute inset-0 bg-black/30"
-            onClick={() => setShowModal(false)}
-          />
-          <div className="absolute bottom-0 left-0 right-0 bg-universal-white rounded-t-2xl p-4 shadow-lg">
-            <div className={`text-center mb-4 ${Magnetik_Medium.className}`}>
-              Select the days
-            </div>
-            <div className="space-y-3">
-              <label
-                className={`flex items-center justify-between border border-light-grey-2 rounded-lg px-4 py-3 cursor-pointer hover:border-primary-colour transition-colors duration-200 ${Magnetik_Medium.className}`}
-              >
-                <span>Mon to Fri</span>
-                <input
-                  type="radio"
-                  name="dayPreset"
-                  checked={dayPreset === "Mon to Fri"}
-                  onChange={() => onPresetChange("Mon to Fri")}
-                  className="cursor-pointer"
-                />
-              </label>
-
-              <label
-                className={`flex items-center justify-between border border-light-grey-2 rounded-lg px-4 py-3 cursor-pointer hover:border-primary-colour transition-colors duration-200 ${Magnetik_Medium.className}`}
-              >
-                <span>Custom</span>
-                <input
-                  type="radio"
-                  name="dayPreset"
-                  checked={dayPreset === "Custom"}
-                  onChange={() => onPresetChange("Custom")}
-                  className="cursor-pointer"
-                />
-              </label>
-
-              {dayPreset === "Custom" && (
-                <div className="grid grid-cols-2 gap-3 mt-2">
-                  {DAYS_OF_WEEK.map((d) => (
-                    <button
-                      key={d}
-                      className={`p-3 rounded-lg border-2 transition-all duration-200 hover:scale-105 ${Magnetik_Medium.className} ${
-                        writeDays.includes(d)
-                          ? "border-primary-colour bg-accent-shade-1 text-primary-colour shadow-md"
-                          : "border-light-grey-2 text-grey-2 hover:border-primary-colour hover:text-primary-colour"
-                      }`}
-                      onClick={() => toggleDay(d)}
-                    >
-                      {d}
-                    </button>
-                  ))}
+      {/* Day Selection Modal */}
+      <Modal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)}
+        placement="bottom"
+        className="m-0"
+        classNames={{
+          wrapper: "items-end",
+          base: "rounded-t-3xl max-h-[80vh] m-0",
+          backdrop: "bg-black/50"
+        }}
+      >
+        <ModalContent>
+          <ModalHeader className="flex flex-col gap-1 pb-2">
+            <h2 className={`text-xl text-center text-primary-colour ${Magnetik_Bold.className}`}>
+              {viewMode === "preset" ? "Select the days" : "Custom"}
+            </h2>
+          </ModalHeader>
+          <ModalBody className="pb-6">
+            {viewMode === "preset" ? (
+              <div className="space-y-4 py-2">
+                {/* Mon to Fri Option */}
+                <div
+                  onClick={() => handlePresetSelect("Mon to Fri")}
+                  className="flex items-center justify-between py-4 border-b border-grey-5 cursor-pointer"
+                >
+                  <span className={`text-lg text-primary-colour ${Magnetik_Medium.className}`}>Mon to Fri</span>
+                  <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+                    dayPreset === "Mon to Fri" ? "border-primary-colour bg-primary-colour" : "border-grey-4"
+                  }`}>
+                    {dayPreset === "Mon to Fri" && <div className="w-3 h-3 rounded-full bg-white" />}
+                  </div>
                 </div>
+
+                {/* Custom Option */}
+                <div
+                  onClick={() => handlePresetSelect("Custom")}
+                  className="flex items-center justify-between py-4 border-b border-grey-5 cursor-pointer"
+                >
+                  <span className={`text-lg text-primary-colour ${Magnetik_Medium.className}`}>Custom</span>
+                  <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${
+                    dayPreset === "Custom" ? "border-primary-colour bg-primary-colour" : "border-grey-4"
+                  }`}>
+                    {dayPreset === "Custom" && <div className="w-3 h-3 rounded-full bg-white" />}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-1 py-2 overflow-y-auto max-h-[50vh]">
+                {DAYS.map((day) => (
+                  <div
+                    key={day.id}
+                    onClick={() => toggleDay(day.id)}
+                    className="flex items-center justify-between py-4 border-b border-grey-5 cursor-pointer"
+                  >
+                    <span className={`text-lg text-primary-colour ${Magnetik_Medium.className}`}>{day.id}</span>
+                    <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
+                      writeDays.includes(day.id) ? "border-primary-colour bg-primary-colour" : "border-grey-4"
+                    }`}>
+                      {writeDays.includes(day.id) && <div className="w-3 h-3 rounded-full bg-white" />}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            <div className="flex gap-3 pt-6">
+              {viewMode === "custom" ? (
+                <Button
+                  variant="bordered"
+                  className="flex-1 border-2 border-primary-colour h-14"
+                  onClick={() => setViewMode("preset")}
+                >
+                  <span className={Magnetik_Medium.className}>Back</span>
+                </Button>
+              ) : (
+                <Button
+                  variant="bordered"
+                  className="flex-1 border-2 border-primary-colour h-14"
+                  onClick={() => setIsModalOpen(false)}
+                >
+                  <span className={Magnetik_Medium.className}>Cancel</span>
+                </Button>
               )}
-            </div>
-            <div className="mt-4">
               <Button
-                className="w-full bg-primary-colour hover:bg-primary-shade-6 text-universal-white py-4 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg"
-                onClick={() => setShowModal(false)}
+                className="flex-1 bg-primary-colour text-white h-14"
+                onClick={() => setIsModalOpen(false)}
               >
-                Done
+                <span className={Magnetik_Medium.className}>Done</span>
               </Button>
             </div>
-          </div>
-        </div>
-      )}
-    </>
+          </ModalBody>
+        </ModalContent>
+      </Modal>
+    </div>
   );
 }

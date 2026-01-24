@@ -51,6 +51,11 @@ export default function UpdatePasswordView() {
   const { show: showLoading, hide: hideLoading } = useLoadingStore();
   const isFromSettings = searchParams?.get("from") === "settings";
 
+  useEffect(() => {
+    router.prefetch("/auth/password-updated");
+    router.prefetch("/auth/forgot-password");
+  }, [router]);
+
   const [formData, setFormData] = useState<UpdatePasswordFormData>({
     currentPassword: "",
     newPassword: "",

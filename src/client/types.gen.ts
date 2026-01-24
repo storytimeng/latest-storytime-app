@@ -1029,6 +1029,28 @@ export type UpdateSupportDto = {
     isActive?: boolean;
 };
 
+export type UploadRequestDto = {
+    /**
+     * The image file to upload
+     */
+    file: Blob | File;
+};
+
+export type UploadResponseDto = {
+    /**
+     * The URL of the uploaded image
+     */
+    url: string;
+    /**
+     * The public ID of the uploaded image in Cloudinary
+     */
+    publicId: string;
+    /**
+     * Success message
+     */
+    message: string;
+};
+
 export type UsersControllerCheckPenNameAvailabilityData = {
     body?: never;
     path?: never;
@@ -5196,3 +5218,27 @@ export type SupportControllerUpdateResponses = {
 };
 
 export type SupportControllerUpdateResponse = SupportControllerUpdateResponses[keyof SupportControllerUpdateResponses];
+
+export type UploadControllerUploadImageData = {
+    /**
+     * Image file to upload
+     */
+    body: UploadRequestDto;
+    path?: never;
+    query?: {
+        /**
+         * The folder path in Cloudinary (optional)
+         */
+        folder?: string;
+    };
+    url: '/uploads/image';
+};
+
+export type UploadControllerUploadImageResponses = {
+    /**
+     * Image uploaded successfully
+     */
+    200: UploadResponseDto;
+};
+
+export type UploadControllerUploadImageResponse = UploadControllerUploadImageResponses[keyof UploadControllerUploadImageResponses];

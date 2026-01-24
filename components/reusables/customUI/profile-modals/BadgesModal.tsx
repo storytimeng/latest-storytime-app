@@ -7,6 +7,7 @@ import { useUserAchievements } from "@/src/hooks/useUserAchievements";
 import { Skeleton } from "@heroui/skeleton";
 import { ChevronLeft, Lock } from "lucide-react";
 import { Button } from "@heroui/button";
+import Image from "next/image";
 
 // Badge designs mapping
 const badgeDesigns: Record<string, { color: string; icon: string; name: string }> = {
@@ -23,47 +24,62 @@ const badgeDesigns: Record<string, { color: string; icon: string; name: string }
 const BadgeCard = ({ 
   badge, 
   isPending = false,
+  isLocked = false,
   onClick 
 }: { 
   badge: any; 
   isPending?: boolean;
+  isLocked?: boolean;
   onClick?: () => void;
 }) => {
   const design = badgeDesigns[badge.category || 'innocent'] || badgeDesigns.innocent;
   
   return (
     <div 
-      className={`relative cursor-pointer ${isPending ? 'opacity-60' : ''}`}
+      className={`relative cursor-pointer transition-all duration-300 ${isPending || isLocked ? 'opacity-40 grayscale' : 'hover:scale-105'}`}
       onClick={onClick}
     >
       {/* Badge Circle */}
-      <div className={`w-full aspect-square rounded-full bg-gradient-to-br ${design.color} flex items-center justify-center relative border-4 border-white shadow-lg`}>
-        {/* Top text */}
-        <div className="absolute top-3 left-1/2 -translate-x-1/2 text-[10px] font-bold text-white uppercase tracking-wider">
-          {design.name}
-        </div>
+      <div className={`w-full aspect-square rounded-full flex items-center justify-center relative border-4 border-white shadow-lg overflow-hidden ${isLocked ? 'bg-grey-5' : `bg-gradient-to-br ${design.color}`}`}>
+        {badge.imageUrl && !isLocked ? (
+          <Image 
+            src={badge.imageUrl} 
+            alt={badge.name} 
+            fill 
+            className="object-cover"
+          />
+        ) : (
+          <>
+            {/* Fallback design for badges without images or locked ones */}
+            <div className="absolute top-3 left-1/2 -translate-x-1/2 text-[10px] font-bold text-white uppercase tracking-wider">
+              {isLocked ? 'LOCKED' : design.name}
+            </div>
+            
+            <div className="text-4xl text-white">
+              {isLocked ? '?' : design.icon}
+            </div>
+            
+            {!isLocked && (
+              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 text-[10px] font-bold text-white uppercase tracking-wider">
+                {badge.category || 'Explorer'}
+              </div>
+            )}
+          </>
+        )}
         
-        {/* Icon */}
-        <div className="text-4xl">
-          {design.icon}
-        </div>
-        
-        {/* Bottom text */}
-        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 text-[10px] font-bold text-white uppercase tracking-wider">
-          {badge.category || 'Explorer'}
-        </div>
-        
-        {/* Decorative stars */}
-        <div className="absolute top-6 left-4 text-white text-xs">★</div>
-        <div className="absolute top-6 right-4 text-white text-xs">★</div>
+        {isLocked && (
+          <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+            <Lock size={24} className="text-white/50" />
+          </div>
+        )}
       </div>
       
       {/* Title */}
       <div className="text-center mt-2">
-        <p className={`text-sm text-primary-colour ${Magnetik_Medium.className}`}>
-          Celebrating
+        <p className={`text-[10px] text-primary-shade-3 uppercase tracking-tighter ${Magnetik_Medium.className}`}>
+          {isLocked ? "Hidden Achievement" : "Celebrating"}
         </p>
-        <p className={`text-sm text-primary-colour ${Magnetik_Medium.className}`}>
+        <p className={`text-sm text-primary-colour ${isLocked ? 'blur-[3px] select-none' : ''} ${Magnetik_Medium.className}`}>
           {badge.name}
         </p>
       </div>
@@ -135,25 +151,32 @@ export const BadgesModal = () => {
           <div className="space-y-6">
             {/* Large Badge */}
             <div className="flex justify-center">
-              <div className={`w-64 h-64 rounded-full bg-gradient-to-br ${design.color} flex items-center justify-center relative border-8 border-white shadow-xl`}>
-                {/* Top text */}
-                <div className="absolute top-8 left-1/2 -translate-x-1/2 text-base font-bold text-white uppercase tracking-wider">
-                  {design.name}
-                </div>
-                
-                {/* Icon */}
-                <div className="text-8xl">
-                  {design.icon}
-                </div>
-                
-                {/* Bottom text */}
-                <div className="absolute bottom-8 left-1/2 -translate-x-1/2 text-base font-bold text-white uppercase tracking-wider">
-                  {selectedBadge.category || 'Explorer'}
-                </div>
-                
-                {/* Decorative stars */}
-                <div className="absolute top-16 left-12 text-white text-2xl">★</div>
-                <div className="absolute top-16 right-12 text-white text-2xl">★</div>
+              <div className={`w-64 h-64 rounded-full flex items-center justify-center relative border-8 border-white shadow-xl overflow-hidden ${!selectedBadge.imageUrl ? `bg-gradient-to-br ${design.color}` : ''}`}>
+                {selectedBadge.imageUrl ? (
+                  <Image 
+                    src={selectedBadge.imageUrl} 
+                    alt={selectedBadge.name} 
+                    fill 
+                    className="object-cover"
+                  />
+                ) : (
+                  <>
+                    {/* Top text */}
+                    <div className="absolute top-8 left-1/2 -translate-x-1/2 text-base font-bold text-white uppercase tracking-wider">
+                      {design.name}
+                    </div>
+                    
+                    {/* Icon */}
+                    <div className="text-8xl">
+                      {design.icon}
+                    </div>
+                    
+                    {/* Bottom text */}
+                    <div className="absolute bottom-8 left-1/2 -translate-x-1/2 text-base font-bold text-white uppercase tracking-wider">
+                      {selectedBadge.category || 'Explorer'}
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 
@@ -213,23 +236,31 @@ export const BadgesModal = () => {
             </div>
           )}
 
-          {/* Pending Badges */}
-          {pendingBadges.length > 0 && (
-            <div>
-              <h3 className={`text-base ${Magnetik_Medium.className} mb-3 flex items-center gap-2`}>
-                Pending Badges <Lock size={16} className="text-grey-3" />
-              </h3>
-              <div className="grid grid-cols-2 gap-6">
-                {pendingBadges.map((badge) => (
-                  <BadgeCard
-                    key={badge.id}
-                    badge={badge}
-                    isPending
-                  />
-                ))}
-              </div>
+          {/* Pending/Locked Badges */}
+          <div>
+            <h3 className={`text-base ${Magnetik_Medium.className} mb-3 flex items-center gap-2`}>
+              Locked Achievements <Lock size={16} className="text-grey-3" />
+            </h3>
+            <div className="grid grid-cols-2 gap-x-6 gap-y-8">
+              {/* Actual pending badges from logic */}
+              {pendingBadges.map((badge) => (
+                <BadgeCard
+                  key={badge.id}
+                  badge={badge}
+                  isPending
+                />
+              ))}
+              
+              {/* Fill up to about 50 locked achievement skeletons */}
+              {[...Array(50)].map((_, i) => (
+                <BadgeCard
+                  key={`locked-${i}`}
+                  badge={{ name: "Secret Achievement", category: "locked" }}
+                  isLocked
+                />
+              ))}
             </div>
-          )}
+          </div>
 
           {/* Empty state */}
           {earnedBadges.length === 0 && pendingBadges.length === 0 && (

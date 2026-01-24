@@ -23,6 +23,8 @@ import {
 } from "@/lib/storyCache";
 import { CacheLoadingModal } from "@/components/reusables/customUI/CacheLoadingModal";
 import { useUnsavedChangesWarning } from "@/src/hooks/useUnsavedChangesWarning";
+import { UPLOAD_PATHS } from "@/src/config/uploadPaths";
+import { useImageUpload } from "@/src/hooks/useImageUpload";
 // Custom hooks for refactored logic
 import { useStoryFormState } from "@/src/hooks/useStoryFormState";
 import { useStoryContent } from "@/src/hooks/useStoryContent";
@@ -268,31 +270,30 @@ const StoryForm: React.FC<StoryFormProps> = ({
   onCancel,
   isLoading = false,
   createdStoryId,
+  initialChapters,
+  initialParts,
+  // Lifted state props
+  formData,
+  formErrors,
+  currentStep,
+  storyStructure,
+  setFormData,
+  setFormErrors,
+  setCurrentStep,
+  setStoryStructure,
+  handleFieldChange,
+  handleGenreToggle,
+  validateForm,
+  handleStructureNext,
 }) => {
   const { user } = useUserStore();
   const userId = user?.id;
 
-  // ============================================================================
-  // REFACTORED: Custom hooks (now active!)
-  // ============================================================================
-  const formStateHook = useStoryFormState({ initialData, mode });
   const contentStateHook = useStoryContent({
-    storyStructure: formStateHook.storyStructure,
+    storyStructure: storyStructure,
+    initialChapters,
+    initialParts,
   });
-
-  // Create aliases for backward compatibility - these reference hook state
-  const formData = formStateHook.formData;
-  const formErrors = formStateHook.formErrors;
-  const currentStep = formStateHook.currentStep;
-  const storyStructure = formStateHook.storyStructure;
-  const setFormData = formStateHook.setFormData;
-  const setFormErrors = formStateHook.setFormErrors;
-  const setCurrentStep = formStateHook.setCurrentStep;
-  const setStoryStructure = formStateHook.setStoryStructure;
-  const handleFieldChange = formStateHook.handleFieldChange;
-  const handleGenreToggle = formStateHook.handleGenreToggle;
-  const validateForm = formStateHook.validateForm;
-  const handleStructureNext = formStateHook.handleStructureNext;
 
   // Content state from hooks
   const chapters = contentStateHook.chapters;
@@ -556,6 +557,10 @@ const StoryForm: React.FC<StoryFormProps> = ({
     [handleFieldChange]
   );
 
+
+  // Define specialized upload hook for cover images
+  const { upload: coverUpload, isUploading: isCoverUploading } = useImageUpload(UPLOAD_PATHS.STORY_COVER);
+
   // Render cover image section
   const renderCoverImage = () => (
     <ImageUpload
@@ -564,6 +569,9 @@ const StoryForm: React.FC<StoryFormProps> = ({
       aspectRatio="video"
       placeholder="Add cover image"
       className="w-full"
+      autoUpload={true}
+      uploadFn={coverUpload}
+      isUploading={isCoverUploading}
     />
   );
 
@@ -628,6 +636,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
         required={!storyStructure.hasChapters && !storyStructure.hasEpisodes}
         rows={6}
         className="max-h-[400px]"
+        isRichText={true}
       />
       {!storyStructure.hasChapters && !storyStructure.hasEpisodes && (
         <p className="text-xs text-gray-500 -mt-4">
@@ -959,6 +968,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
                           );
                         }}
                         rows={12}
+                        isRichText={true}
                       />
                     </div>
                   )}
@@ -1042,6 +1052,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
                           );
                         }}
                         rows={12}
+                        isRichText={true}
                       />
                     </div>
                   )}
@@ -1071,6 +1082,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
             value={formData.content || ""}
             onChange={(value) => handleFieldChange("content", value)}
             rows={20}
+            isRichText={true}
           />
           <p className="text-xs text-gray-500">
             Write your complete story in this field since you selected no

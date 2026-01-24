@@ -4,8 +4,9 @@ import React, { useState, useMemo, useEffect } from "react";
 import { Avatar } from "@heroui/avatar";
 import { Button } from "@heroui/button";
 import { Textarea } from "@heroui/input";
-import { MessageCircle, ChevronDown, ChevronRight } from "lucide-react";
+import { MessageCircle, ChevronDown, ChevronRight, Edit2, Trash2, X, Check } from "lucide-react";
 import { Magnetik_Medium, Magnetik_Regular } from "@/lib/font";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface Comment {
   id: string;
@@ -23,7 +24,9 @@ interface Comment {
 
 interface CommentsSectionProps {
   comments: Comment[];
-  onSubmitComment: (text: string, parentId?: string) => Promise<void>;
+  onSubmitComment: (text: string, parentId?: string) => Promise<any>;
+  onUpdateComment?: (id: string, text: string) => Promise<void>;
+  onDeleteComment?: (id: string) => Promise<void>;
   isThreaded?: boolean;
   currentUser?: {
     id: string;
@@ -35,6 +38,8 @@ interface CommentsSectionProps {
 export const CommentsSection = ({
   comments,
   onSubmitComment,
+  onUpdateComment,
+  onDeleteComment,
   isThreaded = true,
   currentUser,
 }: CommentsSectionProps) => {
@@ -50,6 +55,10 @@ export const CommentsSection = ({
   const [replyCooldowns, setReplyCooldowns] = useState<Map<string, number>>(
     new Map()
   );
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editContent, setEditContent] = useState("");
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
 
   // Countdown timer effect for main comment
   useEffect(() => {
@@ -97,6 +106,32 @@ export const CommentsSection = ({
   const extractWaitTime = (errorMessage: string): number => {
     const match = errorMessage.match(/(\d+)s/);
     return match ? parseInt(match[1], 10) : 30; // Default to 30s if can't parse
+  };
+
+  const handleUpdate = async (id: string) => {
+    if (!onUpdateComment || !editContent.trim()) return;
+    setIsUpdating(true);
+    try {
+      await onUpdateComment(id, editContent);
+      setEditingCommentId(null);
+      setEditContent("");
+    } catch (error) {
+      console.error("Failed to update comment:", error);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!onDeleteComment) return;
+    setIsDeleting(id);
+    try {
+      await onDeleteComment(id);
+    } catch (error) {
+      console.error("Failed to delete comment:", error);
+    } finally {
+      setIsDeleting(null);
+    }
   };
 
   // Clean up optimistic comments that have been successfully matched with real ones
@@ -211,15 +246,25 @@ export const CommentsSection = ({
     setIsSubmitting(true);
 
     try {
-      await onSubmitComment(commentText);
+      const serverComment = await onSubmitComment(commentText);
       // Set 30-second cooldown after successful submission
       setCooldownSeconds(30);
-      // Mark optimistic comment as no longer optimistic (unfade it)
-      setOptimisticComments((prev) =>
-        prev.map((c) =>
-          c.id === optimisticId ? { ...c, isOptimistic: false } : c
-        )
-      );
+      
+      // Update optimistic comment with real server data immediately
+      if (serverComment && serverComment.id) {
+        setOptimisticComments((prev) =>
+          prev.map((c) =>
+            c.id === optimisticId ? { ...serverComment, isOptimistic: false } : c
+          )
+        );
+      } else {
+        // Fallback: just unmark as optimistic if we can't find real ID
+        setOptimisticComments((prev) =>
+          prev.map((c) =>
+            c.id === optimisticId ? { ...c, isOptimistic: false } : c
+          )
+        );
+      }
     } catch (error: any) {
       console.error("Failed to submit comment:", error);
 
@@ -268,15 +313,24 @@ export const CommentsSection = ({
     setIsSubmitting(true);
 
     try {
-      await onSubmitComment(replyContent, parentId);
+      const serverReply = await onSubmitComment(replyContent, parentId);
       // Set 30-second cooldown for this specific reply thread
       setReplyCooldowns((prev) => new Map(prev).set(parentId, 30));
-      // Mark optimistic reply as no longer optimistic (unfade it)
-      setOptimisticComments((prev) =>
-        prev.map((c) =>
-          c.id === optimisticId ? { ...c, isOptimistic: false } : c
-        )
-      );
+      
+      // Update optimistic reply with real server data immediately
+      if (serverReply && serverReply.id) {
+        setOptimisticComments((prev) =>
+          prev.map((c) =>
+            c.id === optimisticId ? { ...serverReply, isOptimistic: false } : c
+          )
+        );
+      } else {
+        setOptimisticComments((prev) =>
+          prev.map((c) =>
+            c.id === optimisticId ? { ...c, isOptimistic: false } : c
+          )
+        );
+      }
     } catch (error: any) {
       console.error("Failed to submit reply:", error);
 
@@ -324,7 +378,14 @@ export const CommentsSection = ({
     const replyCooldown = replyCooldowns.get(comment.id) || 0;
 
     return (
-      <div key={comment.id} className="relative">
+      <motion.div
+        key={comment.id}
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        transition={{ duration: 0.3 }}
+        className="relative"
+      >
         {/* Vertical line for threading - thicker and more visible like Reddit */}
         {depth > 0 && (
           <div className="absolute left-3 top-0 bottom-0 w-0.5 bg-divider hover:bg-primary-colour/30 transition-colors" />
@@ -358,11 +419,47 @@ export const CommentsSection = ({
                   })}
                 </span>
               </div>
-              <p
-                className={`text-sm text-foreground mb-2 leading-relaxed ${Magnetik_Regular.className}`}
-              >
-                {comment.content}
-              </p>
+              
+              {editingCommentId === comment.id ? (
+                <div className="mb-2 space-y-2">
+                  <Textarea
+                    value={editContent}
+                    onChange={(e) => setEditContent(e.target.value)}
+                    minRows={2}
+                    size="sm"
+                    classNames={{
+                      input: "text-sm",
+                    }}
+                  />
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      color="primary"
+                      variant="flat"
+                      startContent={<Check size={14} />}
+                      onClick={() => handleUpdate(comment.id)}
+                      isLoading={isUpdating}
+                    >
+                      Update
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="light"
+                      startContent={<X size={14} />}
+                      onClick={() => setEditingCommentId(null)}
+                      disabled={isUpdating}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <p
+                  className={`text-sm text-foreground mb-2 leading-relaxed ${Magnetik_Regular.className}`}
+                >
+                  {comment.content}
+                </p>
+              )}
 
               {/* Action buttons - Reddit style */}
               <div className="flex items-center gap-4">
@@ -372,7 +469,8 @@ export const CommentsSection = ({
                     onClick={() =>
                       setReplyingTo(showReplyForm ? null : comment.id)
                     }
-                    className="flex items-center gap-1 text-xs font-medium text-default-500 hover:text-primary-500 transition-colors px-2 py-1 rounded hover:bg-default-200"
+                    disabled={comment.id.startsWith("optimistic")}
+                    className="flex items-center gap-1 text-xs font-medium text-default-500 hover:text-primary-500 transition-colors px-2 py-1 rounded hover:bg-default-200 disabled:opacity-30 disabled:cursor-not-allowed"
                   >
                     <MessageCircle size={14} />
                     <span>Reply</span>
@@ -400,6 +498,39 @@ export const CommentsSection = ({
                       </>
                     )}
                   </button>
+                )}
+
+                {/* Edit & Delete buttons (if owner) */}
+                {currentUser && currentUser.id === comment.user.id && !comment.isOptimistic && (
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => {
+                        setEditingCommentId(comment.id);
+                        setEditContent(comment.content);
+                        setReplyingTo(null);
+                      }}
+                      className="flex items-center gap-1 text-xs font-medium text-default-500 hover:text-primary-500 transition-colors px-2 py-1 rounded hover:bg-default-200"
+                    >
+                      <Edit2 size={12} />
+                      <span>Edit</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (window.confirm("Are you sure you want to delete this comment?")) {
+                          handleDelete(comment.id);
+                        }
+                      }}
+                      disabled={isDeleting === comment.id}
+                      className="flex items-center gap-1 text-xs font-medium text-red-500/70 hover:text-red-500 transition-colors px-2 py-1 rounded hover:bg-red-500/10 disabled:opacity-50"
+                    >
+                      {isDeleting === comment.id ? (
+                        <div className="w-3 h-3 border-2 border-current border-t-transparent animate-spin rounded-full" />
+                      ) : (
+                        <Trash2 size={12} />
+                      )}
+                      <span>Delete</span>
+                    </button>
+                  </div>
                 )}
               </div>
 
@@ -450,11 +581,11 @@ export const CommentsSection = ({
           {/* Nested replies */}
           {!isCollapsed && hasReplies && (
             <div className="mt-1 pt-1">
-              {comment.replies!.map((reply) => renderComment(reply, depth + 1))}
+          {comment.replies!.map((reply) => renderComment(reply, depth + 1))}
             </div>
           )}
         </div>
-      </div>
+      </motion.div>
     );
   };
 
@@ -500,7 +631,9 @@ export const CommentsSection = ({
             No comments yet. Be the first to share your thoughts!
           </p>
         ) : (
-          organizedComments.map((comment) => renderComment(comment))
+          <AnimatePresence mode="popLayout">
+            {organizedComments.map((comment) => renderComment(comment))}
+          </AnimatePresence>
         )}
       </div>
     </div>

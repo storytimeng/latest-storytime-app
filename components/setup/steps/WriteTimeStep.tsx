@@ -1,6 +1,6 @@
 import { Magnetik_Regular } from "@/lib/font";
 import StepContainer from "../shared/StepContainer";
-import TimePicker from "../shared/TimePicker";
+import { TimePicker } from "@/components/reusables/customUI/TimePicker";
 import DaySelector from "../shared/DaySelector";
 import type { StepComponentProps, TimeValue, DayPreset } from "../types";
 
@@ -39,7 +39,7 @@ export default function WriteTimeStep({
       isTransitioning={isTransitioning}
       showSkip
     >
-      <div className="flex items-center justify-center py-4">
+      <div className="flex items-center justify-center py-6">
         <TimePicker value={writeTime} onChange={onWriteTimeChange} />
       </div>
 
@@ -52,7 +52,7 @@ export default function WriteTimeStep({
         onPresetChange={onPresetChange}
       />
 
-      <p className={`text-grey-2 body-text-small-regular-auto mt-6 ${Magnetik_Regular.className}`}>
+      <p className={`text-grey-2 body-text-small-regular-auto mt-6 text-center ${Magnetik_Regular.className}`}>
         Note: You will always get a reminder
       </p>
     </StepContainer>

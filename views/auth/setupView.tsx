@@ -55,7 +55,7 @@ export default function SetupView() {
       onKeyDown={setup.handleKeyDown}
       tabIndex={0}
     >
-      <SetupProgress currentStep={setup.step} />
+      <SetupProgress currentStep={setup.step} onStepClick={setup.goToStep} />
 
       {/* Step Content with Framer Motion */}
       <div className="flex-1 overflow-hidden">
@@ -94,6 +94,8 @@ export default function SetupView() {
                 onImagePreviewToggle={setShowImagePreview}
                 onImageSelect={handleImageSelection}
                 onImageAccept={handleImageAccept}
+                onPreviewChange={setup.setImagePreview}
+                onUploadReady={setup.setUploadTrigger}
                 onNext={setup.goNext}
                 onSkip={setup.skipStep}
                 canContinue={setup.canContinue}

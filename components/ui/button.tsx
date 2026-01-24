@@ -51,7 +51,7 @@ const variantClasses: Record<Variant, string> = {
     "w-[335px] h-[48px] rounded-[8px] border border-dashed border-complimentary-colour bg-transparent text-complimentary-colour py-2 px-4 body-text-small-regular-auto",
   google:
     "mb-12 w-full flex items-center justify-center space-x-2 border-2 border-light-grey-2 hover:border-primary-colour hover:bg-accent-shade-3 bg-accent-colour py-3 rounded-3xl body-text-smallest-auto-regular text-primary-colour transition-colors",
-  skip: "bg-transparent border-none text-primary-colour hover:text-primary-shade-6 body-text-small-regular-auto p-2 min-w-0 h-auto transition-colors",
+  skip: "w-full bg-transparent border-none text-primary-colour hover:text-primary-shade-6 body-text-small-regular-auto p-2 min-w-0 h-auto transition-colors",
 };
 
 export const Button = forwardRef<HTMLButtonElement, Props>(function Button(

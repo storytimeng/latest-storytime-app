@@ -1,11 +1,16 @@
 "use client";
 
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 
 export default function PasswordUpdatedView() {
   const router = useRouter();
+
+  useEffect(() => {
+    router.prefetch("/auth/login");
+  }, [router]);
 
   const handleProceed = () => {
     router.push("/auth/login");

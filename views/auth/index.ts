@@ -5,3 +5,7 @@ export { default as SignupView } from "./signupView";
 export { default as ForgotPasswordView } from "./forgotPasswordView";
 export { default as OtpView } from "./otpView";
 export { default as SetupView } from "./setupView";
+export { default as EmailSentView } from "./emailSentView";
+export { default as UpdatePasswordView } from "./updatePasswordView";
+export { default as PasswordUpdatedView } from "./passwordUpdatedView";
+export { default as OnboardingView } from "./onboardingView";
