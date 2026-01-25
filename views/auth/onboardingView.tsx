@@ -54,7 +54,7 @@ export default function OnboardingView() {
   }, [currentStep]);
 
   const currentStepData = ONBOARDING_STEPS.find(
-    (step) => step.id === currentStep
+    (step) => step.id === currentStep,
   );
 
   const handleNext = () => {
@@ -64,11 +64,15 @@ export default function OnboardingView() {
       setCurrentStep(nextStep);
       updateHash(nextStep);
     } else {
+      // Mark onboarding as completed before navigating
+      localStorage.setItem("storyTimeOnboarding", "true");
       router.push(ONBOARDING_CONFIG.routes.onComplete);
     }
   };
 
   const handleSkip = () => {
+    // Mark onboarding as completed even when skipping
+    localStorage.setItem("storyTimeOnboarding", "true");
     router.push(ONBOARDING_CONFIG.routes.onSkip);
   };
 
@@ -177,16 +181,16 @@ export default function OnboardingView() {
                     index === currentStep - 1
                       ? 1
                       : index < currentStep - 1
-                      ? 1
-                      : 0,
+                        ? 1
+                        : 0,
                   transformOrigin:
                     direction === "forward" && index === currentStep - 1
                       ? "left"
                       : direction === "backward" && index === currentStep - 1
-                      ? "right"
-                      : index < currentStep - 1
-                      ? "left"
-                      : "left",
+                        ? "right"
+                        : index < currentStep - 1
+                          ? "left"
+                          : "left",
                 }}
                 transition={{
                   duration: ONBOARDING_CONFIG.animation.indicatorDuration,
@@ -195,8 +199,8 @@ export default function OnboardingView() {
                     index === currentStep - 1
                       ? 0.2
                       : index === currentStep - 2 && direction === "forward"
-                      ? 0
-                      : 0,
+                        ? 0
+                        : 0,
                 }}
                 style={{
                   boxShadow:
@@ -233,10 +237,7 @@ export default function OnboardingView() {
           {currentStep === ONBOARDING_STEPS.length ? "Get Started" : "Next"}
         </Button>
 
-        <Button
-          onPress={handleSkip}
-          variant="skip"
-        >
+        <Button onPress={handleSkip} variant="skip">
           Skip
         </Button>
       </div>

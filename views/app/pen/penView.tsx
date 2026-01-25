@@ -54,7 +54,7 @@ const PenView = () => {
 
     if (!isAuthenticated()) {
       openAuthModal("login");
-      router.push("/");
+      // router.push("/");
     }
   }, [isAuthenticated, openAuthModal, router]);
 
@@ -82,21 +82,21 @@ const PenView = () => {
         return [...stories].sort(
           (a, b) =>
             new Date(b.lastEdited || b.writingDate || b.updatedAt).getTime() -
-            new Date(a.lastEdited || a.writingDate || a.updatedAt).getTime()
+            new Date(a.lastEdited || a.writingDate || a.updatedAt).getTime(),
         );
       case "Ongoing":
         return stories.filter(
-          (story: ExtendedStory) => story.status === "Ongoing"
+          (story: ExtendedStory) => story.status === "Ongoing",
         );
       case "Published":
         return stories.filter(
           (story: ExtendedStory) =>
-            story.status === "Completed" || story.storyStatus === "complete"
+            story.status === "Completed" || story.storyStatus === "complete",
         );
       case "Drafts":
         return stories.filter(
           (story: ExtendedStory) =>
-            story.status === "Draft" || story.storyStatus === "drafts"
+            story.status === "Draft" || story.storyStatus === "drafts",
         );
       default:
         return stories;
