@@ -1,4 +1,6 @@
-const withSerwist = require("@serwist/next").default({
+import withSerwistInit from "@serwist/next";
+
+const withSerwist = withSerwistInit({
   swSrc: "app/sw.ts",
   swDest: "public/sw.js",
   cacheOnNavigation: true,
@@ -88,4 +90,4 @@ const nextConfig = {
   },
 };
 
-module.exports = withSerwist(nextConfig);
+export default withSerwist(nextConfig);

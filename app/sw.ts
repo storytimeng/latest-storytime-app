@@ -27,7 +27,38 @@ type MatcherContext = {
 };
 
 const serwist = new Serwist({
-  precacheEntries: self.__SW_MANIFEST,
+  precacheEntries: [
+    ...(self.__SW_MANIFEST || []),
+    // Main pages
+    { url: "/", revision: "1" },
+    { url: "/home", revision: "1" },
+    { url: "/library", revision: "1" },
+    { url: "/notification", revision: "1" },
+    { url: "/pen", revision: "1" },
+
+    // Auth pages
+    { url: "/auth", revision: "1" },
+    { url: "/auth/login", revision: "1" },
+    { url: "/auth/signup", revision: "1" },
+    { url: "/auth/onboarding", revision: "1" },
+    { url: "/auth/forgot-password", revision: "1" },
+    { url: "/auth/update-password", revision: "1" },
+    { url: "/auth/password-updated", revision: "1" },
+    { url: "/auth/email-sent", revision: "1" },
+    { url: "/auth/otp", revision: "1" },
+    { url: "/auth/setup", revision: "1" },
+
+    // App pages
+    { url: "/all-genres", revision: "1" },
+    { url: "/my-stories", revision: "1" },
+    { url: "/new-story", revision: "1" },
+    { url: "/premium", revision: "1" },
+    { url: "/pricing", revision: "1" },
+    { url: "/profile", revision: "1" },
+    { url: "/search", revision: "1" },
+    { url: "/settings", revision: "1" },
+    { url: "/offline", revision: "1" },
+  ],
   skipWaiting: true,
   clientsClaim: true,
   navigationPreload: true,
