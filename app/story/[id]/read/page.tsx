@@ -6,12 +6,13 @@ import {
   storiesControllerGetChapterById,
   storiesControllerGetEpisodeById,
 } from "@/src/client/sdk.gen";
+import { client } from "@/src/client/client.gen";
 
 // Lazy load ReadStoryView for code splitting
 const ReadStoryView = lazy(() =>
   import("@/views/app/story/readStoryView").then((mod) => ({
     default: mod.ReadStoryView,
-  }))
+  })),
 );
 
 type Props = {
@@ -29,6 +30,11 @@ export async function generateMetadata({
   const episodeId = sParams.episodeId;
 
   try {
+    // Configure client for server-side rendering (bypass proxy, use direct API URL)
+    client.setConfig({
+      baseUrl: process.env.NEXT_PUBLIC_API_URL || "https://api.storytime.ng",
+    });
+
     const response = await storiesControllerFindOne({
       path: { id },
     });
@@ -73,15 +79,30 @@ export async function generateMetadata({
 
       const fullTitle = `${displayTitle} - ${authorName} | Storytime`;
 
+      // Ensure absolute URLs for images
+      const absoluteImageUrl = imageUrl.startsWith("http")
+        ? imageUrl
+        : `https://storytime.ng${imageUrl}`;
+
+      // Build the story URL with query params if present
+      let storyUrl = `https://storytime.ng/story/${id}/read`;
+      if (chapterId) {
+        storyUrl += `?chapterId=${chapterId}`;
+      } else if (episodeId) {
+        storyUrl += `?episodeId=${episodeId}`;
+      }
+
       return {
         title: fullTitle,
         description: description.slice(0, 160),
         openGraph: {
           title: displayTitle,
           description: description.slice(0, 160),
+          url: storyUrl,
+          siteName: "Storytime",
           images: [
             {
-              url: imageUrl,
+              url: absoluteImageUrl,
               width: 1200,
               height: 630,
               alt: displayTitle,
@@ -93,7 +114,7 @@ export async function generateMetadata({
           card: "summary_large_image",
           title: displayTitle,
           description: description.slice(0, 160),
-          images: [imageUrl],
+          images: [absoluteImageUrl],
         },
       };
     }

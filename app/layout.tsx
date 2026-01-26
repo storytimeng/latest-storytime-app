@@ -148,7 +148,7 @@ export default function RootLayout({
         className={cn(
           "m-auto min-h-screen bg-background bg-center bg-no-repeat scroll-smooth antialiased",
           Magnetik_Medium.className,
-          Magnetik_Medium.variable
+          Magnetik_Medium.variable,
         )}
       >
         <Providers themeProps={{ attribute: "class", defaultTheme: "light" }}>
