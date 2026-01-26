@@ -21,7 +21,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     });
 
     if (!response.error && response.data) {
-      const story = response.data as any;
+      const data = response?.data as any;
+      const story = data?.data as any;
       const title = story.title || "Story";
       const description =
         story.description || "Read this amazing story on Storytime";
