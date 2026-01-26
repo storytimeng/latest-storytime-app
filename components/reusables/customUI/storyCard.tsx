@@ -84,7 +84,7 @@ const StoryCard = ({
       className={cn(
         "flex-shrink-0 rounded-xl border-none bg-transparent shadow-none space-y-2 relative",
         isPenMode ? "w-full cursor-pointer" : "w-[160px] cursor-pointer",
-        className
+        className,
       )}
       onClick={isPenMode ? handleCardClick : undefined}
     >
@@ -97,7 +97,7 @@ const StoryCard = ({
             height={150}
             className={cn(
               "w-full object-cover rounded-lg transition-transform group-hover:scale-[1.03]",
-              isPenMode ? "aspect-[10/9]" : "h-28"
+              isPenMode ? "aspect-[10/9]" : "h-28",
             )}
           />
         ) : (
@@ -108,7 +108,7 @@ const StoryCard = ({
             height={150}
             className={cn(
               "w-full object-cover rounded-lg transition-transform group-hover:scale-[1.03]",
-              isPenMode ? "aspect-[10/9]" : "h-28"
+              isPenMode ? "aspect-[10/9]" : "h-28",
             )}
             onError={handleImageError}
             loading="lazy"
@@ -121,7 +121,7 @@ const StoryCard = ({
           className={cn(
             "absolute rounded-md px-2 py-1 text-[10px] text-[#361B17] bg-[#FFEBD0]",
             Magnetik_Regular.className,
-            isPenMode ? "top-3 left-3" : "top-2 right-2"
+            isPenMode ? "top-3 left-3" : "top-2 right-2",
           )}
         >
           {displayGenre}
@@ -129,24 +129,24 @@ const StoryCard = ({
 
         {/* Action buttons for pen mode */}
         {isPenMode && (
-          <div className="absolute flex flex-col gap-2 right-2 top-2">
+          <>
             {onEdit && (
               <button
                 onClick={handleEdit}
-                className="w-6 h-6 rounded-full bg-[#F5E6D3] flex items-center justify-center hover:bg-[#E5D6C3]"
+                className="absolute right-2 top-2 w-8 h-8 rounded-full bg-[#F5E6D3] flex items-center justify-center hover:bg-[#E5D6C3] transition-colors"
               >
-                <Pencil className="w-3 h-3 text-primary-colour" />
+                <Pencil className="w-4 h-4 text-primary-colour" />
               </button>
             )}
             {onDelete && (
               <button
                 onClick={handleDelete}
-                className="w-6 h-6 rounded-full bg-[#F5E6D3] flex items-center justify-center hover:bg-[#E5D6C3]"
+                className="absolute left-2 bottom-2 w-8 h-8 rounded-full bg-red-100 flex items-center justify-center hover:bg-red-200 transition-colors"
               >
-                <Trash2 className="w-3 h-3 text-primary-colour" />
+                <Trash2 className="w-4 h-4 text-red-600" />
               </button>
             )}
-          </div>
+          </>
         )}
       </div>
 
@@ -156,7 +156,7 @@ const StoryCard = ({
         <div className="flex items-center gap-2">
           <h3
             className={cn(
-              "truncate text-sm font-semibold text-[#361B17] flex-1"
+              "truncate text-sm font-semibold text-[#361B17] flex-1",
             )}
           >
             {story.title}
@@ -165,7 +165,7 @@ const StoryCard = ({
             className={cn(
               "text-xs px-2 py-0.5 rounded-full",
               getStatusColor(story.storyStatus || story.status),
-              Magnetik_Regular.className
+              Magnetik_Regular.className,
             )}
           >
             ({story.storyStatus || story.status || "Unknown"})
@@ -179,7 +179,7 @@ const StoryCard = ({
               <p
                 className={cn(
                   "text-[#361B17] text-xs",
-                  Magnetik_Regular.className
+                  Magnetik_Regular.className,
                 )}
               >
                 Writing date: {new Date(story.createdAt).toLocaleDateString()}
@@ -230,7 +230,7 @@ const StoryCard = ({
               <span
                 className={cn(
                   "text-[#361B17] text-xs",
-                  Magnetik_Regular.className
+                  Magnetik_Regular.className,
                 )}
               >
                 By {authorName}

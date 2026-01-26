@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import {
   Modal,
   ModalContent,
@@ -65,6 +65,10 @@ const PenView = () => {
     id: string | number;
     title: string;
   } | null>(null);
+  const deleteCountdown = useRef(5);
+  const countdownInterval = useRef<NodeJS.Timeout | null>(null);
+  const [canDelete, setCanDelete] = useState(false);
+  const [countdownDisplay, setCountdownDisplay] = useState(5);
 
   // Get current user profile
   const { user } = useUserProfile();
@@ -114,9 +118,38 @@ const PenView = () => {
     const story = filteredStories.find((s: ExtendedStory) => s.id === storyId);
     if (story) {
       setStoryToDelete({ id: storyId, title: (story as ExtendedStory).title });
+      deleteCountdown.current = 5;
+      setCountdownDisplay(5);
+      setCanDelete(false);
       setIsDeleteModalOpen(true);
     }
   };
+
+  // Countdown timer for delete button
+  useEffect(() => {
+    if (isDeleteModalOpen) {
+      deleteCountdown.current = 5;
+      setCountdownDisplay(5);
+      setCanDelete(false);
+
+      countdownInterval.current = setInterval(() => {
+        deleteCountdown.current -= 1;
+        setCountdownDisplay(deleteCountdown.current);
+        if (deleteCountdown.current <= 0) {
+          setCanDelete(true);
+          if (countdownInterval.current) {
+            clearInterval(countdownInterval.current);
+          }
+        }
+      }, 1000);
+    }
+
+    return () => {
+      if (countdownInterval.current) {
+        clearInterval(countdownInterval.current);
+      }
+    };
+  }, [isDeleteModalOpen]);
 
   const confirmDelete = async () => {
     if (storyToDelete) {
@@ -415,23 +448,27 @@ const PenView = () => {
           <ModalBody className="px-6 py-8">
             <p className="text-center body-text-small-medium-auto text-primary-colour">
               Are you sure you want to delete &ldquo;{storyToDelete?.title}
-              &rdquo;
+              &rdquo;?
+            </p>
+            <p className="mt-4 text-center text-sm text-red-600 font-medium">
+              This action cannot be undone.
             </p>
           </ModalBody>
 
-          <ModalFooter className="flex gap-4 px-6 pt-0 pb-6">
-            <Button
-              onPress={cancelDelete}
-              className="flex-1 py-6 bg-transparent border-2 rounded-full border-primary-colour text-primary-colour body-text-small-medium-auto"
-            >
-              No
-            </Button>
+          <ModalFooter className="flex gap-4 px-6 pt-0 pb-8">
             <Button
               onPress={confirmDelete}
               isLoading={isDeleting}
-              className="flex-1 py-6 rounded-full bg-primary-shade-6 text-universal-white body-text-small-medium-auto"
+              isDisabled={!canDelete || isDeleting}
+              className="flex-1 py-7 text-base rounded-full bg-red-600 hover:bg-red-700 text-white body-text-small-medium-auto disabled:opacity-50 disabled:bg-red-400"
             >
-              Yes
+              {canDelete ? "Yes, Delete" : `Yes (${countdownDisplay})`}
+            </Button>
+            <Button
+              onPress={cancelDelete}
+              className="flex-1 py-7 text-base bg-transparent border-2 rounded-full border-primary-colour text-primary-colour body-text-small-medium-auto"
+            >
+              No
             </Button>
           </ModalFooter>
         </ModalContent>
