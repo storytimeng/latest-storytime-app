@@ -37,6 +37,10 @@ const MyStoriesView = () => {
     id: string | number;
     title: string;
   } | null>(null);
+  const deleteCountdown = React.useRef(5);
+  const countdownInterval = React.useRef<NodeJS.Timeout | null>(null);
+  const [canDelete, setCanDelete] = React.useState(false);
+  const [countdownDisplay, setCountdownDisplay] = React.useState(5);
 
   // Fetch stories from user's library
   const { stories, isLoading, mutate } = useLibrary();
@@ -52,19 +56,19 @@ const MyStoriesView = () => {
         return [...stories].sort(
           (a, b) =>
             new Date(b.lastEdited || b.writingDate || b.updatedAt).getTime() -
-            new Date(a.lastEdited || a.writingDate || a.updatedAt).getTime()
+            new Date(a.lastEdited || a.writingDate || a.updatedAt).getTime(),
         );
       case "Ongoing":
         return stories.filter(
-          (story: ExtendedStory) => story.status === "Ongoing"
+          (story: ExtendedStory) => story.status === "Ongoing",
         );
       case "Published":
         return stories.filter(
-          (story: ExtendedStory) => story.status === "Completed"
+          (story: ExtendedStory) => story.status === "Completed",
         );
       case "Drafts":
         return stories.filter(
-          (story: ExtendedStory) => story.status === "Draft"
+          (story: ExtendedStory) => story.status === "Draft",
         );
       default:
         return stories;
@@ -79,9 +83,38 @@ const MyStoriesView = () => {
     const story = filteredStories.find((s: ExtendedStory) => s.id === storyId);
     if (story) {
       setStoryToDelete({ id: storyId, title: (story as ExtendedStory).title });
+      deleteCountdown.current = 5;
+      setCountdownDisplay(5);
+      setCanDelete(false);
       setIsDeleteModalOpen(true);
     }
   };
+
+  // Countdown timer for delete button
+  React.useEffect(() => {
+    if (isDeleteModalOpen) {
+      deleteCountdown.current = 5;
+      setCountdownDisplay(5);
+      setCanDelete(false);
+
+      countdownInterval.current = setInterval(() => {
+        deleteCountdown.current -= 1;
+        setCountdownDisplay(deleteCountdown.current);
+        if (deleteCountdown.current <= 0) {
+          setCanDelete(true);
+          if (countdownInterval.current) {
+            clearInterval(countdownInterval.current);
+          }
+        }
+      }, 1000);
+    }
+
+    return () => {
+      if (countdownInterval.current) {
+        clearInterval(countdownInterval.current);
+      }
+    };
+  }, [isDeleteModalOpen]);
 
   const confirmDelete = async () => {
     if (storyToDelete) {
@@ -202,23 +235,27 @@ const MyStoriesView = () => {
           <ModalBody className="px-6 py-8">
             <p className="text-center body-text-small-medium-auto text-primary-colour">
               Are you sure you want to delete &ldquo;{storyToDelete?.title}
-              &rdquo;
+              &rdquo;?
+            </p>
+            <p className="mt-4 text-center text-sm text-red-600 font-medium">
+              This action cannot be undone.
             </p>
           </ModalBody>
 
-          <ModalFooter className="flex gap-4 px-6 pt-0 pb-6">
-            <Button
-              onPress={cancelDelete}
-              className="flex-1 py-6 bg-transparent border-2 rounded-full border-primary-colour text-primary-colour body-text-small-medium-auto"
-            >
-              No
-            </Button>
+          <ModalFooter className="flex gap-4 px-6 pt-0 pb-8">
             <Button
               onPress={confirmDelete}
               isLoading={isDeleting}
-              className="flex-1 py-6 rounded-full bg-primary-shade-6 text-universal-white body-text-small-medium-auto"
+              isDisabled={!canDelete || isDeleting}
+              className="flex-1 py-7 text-base rounded-full bg-red-600 hover:bg-red-700 text-white body-text-small-medium-auto disabled:opacity-50 disabled:bg-red-400"
             >
-              Yes
+              {canDelete ? "Yes, Delete" : `Yes (${countdownDisplay})`}
+            </Button>
+            <Button
+              onPress={cancelDelete}
+              className="flex-1 py-7 text-base bg-transparent border-2 rounded-full border-primary-colour text-primary-colour body-text-small-medium-auto"
+            >
+              No
             </Button>
           </ModalFooter>
         </ModalContent>

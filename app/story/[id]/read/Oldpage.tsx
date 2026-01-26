@@ -20,65 +20,14 @@ type Props = {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 };
 
-// Helper function to strip HTML tags and truncate
-const stripHtmlAndTruncate = (
-  html: string,
-  maxLength: number = 155,
-): string => {
-  if (!html) return "";
-
-  // Remove HTML tags
-  const stripped = html.replace(/<[^>]*>/g, "");
-
-  // Decode HTML entities
-  const decoded = stripped
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'");
-
-  // Trim and truncate
-  const trimmed = decoded.trim();
-  if (trimmed.length <= maxLength) return trimmed;
-  return trimmed.substring(0, maxLength).trim() + "...";
-};
-
-// Helper function to fetch chapter/episode metadata
-const fetchContentMetadata = async (
-  id: string,
-  type: "chapter" | "episode",
-) => {
-  try {
-    const response =
-      type === "chapter"
-        ? await storiesControllerGetChapterById({ path: { chapterId: id } })
-        : await storiesControllerGetEpisodeById({ path: { episodeId: id } });
-
-    if (!response.error && response.data) {
-      const data = response.data as any;
-      const content = data?.data || data;
-      return {
-        number: content.episodeNumber || content.chapterNumber || "",
-        title: content.title?.trim(),
-        content: content.content,
-      };
-    }
-  } catch (e) {
-    console.error(`Error fetching ${type} metadata:`, e);
-  }
-  return null;
-};
-
 export async function generateMetadata({
   params,
   searchParams,
 }: Props): Promise<Metadata> {
   const { id } = await params;
   const sParams = await searchParams;
-  const chapterId = sParams.chapterId as string | undefined;
-  const episodeId = sParams.episodeId as string | undefined;
+  const chapterId = sParams.chapterId;
+  const episodeId = sParams.episodeId;
 
   try {
     // Configure client for server-side rendering (bypass proxy, use direct API URL)
@@ -100,26 +49,81 @@ export async function generateMetadata({
         story.imageUrl || story.coverImage || "/images/storytime-fallback.png";
       const authorName = story.author?.penName || "Unknown Author";
 
-      // Fetch chapter or episode metadata if viewing specific content
-      if (chapterId) {
-        const contentData = await fetchContentMetadata(chapterId, "chapter");
-        if (contentData) {
-          if (contentData.content) {
-            description = stripHtmlAndTruncate(contentData.content);
+      // Helper function to strip HTML tags and truncate
+      const stripHtmlAndTruncate = (
+        html: string,
+        maxLength: number = 155,
+      ): string => {
+        if (!html) return "";
+        // Remove HTML tags
+        const stripped = html.replace(/<[^>]*>/g, "");
+        // Decode HTML entities
+        const decoded = stripped
+          .replace(/&nbsp;/g, " ")
+          .replace(/&amp;/g, "&")
+          .replace(/&lt;/g, "<")
+          .replace(/&gt;/g, ">")
+          .replace(/&quot;/g, '"')
+          .replace(/&#39;/g, "'");
+        // Trim and truncate
+        const trimmed = decoded.trim();
+        if (trimmed.length <= maxLength) return trimmed;
+        return trimmed.substring(0, maxLength).trim() + "...";
+      };
+
+      // If viewing a specific chapter, try to fetch its title/number
+      if (chapterId && typeof chapterId === "string") {
+        try {
+          const chapterResponse = await storiesControllerGetChapterById({
+            path: { chapterId },
+          });
+          if (!chapterResponse.error && chapterResponse.data) {
+            const chapterData = chapterResponse.data as any;
+            const chapter = chapterData?.data || chapterData;
+            const chapterNum =
+              chapter.episodeNumber || chapter.chapterNumber || "";
+            const chapterTitle = chapter.title?.trim();
+
+            // Use chapter content for description if available
+            if (chapter.content) {
+              description = stripHtmlAndTruncate(chapter.content);
+            }
+
+            if (chapterTitle) {
+              displayTitle = `${story.title} - Chapter ${chapterNum}: ${chapterTitle}`;
+            } else {
+              displayTitle = `${story.title} - Chapter ${chapterNum}`;
+            }
           }
-          displayTitle = contentData.title
-            ? `${story.title} - "Chapter ${contentData.number}: ${contentData.title}"`
-            : `${story.title} - Chapter ${contentData.number}`;
+        } catch (e) {
+          console.error("Error fetching chapter metadata:", e);
         }
-      } else if (episodeId) {
-        const contentData = await fetchContentMetadata(episodeId, "episode");
-        if (contentData) {
-          if (contentData.content) {
-            description = stripHtmlAndTruncate(contentData.content);
+      }
+      // If viewing a specific episode, try to fetch its title/number
+      else if (episodeId && typeof episodeId === "string") {
+        try {
+          const episodeResponse = await storiesControllerGetEpisodeById({
+            path: { episodeId },
+          });
+          if (!episodeResponse.error && episodeResponse.data) {
+            const episodeData = episodeResponse.data as any;
+            const episode = episodeData?.data || episodeData;
+            const episodeNum = episode.episodeNumber || "";
+            const episodeTitle = episode.title?.trim();
+
+            // Use episode content for description if available
+            if (episode.content) {
+              description = stripHtmlAndTruncate(episode.content);
+            }
+
+            if (episodeTitle) {
+              displayTitle = `${story.title} - Episode ${episodeNum}: ${episodeTitle}`;
+            } else {
+              displayTitle = `${story.title} - Episode ${episodeNum}`;
+            }
           }
-          displayTitle = contentData.title
-            ? `${story.title} - "Episode ${contentData.number}: ${contentData.title}"`
-            : `${story.title} - Episode ${contentData.number}`;
+        } catch (e) {
+          console.error("Error fetching episode metadata:", e);
         }
       }
 
