@@ -32,6 +32,7 @@ import { useApiUserStats } from "@/src/hooks/useApiUserStats";
 import { useOnlineStatus } from "@/src/hooks/useOnlineStatus";
 import { useGenres } from "@/src/hooks/useGenres";
 import { Tooltip } from "@heroui/tooltip";
+import { cn } from "@/lib";
 
 const ProfileView = () => {
   const router = useRouter();
@@ -273,7 +274,7 @@ const ProfileView = () => {
                 </button>
               </div>
               <div className="grid grid-cols-3 gap-2">
-                {genres.slice(0, 6).map((genre) => (
+                {genres.slice(0, 6).map((genre: string) => (
                   <GenreButton
                     key={genre}
                     genre={genre}

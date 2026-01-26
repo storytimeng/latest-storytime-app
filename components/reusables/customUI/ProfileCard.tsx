@@ -19,6 +19,7 @@ interface ProfileCardProps {
   containerClassName?: string;
   textClassName?: string;
   useLiveData?: boolean; // If true, fetch from API
+  hideEditButton?: boolean;
 }
 
 const ProfileCard = ({
@@ -30,6 +31,7 @@ const ProfileCard = ({
   containerClassName = "",
   textClassName = "",
   useLiveData = false,
+  hideEditButton = false,
 }: ProfileCardProps) => {
   const router = useRouter();
   const { user, isLoading } = useUserProfile();
@@ -86,12 +88,14 @@ const ProfileCard = ({
                 
               />
             </div>
-            <button 
-              className="absolute flex items-center justify-center w-8 h-8 rounded-full -bottom-1 -right-1 bg-universal-white cursor-pointer hover:bg-gray-100 transition-colors"
-              onClick={() => router.push("?modal=edit-profile", { scroll: false })}
-            >
-              <Camera className="w-4 h-4 text-primary-colour" />
-            </button>
+            {!hideEditButton && (
+              <button 
+                className="absolute flex items-center justify-center w-8 h-8 rounded-full -bottom-1 -right-1 bg-universal-white cursor-pointer hover:bg-gray-100 transition-colors"
+                onClick={() => router.push("?modal=edit-profile", { scroll: false })}
+              >
+                <Camera className="w-4 h-4 text-primary-colour" />
+              </button>
+            )}
           </div>
           <div
             className={cn(
