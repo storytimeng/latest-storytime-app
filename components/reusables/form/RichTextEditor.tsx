@@ -53,7 +53,7 @@ const MenuButton = ({
     className={cn(
       "p-1.5 rounded-md transition-colors hover:bg-gray-100 text-gray-600",
       isActive && "bg-primary-shade-1/20 text-primary-colour",
-      disabled && "opacity-50 cursor-not-allowed"
+      disabled && "opacity-50 cursor-not-allowed",
     )}
   >
     {children}
@@ -86,16 +86,15 @@ const RichTextEditor = ({
       }),
       BubbleMenuExtension.configure({
         element: bubbleMenuRef.current,
-    
       }),
     ],
     content: value,
     editorProps: {
       attributes: {
         class: cn(
-          "prose prose-sm sm:prose-base max-w-none focus:outline-none px-4 py-3",
+          "prose prose-sm sm:prose-base overflow-auto max-w-none focus:outline-none px-4 py-3",
           Magnetik_Regular.className,
-          minHeight
+          minHeight,
         ),
       },
     },
@@ -108,7 +107,7 @@ const RichTextEditor = ({
   useEffect(() => {
     if (editor && value !== editor.getHTML()) {
       if (editor.getText() === "" && value !== "<p></p>") {
-         editor.commands.setContent(value);
+        editor.commands.setContent(value);
       }
     }
   }, [value, editor]);
@@ -120,12 +119,12 @@ const RichTextEditor = ({
   return (
     <div
       className={cn(
-        "border border-light-grey-2 rounded-xl overflow-hidden bg-white focus-within:ring-2 focus-within:ring-primary-colour/20 focus-within:border-primary-colour transition-all",
-        className
+        "border border-light-grey-2 rounded-xl overflow-auto bg-white focus-within:ring-2 focus-within:ring-primary-colour/20 focus-within:border-primary-colour transition-all flex flex-col",
+        className,
       )}
     >
-      {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-1 p-2 border-b bg-gray-50/50 border-light-grey-2">
+      {/* Toolbar - Sticky */}
+      <div className="flex flex-wrap items-center gap-1 p-2 border-b bg-gray-50/50 border-light-grey-2 sticky top-0 z-10">
         <MenuButton
           onClick={() => editor.chain().focus().toggleBold().run()}
           isActive={editor.isActive("bold")}
@@ -147,26 +146,30 @@ const RichTextEditor = ({
         >
           <Strikethrough size={18} />
         </MenuButton>
-        
+
         <div className="w-px h-5 mx-1 bg-gray-300" />
-        
+
         <MenuButton
-          onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+          onClick={() =>
+            editor.chain().focus().toggleHeading({ level: 2 }).run()
+          }
           isActive={editor.isActive("heading", { level: 2 })}
           title="Heading"
         >
           <Heading1 size={18} />
         </MenuButton>
         <MenuButton
-          onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
+          onClick={() =>
+            editor.chain().focus().toggleHeading({ level: 3 }).run()
+          }
           isActive={editor.isActive("heading", { level: 3 })}
           title="Subheading"
         >
           <Heading2 size={18} />
         </MenuButton>
-        
+
         <div className="w-px h-5 mx-1 bg-gray-300" />
-        
+
         <MenuButton
           onClick={() => editor.chain().focus().toggleBulletList().run()}
           isActive={editor.isActive("bulletList")}
@@ -198,7 +201,7 @@ const RichTextEditor = ({
         >
           <Undo size={18} />
         </MenuButton>
-      <MenuButton
+        <MenuButton
           onClick={() => editor.chain().focus().redo().run()}
           disabled={!editor.can().redo()}
           title="Redo"
@@ -220,54 +223,174 @@ const RichTextEditor = ({
             </button>
           </PopoverTrigger>
           <PopoverContent className="p-2 w-48">
-             <div className="flex flex-col gap-2">
-                <span className={`text-xs text-gray-400 font-medium ${Magnetik_Medium.className}`}>TTS Controls</span>
-                
-                <div className="space-y-1">
-                   <p className="text-[10px] text-gray-400 uppercase">Pause</p>
-                   <div className="flex gap-1">
-                      <Button size="sm" variant="flat" className="h-6 text-xs w-full" onPress={() => editor.chain().focus().insertContent(' [[delay=500]] ').run()}>0.5s</Button>
-                      <Button size="sm" variant="flat" className="h-6 text-xs w-full" onPress={() => editor.chain().focus().insertContent(' [[delay=1000]] ').run()}>1s</Button>
-                   </div>
-                </div>
+            <div className="flex flex-col gap-2">
+              <span
+                className={`text-xs text-gray-400 font-medium ${Magnetik_Medium.className}`}
+              >
+                TTS Controls
+              </span>
 
-                <div className="space-y-1">
-                   <p className="text-[10px] text-gray-400 uppercase">Speed</p>
-                   <div className="flex gap-1">
-                      <Button size="sm" variant="flat" className="h-6 text-xs w-full" onPress={() => editor.chain().focus().insertContent(' [[rate=0.75]] ').run()}>0.75x</Button>
-                      <Button size="sm" variant="flat" className="h-6 text-xs w-full" onPress={() => editor.chain().focus().insertContent(' [[rate=default]] ').run()}>Normal</Button>
-                      <Button size="sm" variant="flat" className="h-6 text-xs w-full" onPress={() => editor.chain().focus().insertContent(' [[rate=1.25]] ').run()}>1.25x</Button>
-                   </div>
+              <div className="space-y-1">
+                <p className="text-[10px] text-gray-400 uppercase">Pause</p>
+                <div className="flex gap-1">
+                  <Button
+                    size="sm"
+                    variant="flat"
+                    className="h-6 text-xs w-full"
+                    onPress={() =>
+                      editor
+                        .chain()
+                        .focus()
+                        .insertContent(" [[delay=500]] ")
+                        .run()
+                    }
+                  >
+                    0.5s
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="flat"
+                    className="h-6 text-xs w-full"
+                    onPress={() =>
+                      editor
+                        .chain()
+                        .focus()
+                        .insertContent(" [[delay=1000]] ")
+                        .run()
+                    }
+                  >
+                    1s
+                  </Button>
                 </div>
+              </div>
 
-                <div className="space-y-1">
-                   <p className="text-[10px] text-gray-400 uppercase">Volume</p>
-                   <div className="flex gap-1">
-                      <Button size="sm" variant="flat" className="h-6 text-xs w-full" onPress={() => editor.chain().focus().insertContent(' [[volume=0.5]] ').run()}>Low</Button>
-                      <Button size="sm" variant="flat" className="h-6 text-xs w-full" onPress={() => editor.chain().focus().insertContent(' [[volume=default]] ').run()}>Normal</Button>
-                   </div>
+              <div className="space-y-1">
+                <p className="text-[10px] text-gray-400 uppercase">Speed</p>
+                <div className="flex gap-1">
+                  <Button
+                    size="sm"
+                    variant="flat"
+                    className="h-6 text-xs w-full"
+                    onPress={() =>
+                      editor
+                        .chain()
+                        .focus()
+                        .insertContent(" [[rate=0.75]] ")
+                        .run()
+                    }
+                  >
+                    0.75x
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="flat"
+                    className="h-6 text-xs w-full"
+                    onPress={() =>
+                      editor
+                        .chain()
+                        .focus()
+                        .insertContent(" [[rate=default]] ")
+                        .run()
+                    }
+                  >
+                    Normal
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="flat"
+                    className="h-6 text-xs w-full"
+                    onPress={() =>
+                      editor
+                        .chain()
+                        .focus()
+                        .insertContent(" [[rate=1.25]] ")
+                        .run()
+                    }
+                  >
+                    1.25x
+                  </Button>
                 </div>
-                
-                <div className="space-y-1">
-                   <p className="text-[10px] text-gray-400 uppercase">Skip</p>
-                   <div className="flex gap-1">
-                      <Button size="sm" variant="flat" className="h-6 text-xs w-full" onPress={() => editor.chain().focus().insertContent(' [[skip=true]] ').run()}>Start</Button>
-                      <Button size="sm" variant="flat" className="h-6 text-xs w-full" onPress={() => editor.chain().focus().insertContent(' [[skip=false]] ').run()}>End</Button>
-                   </div>
-                </div>
+              </div>
 
-             </div>
+              <div className="space-y-1">
+                <p className="text-[10px] text-gray-400 uppercase">Volume</p>
+                <div className="flex gap-1">
+                  <Button
+                    size="sm"
+                    variant="flat"
+                    className="h-6 text-xs w-full"
+                    onPress={() =>
+                      editor
+                        .chain()
+                        .focus()
+                        .insertContent(" [[volume=0.5]] ")
+                        .run()
+                    }
+                  >
+                    Low
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="flat"
+                    className="h-6 text-xs w-full"
+                    onPress={() =>
+                      editor
+                        .chain()
+                        .focus()
+                        .insertContent(" [[volume=default]] ")
+                        .run()
+                    }
+                  >
+                    Normal
+                  </Button>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <p className="text-[10px] text-gray-400 uppercase">Skip</p>
+                <div className="flex gap-1">
+                  <Button
+                    size="sm"
+                    variant="flat"
+                    className="h-6 text-xs w-full"
+                    onPress={() =>
+                      editor
+                        .chain()
+                        .focus()
+                        .insertContent(" [[skip=true]] ")
+                        .run()
+                    }
+                  >
+                    Start
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="flat"
+                    className="h-6 text-xs w-full"
+                    onPress={() =>
+                      editor
+                        .chain()
+                        .focus()
+                        .insertContent(" [[skip=false]] ")
+                        .run()
+                    }
+                  >
+                    End
+                  </Button>
+                </div>
+              </div>
+            </div>
           </PopoverContent>
         </Popover>
       </div>
 
       <EditorContent editor={editor} />
-      
+
       {/* Bubble Menu for quick edits */}
-      <div 
+      <div
         ref={bubbleMenuRef}
         className="flex items-center gap-1 p-1 bg-white border shadow-lg rounded-lg border-light-grey-2"
-        style={{ visibility: 'hidden' }}
+        style={{ visibility: "hidden" }}
       >
         {editor && (
           <>

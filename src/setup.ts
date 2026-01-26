@@ -3,12 +3,18 @@ import { client } from "./client/client.gen";
 import { createClientConfig } from "./heyapi-runtime";
 import { getAuthToken } from "./stores/useAuthStore";
 import { refreshTokens, ensureValidToken } from "./lib/tokenManager";
+import { setupApiInterceptor } from "@/lib/offline/apiInterceptor";
 
 // Initialize HeyAPI client config immediately
 try {
   const config = createClientConfig();
   console.log("🔧 Initializing HeyAPI client with config:", config);
   client.setConfig(config);
+
+  // Initialize offline interceptor
+  if (typeof window !== "undefined") {
+    setupApiInterceptor(client);
+  }
 
   // Set auth callback with proactive token refresh
   client.setConfig({

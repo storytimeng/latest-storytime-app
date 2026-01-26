@@ -4,9 +4,24 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { PageHeader } from "@/components/reusables/customUI";
+import { useOnlineStatus } from "@/src/hooks/useOnlineStatus";
+import { OfflineIndicator } from "@/components/OfflineIndicator";
 
 const AllGenres = () => {
   const router = useRouter();
+  const isOnline = useOnlineStatus();
+
+  // Show offline indicator when offline
+  if (!isOnline) {
+    return (
+      <div className="bg-accent-shade-1 min-h-screen px-4 pt-4">
+        <PageHeader title="Genre Pick" backLink="/home" />
+        <div className="mt-10">
+          <OfflineIndicator />
+        </div>
+      </div>
+    );
+  }
 
   // Prefetch all genre routes on mount
   React.useEffect(() => {

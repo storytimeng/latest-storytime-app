@@ -112,9 +112,89 @@ const serwist = new Serwist({
         ],
       }),
     },
-    // DO NOT CACHE API ROUTES - Use NetworkOnly
+    // Cache API routes with StaleWhileRevalidate for offline support
+    // User data (profile, settings, achievements, stats) - cache indefinitely until next online sync
     {
-      matcher: ({ url }: MatcherContext) => url.pathname.startsWith("/api/"),
+      matcher: ({ url }: MatcherContext) =>
+        url.pathname.startsWith("/api/users/profile") ||
+        url.pathname.startsWith("/api/users/achievements") ||
+        url.pathname.startsWith("/api/users/stats") ||
+        url.pathname === "/api/settings",
+      handler: new StaleWhileRevalidate({
+        cacheName: "api-user-data",
+        plugins: [
+          new CacheableResponsePlugin({
+            statuses: [0, 200],
+          }),
+          new ExpirationPlugin({
+            maxEntries: 50,
+            // No maxAgeSeconds - cache indefinitely
+          }),
+        ],
+      }),
+    },
+    // Stories data - cache for 2 weeks
+    {
+      matcher: ({ url }: MatcherContext) =>
+        url.pathname.startsWith("/api/stories") ||
+        url.pathname.startsWith("/api/genres") ||
+        url.pathname.startsWith("/api/categories"),
+      handler: new StaleWhileRevalidate({
+        cacheName: "api-stories",
+        plugins: [
+          new CacheableResponsePlugin({
+            statuses: [0, 200],
+          }),
+          new ExpirationPlugin({
+            maxEntries: 200,
+            maxAgeSeconds: 14 * 24 * 60 * 60, // 2 weeks
+          }),
+        ],
+      }),
+    },
+    // Reading history and progress - cache for 1 hour
+    {
+      matcher: ({ url }: MatcherContext) =>
+        url.pathname.startsWith("/api/users/reading-history") ||
+        url.pathname.startsWith("/api/users/reading-progress"),
+      handler: new StaleWhileRevalidate({
+        cacheName: "api-reading-data",
+        plugins: [
+          new CacheableResponsePlugin({
+            statuses: [0, 200],
+          }),
+          new ExpirationPlugin({
+            maxEntries: 100,
+            maxAgeSeconds: 60 * 60, // 1 hour
+          }),
+        ],
+      }),
+    },
+    // Notifications - cache for 5 minutes
+    {
+      matcher: ({ url }: MatcherContext) =>
+        url.pathname.startsWith("/api/notifications"),
+      handler: new StaleWhileRevalidate({
+        cacheName: "api-notifications",
+        plugins: [
+          new CacheableResponsePlugin({
+            statuses: [0, 200],
+          }),
+          new ExpirationPlugin({
+            maxEntries: 50,
+            maxAgeSeconds: 5 * 60, // 5 minutes
+          }),
+        ],
+      }),
+    },
+    // Mutation endpoints (POST/PUT/DELETE) - DO NOT CACHE
+    {
+      matcher: ({ request, url }: MatcherContext) =>
+        url.pathname.startsWith("/api/") &&
+        (request.method === "POST" ||
+          request.method === "PUT" ||
+          request.method === "DELETE" ||
+          request.method === "PATCH"),
       handler: new NetworkOnly(),
     },
     // DO NOT CACHE _rsc requests (React Server Components)

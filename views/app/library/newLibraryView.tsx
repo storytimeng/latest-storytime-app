@@ -9,8 +9,11 @@ import { useOfflineStories } from "@/src/hooks/useOfflineStories";
 import { formatBytes } from "@/lib/offline/db";
 import { usersControllerGetAllReadingProgress } from "@/src/client/sdk.gen";
 import { useSearchParams } from "next/navigation";
+import { useOnlineStatus } from "@/src/hooks/useOnlineStatus";
+import { OfflineIndicator } from "@/components/OfflineIndicator";
 
 const NewLibraryView = () => {
+  const isOnline = useOnlineStatus();
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
 
@@ -180,8 +183,15 @@ const NewLibraryView = () => {
         </div>
       </div>
 
+      {/* Offline Indicator for Library Tab */}
+      {activeTab === "library" && !isOnline && (
+        <div className="px-4">
+          <OfflineIndicator />
+        </div>
+      )}
+
       {/* Loading State */}
-      {((isLoading && activeTab === "library" && page === 1) ||
+      {((isLoading && activeTab === "library" && page === 1 && isOnline) ||
         (isLoadingOffline && activeTab === "downloads")) && (
         <div className="px-4">
           <div className="grid grid-cols-2 gap-4">
@@ -234,7 +244,9 @@ const NewLibraryView = () => {
         )}
 
       {/* Stories Grid */}
-      {!(isLoading && page === 1) && !isLoadingOffline && (
+      {/* Show grid when: (library tab + online + not loading) OR (downloads tab + not loading offline) */}
+      {((activeTab === "library" && isOnline && !(isLoading && page === 1)) ||
+        (activeTab === "downloads" && !isLoadingOffline)) && (
         <div className="px-4">
           {currentStories.length > 0 ? (
             <>
