@@ -28,6 +28,7 @@ export const STORES = {
   SETTINGS: "settings",
   NOTIFICATIONS: "notifications",
   PENDING_ACTIONS: "pendingActions",
+  API_CACHE: "apiCache",
 } as const;
 
 // Database schema
@@ -98,6 +99,11 @@ interface StorytimeDB extends DBSchema {
     key: string;
     value: PendingAction;
     indexes: { type: string; createdAt: number };
+  };
+  apiCache: {
+    key: string;
+    value: CachedApiResponse;
+    indexes: { userId: string; expiresAt: number };
   };
 }
 
@@ -215,6 +221,14 @@ export interface PendingAction {
   retryCount: number;
 }
 
+export interface CachedApiResponse {
+  key: string; // URL + query params hash
+  data: any;
+  cachedAt: number;
+  expiresAt: number;
+  userId?: string;
+}
+
 let dbInstance: IDBPDatabase<StorytimeDB> | null = null;
 
 /**
@@ -329,6 +343,15 @@ export async function getDB(): Promise<IDBPDatabase<StorytimeDB> | null> {
         });
         actionsStore.createIndex("type", "type");
         actionsStore.createIndex("createdAt", "createdAt");
+      }
+
+      // API Cache store
+      if (!db.objectStoreNames.contains(STORES.API_CACHE)) {
+        const cacheStore = db.createObjectStore(STORES.API_CACHE, {
+          keyPath: "key",
+        });
+        cacheStore.createIndex("userId", "userId");
+        cacheStore.createIndex("expiresAt", "expiresAt");
       }
     },
   });

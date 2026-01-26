@@ -29,10 +29,14 @@ import { Shield, Award } from "lucide-react";
 import { useUserProfile } from "@/src/hooks/useUserProfile";
 import { useUserAchievements } from "@/src/hooks/useUserAchievements";
 import { useApiUserStats } from "@/src/hooks/useApiUserStats";
+import { useOnlineStatus } from "@/src/hooks/useOnlineStatus";
+import { useGenres } from "@/src/hooks/useGenres";
+import { Tooltip } from "@heroui/tooltip";
 
 const ProfileView = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const isOnline = useOnlineStatus();
   const activeModal = searchParams.get("modal");
 
   // Keep track of the last active modal to preserve content during exit animation
@@ -48,6 +52,7 @@ const ProfileView = () => {
   const { user } = useUserProfile();
   const { badges, certificates } = useUserAchievements();
   const { stats } = useApiUserStats();
+  const { genres: apiGenres } = useGenres();
 
   const profileOptions = [
     {
@@ -90,17 +95,9 @@ const ProfileView = () => {
     },
   ];
 
-  // Use user's favorite genres from profile, fallback to defaults
+  // Use user's favorite genres from profile, fallback to API genres, then defaults
   const userGenres = user?.favoriteGenres || user?.genres || [];
-  const defaultGenres = [
-    "Action",
-    "Adventure",
-    "Anthology",
-    "Biography",
-    "Classic",
-    "Comedy",
-  ];
-  const genres = userGenres.length > 0 ? userGenres : defaultGenres;
+  const genres = userGenres.length > 0 ? userGenres : (apiGenres || []);
 
   useEffect(() => {
     if (activeModal) {
@@ -199,7 +196,11 @@ const ProfileView = () => {
           />
 
           {/* Profile Section */}
-          <ProfileCard showSettings={true} useLiveData={true} />
+          <ProfileCard 
+            showSettings={true} 
+            useLiveData={true} 
+            hideEditButton={!isOnline} 
+          />
 
           {/* Badge/Certificate Card - Bleeding into next section */}
           <div className="relative z-20 -mb-16">
@@ -263,9 +264,10 @@ const ProfileView = () => {
                 </h3>
                 <button
                   onClick={() =>
-                    router.push("?modal=edit-genres", { scroll: false })
+                    isOnline && router.push("?modal=edit-genres", { scroll: false })
                   }
-                  className="text-primary-colour p-1"
+                  className={cn("text-primary-colour p-1", !isOnline && "opacity-50 cursor-not-allowed")}
+                  disabled={!isOnline}
                 >
                   <span className="text-xl">✎</span>
                 </button>

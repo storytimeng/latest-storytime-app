@@ -17,6 +17,8 @@ import { Magnetik_Bold, Magnetik_Regular } from "@/lib/font";
 import { useModalNavigation } from "@/hooks/useModalNavigation";
 import { SETTINGS_OPTIONS } from "@/config/settings";
 import { useSupportStore, SupportViewType } from "@/src/stores/useSupportStore";
+import { useOnlineStatus } from "@/src/hooks/useOnlineStatus";
+import { showToast } from "@/lib/showNotification";
 
 /**
  * SettingsView Component
@@ -26,6 +28,7 @@ import { useSupportStore, SupportViewType } from "@/src/stores/useSupportStore";
 const SettingsView = () => {
   const { isOpen, activeModal, openModal, closeModal } = useModalNavigation();
   const openSupportModal = useSupportStore((state) => state.openModal);
+  const isOnline = useOnlineStatus();
 
   const handleOptionClick = (id: string) => {
     if (id === "faqs") {
@@ -35,6 +38,13 @@ const SettingsView = () => {
     } else if (id === "support") {
       openSupportModal("support");
     } else {
+      if (!isOnline && (id === "security" || id === "delete-account")) {
+        showToast({
+          type: "error",
+          message: "This setting is unavailable while offline",
+        });
+        return;
+      }
       openModal(id);
     }
   };

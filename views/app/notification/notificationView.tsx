@@ -26,6 +26,7 @@ import { Skeleton } from "@heroui/skeleton";
 import { Magnetik_Medium, Magnetik_Regular } from "@/lib/font";
 import { PageHeader } from "@/components/reusables/customUI";
 import { useNotifications } from "@/src/hooks/useNotifications";
+import { useOnlineStatus } from "@/src/hooks/useOnlineStatus";
 import { cn } from "@/lib/utils";
 
 const NotificationView = () => {
@@ -37,6 +38,7 @@ const NotificationView = () => {
     deleteNotification,
     unreadCount,
   } = useNotifications();
+  const isOnline = useOnlineStatus();
 
   // Debug: log notifications data
   React.useEffect(() => {
@@ -105,8 +107,9 @@ const NotificationView = () => {
           <Button
             size="sm"
             variant="flat"
-            onPress={() => markAllAsRead()}
-            className="text-xs text-complimentary-colour bg-transparent"
+            onPress={() => isOnline && markAllAsRead()}
+            className={cn("text-xs text-complimentary-colour bg-transparent", !isOnline && "opacity-50 cursor-not-allowed")}
+            disabled={!isOnline}
           >
             Mark all read
           </Button>
@@ -195,10 +198,11 @@ const NotificationView = () => {
 
                     <div className="flex items-center gap-3">
                       <button
-                        className="text-gray-400 hover:text-red-500 transition-colors"
+                        className={cn("text-gray-400 transition-colors", isOnline ? "hover:text-red-500" : "opacity-30 cursor-not-allowed")}
+                        disabled={!isOnline}
                         onClick={(e) => {
                           e.stopPropagation();
-                          deleteNotification(notification.id);
+                          isOnline && deleteNotification(notification.id);
                         }}
                       >
                         <Trash2 className="w-3.5 h-3.5" />
