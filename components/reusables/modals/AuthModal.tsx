@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-import { X } from "lucide-react";
 import { useAuthModalStore } from "@/src/stores/useAuthModalStore";
 import LoginView from "@/views/auth/loginView";
 import SignupView from "@/views/auth/signupView";
@@ -54,15 +53,11 @@ export const AuthModal = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 overflow-y-auto">
-      <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-xl relative animate-in fade-in zoom-in duration-200 my-8 max-h-[90vh] overflow-y-auto no-scrollbar">
-        <button
-          onClick={closeModal}
-          className="absolute right-4 top-4 text-gray-400 hover:text-gray-600 z-10"
-        >
-          <X size={24} />
-        </button>
-
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm sm:p-4 overflow-y-auto"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div className="bg-white rounded-t-3xl sm:rounded-2xl w-full max-w-md p-6 pb-8 sm:pb-6 shadow-xl relative animate-in slide-in-from-bottom sm:fade-in sm:zoom-in duration-300 sm:my-8 max-h-[95vh] sm:max-h-[90vh] overflow-y-auto no-scrollbar">
         {renderView()}
       </div>
     </div>
