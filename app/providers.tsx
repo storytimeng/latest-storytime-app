@@ -10,6 +10,7 @@ import { SWRConfig } from "swr";
 import Cookies from "js-cookie";
 import { ToastProvider } from "@heroui/toast";
 import { AuthModal } from "@/components/reusables/modals/AuthModal";
+import { AuthGuard } from "@/components/AuthGuard";
 
 // Hey-API client setup (runs immediately)
 import "../src/setup";
@@ -35,6 +36,7 @@ export function Providers({ children, themeProps }: ProvidersProps) {
     <HeroUIProvider navigate={router.push}>
       <NextThemesProvider {...themeProps}>
         <ToastProvider placement="top-center" />
+        <AuthGuard />
         <AuthModal />
         <SWRConfig
           value={{

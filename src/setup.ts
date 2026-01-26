@@ -54,8 +54,8 @@ try {
     if (response.status === 401) {
       // Skip token refresh for auth endpoints - these should return 401 normally for bad credentials
       const url = new URL(response.url);
-      const isAuthEndpoint = url.pathname.includes('/auth');
-      
+      const isAuthEndpoint = url.pathname.includes("/auth");
+
       if (isAuthEndpoint) {
         console.log("[Interceptor] 401 from auth endpoint, skipping refresh");
         return response;
@@ -77,7 +77,7 @@ try {
 
         if (!isTokenError) {
           console.log(
-            "[Interceptor] 401 but not a token error, passing through"
+            "[Interceptor] 401 but not a token error, passing through",
           );
           return response;
         }
@@ -86,14 +86,14 @@ try {
       } catch (e) {
         // If we can't parse the response, assume it's a token error
         console.log(
-          "[Interceptor] Could not parse 401 response, assuming token error"
+          "[Interceptor] Could not parse 401 response, assuming token error",
         );
       }
 
       // If already refreshing, queue this request
       if (isRefreshing) {
         console.log(
-          "[Interceptor] Token refresh in progress, queuing request..."
+          "[Interceptor] Token refresh in progress, queuing request...",
         );
         return new Promise((resolve, reject) => {
           failedQueue.push({
@@ -112,7 +112,7 @@ try {
                 if (newToken) {
                   (retryOpts.headers as Headers).set(
                     "Authorization",
-                    `Bearer ${newToken}`
+                    `Bearer ${newToken}`,
                   );
                 }
 
@@ -137,7 +137,7 @@ try {
 
         if (refreshResult && refreshResult.token) {
           console.log(
-            "[Interceptor] ✅ Token refreshed successfully, retrying original request..."
+            "[Interceptor] ✅ Token refreshed successfully, retrying original request...",
           );
 
           // Update client auth config
@@ -158,11 +158,11 @@ try {
 
           (retryOpts.headers as Headers).set(
             "Authorization",
-            `Bearer ${refreshResult.token}`
+            `Bearer ${refreshResult.token}`,
           );
 
           console.log(
-            "[Interceptor] Retrying original request with new token..."
+            "[Interceptor] Retrying original request with new token...",
           );
           const retryResponse = await fetch(response.url, retryOpts);
 
@@ -171,24 +171,27 @@ try {
           // Return the successful response to SWR (success or failure from retry)
           console.log(
             "[Interceptor] ✅ Request retry completed:",
-            retryResponse.status
+            retryResponse.status,
           );
           return retryResponse;
         } else {
           // Refresh failed, clear auth and redirect to login
           console.error(
-            "[Interceptor] ❌ Token refresh failed, clearing auth..."
+            "[Interceptor] ❌ Token refresh failed, clearing auth...",
           );
           processQueue(new Error("Token refresh failed"));
           isRefreshing = false;
 
-          // Clear auth state
+          // Clear auth and show auth modal
           const { clearAuth } = await import("./stores/useAuthStore");
           clearAuth();
 
-          // Redirect to login if we're in a browser environment
+          // Open auth modal instead of redirecting
           if (typeof window !== "undefined") {
-            window.location.href = "/auth/login";
+            const { useAuthModalStore } = await import(
+              "./stores/useAuthModalStore"
+            );
+            useAuthModalStore.getState().openModal("login");
           }
 
           // Return 401 response so components can handle it gracefully
@@ -199,11 +202,14 @@ try {
         processQueue(error);
         isRefreshing = false;
 
-        // Clear auth and redirect
+        // Clear auth and show auth modal
         const { clearAuth } = await import("./stores/useAuthStore");
         clearAuth();
         if (typeof window !== "undefined") {
-          window.location.href = "/auth/login";
+          const { useAuthModalStore } = await import(
+            "./stores/useAuthModalStore"
+          );
+          useAuthModalStore.getState().openModal("login");
         }
 
         // Return 401 response so components can handle it gracefully
