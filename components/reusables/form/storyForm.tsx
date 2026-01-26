@@ -25,6 +25,7 @@ import { CacheLoadingModal } from "@/components/reusables/customUI/CacheLoadingM
 import { useUnsavedChangesWarning } from "@/src/hooks/useUnsavedChangesWarning";
 import { UPLOAD_PATHS } from "@/src/config/uploadPaths";
 import { useImageUpload } from "@/src/hooks/useImageUpload";
+import { useGenres } from "@/src/hooks/useGenres";
 // Custom hooks for refactored logic
 import { useStoryFormState } from "@/src/hooks/useStoryFormState";
 import { useStoryContent } from "@/src/hooks/useStoryContent";
@@ -38,11 +39,11 @@ import type {
   StoryBriefModalProps,
   AdditionalInfoModalProps,
 } from "@/types/story";
-import { GENRES, LANGUAGES, STATUSES } from "@/types/story";
+import { LANGUAGES, STATUSES } from "@/types/story";
 
 // Initial form data
 const getInitialFormData = (
-  initialData?: Partial<StoryFormData>
+  initialData?: Partial<StoryFormData>,
 ): StoryFormData => ({
   title: "",
   collaborate: "",
@@ -118,7 +119,7 @@ const StoryBriefModal: React.FC<StoryBriefModalProps> = ({
                     "flex-1",
                     structure.hasChapters === Boolean(index)
                       ? "bg-complimentary-colour text-universal-white"
-                      : "border-complimentary-colour text-complimentary-colour"
+                      : "border-complimentary-colour text-complimentary-colour",
                   )}
                 >
                   {option}
@@ -154,7 +155,7 @@ const StoryBriefModal: React.FC<StoryBriefModalProps> = ({
                     "flex-1",
                     structure.hasEpisodes === Boolean(index)
                       ? "bg-complimentary-colour text-universal-white"
-                      : "border-complimentary-colour text-complimentary-colour"
+                      : "border-complimentary-colour text-complimentary-colour",
                   )}
                 >
                   {option}
@@ -288,6 +289,10 @@ const StoryForm: React.FC<StoryFormProps> = ({
 }) => {
   const { user } = useUserStore();
   const userId = user?.id;
+
+  // Fetch genres from API
+  const { genres: apiGenres, isLoading: isLoadingGenres } = useGenres();
+  const genres = apiGenres || [];
 
   const contentStateHook = useStoryContent({
     storyStructure: storyStructure,
@@ -546,7 +551,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
 
       onSubmit(finalData, contentData, partsData);
     },
-    [formData, storyStructure, chapters, parts, onSubmit]
+    [formData, storyStructure, chapters, parts, onSubmit],
   );
 
   // Handle cover image change
@@ -554,12 +559,13 @@ const StoryForm: React.FC<StoryFormProps> = ({
     (imageUrl: string | null) => {
       handleFieldChange("coverImage", imageUrl || "");
     },
-    [handleFieldChange]
+    [handleFieldChange],
   );
 
-
   // Define specialized upload hook for cover images
-  const { upload: coverUpload, isUploading: isCoverUploading } = useImageUpload(UPLOAD_PATHS.STORY_COVER);
+  const { upload: coverUpload, isUploading: isCoverUploading } = useImageUpload(
+    UPLOAD_PATHS.STORY_COVER,
+  );
 
   // Render cover image section
   const renderCoverImage = () => (
@@ -702,64 +708,75 @@ const StoryForm: React.FC<StoryFormProps> = ({
           Select Genres (max 3){" "}
           {formErrors.selectedGenres && <span className="text-red-500">*</span>}
         </label>
-        <div className="grid grid-cols-3 gap-3">
-          {GENRES.map((genre) => {
-            const isSelected = formData.selectedGenres.includes(genre);
-            return (
-              <button
-                key={genre}
-                onClick={() => handleGenreToggle(genre)}
-                disabled={!isSelected && formData.selectedGenres.length >= 3}
-                className={cn(
-                  "relative whitespace-nowrap flex-shrink-0 transition-all duration-200 ease-in-out",
-                  "px-2 py-1 rounded-lg min-w-[70px] text-center text-xs",
-                  Magnetik_Regular.className,
-                  isSelected ? "shadow-lg" : "",
-                  !isSelected && formData.selectedGenres.length >= 3
-                    ? "opacity-50 cursor-not-allowed"
-                    : "cursor-pointer"
-                )}
-                style={{
-                  backgroundImage: `repeating-linear-gradient(-45deg, #f89a28, #f89a28 18px, #ec8e1c 18px, #ec8e1c 36px)`,
-                  color: "white",
-                  border: isSelected
-                    ? "2px solid rgba(255,255,255,0.9)"
-                    : "1px solid rgba(0,0,0,0.06)",
-                  boxShadow: isSelected
-                    ? "0 8px 20px -8px rgba(0,0,0,0.2)"
-                    : "0 3px 8px -6px rgba(0,0,0,0.12)",
-                  fontWeight: 300,
-                }}
-              >
-                {/* check-in-circle top-right */}
-                {isSelected && (
-                  <span
-                    className="absolute flex items-center justify-center w-4 h-4 bg-white rounded-full -top-1 -right-1"
-                    style={{ border: "2px solid #f28a20" }}
-                  >
-                    <svg
-                      width="8"
-                      height="8"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                      aria-hidden
+        {isLoadingGenres ? (
+          <div className="grid grid-cols-3 gap-3">
+            {[...Array(6)].map((_, i) => (
+              <div
+                key={i}
+                className="h-8 bg-gray-200 rounded-lg animate-pulse"
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-3 gap-3">
+            {genres.map((genre: string) => {
+              const isSelected = formData.selectedGenres.includes(genre);
+              return (
+                <button
+                  key={genre}
+                  onClick={() => handleGenreToggle(genre)}
+                  disabled={!isSelected && formData.selectedGenres.length >= 3}
+                  className={cn(
+                    "relative whitespace-nowrap flex-shrink-0 transition-all duration-200 ease-in-out",
+                    "px-2 py-1 rounded-lg min-w-[70px] text-center text-xs",
+                    Magnetik_Regular.className,
+                    isSelected ? "shadow-lg" : "",
+                    !isSelected && formData.selectedGenres.length >= 3
+                      ? "opacity-50 cursor-not-allowed"
+                      : "cursor-pointer",
+                  )}
+                  style={{
+                    backgroundImage: `repeating-linear-gradient(-45deg, #f89a28, #f89a28 18px, #ec8e1c 18px, #ec8e1c 36px)`,
+                    color: "white",
+                    border: isSelected
+                      ? "2px solid rgba(255,255,255,0.9)"
+                      : "1px solid rgba(0,0,0,0.06)",
+                    boxShadow: isSelected
+                      ? "0 8px 20px -8px rgba(0,0,0,0.2)"
+                      : "0 3px 8px -6px rgba(0,0,0,0.12)",
+                    fontWeight: 300,
+                  }}
+                >
+                  {/* check-in-circle top-right */}
+                  {isSelected && (
+                    <span
+                      className="absolute flex items-center justify-center w-4 h-4 bg-white rounded-full -top-1 -right-1"
+                      style={{ border: "2px solid #f28a20" }}
                     >
-                      <path
-                        d="M20 6L9 17L4 12"
-                        stroke="#f28a20"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  </span>
-                )}
-                <span className="relative z-10">{genre}</span>
-              </button>
-            );
-          })}
-        </div>
+                      <svg
+                        width="8"
+                        height="8"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                        aria-hidden
+                      >
+                        <path
+                          d="M20 6L9 17L4 12"
+                          stroke="#f28a20"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </span>
+                  )}
+                  <span className="relative z-10">{genre}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
         {formErrors.selectedGenres && (
           <p className="mt-1 text-xs text-red-500">
             {formErrors.selectedGenres}
@@ -852,7 +869,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
               className={cn(
                 formData.storyStatus === status
                   ? "bg-complimentary-colour text-universal-white"
-                  : "border-light-grey-2 text-primary-colour hover:border-complimentary-colour"
+                  : "border-light-grey-2 text-primary-colour hover:border-complimentary-colour",
               )}
             >
               {status}
@@ -889,7 +906,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
                     <h3
                       className={cn(
                         "text-base text-primary-colour font-medium",
-                        Magnetik_Medium.className
+                        Magnetik_Medium.className,
                       )}
                     >
                       Chapter {chapter.id}:{" "}
@@ -898,7 +915,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
                     <ChevronDown
                       className={cn(
                         "w-5 h-5 text-primary-colour transition-transform",
-                        isExpanded ? "rotate-180" : ""
+                        isExpanded ? "rotate-180" : "",
                       )}
                     />
                   </div>
@@ -917,8 +934,8 @@ const StoryForm: React.FC<StoryFormProps> = ({
                             prev.map((ch) =>
                               ch.id === chapter.id
                                 ? { ...ch, title: value }
-                                : ch
-                            )
+                                : ch,
+                            ),
                           );
                         }}
                       />
@@ -941,11 +958,11 @@ const StoryForm: React.FC<StoryFormProps> = ({
                                           episodes: ch.episodes?.map((ep) =>
                                             ep.id === episode.id
                                               ? { ...ep, title: value }
-                                              : ep
+                                              : ep,
                                           ),
                                         }
-                                      : ch
-                                  )
+                                      : ch,
+                                  ),
                                 );
                               }}
                             />
@@ -963,8 +980,10 @@ const StoryForm: React.FC<StoryFormProps> = ({
                         onChange={(value) => {
                           setChapters((prev) =>
                             prev.map((ch) =>
-                              ch.id === chapter.id ? { ...ch, body: value } : ch
-                            )
+                              ch.id === chapter.id
+                                ? { ...ch, body: value }
+                                : ch,
+                            ),
                           );
                         }}
                         rows={12}
@@ -1005,7 +1024,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
                     <h3
                       className={cn(
                         "text-base text-primary-colour font-medium",
-                        Magnetik_Medium.className
+                        Magnetik_Medium.className,
                       )}
                     >
                       Episode {part.id}: {part.title || `Episode ${part.id}`}
@@ -1013,7 +1032,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
                     <ChevronDown
                       className={cn(
                         "w-5 h-5 text-primary-colour transition-transform",
-                        isExpanded ? "rotate-180" : ""
+                        isExpanded ? "rotate-180" : "",
                       )}
                     />
                   </div>
@@ -1030,8 +1049,8 @@ const StoryForm: React.FC<StoryFormProps> = ({
                         onValueChange={(value) => {
                           setParts((prev) =>
                             prev.map((p) =>
-                              p.id === part.id ? { ...p, title: value } : p
-                            )
+                              p.id === part.id ? { ...p, title: value } : p,
+                            ),
                           );
                         }}
                       />
@@ -1047,8 +1066,8 @@ const StoryForm: React.FC<StoryFormProps> = ({
                         onChange={(value) => {
                           setParts((prev) =>
                             prev.map((p) =>
-                              p.id === part.id ? { ...p, body: value } : p
-                            )
+                              p.id === part.id ? { ...p, body: value } : p,
+                            ),
                           );
                         }}
                         rows={12}
@@ -1107,7 +1126,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
               onSubmit(
                 draftData,
                 storyStructure.hasChapters ? chapters : undefined,
-                !storyStructure.hasChapters ? parts : undefined
+                !storyStructure.hasChapters ? parts : undefined,
               );
             }}
             disabled={isLoading}
@@ -1124,7 +1143,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
                 onSubmit(
                   publishData,
                   storyStructure.hasChapters ? chapters : undefined,
-                  !storyStructure.hasChapters ? parts : undefined
+                  !storyStructure.hasChapters ? parts : undefined,
                 );
               } else {
                 // In create mode, show additional info modal
@@ -1191,7 +1210,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
               onSubmit(
                 formData,
                 storyStructure.hasChapters ? chapters : undefined,
-                !storyStructure.hasChapters ? parts : undefined
+                !storyStructure.hasChapters ? parts : undefined,
               );
             }}
           />

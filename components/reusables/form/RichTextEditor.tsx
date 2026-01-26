@@ -92,7 +92,7 @@ const RichTextEditor = ({
     editorProps: {
       attributes: {
         class: cn(
-          "prose prose-sm sm:prose-base max-w-none focus:outline-none px-4 py-3",
+          "prose prose-sm sm:prose-base overflow-auto max-w-none focus:outline-none px-4 py-3",
           Magnetik_Regular.className,
           minHeight,
         ),
@@ -119,7 +119,7 @@ const RichTextEditor = ({
   return (
     <div
       className={cn(
-        "border border-light-grey-2 rounded-xl overflow-hidden bg-white focus-within:ring-2 focus-within:ring-primary-colour/20 focus-within:border-primary-colour transition-all flex flex-col",
+        "border border-light-grey-2 rounded-xl overflow-auto bg-white focus-within:ring-2 focus-within:ring-primary-colour/20 focus-within:border-primary-colour transition-all flex flex-col",
         className,
       )}
     >

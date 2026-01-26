@@ -5,7 +5,7 @@ import { getDB, STORES, Draft, PendingAction } from "@/lib/offline/db";
 import { useOnlineStatus } from "./useOnlineStatus";
 
 // Generate unique ID
-const generateId = () => crypto.randomUUID();
+export const generateId = () => crypto.randomUUID();
 
 /**
  * Hook to manage drafts with offline queue support
