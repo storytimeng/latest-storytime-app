@@ -30,6 +30,7 @@ import {
   usersControllerGetEpisodeProgress,
   usersControllerUpdateEpisodeProgress,
   usersControllerGetAggregatedStoryProgress,
+  usersControllerMarkStoryAsRead,
 } from "@/src/client";
 
 // Helper to unwrap API response
@@ -758,5 +759,24 @@ export function useAggregatedProgress(storyId: string | undefined) {
     isLoading,
     error,
     mutate,
+  };
+}
+// Hook to mark a story as read
+export function useMarkStoryAsRead() {
+  const markAsRead = async (storyId: string) => {
+    if (!storyId) return;
+    try {
+      const response = await usersControllerMarkStoryAsRead({
+        path: { id: storyId },
+      });
+      return response.data;
+    } catch (error) {
+      console.error("Failed to mark story as read:", error);
+      // We don't throw here to avoid disrupting the UI for a background tracking task
+    }
+  };
+
+  return {
+    markAsRead,
   };
 }

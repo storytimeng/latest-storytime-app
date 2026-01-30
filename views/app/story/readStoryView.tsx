@@ -18,6 +18,7 @@ import {
   useReadingProgress,
   useChapterProgress,
   useEpisodeProgress,
+  useMarkStoryAsRead,
 } from "@/src/hooks/useStoryDetail";
 import {
   useOfflineStories,
@@ -82,9 +83,25 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
   const { story, isLoading: isStoryLoading } = useStory(
     isOnline ? storyId : undefined
   );
-  const { likeCount, isLiked, toggleLike } = useStoryLikes(
+    const { likeCount, isLiked, toggleLike } = useStoryLikes(
     isOnline ? storyId : undefined
   );
+
+  // Mark as read after delay
+  const { markAsRead } = useMarkStoryAsRead();
+  const hasMarkedAsReadRef = useRef(false);
+
+  useEffect(() => {
+    if (!isOnline || !storyId || hasMarkedAsReadRef.current) return;
+
+    const timer = setTimeout(() => {
+      markAsRead(storyId);
+      hasMarkedAsReadRef.current = true;
+    }, 5000); // 5 seconds delay
+
+    return () => clearTimeout(timer);
+  }, [isOnline, storyId, markAsRead]);
+
 
   // Reading progress tracking
   const contentContainerRef = useRef<HTMLDivElement>(null);
