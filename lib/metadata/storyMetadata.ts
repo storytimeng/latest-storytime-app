@@ -87,7 +87,7 @@ export async function generateStoryMetadata(
         story.description || "Read this amazing story on Storytime";
       const imageUrl =
         story.imageUrl || story.coverImage || "/images/storytime-fallback.png";
-      const authorName = story.author?.penName || "Unknown Author";
+      const authorName = story.author?.penName || "Anonymous";
 
       // Fetch chapter or episode metadata if viewing specific content
       if (chapterId) {

@@ -501,7 +501,7 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
                 authorName={
                   activeStory.anonymous
                     ? "Anonymous"
-                    : activeStory.author?.penName || "Unknown Author"
+                    : activeStory.author?.penName || "Anonymous"
                 }
                 authorAvatar={activeStory.author?.avatar}
                 hasNavigation={hasNavigation}

@@ -47,7 +47,7 @@ export async function generateMetadata({
         story.description || "Read this amazing story on Storytime";
       const imageUrl =
         story.imageUrl || story.coverImage || "/images/storytime-fallback.png";
-      const authorName = story.author?.penName || "Unknown Author";
+      const authorName = story.author?.penName || "Anonymous";
 
       // Helper function to strip HTML tags and truncate
       const stripHtmlAndTruncate = (

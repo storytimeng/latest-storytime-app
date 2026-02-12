@@ -40,7 +40,7 @@ const LibraryView = () => {
     return {
       id: story.id,
       title: story.title,
-      author: story.author?.penName || "Unknown Author",
+      author: story.author?.penName || "Anonymous",
       coverImage: story.imageUrl || "/images/nature.jpg",
       genre: "Fiction", // Reading history doesn't include genres
       status: status,
