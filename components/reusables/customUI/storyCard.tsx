@@ -73,7 +73,7 @@ const StoryCard = ({
         ? `${story.author.firstName} ${story.author.lastName}`.trim()
         : story.author?.firstName || story.author?.lastName) ||
       story.author?.name ||
-      "Unknown Author";
+      "Anonymous";
   const displayImage = story.imageUrl || "/images/storytime-fallback.png"; // Fallback image
   const displayGenre = story.genres?.[0] || "Uncategorized";
 

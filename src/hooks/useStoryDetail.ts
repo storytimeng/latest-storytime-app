@@ -30,6 +30,7 @@ import {
   usersControllerGetEpisodeProgress,
   usersControllerUpdateEpisodeProgress,
   usersControllerGetAggregatedStoryProgress,
+  usersControllerMarkStoryAsRead,
 } from "@/src/client";
 
 // Helper to unwrap API response
@@ -58,7 +59,7 @@ export function useStory(storyId: string | undefined) {
     },
     {
       revalidateOnFocus: false,
-    }
+    },
   );
 
   return {
@@ -73,6 +74,7 @@ export function useStory(storyId: string | undefined) {
 export function useStoryLikes(storyId: string | undefined) {
   const [isLiked, setIsLiked] = React.useState(false);
   const [isLiking, setIsLiking] = React.useState(false);
+  const [likeCount, setLikeCount] = React.useState(0);
 
   // Fetch like count
   const { data: likeCountData, mutate: mutateLikeCount } = useSWR(
@@ -83,7 +85,11 @@ export function useStoryLikes(storyId: string | undefined) {
         path: { id: storyId },
       });
       return unwrap(response);
-    }
+    },
+    {
+      revalidateOnFocus: true,
+      revalidateOnReconnect: true,
+    },
   );
 
   // Check if user has liked
@@ -100,47 +106,76 @@ export function useStoryLikes(storyId: string | undefined) {
         // User not authenticated or hasn't liked
         return { hasLiked: false };
       }
-    }
+    },
+    {
+      revalidateOnFocus: true,
+      revalidateOnReconnect: true,
+    },
   );
 
+  // Sync liked state when data loads
   React.useEffect(() => {
-    if (userLikeData) {
+    if (userLikeData !== undefined) {
       setIsLiked((userLikeData as any)?.hasLiked || false);
     }
   }, [userLikeData]);
 
-  const [likeCount, setLikeCount] = React.useState(0);
-
+  // Sync like count when data loads
   React.useEffect(() => {
-    if (likeCountData) {
+    if (likeCountData !== undefined) {
       setLikeCount((likeCountData as any)?.count || 0);
     }
   }, [likeCountData]);
 
   const toggleLike = async () => {
-    if (!storyId) return;
+    if (!storyId || isLiking) return; // Prevent spam clicking
 
-    // Optimistic update
+    // Save current state for potential rollback
     const previousLiked = isLiked;
     const previousCount = likeCount;
+    const targetState = !isLiked; // What we're trying to achieve
 
-    setIsLiked(!isLiked);
-    setLikeCount((prev) => (isLiked ? prev - 1 : prev + 1));
+    // Optimistic update
+    setIsLiking(true);
+    setIsLiked(targetState);
+    setLikeCount((prev) => (targetState ? prev + 1 : prev - 1));
 
     try {
-      if (isLiked) {
-        await storiesControllerUnlikeStory({ path: { id: storyId } });
-      } else {
+      if (targetState) {
+        // User wants to like
         await storiesControllerLikeStory({ path: { id: storyId } });
+      } else {
+        // User wants to unlike
+        await storiesControllerUnlikeStory({ path: { id: storyId } });
       }
 
-      // Revalidate to get accurate counts
+      // Revalidate to get accurate counts from server
       await Promise.all([mutateLikeCount(), mutateUserLike()]);
-    } catch (error) {
-      // Rollback on error
+    } catch (error: any) {
       console.error("Failed to toggle like:", error);
-      setIsLiked(previousLiked);
-      setLikeCount(previousCount);
+
+      // Check if error is due to already being in desired state
+      const errorMessage = error?.message || error?.toString() || "";
+      const isAlreadyInDesiredState =
+        errorMessage.toLowerCase().includes("already liked") ||
+        errorMessage.toLowerCase().includes("already unliked") ||
+        errorMessage.toLowerCase().includes("duplicate") ||
+        error?.response?.status === 409; // Conflict status
+
+      if (isAlreadyInDesiredState) {
+        // Don't rollback - just sync with server to be sure
+        try {
+          await Promise.all([mutateLikeCount(), mutateUserLike()]);
+        } catch (syncError) {
+          console.error("Failed to sync like state:", syncError);
+        }
+      } else {
+        // Real error - rollback optimistic update
+        setIsLiked(previousLiked);
+        setLikeCount(previousCount);
+      }
+    } finally {
+      setIsLiking(false);
     }
   };
 
@@ -175,7 +210,7 @@ export function useStoryComments(storyId: string | undefined) {
         path: { id: storyId },
       });
       return unwrap(response);
-    }
+    },
   );
 
   const createComment = async (content: string, parentCommentId?: string) => {
@@ -192,7 +227,7 @@ export function useStoryComments(storyId: string | undefined) {
 
       // Revalidate comments and count
       await Promise.all([mutate(), mutateCommentCount()]);
-      
+
       // Return the new comment data
       return (response.data as any)?.data || response.data;
     } catch (error) {
@@ -249,7 +284,7 @@ export function useStoryChapters(storyId: string | undefined) {
         path: { id: storyId },
       });
       return unwrap(response);
-    }
+    },
   );
 
   return {
@@ -269,7 +304,7 @@ export function useStoryEpisodes(storyId: string | undefined) {
         path: { id: storyId },
       });
       return unwrap(response);
-    }
+    },
   );
 
   return {
@@ -289,7 +324,7 @@ export function useChapter(chapterId: string | undefined) {
         path: { chapterId },
       });
       return unwrap(response);
-    }
+    },
   );
 
   return {
@@ -311,7 +346,7 @@ export function useEpisode(episodeId: string | undefined) {
         path: { episodeId },
       });
       return unwrap(response);
-    }
+    },
   );
 
   return {
@@ -338,7 +373,7 @@ export function useChapterComments(chapterId: string | undefined) {
         path: { chapterId },
       });
       return unwrap(response);
-    }
+    },
   );
 
   const createComment = async (content: string, parentCommentId?: string) => {
@@ -352,7 +387,7 @@ export function useChapterComments(chapterId: string | undefined) {
 
       // Revalidate comments
       await mutate();
-      
+
       // Return the new comment data
       return (response.data as any)?.data || response.data;
     } catch (error) {
@@ -413,7 +448,7 @@ export function useEpisodeComments(episodeId: string | undefined) {
         path: { episodeId },
       });
       return unwrap(response);
-    }
+    },
   );
 
   const createComment = async (content: string, parentCommentId?: string) => {
@@ -426,7 +461,7 @@ export function useEpisodeComments(episodeId: string | undefined) {
       });
 
       await mutate();
-      
+
       // Return the new comment data
       return (response.data as any)?.data || response.data;
     } catch (error) {
@@ -495,7 +530,7 @@ export function useReadingProgress(storyId: string | undefined) {
             typeof progressData.percentageRead === "string"
           ) {
             progressData.percentageRead = parseFloat(
-              progressData.percentageRead
+              progressData.percentageRead,
             );
           }
           return progressData;
@@ -510,7 +545,7 @@ export function useReadingProgress(storyId: string | undefined) {
       revalidateOnFocus: false,
       revalidateOnReconnect: false,
       refreshInterval: 600000, // Refetch every 10 minutes
-    }
+    },
   );
 
   const updateProgress = async (progressData: {
@@ -551,7 +586,7 @@ export function useReadingProgress(storyId: string | undefined) {
 // Hook to get and update reading progress for a chapter
 export function useChapterProgress(
   storyId: string | undefined,
-  chapterId: string | undefined
+  chapterId: string | undefined,
 ) {
   const { data, error, isLoading, mutate } = useSWR(
     storyId && chapterId
@@ -576,7 +611,7 @@ export function useChapterProgress(
             typeof progressData.percentageRead === "string"
           ) {
             progressData.percentageRead = parseFloat(
-              progressData.percentageRead
+              progressData.percentageRead,
             );
           }
           return progressData;
@@ -590,7 +625,7 @@ export function useChapterProgress(
       revalidateOnFocus: false,
       revalidateOnReconnect: false,
       refreshInterval: 600000, // Refetch every 10 minutes
-    }
+    },
   );
 
   const updateProgress = async (progressData: {
@@ -627,7 +662,7 @@ export function useChapterProgress(
 // Hook to get and update reading progress for an episode
 export function useEpisodeProgress(
   storyId: string | undefined,
-  episodeId: string | undefined
+  episodeId: string | undefined,
 ) {
   const { data, error, isLoading, mutate } = useSWR(
     storyId && episodeId
@@ -652,7 +687,7 @@ export function useEpisodeProgress(
             typeof progressData.percentageRead === "string"
           ) {
             progressData.percentageRead = parseFloat(
-              progressData.percentageRead
+              progressData.percentageRead,
             );
           }
           return progressData;
@@ -666,7 +701,7 @@ export function useEpisodeProgress(
       revalidateOnFocus: false,
       revalidateOnReconnect: false,
       refreshInterval: 600000, // Refetch every 10 minutes
-    }
+    },
   );
 
   const updateProgress = async (progressData: {
@@ -725,7 +760,7 @@ export function useAggregatedProgress(storyId: string | undefined) {
             typeof data.storyProgress.percentageRead === "string"
           ) {
             data.storyProgress.percentageRead = parseFloat(
-              data.storyProgress.percentageRead
+              data.storyProgress.percentageRead,
             );
           }
           // Convert percentageRead in episode/chapter progress arrays
@@ -750,7 +785,7 @@ export function useAggregatedProgress(storyId: string | undefined) {
       revalidateOnFocus: false,
       revalidateOnReconnect: false,
       refreshInterval: 600000, // Refetch every 10 minutes
-    }
+    },
   );
 
   return {
@@ -758,5 +793,24 @@ export function useAggregatedProgress(storyId: string | undefined) {
     isLoading,
     error,
     mutate,
+  };
+}
+// Hook to mark a story as read
+export function useMarkStoryAsRead() {
+  const markAsRead = async (storyId: string) => {
+    if (!storyId) return;
+    try {
+      const response = await usersControllerMarkStoryAsRead({
+        path: { id: storyId },
+      });
+      return response.data;
+    } catch (error) {
+      console.error("Failed to mark story as read:", error);
+      // We don't throw here to avoid disrupting the UI for a background tracking task
+    }
+  };
+
+  return {
+    markAsRead,
   };
 }
