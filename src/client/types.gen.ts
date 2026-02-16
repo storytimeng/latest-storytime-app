@@ -475,6 +475,10 @@ export type UpdateStoryDto = {
      */
     title?: string;
     /**
+     * Story status (complete, ongoing, or drafts)
+     */
+    storyStatus?: 'complete' | 'ongoing' | 'drafts';
+    /**
      * Story content
      */
     content?: string;

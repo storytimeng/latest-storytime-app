@@ -36,6 +36,7 @@ export interface StoryStructure {
 
 export interface Chapter {
   id: number;
+  uuid?: string; // API's UUID for fetching full content
   title: string;
   body: string;
   episodes?: Episode[];
@@ -43,12 +44,14 @@ export interface Chapter {
 
 export interface Episode {
   id: number;
+  uuid?: string;
   title: string;
   body: string;
 }
 
 export interface Part {
   id: number;
+  uuid?: string; // API's UUID for fetching full content
   title: string;
   body: string;
 }
@@ -68,10 +71,17 @@ export interface StoryFormProps {
   currentStep: "form" | "structure" | "writing" | "additional";
   storyStructure: StoryStructure;
   setFormData: React.Dispatch<React.SetStateAction<StoryFormData>>;
-  setFormErrors: React.Dispatch<React.SetStateAction<Partial<Record<keyof StoryFormData, string>>>>;
-  setCurrentStep: React.Dispatch<React.SetStateAction<"form" | "structure" | "writing" | "additional">>;
+  setFormErrors: React.Dispatch<
+    React.SetStateAction<Partial<Record<keyof StoryFormData, string>>>
+  >;
+  setCurrentStep: React.Dispatch<
+    React.SetStateAction<"form" | "structure" | "writing" | "additional">
+  >;
   setStoryStructure: React.Dispatch<React.SetStateAction<StoryStructure>>;
-  handleFieldChange: (field: keyof StoryFormData, value: string | number | boolean | string[]) => void;
+  handleFieldChange: (
+    field: keyof StoryFormData,
+    value: string | number | boolean | string[],
+  ) => void;
   handleGenreToggle: (genre: string) => void;
   validateForm: () => boolean;
   handleStructureNext: (structure: StoryStructure) => void;
