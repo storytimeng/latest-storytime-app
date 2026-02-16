@@ -1,11 +1,24 @@
 "use client";
 
-import React, { useState, useCallback, useEffect } from "react";
+import React, {
+  useState,
+  useCallback,
+  useEffect,
+  useRef,
+  useMemo,
+} from "react";
 import { Button } from "@heroui/button";
 import { Select, SelectItem } from "@heroui/select";
 import { Switch } from "@heroui/switch";
-import { ChevronRight, ChevronDown } from "lucide-react";
-// Icons will be replaced with text/emoji alternatives
+import { Accordion, AccordionItem } from "@heroui/accordion";
+import {
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+} from "@heroui/modal";
+import { ChevronRight, Trash2, X, ArrowLeft } from "lucide-react";
 import { Magnetik_Bold, Magnetik_Medium, Magnetik_Regular } from "@/lib/font";
 import FormField from "./formField";
 import TextAreaField from "./textArea";
@@ -13,20 +26,10 @@ import ImageUpload from "./imageUpload";
 import { CollaboratorInput } from "./CollaboratorInput";
 import { cn } from "@/lib/utils";
 import { showToast } from "@/lib/showNotification";
-import {
-  saveChaptersCache,
-  saveEpisodesCache,
-  getChaptersCache,
-  getEpisodesCache,
-  hasCachedData,
-  clearStoryCache,
-} from "@/lib/storyCache";
-import { CacheLoadingModal } from "@/components/reusables/customUI/CacheLoadingModal";
-import { useUnsavedChangesWarning } from "@/src/hooks/useUnsavedChangesWarning";
+import { ErrorModal } from "@/components/reusables/modals/ErrorModal";
 import { UPLOAD_PATHS } from "@/src/config/uploadPaths";
 import { useImageUpload } from "@/src/hooks/useImageUpload";
 import { useGenres } from "@/src/hooks/useGenres";
-// Custom hooks for refactored logic
 import { useStoryFormState } from "@/src/hooks/useStoryFormState";
 import { useStoryContent } from "@/src/hooks/useStoryContent";
 import { useUserStore } from "@/src/stores/useUserStore";
@@ -263,6 +266,28 @@ const AdditionalInfoModal: React.FC<AdditionalInfoModalProps> = ({
   );
 };
 
+// Helper function to format timestamps
+const formatTimestamp = (timestamp?: string): string => {
+  if (!timestamp) return "";
+  const date = new Date(timestamp);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return "Just now";
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: date.getFullYear() !== now.getFullYear() ? "numeric" : undefined,
+  });
+};
+
 // Main Story Form Component
 const StoryForm: React.FC<StoryFormProps> = ({
   mode,
@@ -294,15 +319,30 @@ const StoryForm: React.FC<StoryFormProps> = ({
   const { genres: apiGenres, isLoading: isLoadingGenres } = useGenres();
   const genres = apiGenres || [];
 
+  // Get storyId for lazy loading (edit mode uses initialData.id, create mode uses createdStoryId)
+  const storyId =
+    mode === "edit" ? (initialData?.id as string) : createdStoryId || undefined;
+
   const contentStateHook = useStoryContent({
     storyStructure: storyStructure,
     initialChapters,
     initialParts,
+    storyId,
   });
 
   // Content state from hooks
   const chapters = contentStateHook.chapters;
   const parts = contentStateHook.parts;
+
+  // Debug logging
+  console.log("[storyForm] Render state:", {
+    mode,
+    storyStructure,
+    initialChapters,
+    initialParts,
+    chapters,
+    parts,
+  });
   const setChapters = contentStateHook.setChapters;
   const setParts = contentStateHook.setParts;
   const addChapter = contentStateHook.addChapter;
@@ -313,199 +353,330 @@ const StoryForm: React.FC<StoryFormProps> = ({
   const expandedEpisodes = contentStateHook.expandedEpisodes;
   const setExpandedChapters = contentStateHook.setExpandedChapters;
   const setExpandedEpisodes = contentStateHook.setExpandedEpisodes;
-  // ============================================================================
+  const updateChapter = contentStateHook.updateChapter;
+  const updatePart = contentStateHook.updatePart;
+  const getEditedChapters = contentStateHook.getEditedChapters;
+  const getEditedParts = contentStateHook.getEditedParts;
+  const getAllModifiedChapters = contentStateHook.getAllModifiedChapters;
+  const getAllModifiedParts = contentStateHook.getAllModifiedParts;
+  const selectedChapterIndex = contentStateHook.selectedChapterIndex;
+  const selectedPartIndex = contentStateHook.selectedPartIndex;
+  const setSelectedChapterIndex = contentStateHook.setSelectedChapterIndex;
+  const setSelectedPartIndex = contentStateHook.setSelectedPartIndex;
+  const loadChapterContent = contentStateHook.loadChapterContent;
+  const loadEpisodeContent = contentStateHook.loadEpisodeContent;
+  const loadingChapterIds = contentStateHook.loadingChapterIds;
+  const loadingPartIds = contentStateHook.loadingPartIds;
+  const deletedChapterIds = contentStateHook.deletedChapterIds;
+  const deletedPartIds = contentStateHook.deletedPartIds;
+  const markChapterForDeletion = contentStateHook.markChapterForDeletion;
+  const markPartForDeletion = contentStateHook.markPartForDeletion;
+  const restoreChapter = contentStateHook.restoreChapter;
+  const restorePart = contentStateHook.restorePart;
+  const getDeletedChapters = contentStateHook.getDeletedChapters;
+  const getDeletedParts = contentStateHook.getDeletedParts;
+  const renumberChapters = contentStateHook.renumberChapters;
+  const renumberParts = contentStateHook.renumberParts;
 
-  // Cache loading modal state (not in hooks yet)
-  const [showCacheModal, setShowCacheModal] = useState(false);
-  const [pendingCacheType, setPendingCacheType] = useState<
-    "chapters" | "episodes" | null
-  >(null);
-  const [cacheChecked, setCacheChecked] = useState(false);
+  // Error modal state
+  const [errorModalOpen, setErrorModalOpen] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [errorDetails, setErrorDetails] = useState<string | undefined>();
 
-  // Track unsaved changes
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const initialFormDataRef = React.useRef<string>("");
+  // Delete confirmation modal state
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<{
+    type: "chapter" | "episode";
+    id: number;
+    title: string;
+    uuid?: string;
+  } | null>(null);
 
-  // Set initial data snapshot after component mounts
+  // Windowed loading: Show ±5 episodes/chapters from selected index
+  const visibleChapters = useMemo(() => {
+    if (selectedChapterIndex === null || chapters.length <= 10) {
+      console.log("[storyForm] Showing all chapters:", chapters.length);
+      return chapters; // Show all if 10 or fewer
+    }
+
+    const start = Math.max(0, selectedChapterIndex - 5);
+    const end = Math.min(chapters.length, selectedChapterIndex + 6); // +6 to include selected + 5 after
+    const visible = chapters.slice(start, end);
+    console.log("[storyForm] Windowed chapters:", {
+      selectedChapterIndex,
+      start,
+      end,
+      visibleCount: visible.length,
+      totalCount: chapters.length,
+    });
+    return visible;
+  }, [chapters, selectedChapterIndex]);
+
+  const visibleParts = useMemo(() => {
+    if (selectedPartIndex === null || parts.length <= 10) {
+      console.log("[storyForm] Showing all episodes:", parts.length);
+      return parts; // Show all if 10 or fewer
+    }
+
+    const start = Math.max(0, selectedPartIndex - 5);
+    const end = Math.min(parts.length, selectedPartIndex + 6);
+    const visible = parts.slice(start, end);
+    console.log("[storyForm] Windowed episodes:", {
+      selectedPartIndex,
+      start,
+      end,
+      visibleCount: visible.length,
+      totalCount: parts.length,
+    });
+    return visible;
+  }, [parts, selectedPartIndex]);
+
+  // Track what we've attempted to load to prevent infinite loops
+  const attemptedChapterLoads = useRef<Set<string>>(new Set());
+  const attemptedEpisodeLoads = useRef<Set<string>>(new Set());
+
+  // Clear attempted loads when story changes
   useEffect(() => {
-    if (!initialFormDataRef.current) {
-      initialFormDataRef.current = JSON.stringify({
-        formData,
-        chapters,
-        parts,
-        storyStructure,
+    attemptedChapterLoads.current.clear();
+    attemptedEpisodeLoads.current.clear();
+    console.log("[storyForm] Cleared attempted loads for new story:", storyId);
+  }, [storyId]);
+
+  // Auto-expand selected episode/chapter when entering writing view and load content
+  useEffect(() => {
+    if (currentStep === "writing" && mode === "edit" && storyId) {
+      if (selectedChapterIndex !== null && chapters[selectedChapterIndex]) {
+        const selectedChapter = chapters[selectedChapterIndex];
+        console.log("[storyForm] Auto-expanding chapter:", {
+          selectedChapterIndex,
+          chapterId: selectedChapter.id,
+          chapterUuid: selectedChapter.uuid,
+          title: selectedChapter.title,
+        });
+        setExpandedChapters(new Set([selectedChapter.id]));
+
+        // Load chapter content if it has a UUID and we haven't attempted yet
+        if (
+          selectedChapter.uuid &&
+          !attemptedChapterLoads.current.has(selectedChapter.uuid)
+        ) {
+          attemptedChapterLoads.current.add(selectedChapter.uuid);
+          loadChapterContent(selectedChapter.uuid, selectedChapterIndex);
+        }
+      }
+      if (selectedPartIndex !== null && parts[selectedPartIndex]) {
+        const selectedPart = parts[selectedPartIndex];
+        console.log("[storyForm] Auto-expanding episode:", {
+          selectedPartIndex,
+          partId: selectedPart.id,
+          partUuid: selectedPart.uuid,
+          title: selectedPart.title,
+        });
+        setExpandedEpisodes(new Set([selectedPart.id]));
+
+        // Load episode content if it has a UUID and we haven't attempted yet
+        if (
+          selectedPart.uuid &&
+          !attemptedEpisodeLoads.current.has(selectedPart.uuid)
+        ) {
+          attemptedEpisodeLoads.current.add(selectedPart.uuid);
+          loadEpisodeContent(selectedPart.uuid, selectedPartIndex);
+        }
+      }
+    }
+  }, [
+    currentStep,
+    selectedChapterIndex,
+    selectedPartIndex,
+    mode,
+    storyId,
+    setExpandedChapters,
+    setExpandedEpisodes,
+    loadChapterContent,
+    loadEpisodeContent,
+  ]);
+
+  // Load content for expanded chapters (when user clicks accordion)
+  useEffect(() => {
+    if (
+      mode === "edit" &&
+      storyId &&
+      expandedChapters.size > 0 &&
+      chapters.length > 0
+    ) {
+      expandedChapters.forEach((chapterId) => {
+        const chapterIndex = chapters.findIndex((ch) => ch.id === chapterId);
+        if (chapterIndex !== -1) {
+          const chapter = chapters[chapterIndex];
+          // Load if has UUID and we haven't attempted to load it yet
+          if (
+            chapter.uuid &&
+            !attemptedChapterLoads.current.has(chapter.uuid)
+          ) {
+            console.log("[storyForm] Loading content for expanded chapter:", {
+              chapterId,
+              chapterIndex,
+              uuid: chapter.uuid,
+            });
+            attemptedChapterLoads.current.add(chapter.uuid);
+            loadChapterContent(chapter.uuid, chapterIndex);
+          }
+        }
       });
     }
+  }, [expandedChapters, chapters, mode, storyId, loadChapterContent]);
+
+  // Load content for expanded episodes (when user clicks accordion)
+  useEffect(() => {
+    if (
+      mode === "edit" &&
+      storyId &&
+      expandedEpisodes.size > 0 &&
+      parts.length > 0
+    ) {
+      expandedEpisodes.forEach((episodeId) => {
+        const episodeIndex = parts.findIndex((p) => p.id === episodeId);
+        if (episodeIndex !== -1) {
+          const episode = parts[episodeIndex];
+          // Load if has UUID and we haven't attempted to load it yet
+          if (
+            episode.uuid &&
+            !attemptedEpisodeLoads.current.has(episode.uuid)
+          ) {
+            console.log("[storyForm] Loading content for expanded episode:", {
+              episodeId,
+              episodeIndex,
+              uuid: episode.uuid,
+            });
+            attemptedEpisodeLoads.current.add(episode.uuid);
+            loadEpisodeContent(episode.uuid, episodeIndex);
+          }
+        }
+      });
+    }
+  }, [expandedEpisodes, parts, mode, storyId, loadEpisodeContent]);
+
+  // Auto-save state
+  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const lastSavedDataRef = useRef<string>("");
+
+  // Show error in modal
+  const showError = useCallback((message: string, details?: string) => {
+    setErrorMessage(message);
+    setErrorDetails(details);
+    setErrorModalOpen(true);
   }, []);
 
-  // Track changes
-  useEffect(() => {
-    if (!initialFormDataRef.current) return;
+  // Auto-save to IndexedDB
+  const autoSave = useCallback(async () => {
+    if (!userId) return;
 
     const currentData = JSON.stringify({
       formData,
       chapters,
       parts,
       storyStructure,
+      timestamp: new Date().toISOString(),
     });
-    setHasUnsavedChanges(currentData !== initialFormDataRef.current);
-  }, [formData, chapters, parts, storyStructure]);
 
-  // Unsaved changes warning with automatic caching
-  useUnsavedChangesWarning({
-    hasUnsavedChanges,
-    onSave: () => {
-      const storyId = createdStoryId || (mode === "edit" && initialData?.id);
-      if (storyId && userId) {
-        if (storyStructure.hasChapters && chapters.length > 0) {
-          saveChaptersCache(storyId, userId, chapters);
-        }
-        if (storyStructure.hasEpisodes && parts.length > 0) {
-          saveEpisodesCache(storyId, userId, parts);
-        }
-      }
-    },
-  });
+    // Don't save if nothing changed
+    if (currentData === lastSavedDataRef.current) return;
 
-  // Check for cached data when story ID becomes available
+    try {
+      const storyKey = createdStoryId || initialData?.id || "draft";
+      const db = await openDB();
+      await db.put("autoSave", {
+        id: `story-${storyKey}`,
+        data: currentData,
+        timestamp: Date.now(),
+      });
+      lastSavedDataRef.current = currentData;
+      console.log("✅ Auto-saved at", new Date().toLocaleTimeString());
+    } catch (error) {
+      console.error("❌ Auto-save failed:", error);
+    }
+  }, [
+    userId,
+    formData,
+    chapters,
+    parts,
+    storyStructure,
+    createdStoryId,
+    initialData?.id,
+  ]);
+
+  // Set up auto-save interval
   useEffect(() => {
-    if (cacheChecked) return;
+    if (currentStep !== "writing" && currentStep !== "form") return;
 
-    const storyId = createdStoryId || (mode === "edit" && initialData?.id);
-    if (!storyId || !userId) return;
+    // Clear existing timer
+    if (autoSaveTimerRef.current) {
+      clearInterval(autoSaveTimerRef.current);
+    }
 
-    const checkCache = async () => {
-      const cached = await hasCachedData(storyId, userId);
+    // Auto-save every 30 seconds
+    autoSaveTimerRef.current = setInterval(() => {
+      autoSave();
+    }, 30000);
 
-      if (cached.hasChapters && storyStructure.hasChapters) {
-        setPendingCacheType("chapters");
-        setShowCacheModal(true);
-        setCacheChecked(true);
-      } else if (cached.hasEpisodes && storyStructure.hasEpisodes) {
-        setPendingCacheType("episodes");
-        setShowCacheModal(true);
-        setCacheChecked(true);
-      } else {
-        setCacheChecked(true);
+    // Save on unmount
+    return () => {
+      if (autoSaveTimerRef.current) {
+        clearInterval(autoSaveTimerRef.current);
+        autoSave();
       }
     };
+  }, [currentStep, autoSave]);
 
-    checkCache();
-  }, [
-    createdStoryId,
-    mode,
-    initialData?.id,
-    storyStructure,
-    cacheChecked,
-    userId,
-  ]);
-
-  // Handle loading cache
-  const handleLoadCache = useCallback(async () => {
-    const storyId = createdStoryId || (mode === "edit" && initialData?.id);
-    if (!storyId || !pendingCacheType || !userId) return;
-
-    if (pendingCacheType === "chapters") {
-      const cached = await getChaptersCache(storyId, userId);
-      if (cached && cached.length > 0) {
-        setChapters(cached);
-        // Expand the first chapter
-        setExpandedChapters(new Set([cached[0].id]));
-        showToast({
-          type: "success",
-          message: `Loaded ${cached.length} cached chapter${cached.length > 1 ? "s" : ""}`,
+  // Helper to open IndexedDB
+  const openDB = async () => {
+    return new Promise<any>((resolve, reject) => {
+      const request = indexedDB.open("StoryAutosave", 1);
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () =>
+        resolve({
+          put: (store: string, data: any) => {
+            const db = request.result;
+            const transaction = db.transaction([store], "readwrite");
+            const objectStore = transaction.objectStore(store);
+            return new Promise((res, rej) => {
+              const req = objectStore.put(data);
+              req.onsuccess = () => res(req.result);
+              req.onerror = () => rej(req.error);
+            });
+          },
         });
-      }
-    } else if (pendingCacheType === "episodes") {
-      const cached = await getEpisodesCache(storyId, userId);
-      if (cached && cached.length > 0) {
-        setParts(cached);
-        // Expand the first episode
-        setExpandedEpisodes(new Set([cached[0].id]));
-        showToast({
-          type: "success",
-          message: `Loaded ${cached.length} cached episode${cached.length > 1 ? "s" : ""}`,
-        });
-      }
-    }
+      request.onupgradeneeded = (event: any) => {
+        const db = event.target.result;
+        if (!db.objectStoreNames.contains("autoSave")) {
+          db.createObjectStore("autoSave", { keyPath: "id" });
+        }
+      };
+    });
+  };
 
-    setShowCacheModal(false);
-    setPendingCacheType(null);
-  }, [createdStoryId, mode, initialData?.id, pendingCacheType, userId]);
-
-  // Handle discarding cache
-  const handleDiscardCache = useCallback(async () => {
-    const storyId = createdStoryId || (mode === "edit" && initialData?.id);
-    if (storyId && userId) {
-      await clearStoryCache(storyId, userId);
-      showToast({
-        type: "info",
-        message: "Cached data has been discarded",
-      });
-    }
-    setShowCacheModal(false);
-    setPendingCacheType(null);
-  }, [createdStoryId, mode, initialData?.id, userId]);
-
-  // Accordion state and toggle functions are now handled by contentStateHook
-
-  // Auto-save chapters to cache when they change
+  // Auto-save chapters/episodes to cache when they change
   useEffect(() => {
-    const storyId = createdStoryId || (mode === "edit" && initialData?.id);
-    if (
-      storyId &&
-      userId &&
-      chapters.length > 0 &&
-      storyStructure.hasChapters
-    ) {
-      saveChaptersCache(storyId, userId, chapters);
+    if (chapters.length > 0 || parts.length > 0) {
+      autoSave();
     }
-  }, [
-    chapters,
-    createdStoryId,
-    mode,
-    initialData?.id,
-    storyStructure.hasChapters,
-    userId,
-  ]);
-
-  // Auto-save episodes to cache when they change
-  useEffect(() => {
-    const storyId = createdStoryId || (mode === "edit" && initialData?.id);
-    if (storyId && userId && parts.length > 0 && storyStructure.hasEpisodes) {
-      saveEpisodesCache(storyId, userId, parts);
-    }
-  }, [
-    parts,
-    createdStoryId,
-    mode,
-    initialData?.id,
-    storyStructure.hasEpisodes,
-    userId,
-  ]);
+  }, [chapters, parts, autoSave]);
 
   // Update form data when initialData changes (for edit mode)
   React.useEffect(() => {
     if (mode === "edit" && initialData) {
       setFormData(getInitialFormData(initialData));
-      // Update story structure if chapter/episodes flags are set
-      if (initialData.chapter || initialData.episodes) {
-        setStoryStructure({
-          hasChapters: initialData.chapter || false,
-          hasEpisodes: initialData.episodes || false,
-        });
-        // If story has structure (chapters/episodes), show writing interface
-        setCurrentStep("writing");
-      } else {
-        // For simple stories without chapters/episodes, stay on form
-        setCurrentStep("form");
-      }
+      // Update story structure based on chapter/episodes flags
+      setStoryStructure({
+        hasChapters: initialData.chapter || false,
+        hasEpisodes: initialData.episodes || false,
+      });
+      // Always stay on form step in edit mode - user can navigate to writing
+      setCurrentStep("form");
     }
   }, [mode, initialData]);
 
   // Form validation is now handled by formStateHook.validateForm
-  // handleFieldChange is now handled by formStateHook.handleFieldChange
-  // handleGenreToggle is now handled by formStateHook.handleGenreToggle
 
   // Handle form submission
   const handleSubmit = useCallback(() => {
@@ -516,12 +687,29 @@ const StoryForm: React.FC<StoryFormProps> = ({
       return;
     }
 
-    // Reset unsaved changes flag before submit
-    setHasUnsavedChanges(false);
+    // For edit mode, only send edited chapters/episodes
+    // For create mode, send all
+    let contentData: Chapter[] | undefined;
+    let partsData: Part[] | undefined;
 
-    // For edit mode or final submission
-    const contentData = storyStructure.hasChapters ? chapters : undefined;
-    const partsData = !storyStructure.hasChapters ? parts : undefined;
+    if (mode === "edit") {
+      // Only send edited items
+      contentData = storyStructure.hasChapters
+        ? getAllModifiedChapters()
+        : undefined;
+      partsData = !storyStructure.hasChapters
+        ? getAllModifiedParts()
+        : undefined;
+
+      console.log("[storyForm] Submitting edited items:", {
+        editedChapters: contentData,
+        editedParts: partsData,
+      });
+    } else {
+      // Create mode - send all
+      contentData = storyStructure.hasChapters ? chapters : undefined;
+      partsData = !storyStructure.hasChapters ? parts : undefined;
+    }
 
     onSubmit(formData, contentData, partsData);
   }, [
@@ -533,26 +721,103 @@ const StoryForm: React.FC<StoryFormProps> = ({
     storyStructure,
     chapters,
     parts,
+    getAllModifiedChapters,
+    getAllModifiedParts,
   ]);
 
-  // handleStructureNext is now handled by formStateHook.handleStructureNext
-
-  // addChapter and addPart are now handled by contentStateHook
+  // Wrap submission with error handling (defined after handleSubmit)
+  const handleSubmitWithErrorHandling = useCallback(async () => {
+    try {
+      await handleSubmit();
+    } catch (error: any) {
+      const message =
+        error?.message || "An error occurred while saving the story";
+      const details = error?.response?.data?.message || error?.toString();
+      showError(message, details);
+    }
+  }, [handleSubmit, showError]);
 
   // Handle additional info submission
   const handleAdditionalInfoSubmit = useCallback(
     (authorNote: string, giveConsent: boolean) => {
-      // Reset unsaved changes flag before submit
-      setHasUnsavedChanges(false);
-
       const finalData = { ...formData, authorNote, giveConsent };
-      const contentData = storyStructure.hasChapters ? chapters : undefined;
-      const partsData = !storyStructure.hasChapters ? parts : undefined;
 
-      onSubmit(finalData, contentData, partsData);
+      // For edit mode, only send edited chapters/episodes and deleted ones
+      let contentData: Chapter[] | undefined;
+      let partsData: Part[] | undefined;
+      let deletedChaptersData: Chapter[] | undefined;
+      let deletedPartsData: Part[] | undefined;
+
+      if (mode === "edit") {
+        contentData = storyStructure.hasChapters
+          ? getAllModifiedChapters()
+          : undefined;
+        partsData = !storyStructure.hasChapters
+          ? getAllModifiedParts()
+          : undefined;
+        deletedChaptersData = storyStructure.hasChapters
+          ? getDeletedChapters()
+          : undefined;
+        deletedPartsData = !storyStructure.hasChapters
+          ? getDeletedParts()
+          : undefined;
+      } else {
+        contentData = storyStructure.hasChapters ? chapters : undefined;
+        partsData = !storyStructure.hasChapters ? parts : undefined;
+      }
+
+      onSubmit(
+        finalData,
+        contentData,
+        partsData,
+        deletedChaptersData,
+        deletedPartsData,
+      );
     },
-    [formData, storyStructure, chapters, parts, onSubmit],
+    [
+      formData,
+      storyStructure,
+      chapters,
+      parts,
+      mode,
+      getAllModifiedChapters,
+      getAllModifiedParts,
+      getDeletedChapters,
+      getDeletedParts,
+      onSubmit,
+    ],
   );
+
+  // Handle delete modal
+  const handleDeleteClick = useCallback(
+    (type: "chapter" | "episode", id: number, title: string, uuid?: string) => {
+      setItemToDelete({ type, id, title, uuid });
+      setDeleteModalOpen(true);
+    },
+    [],
+  );
+
+  const handleDeleteConfirm = useCallback(() => {
+    if (!itemToDelete) return;
+
+    if (itemToDelete.type === "chapter") {
+      markChapterForDeletion(itemToDelete.id);
+    } else {
+      markPartForDeletion(itemToDelete.id);
+    }
+
+    setDeleteModalOpen(false);
+    setItemToDelete(null);
+    showToast({
+      type: "success",
+      message: `${itemToDelete.type === "chapter" ? "Chapter" : "Episode"} marked for deletion. Save to confirm.`,
+    });
+  }, [itemToDelete, markChapterForDeletion, markPartForDeletion]);
+
+  const handleDeleteCancel = useCallback(() => {
+    setDeleteModalOpen(false);
+    setItemToDelete(null);
+  }, []);
 
   // Handle cover image change
   const handleCoverImageChange = useCallback(
@@ -645,7 +910,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
         isRichText={true}
       />
       {!storyStructure.hasChapters && !storyStructure.hasEpisodes && (
-        <p className="text-xs text-gray-500 -mt-4">
+        <p className="-mt-4 text-xs text-gray-500">
           Content is required when your story doesn't have chapters or episodes.
         </p>
       )}
@@ -653,7 +918,8 @@ const StoryForm: React.FC<StoryFormProps> = ({
       {/* Show Chapters/Episodes in Edit Mode */}
       {mode === "edit" &&
         (storyStructure.hasChapters || storyStructure.hasEpisodes) &&
-        chapters.length > 0 && (
+        ((storyStructure.hasChapters && chapters.length > 0) ||
+          (storyStructure.hasEpisodes && parts.length > 0)) && (
           <div className="space-y-2">
             <label
               className={`text-primary-colour text-base block ${Magnetik_Medium.className}`}
@@ -661,32 +927,67 @@ const StoryForm: React.FC<StoryFormProps> = ({
               {storyStructure.hasChapters ? "Chapters" : "Episodes"}
             </label>
             <div className="max-h-[300px] overflow-y-auto space-y-2 border border-gray-200 rounded-lg p-3">
-              {chapters.slice(0, 5).map((chapter, index) => (
-                <button
-                  key={chapter.id}
-                  onClick={() => setCurrentStep("writing")}
-                  className="w-full flex items-center justify-between p-3 bg-white hover:bg-gray-50 border border-gray-200 rounded-lg transition-colors"
-                >
-                  <div className="text-left">
-                    <p
-                      className={`text-primary-colour text-sm ${Magnetik_Medium.className}`}
+              {(storyStructure.hasChapters ? chapters : parts)
+                .slice(0, 5)
+                .map((item, sliceIndex) => {
+                  // Find the actual index in the full array
+                  const actualIndex = storyStructure.hasChapters
+                    ? chapters.findIndex((ch) => ch.id === item.id)
+                    : parts.findIndex((p) => p.id === item.id);
+
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => {
+                        console.log("[storyForm] Chapter/Episode clicked:", {
+                          itemId: item.id,
+                          actualIndex,
+                          title: item.title,
+                          hasChapters: storyStructure.hasChapters,
+                        });
+
+                        if (storyStructure.hasChapters) {
+                          setSelectedChapterIndex(actualIndex);
+                        } else {
+                          setSelectedPartIndex(actualIndex);
+                        }
+                        setCurrentStep("writing");
+                      }}
+                      className="flex items-center justify-between w-full p-3 transition-colors bg-white border border-gray-200 rounded-lg hover:bg-gray-50"
                     >
-                      {storyStructure.hasChapters
-                        ? `Chapter ${index + 1}`
-                        : `Episode ${index + 1}`}
-                    </p>
-                    <p className="text-gray-500 text-xs truncate max-w-[250px]">
-                      {chapter.title || "Untitled"}
-                    </p>
-                  </div>
-                  <ChevronRight size={20} className="text-gray-400" />
-                </button>
-              ))}
-              {chapters.length > 5 && (
-                <p className="text-xs text-center text-gray-500 py-2">
-                  +{chapters.length - 5} more{" "}
-                  {storyStructure.hasChapters ? "chapters" : "episodes"}
-                </p>
+                      <div className="text-left">
+                        <p
+                          className={`text-primary-colour text-sm ${Magnetik_Medium.className}`}
+                        >
+                          {storyStructure.hasChapters
+                            ? `Chapter ${actualIndex + 1}`
+                            : `Episode ${actualIndex + 1}`}
+                        </p>
+                        <p className="text-gray-500 text-xs truncate max-w-[250px]">
+                          {item.title || "Untitled"}
+                        </p>
+                      </div>
+                      <ChevronRight size={20} className="text-gray-400" />
+                    </button>
+                  );
+                })}
+              {(storyStructure.hasChapters ? chapters.length : parts.length) >
+                5 && (
+                <Button
+                  variant="light"
+                  size="sm"
+                  onClick={() => setCurrentStep("writing")}
+                  className="w-full py-2 text-xs text-gray-600 hover:text-primary-colour"
+                >
+                  <span className={Magnetik_Regular.className}>
+                    +
+                    {(storyStructure.hasChapters
+                      ? chapters.length
+                      : parts.length) - 5}{" "}
+                    more {storyStructure.hasChapters ? "chapters" : "episodes"}{" "}
+                    - Click to view all
+                  </span>
+                </Button>
               )}
             </div>
             <Button
@@ -889,86 +1190,173 @@ const StoryForm: React.FC<StoryFormProps> = ({
       {/* Content based on story structure */}
       {storyStructure.hasChapters ? (
         <div className="space-y-4">
-          <div className="max-h-[600px] overflow-y-auto space-y-6 pr-2">
-            {chapters.map((chapter, index) => {
-              const isExpanded = expandedChapters.has(chapter.id);
+          {chapters.length > 10 && selectedChapterIndex !== null && (
+            <Button
+              size="sm"
+              variant="light"
+              className="mb-2 text-sm text-gray-600 hover:text-primary-colour"
+              onClick={() => setCurrentStep("writing")}
+            >
+              <span className={Magnetik_Regular.className}>
+                Showing {visibleChapters.length} of {chapters.length} chapters
+                (±5 from selected) - Click to view all
+              </span>
+            </Button>
+          )}
+          <Accordion
+            variant="splitted"
+            selectionMode="multiple"
+            selectedKeys={Array.from(expandedChapters).map(String)}
+            onSelectionChange={(keys) => {
+              const newSet = new Set(
+                Array.from(keys as Set<string>).map((k) => parseInt(k, 10)),
+              );
+              setExpandedChapters(newSet);
+            }}
+            className="px-0"
+            itemClasses={{
+              base: "mb-4",
+              trigger:
+                "py-4 px-4 bg-white hover:bg-accent-shade-1 rounded-lg data-[hover=true]:bg-accent-shade-1",
+              title: `text-base text-primary-colour font-medium ${Magnetik_Medium.className}`,
+              indicator: "text-primary-colour",
+              content: "px-4 pb-4 pt-0",
+            }}
+          >
+            {visibleChapters.map((chapter, chapterIndex) => {
+              const isDeleted = deletedChapterIds.has(chapter.id);
 
               return (
-                <div
-                  key={chapter.id}
-                  className="bg-white rounded-lg shadow-sm overflow-hidden"
-                >
-                  {/* Chapter Header - Always Visible */}
-                  <div
-                    className="flex items-center justify-between p-4 cursor-pointer hover:bg-accent-shade-1 transition-colors"
-                    onClick={() => toggleChapter(chapter.id)}
-                  >
-                    <h3
-                      className={cn(
-                        "text-base text-primary-colour font-medium",
-                        Magnetik_Medium.className,
-                      )}
-                    >
-                      Chapter {chapter.id}:{" "}
-                      {chapter.title || `Chapter ${chapter.id}`}
-                    </h3>
-                    <ChevronDown
-                      className={cn(
-                        "w-5 h-5 text-primary-colour transition-transform",
-                        isExpanded ? "rotate-180" : "",
-                      )}
-                    />
-                  </div>
-
-                  {/* Chapter Content - Collapsible */}
-                  {isExpanded && (
-                    <div className="p-4 pt-0 space-y-4">
-                      <FormField
-                        label={`Chapter ${chapter.id} Title`}
-                        type="text"
-                        id={`chapter-${chapter.id}-title`}
-                        placeholder={`Chapter ${chapter.id}`}
-                        value={chapter.title}
-                        onValueChange={(value) => {
-                          setChapters((prev) =>
-                            prev.map((ch) =>
-                              ch.id === chapter.id
-                                ? { ...ch, title: value }
-                                : ch,
-                            ),
-                          );
+                <AccordionItem
+                  key={chapter.uuid || `chapter-${chapter.id}`}
+                  aria-label={`Chapter ${chapter.id}`}
+                  title={
+                    <div className="flex items-center justify-between w-full pr-2">
+                      <div className="flex flex-col gap-0.5 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-gray-600">Chapter</span>
+                          <input
+                            type="number"
+                            min="1"
+                            value={chapter.chapterNumber ?? chapter.id}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              const num = parseInt(e.target.value);
+                              if (!isNaN(num) && num > 0) {
+                                updateChapter(chapter.id, "chapterNumber", num);
+                              }
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            className={cn(
+                              "w-16 px-2 py-1 text-sm border rounded",
+                              isDeleted && "opacity-50",
+                            )}
+                            disabled={isDeleted}
+                          />
+                          <span
+                            className={cn(
+                              isDeleted && "line-through opacity-50",
+                            )}
+                          >
+                            : {chapter.title || `Chapter ${chapter.id}`}
+                          </span>
+                        </div>
+                        {(chapter.createdAt || chapter.updatedAt) && (
+                          <span className="text-xs text-gray-500">
+                            {chapter.createdAt && (
+                              <span>
+                                Created: {formatTimestamp(chapter.createdAt)}
+                              </span>
+                            )}
+                            {chapter.updatedAt &&
+                              chapter.updatedAt !== chapter.createdAt && (
+                                <span className="ml-3">
+                                  Updated: {formatTimestamp(chapter.updatedAt)}
+                                </span>
+                              )}
+                          </span>
+                        )}
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (isDeleted) {
+                            restoreChapter(chapter.id);
+                            showToast({
+                              type: "success",
+                              message: "Chapter restored",
+                            });
+                          } else {
+                            handleDeleteClick(
+                              "chapter",
+                              chapter.id,
+                              chapter.title || `Chapter ${chapter.id}`,
+                              chapter.uuid,
+                            );
+                          }
                         }}
-                      />
+                        className={cn(
+                          "p-2 rounded-md transition-colors",
+                          isDeleted
+                            ? "text-green-600 hover:bg-green-50"
+                            : "text-red-600 hover:bg-red-50",
+                        )}
+                        title={isDeleted ? "Restore chapter" : "Delete chapter"}
+                      >
+                        {isDeleted ? (
+                          <span className="text-sm font-medium">Restore</span>
+                        ) : (
+                          <Trash2 size={18} />
+                        )}
+                      </button>
+                    </div>
+                  }
+                  classNames={{
+                    base: cn(isDeleted && "opacity-60"),
+                  }}
+                >
+                  <div className="space-y-4">
+                    <FormField
+                      label={`Chapter ${chapter.id} Title`}
+                      type="text"
+                      id={`chapter-${chapter.id}-title`}
+                      placeholder={`Chapter ${chapter.id}`}
+                      value={chapter.title}
+                      onValueChange={(value) => {
+                        updateChapter(chapter.id, "title", value);
+                      }}
+                    />
 
-                      {storyStructure.hasEpisodes &&
-                        chapter.episodes?.map((episode) => (
-                          <div key={episode.id} className="ml-4">
-                            <FormField
-                              label={`Episode ${episode.id} Title`}
-                              type="text"
-                              id={`episode-${chapter.id}-${episode.id}-title`}
-                              placeholder={`Episode ${episode.id}`}
-                              value={episode.title}
-                              onValueChange={(value) => {
-                                setChapters((prev) =>
-                                  prev.map((ch) =>
-                                    ch.id === chapter.id
-                                      ? {
-                                          ...ch,
-                                          episodes: ch.episodes?.map((ep) =>
-                                            ep.id === episode.id
-                                              ? { ...ep, title: value }
-                                              : ep,
-                                          ),
-                                        }
-                                      : ch,
-                                  ),
-                                );
-                              }}
-                            />
-                          </div>
-                        ))}
+                    {storyStructure.hasEpisodes &&
+                      chapter.episodes?.map((episode) => (
+                        <div key={episode.id} className="ml-4">
+                          <FormField
+                            label={`Episode ${episode.id} Title`}
+                            type="text"
+                            id={`episode-${chapter.id}-${episode.id}-title`}
+                            placeholder={`Episode ${episode.id}`}
+                            value={episode.title}
+                            onValueChange={(value) => {
+                              setChapters((prev) =>
+                                prev.map((ch) =>
+                                  ch.id === chapter.id
+                                    ? {
+                                        ...ch,
+                                        episodes: ch.episodes?.map((ep) =>
+                                          ep.id === episode.id
+                                            ? { ...ep, title: value }
+                                            : ep,
+                                        ),
+                                      }
+                                    : ch,
+                                ),
+                              );
+                            }}
+                          />
+                        </div>
+                      ))}
 
+                    <div className="relative">
                       <TextAreaField
                         label="Content"
                         htmlFor={`chapter-${chapter.id}-body`}
@@ -978,83 +1366,194 @@ const StoryForm: React.FC<StoryFormProps> = ({
                         placeholder="Write your story content here..."
                         value={chapter.body}
                         onChange={(value) => {
-                          setChapters((prev) =>
-                            prev.map((ch) =>
-                              ch.id === chapter.id
-                                ? { ...ch, body: value }
-                                : ch,
-                            ),
-                          );
+                          updateChapter(chapter.id, "body", value);
                         }}
                         rows={12}
                         isRichText={true}
                       />
+                      {chapter.uuid && loadingChapterIds.has(chapter.uuid) && (
+                        <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-white/80">
+                          <div className="flex flex-col items-center gap-2">
+                            <div className="w-8 h-8 border-b-2 rounded-full animate-spin border-complimentary-colour"></div>
+                            <p
+                              className={`text-sm text-gray-500 ${Magnetik_Regular.className}`}
+                            >
+                              Loading content...
+                            </p>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
+                  </div>
+                </AccordionItem>
               );
             })}
-          </div>
+          </Accordion>
 
-          {/* Add Chapter Button - Outside Accordion */}
-          <Button
-            variant="ghost"
-            className="flex items-center w-full gap-2 border border-dashed text-complimentary-colour border-complimentary-colour"
-            onClick={addChapter}
-          >
-            <span className={Magnetik_Medium.className}>+ Add Chapter</span>
-          </Button>
+          {/* Add Chapter and Renumber Buttons - Outside Accordion */}
+          <div className="flex gap-3">
+            <Button
+              variant="ghost"
+              className="flex items-center flex-1 gap-2 border border-dashed text-complimentary-colour border-complimentary-colour"
+              onClick={addChapter}
+            >
+              <span className={Magnetik_Medium.className}>+ Add Chapter</span>
+            </Button>
+            <Button
+              variant="ghost"
+              className="flex items-center gap-2 border border-dashed text-primary-colour border-primary-colour"
+              onClick={() => {
+                renumberChapters();
+                showToast({
+                  type: "success",
+                  message: "Chapters renumbered successfully",
+                });
+              }}
+            >
+              <span className={Magnetik_Medium.className}>Renumber</span>
+            </Button>
+          </div>
         </div>
       ) : storyStructure.hasEpisodes ? (
         <div className="space-y-4">
-          <div className="max-h-[600px] overflow-y-auto space-y-6 pr-2">
-            {parts.map((part, index) => {
-              const isExpanded = expandedEpisodes.has(part.id);
+          {parts.length > 10 && selectedPartIndex !== null && (
+            <Button
+              size="sm"
+              variant="light"
+              className="mb-2 text-sm text-gray-600 hover:text-primary-colour"
+              onClick={() => setCurrentStep("writing")}
+            >
+              <span className={Magnetik_Regular.className}>
+                Showing {visibleParts.length} of {parts.length} episodes (±5
+                from selected)
+              </span>
+            </Button>
+          )}
+          <Accordion
+            variant="splitted"
+            selectionMode="multiple"
+            selectedKeys={Array.from(expandedEpisodes).map(String)}
+            onSelectionChange={(keys) => {
+              const newSet = new Set(
+                Array.from(keys as Set<string>).map((k) => parseInt(k, 10)),
+              );
+              setExpandedEpisodes(newSet);
+            }}
+            className="px-0"
+            itemClasses={{
+              base: "mb-4",
+              trigger:
+                "py-4 px-4 bg-white hover:bg-accent-shade-1 rounded-lg data-[hover=true]:bg-accent-shade-1",
+              title: `text-base text-primary-colour font-medium ${Magnetik_Medium.className}`,
+              indicator: "text-primary-colour",
+              content: "px-4 pb-4 pt-0",
+            }}
+          >
+            {visibleParts.map((part, partIndex) => {
+              const isDeleted = deletedPartIds.has(part.id);
 
               return (
-                <div
-                  key={part.id}
-                  className="bg-white rounded-lg shadow-sm overflow-hidden"
-                >
-                  {/* Episode Header - Always Visible */}
-                  <div
-                    className="flex items-center justify-between p-4 cursor-pointer hover:bg-accent-shade-1 transition-colors"
-                    onClick={() => toggleEpisode(part.id)}
-                  >
-                    <h3
-                      className={cn(
-                        "text-base text-primary-colour font-medium",
-                        Magnetik_Medium.className,
-                      )}
-                    >
-                      Episode {part.id}: {part.title || `Episode ${part.id}`}
-                    </h3>
-                    <ChevronDown
-                      className={cn(
-                        "w-5 h-5 text-primary-colour transition-transform",
-                        isExpanded ? "rotate-180" : "",
-                      )}
-                    />
-                  </div>
-
-                  {/* Episode Content - Collapsible */}
-                  {isExpanded && (
-                    <div className="p-4 pt-0 space-y-4">
-                      <FormField
-                        label="Episode Title"
-                        type="text"
-                        id={`part-${part.id}-title`}
-                        placeholder={part.title}
-                        value={part.title}
-                        onValueChange={(value) => {
-                          setParts((prev) =>
-                            prev.map((p) =>
-                              p.id === part.id ? { ...p, title: value } : p,
-                            ),
-                          );
+                <AccordionItem
+                  key={part.uuid || `episode-${part.id}`}
+                  aria-label={`Episode ${part.id}`}
+                  title={
+                    <div className="flex items-center justify-between w-full pr-2">
+                      <div className="flex flex-col gap-0.5 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-gray-600">Episode</span>
+                          <input
+                            type="number"
+                            min="1"
+                            value={part.episodeNumber ?? part.id}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              const num = parseInt(e.target.value);
+                              if (!isNaN(num) && num > 0) {
+                                updatePart(part.id, "episodeNumber", num);
+                              }
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            className={cn(
+                              "w-16 px-2 py-1 text-sm border rounded",
+                              isDeleted && "opacity-50",
+                            )}
+                            disabled={isDeleted}
+                          />
+                          <span
+                            className={cn(
+                              isDeleted && "line-through opacity-50",
+                            )}
+                          >
+                            : {part.title || `Episode ${part.id}`}
+                          </span>
+                        </div>
+                        {(part.createdAt || part.updatedAt) && (
+                          <span className="text-xs text-gray-500">
+                            {part.createdAt && (
+                              <span>
+                                Created: {formatTimestamp(part.createdAt)}
+                              </span>
+                            )}
+                            {part.updatedAt &&
+                              part.updatedAt !== part.createdAt && (
+                                <span className="ml-3">
+                                  Updated: {formatTimestamp(part.updatedAt)}
+                                </span>
+                              )}
+                          </span>
+                        )}
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (isDeleted) {
+                            restorePart(part.id);
+                            showToast({
+                              type: "success",
+                              message: "Episode restored",
+                            });
+                          } else {
+                            handleDeleteClick(
+                              "episode",
+                              part.id,
+                              part.title || `Episode ${part.id}`,
+                              part.uuid,
+                            );
+                          }
                         }}
-                      />
+                        className={cn(
+                          "p-2 rounded-md transition-colors",
+                          isDeleted
+                            ? "text-green-600 hover:bg-green-50"
+                            : "text-red-600 hover:bg-red-50",
+                        )}
+                        title={isDeleted ? "Restore episode" : "Delete episode"}
+                      >
+                        {isDeleted ? (
+                          <span className="text-sm font-medium">Restore</span>
+                        ) : (
+                          <Trash2 size={18} />
+                        )}
+                      </button>
+                    </div>
+                  }
+                  classNames={{
+                    base: cn(isDeleted && "opacity-60"),
+                  }}
+                >
+                  <div className="space-y-4">
+                    <FormField
+                      label="Episode Title"
+                      type="text"
+                      id={`part-${part.id}-title`}
+                      placeholder={part.title}
+                      value={part.title}
+                      onValueChange={(value) => {
+                        updatePart(part.id, "title", value);
+                      }}
+                    />
 
+                    <div className="relative">
                       <TextAreaField
                         label="Content"
                         htmlFor={`part-${part.id}-body`}
@@ -1064,30 +1563,53 @@ const StoryForm: React.FC<StoryFormProps> = ({
                         placeholder="Write your episode content here..."
                         value={part.body}
                         onChange={(value) => {
-                          setParts((prev) =>
-                            prev.map((p) =>
-                              p.id === part.id ? { ...p, body: value } : p,
-                            ),
-                          );
+                          updatePart(part.id, "body", value);
                         }}
                         rows={12}
                         isRichText={true}
                       />
+                      {part.uuid && loadingPartIds.has(part.uuid) && (
+                        <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-white/80">
+                          <div className="flex flex-col items-center gap-2">
+                            <div className="w-8 h-8 border-b-2 rounded-full animate-spin border-complimentary-colour"></div>
+                            <p
+                              className={`text-sm text-gray-500 ${Magnetik_Regular.className}`}
+                            >
+                              Loading content...
+                            </p>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
+                  </div>
+                </AccordionItem>
               );
             })}
-          </div>
+          </Accordion>
 
-          {/* Add Episode Button - Outside Accordion */}
-          <Button
-            variant="ghost"
-            className="flex items-center w-full gap-2 border border-dashed text-complimentary-colour border-complimentary-colour"
-            onClick={addPart}
-          >
-            <span className={Magnetik_Medium.className}>+ Add Episode</span>
-          </Button>
+          {/* Add Episode and Renumber Buttons - Outside Accordion */}
+          <div className="flex gap-3">
+            <Button
+              variant="ghost"
+              className="flex items-center flex-1 gap-2 border border-dashed text-complimentary-colour border-complimentary-colour"
+              onClick={addPart}
+            >
+              <span className={Magnetik_Medium.className}>+ Add Episode</span>
+            </Button>
+            <Button
+              variant="ghost"
+              className="flex items-center gap-2 border border-dashed text-primary-colour border-primary-colour"
+              onClick={() => {
+                renumberParts();
+                showToast({
+                  type: "success",
+                  message: "Episodes renumbered successfully",
+                });
+              }}
+            >
+              <span className={Magnetik_Medium.className}>Renumber</span>
+            </Button>
+          </div>
         </div>
       ) : (
         <div className="space-y-4">
@@ -1121,12 +1643,25 @@ const StoryForm: React.FC<StoryFormProps> = ({
             variant="bordered"
             className={`flex-1 border-light-grey-2 text-primary-colour ${Magnetik_Regular.className}`}
             onClick={() => {
-              setHasUnsavedChanges(false); // Reset flag before submit
               const draftData = { ...formData, storyStatus: "Draft" };
               onSubmit(
                 draftData,
-                storyStructure.hasChapters ? chapters : undefined,
-                !storyStructure.hasChapters ? parts : undefined,
+                mode === "edit" && storyStructure.hasChapters
+                  ? getAllModifiedChapters()
+                  : storyStructure.hasChapters
+                    ? chapters
+                    : undefined,
+                mode === "edit" && !storyStructure.hasChapters
+                  ? getAllModifiedParts()
+                  : !storyStructure.hasChapters
+                    ? parts
+                    : undefined,
+                mode === "edit" && storyStructure.hasChapters
+                  ? getDeletedChapters()
+                  : undefined,
+                mode === "edit" && !storyStructure.hasChapters
+                  ? getDeletedParts()
+                  : undefined,
               );
             }}
             disabled={isLoading}
@@ -1136,17 +1671,20 @@ const StoryForm: React.FC<StoryFormProps> = ({
           <Button
             className={`flex-1 bg-primary-shade-6 text-universal-white ${Magnetik_Medium.className}`}
             onClick={() => {
-              setHasUnsavedChanges(false); // Reset flag before submit
-              // In edit mode, submit directly without modal
               if (mode === "edit") {
                 const publishData = { ...formData, storyStatus: "Published" };
                 onSubmit(
                   publishData,
-                  storyStructure.hasChapters ? chapters : undefined,
-                  !storyStructure.hasChapters ? parts : undefined,
+                  storyStructure.hasChapters
+                    ? getAllModifiedChapters()
+                    : undefined,
+                  !storyStructure.hasChapters
+                    ? getAllModifiedParts()
+                    : undefined,
+                  storyStructure.hasChapters ? getDeletedChapters() : undefined,
+                  !storyStructure.hasChapters ? getDeletedParts() : undefined,
                 );
               } else {
-                // In create mode, show additional info modal
                 setCurrentStep("additional");
               }
             }}
@@ -1172,7 +1710,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
         )}
         <Button
           className={`flex-1 bg-primary-shade-6 text-universal-white ${Magnetik_Medium.className}`}
-          onClick={handleSubmit}
+          onClick={handleSubmitWithErrorHandling}
           disabled={isLoading}
           isLoading={isLoading}
         >
@@ -1181,7 +1719,9 @@ const StoryForm: React.FC<StoryFormProps> = ({
       </div>
     );
   };
-
+  console.log("story structure", storyStructure);
+  console.log("episodes", parts);
+  console.log("chapters", chapters);
   return (
     <div className="pb-24 space-y-6">
       {/* Main Form Content */}
@@ -1206,27 +1746,88 @@ const StoryForm: React.FC<StoryFormProps> = ({
             onClose={() => setCurrentStep("writing")}
             onSubmit={handleAdditionalInfoSubmit}
             onSkip={() => {
-              setHasUnsavedChanges(false); // Reset flag before submit
               onSubmit(
                 formData,
                 storyStructure.hasChapters ? chapters : undefined,
                 !storyStructure.hasChapters ? parts : undefined,
+                undefined, // deletedChapters - not used in create mode
+                undefined, // deletedParts - not used in create mode
               );
             }}
           />
         </>
       )}
 
-      {/* Cache Loading Modal */}
-      {pendingCacheType && (
-        <CacheLoadingModal
-          isOpen={showCacheModal}
-          onLoadCache={handleLoadCache}
-          onDiscardCache={handleDiscardCache}
-          cacheType={pendingCacheType}
-          autoLoadDelay={30}
-        />
-      )}
+      {/* Error Modal */}
+      <ErrorModal
+        isOpen={errorModalOpen}
+        onClose={() => setErrorModalOpen(false)}
+        message={errorMessage}
+        details={errorDetails}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={deleteModalOpen}
+        onClose={handleDeleteCancel}
+        placement="bottom"
+        classNames={{
+          backdrop: "bg-black/50",
+          base: "bg-universal-white rounded-t-3xl m-0 mb-0 max-w-[28rem] mx-auto",
+          closeButton: "hidden",
+        }}
+      >
+        <ModalContent>
+          <ModalHeader className="flex items-center justify-between px-6 pt-6 pb-4">
+            <button
+              onClick={handleDeleteCancel}
+              className="text-primary-colour"
+            >
+              <ArrowLeft size={20} />
+            </button>
+            <h2
+              className={`flex-1 text-center body-text-small-medium-auto text-primary-colour ${Magnetik_Medium.className}`}
+            >
+              Delete {itemToDelete?.type === "chapter" ? "Chapter" : "Episode"}
+            </h2>
+            <button
+              onClick={handleDeleteCancel}
+              className="text-primary-colour"
+            >
+              <X size={20} />
+            </button>
+          </ModalHeader>
+
+          <ModalBody className="px-6 py-8">
+            <p
+              className={`text-center body-text-small-medium-auto text-primary-colour ${Magnetik_Regular.className}`}
+            >
+              Are you sure you want to delete &ldquo;{itemToDelete?.title}
+              &rdquo;?
+            </p>
+            <p
+              className={`mt-4 text-center text-sm text-red-600 ${Magnetik_Regular.className}`}
+            >
+              This {itemToDelete?.type} will be deleted when you save.
+            </p>
+          </ModalBody>
+
+          <ModalFooter className="flex gap-4 px-6 pt-0 pb-8">
+            <Button
+              onPress={handleDeleteCancel}
+              className={`flex-1 py-7 text-base bg-transparent border-2 rounded-full border-primary-colour text-primary-colour ${Magnetik_Medium.className}`}
+            >
+              Cancel
+            </Button>
+            <Button
+              onPress={handleDeleteConfirm}
+              className={`flex-1 py-7 text-base rounded-full bg-red-600 hover:bg-red-700 text-white ${Magnetik_Medium.className}`}
+            >
+              Delete
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </div>
   );
 };

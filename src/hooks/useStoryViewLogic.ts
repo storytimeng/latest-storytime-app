@@ -7,6 +7,10 @@ import {
   useCreateMultipleChapters,
   useCreateMultipleEpisodes,
 } from "@/src/hooks/useStoryMutations";
+import { useUpdateMultipleChapters } from "@/src/hooks/useUpdateChapter";
+import { useUpdateMultipleEpisodes } from "@/src/hooks/useUpdateEpisode";
+import { useDeleteMultipleChapters } from "@/src/hooks/useDeleteChapter";
+import { useDeleteMultipleEpisodes } from "@/src/hooks/useDeleteEpisode";
 import { useUserProfile } from "@/src/hooks/useUserProfile";
 import { usersControllerGetProfile } from "@/src/client/sdk.gen";
 import { useUserStore } from "@/src/stores/useUserStore";
@@ -42,7 +46,9 @@ interface UseStoryViewLogicReturn {
   handleSubmit: (
     formData: StoryFormData,
     chapters?: Chapter[],
-    parts?: Part[]
+    parts?: Part[],
+    deletedChapters?: Chapter[],
+    deletedParts?: Part[],
   ) => Promise<void>;
   handleCancel: () => void;
   pageTitle: string;
@@ -53,10 +59,17 @@ interface UseStoryViewLogicReturn {
   currentStep: "form" | "structure" | "writing" | "additional";
   storyStructure: StoryStructure;
   setFormData: React.Dispatch<React.SetStateAction<StoryFormData>>;
-  setFormErrors: React.Dispatch<React.SetStateAction<Partial<Record<keyof StoryFormData, string>>>>;
-  setCurrentStep: React.Dispatch<React.SetStateAction<"form" | "structure" | "writing" | "additional">>;
+  setFormErrors: React.Dispatch<
+    React.SetStateAction<Partial<Record<keyof StoryFormData, string>>>
+  >;
+  setCurrentStep: React.Dispatch<
+    React.SetStateAction<"form" | "structure" | "writing" | "additional">
+  >;
   setStoryStructure: React.Dispatch<React.SetStateAction<StoryStructure>>;
-  handleFieldChange: (field: keyof StoryFormData, value: string | number | boolean | string[]) => void;
+  handleFieldChange: (
+    field: keyof StoryFormData,
+    value: string | number | boolean | string[],
+  ) => void;
   handleGenreToggle: (genre: string) => void;
   validateForm: () => boolean;
   handleStructureNext: (structure: StoryStructure) => void;
@@ -82,16 +95,12 @@ export function useStoryViewLogic({
   >();
   const [initialParts, setInitialParts] = useState<Part[] | undefined>();
   const [createdStoryId, setCreatedStoryId] = useState<string | null>(
-    storyId || null
+    storyId || null,
   );
 
   // Lifted form state
   const formState = useStoryFormState({ initialData, mode });
-  const {
-    currentStep,
-    setCurrentStep,
-    storyStructure,
-  } = formState;
+  const { currentStep, setCurrentStep, storyStructure } = formState;
 
   // Hooks for mutations
   const { createStory, isCreating: isCreatingStory } = useCreateStory();
@@ -100,13 +109,27 @@ export function useStoryViewLogic({
     useCreateMultipleChapters();
   const { createMultipleEpisodes, isCreating: isCreatingEpisodes } =
     useCreateMultipleEpisodes();
+  const { updateMultipleChapters, isUpdating: isUpdatingChapters } =
+    useUpdateMultipleChapters();
+  const { updateMultipleEpisodes, isUpdating: isUpdatingEpisodes } =
+    useUpdateMultipleEpisodes();
+  const { deleteMultipleChapters, isDeleting: isDeletingChapters } =
+    useDeleteMultipleChapters();
+  const { deleteMultipleEpisodes, isDeleting: isDeletingEpisodes } =
+    useDeleteMultipleEpisodes();
 
   const isCreating =
-    isCreatingStory || isCreatingChapters || isCreatingEpisodes;
+    isCreatingStory ||
+    isCreatingChapters ||
+    isCreatingEpisodes ||
+    isUpdatingChapters ||
+    isUpdatingEpisodes ||
+    isDeletingChapters ||
+    isDeletingEpisodes;
 
   // Fetch story data for edit mode
   const { story, isLoading: isFetchingStory } = useFetchStory(
-    mode === "edit" ? storyId : undefined
+    mode === "edit" ? storyId : undefined,
   );
 
   // Prefetch common navigation routes
@@ -181,10 +204,12 @@ export function useStoryViewLogic({
       setInitialData({
         id: story.id,
         title: story.title || "",
-        collaborate: story.collaborate?.join(", ") || "",
+        collaborate: Array.isArray(story.collaborate)
+          ? story.collaborate.join(", ")
+          : story.collaborate || "",
         description: story.description || "",
         content: story.content || "",
-        selectedGenres: story.genres || [],
+        selectedGenres: Array.isArray(story.genres) ? story.genres : [],
         language: capitalizeLanguage(story.language || "english"),
         goAnonymous: story.anonymous || false,
         onlyOnStorytime: story.onlyOnStorytime || false,
@@ -200,31 +225,61 @@ export function useStoryViewLogic({
               : story.storyStatus === "drafts"
                 ? "Draft"
                 : "Draft",
-        coverImage: story.coverImage || story.cover || undefined,
+        coverImage:
+          (story as any).imageUrl ||
+          story.coverImage ||
+          (story as any).cover ||
+          undefined,
       });
 
-      // Populate initial chapters and parts
-      if (story.chapters && story.chapters.length > 0) {
-        setInitialChapters(
-          story.chapters.map((ch: any) => ({
-            id: ch.chapterNumber || ch.id,
-            title: ch.title,
-            body: ch.content || ch.body || "",
-            // If the API returns real IDs, they are likely in ch.id and ch._id
-            // Chapter interface currently uses numeric id. 
-            // We should ideally support string IDs in types/story.ts but let's stick to this for now.
-          }))
+      // Populate initial chapters and parts - keep all from API (even if just metadata)
+      // In edit mode, we want to show all chapters/episodes that exist, even if they don't have content yet
+      if (
+        story.chapters &&
+        Array.isArray(story.chapters) &&
+        story.chapters.length > 0
+      ) {
+        const mappedChapters = story.chapters.map((ch: any, index: number) => ({
+          id: index + 1, // Use array index for unique local ID
+          uuid: ch.id, // Store the API's UUID
+          title: ch.title || `Chapter ${ch.chapterNumber || index + 1}`,
+          body: ch.content || ch.body || "",
+          chapterNumber: ch.chapterNumber,
+          createdAt: ch.createdAt,
+          updatedAt: ch.updatedAt,
+        }));
+        console.log(
+          "[useStoryViewLogic] Setting initialChapters from API chapters:",
+          {
+            apiChapters: story.chapters,
+            mappedChapters,
+          },
         );
+        setInitialChapters(mappedChapters);
       }
 
-      if (story.episodes && story.episodes.length > 0) {
-        setInitialParts(
-          story.episodes.map((ep: any) => ({
-            id: ep.episodeNumber || ep.id,
-            title: ep.title,
-            body: ep.content || ep.body || "",
-          }))
+      if (
+        story.episodes &&
+        Array.isArray(story.episodes) &&
+        story.episodes.length > 0
+      ) {
+        const mappedEpisodes = story.episodes.map((ep: any, index: number) => ({
+          id: index + 1, // Use array index for unique local ID
+          uuid: ep.id, // Store the API's UUID
+          title: ep.title || `Episode ${ep.episodeNumber || index + 1}`,
+          body: ep.content || ep.body || "",
+          episodeNumber: ep.episodeNumber,
+          createdAt: ep.createdAt,
+          updatedAt: ep.updatedAt,
+        }));
+        console.log(
+          "[useStoryViewLogic] Setting initialParts from API episodes:",
+          {
+            apiEpisodes: story.episodes,
+            mappedEpisodes,
+          },
         );
+        setInitialParts(mappedEpisodes);
       }
     }
   }, [mode, story]);
@@ -237,7 +292,7 @@ export function useStoryViewLogic({
       // Actually, if we are in writing step, we should check if we came from structure step.
       // If mode is create, we likely came from structure if hasChapters/hasEpisodes is true.
       if (mode === "create") {
-         setCurrentStep("structure");
+        setCurrentStep("structure");
       } else {
         // In edit mode, maybe go back to form?
         // But edit mode initializes to writing if chapters exist.
@@ -258,16 +313,25 @@ export function useStoryViewLogic({
 
   // Handle form submission
   const handleSubmit = useCallback(
-    async (formData: StoryFormData, _chapters?: Chapter[], _parts?: Part[]) => {
+    async (
+      formData: StoryFormData,
+      _chapters?: Chapter[],
+      _parts?: Part[],
+      deletedChapters?: Chapter[],
+      deletedParts?: Part[],
+    ) => {
       try {
         // If we have a createdStoryId, this is publishing chapters/episodes
-        // ONLY valid if we are in CREATE mode (step 2 of wizard). 
+        // ONLY valid if we are in CREATE mode (step 2 of wizard).
         // In Edit mode, we want to fall through to the update logic.
         if (mode === "create" && createdStoryId && (_chapters || _parts)) {
           const hasChapters = formData.chapter === true;
           const hasEpisodes = formData.episodes === true;
 
           let publishSuccess = false;
+          let result:
+            | { success: boolean; count?: number; error?: string }
+            | undefined;
 
           // Bulk creation of chapters or episodes
           if (hasChapters && _chapters && _chapters.length > 0) {
@@ -275,9 +339,9 @@ export function useStoryViewLogic({
               title: ch.title,
               body: ch.body,
             }));
-            const result = await createMultipleChapters(
+            result = await createMultipleChapters(
               createdStoryId,
-              chaptersPayload
+              chaptersPayload,
             );
             publishSuccess = result?.success === true;
           } else if (hasEpisodes && _parts && _parts.length > 0) {
@@ -285,9 +349,9 @@ export function useStoryViewLogic({
               title: ep.title,
               body: ep.body,
             }));
-            const result = await createMultipleEpisodes(
+            result = await createMultipleEpisodes(
               createdStoryId,
-              episodesPayload
+              episodesPayload,
             );
             publishSuccess = result?.success === true;
           }
@@ -311,9 +375,12 @@ export function useStoryViewLogic({
               router.push(`/story/${createdStoryId}`);
             }
           } else {
+            const errorMsg =
+              result?.error ||
+              "Failed to publish. Your work is saved in cache.";
             showToast({
               type: "error",
-              message: "Failed to publish. Your work is saved in cache.",
+              message: errorMsg,
             });
           }
           return;
@@ -408,40 +475,292 @@ export function useStoryViewLogic({
                 : formData.description);
 
         if (mode === "edit" && storyId) {
-          // Update existing story
-          const updatePayload = {
-            title: formData.title,
-            content: contentText,
-            genres: formData.selectedGenres,
-            collaborate: formData.collaborate
-              ? formData.collaborate.split(",").map((c) => c.trim())
-              : [],
-            imageUrl: formData.coverImage || undefined,
-            storyStatus:
-              formData.storyStatus === "Published" ||
-              formData.storyStatus === "Completed"
-                ? "complete"
-                : formData.storyStatus === "In Progress" ||
-                    formData.storyStatus === "On Hold"
-                  ? "ongoing"
-                  : "drafts",
-          };
+          // Update existing story - only send changed fields
+          const updatePayload: Partial<UpdateStoryDto> = {};
 
-          const success = await updateStory(storyId, updatePayload as any);
+          if (formData.title !== initialData?.title) {
+            updatePayload.title = formData.title;
+          }
+          if (contentText !== initialData?.content) {
+            updatePayload.content = contentText;
+          }
+          if (
+            JSON.stringify(formData.selectedGenres) !==
+            JSON.stringify(initialData?.selectedGenres)
+          ) {
+            updatePayload.genres = formData.selectedGenres;
+          }
 
-          if (success) {
+          const currentCollaborators = formData.collaborate
+            ? formData.collaborate
+                .split(",")
+                .map((c) => c.trim())
+                .filter(Boolean)
+            : [];
+          const initialCollaborators = initialData?.collaborate
+            ? typeof initialData.collaborate === "string"
+              ? initialData.collaborate
+                  .split(",")
+                  .map((c: string) => c.trim())
+                  .filter(Boolean)
+              : initialData.collaborate
+            : [];
+
+          if (
+            JSON.stringify(currentCollaborators) !==
+            JSON.stringify(initialCollaborators)
+          ) {
+            updatePayload.collaborate =
+              currentCollaborators.length > 0 ? currentCollaborators : [];
+          }
+
+          if (formData.coverImage !== initialData?.coverImage) {
+            updatePayload.imageUrl = formData.coverImage || undefined;
+          }
+
+          const apiStatus =
+            formData.storyStatus === "Published" ||
+            formData.storyStatus === "Completed"
+              ? "complete"
+              : formData.storyStatus === "In Progress" ||
+                  formData.storyStatus === "On Hold"
+                ? "ongoing"
+                : "drafts";
+
+          const initialStatus =
+            initialData?.storyStatus === "Completed" ||
+            initialData?.storyStatus === "Published"
+              ? "complete"
+              : initialData?.storyStatus === "In Progress" ||
+                  initialData?.storyStatus === "On Hold"
+                ? "ongoing"
+                : "drafts";
+
+          if (apiStatus !== initialStatus) {
+            updatePayload.storyStatus = apiStatus as any;
+          }
+
+          // Update story metadata (excludes chapters/episodes)
+          let storyUpdateSuccess = true;
+          if (Object.keys(updatePayload).length > 0) {
+            storyUpdateSuccess = await updateStory(
+              storyId,
+              updatePayload as any,
+            );
+
+            if (!storyUpdateSuccess) {
+              const errorMessage =
+                updateError?.message ||
+                "Failed to update story. Please try again.";
+              showToast({
+                type: "error",
+                message: errorMessage,
+              });
+              return;
+            }
+          }
+
+          // Handle chapter/episode updates separately
+          let contentUpdateSuccess = true;
+          let contentUpdateMessage = "";
+          let deletedCount = 0;
+          let createdCount = 0;
+
+          // Delete chapters/episodes first
+          if (deletedChapters && deletedChapters.length > 0) {
+            const chapterUuidsToDelete = deletedChapters
+              .filter((ch) => ch.uuid)
+              .map((ch) => ch.uuid!);
+
+            if (chapterUuidsToDelete.length > 0) {
+              console.log(
+                "[useStoryViewLogic] Deleting chapters:",
+                chapterUuidsToDelete,
+              );
+
+              const deleteResult =
+                await deleteMultipleChapters(chapterUuidsToDelete);
+              deletedCount += deleteResult.deleted;
+
+              if (deleteResult.failed > 0) {
+                contentUpdateMessage += ` ${deleteResult.failed} chapter${deleteResult.failed > 1 ? "s" : ""} failed to delete.`;
+              }
+            }
+          }
+
+          if (deletedParts && deletedParts.length > 0) {
+            const partUuidsToDelete = deletedParts
+              .filter((p) => p.uuid)
+              .map((p) => p.uuid!);
+
+            if (partUuidsToDelete.length > 0) {
+              console.log(
+                "[useStoryViewLogic] Deleting episodes:",
+                partUuidsToDelete,
+              );
+
+              const deleteResult =
+                await deleteMultipleEpisodes(partUuidsToDelete);
+              deletedCount += deleteResult.deleted;
+
+              if (deleteResult.failed > 0) {
+                contentUpdateMessage += ` ${deleteResult.failed} episode${deleteResult.failed > 1 ? "s" : ""} failed to delete.`;
+              }
+            }
+          }
+
+          // Create new chapters/episodes (ones without UUID)
+          if (_chapters && _chapters.length > 0 && storyId) {
+            const newChapters = _chapters.filter((ch) => !ch.uuid);
+
+            if (newChapters.length > 0) {
+              console.log(
+                "[useStoryViewLogic] Creating new chapters:",
+                newChapters,
+              );
+
+              const chaptersPayload = newChapters.map((ch) => ({
+                title: ch.title,
+                body: ch.body,
+              }));
+
+              const result = await createMultipleChapters(
+                storyId,
+                chaptersPayload,
+              );
+
+              if (result?.success) {
+                createdCount += result.count || 0;
+              }
+            }
+          }
+
+          if (_parts && _parts.length > 0 && storyId) {
+            const newParts = _parts.filter((p) => !p.uuid);
+
+            if (newParts.length > 0) {
+              console.log(
+                "[useStoryViewLogic] Creating new episodes:",
+                newParts,
+              );
+
+              const partsPayload = newParts.map((p) => ({
+                title: p.title,
+                body: p.body,
+              }));
+
+              const result = await createMultipleEpisodes(
+                storyId,
+                partsPayload,
+              );
+
+              if (result?.success) {
+                createdCount += result.count || 0;
+              }
+            }
+          }
+
+          // Update existing chapters/episodes
+          if (_chapters && _chapters.length > 0) {
+            // Filter chapters that have UUIDs (existing chapters)
+            const chaptersToUpdate = _chapters.filter((ch) => ch.uuid);
+
+            if (chaptersToUpdate.length > 0) {
+              console.log(
+                "[useStoryViewLogic] Updating edited chapters:",
+                chaptersToUpdate,
+              );
+
+              const updatePayload = chaptersToUpdate.map((ch) => ({
+                uuid: ch.uuid!,
+                title: ch.title,
+                body: ch.body,
+                chapterNumber: ch.chapterNumber,
+              }));
+
+              console.log(
+                "[useStoryViewLogic] Chapter update payload:",
+                updatePayload,
+              );
+
+              const result = await updateMultipleChapters(updatePayload);
+
+              contentUpdateSuccess = result.success;
+
+              if (result.updated > 0) {
+                contentUpdateMessage += ` ${result.updated} chapter${result.updated > 1 ? "s" : ""} updated.`;
+              }
+
+              if (result.failed > 0) {
+                contentUpdateMessage += ` ${result.failed} chapter${result.failed > 1 ? "s" : ""} failed to update.`;
+              }
+            }
+          }
+
+          if (_parts && _parts.length > 0) {
+            // Filter episodes that have UUIDs (existing episodes)
+            const episodesToUpdate = _parts.filter((p) => p.uuid);
+
+            if (episodesToUpdate.length > 0) {
+              console.log(
+                "[useStoryViewLogic] Updating edited episodes:",
+                episodesToUpdate,
+              );
+
+              const updatePayload = episodesToUpdate.map((p) => ({
+                uuid: p.uuid!,
+                title: p.title,
+                body: p.body,
+                episodeNumber: p.episodeNumber,
+              }));
+
+              console.log(
+                "[useStoryViewLogic] Episode update payload:",
+                updatePayload,
+              );
+
+              const result = await updateMultipleEpisodes(updatePayload);
+
+              contentUpdateSuccess = result.success;
+
+              if (result.updated > 0) {
+                contentUpdateMessage += ` ${result.updated} episode${result.updated > 1 ? "s" : ""} updated.`;
+              }
+
+              if (result.failed > 0) {
+                contentUpdateMessage += ` ${result.failed} episode${result.failed > 1 ? "s" : ""} failed to update.`;
+              }
+            }
+          }
+
+          // Build summary message
+          if (deletedCount > 0) {
+            contentUpdateMessage = `${deletedCount} item${deletedCount > 1 ? "s" : ""} deleted.${contentUpdateMessage}`;
+          }
+          if (createdCount > 0) {
+            contentUpdateMessage = `${createdCount} item${createdCount > 1 ? "s" : ""} created.${contentUpdateMessage}`;
+          }
+
+          // Show appropriate success/error messages
+          if (storyUpdateSuccess && contentUpdateSuccess) {
+            const message = contentUpdateMessage
+              ? `Story updated! ${contentUpdateMessage}`
+              : "Story updated successfully!";
+
             showToast({
               type: "success",
-              message: "Story updated successfully!",
+              message,
             });
             router.push(`/story/${storyId}`);
+          } else if (storyUpdateSuccess && !contentUpdateSuccess) {
+            showToast({
+              type: "warning",
+              message: `Story metadata updated but some content updates failed. ${contentUpdateMessage}`,
+            });
           } else {
-            const errorMessage =
-              updateError?.message ||
-              "Failed to update story. Please try again.";
             showToast({
               type: "error",
-              message: errorMessage,
+              message: "Failed to update story.",
             });
           }
         } else {
@@ -457,7 +776,9 @@ export function useStoryViewLogic({
           const apiStatus =
             formData.storyStatus === "Published" ||
             formData.storyStatus === "Completed"
-              ? (hasChapters || hasEpisodes ? "ongoing" : "complete")
+              ? hasChapters || hasEpisodes
+                ? "ongoing"
+                : "complete"
               : formData.storyStatus === "In Progress" ||
                   formData.storyStatus === "On Hold"
                 ? "ongoing"
@@ -517,15 +838,18 @@ export function useStoryViewLogic({
             // If has chapters/episodes, immediately attempt to publish them
             if (hasChapters || hasEpisodes) {
               let publishSuccess = false;
+              let result:
+                | { success: boolean; count?: number; error?: string }
+                | undefined;
 
               if (hasChapters && _chapters && _chapters.length > 0) {
                 const chaptersPayload = _chapters.map((ch) => ({
                   title: ch.title,
                   body: ch.body,
                 }));
-                const result = await createMultipleChapters(
+                result = await createMultipleChapters(
                   newStoryId,
-                  chaptersPayload
+                  chaptersPayload,
                 );
                 publishSuccess = result?.success === true;
               } else if (hasEpisodes && _parts && _parts.length > 0) {
@@ -533,9 +857,9 @@ export function useStoryViewLogic({
                   title: ep.title,
                   body: ep.body,
                 }));
-                const result = await createMultipleEpisodes(
+                result = await createMultipleEpisodes(
                   newStoryId,
-                  episodesPayload
+                  episodesPayload,
                 );
                 publishSuccess = result?.success === true;
               }
@@ -552,11 +876,10 @@ export function useStoryViewLogic({
                 });
                 router.push(`/story/${newStoryId}`);
               } else {
-                showToast({
-                  type: "warning",
-                  message: "Story details saved, but content failed to publish. Check cache.",
-                });
-                setCurrentStep("writing");
+                const errorMsg = hasChapters
+                  ? result?.error || "Failed to publish chapters"
+                  : result?.error || "Failed to publish episodes";
+                throw new Error(errorMsg);
               }
             } else {
               if (formData.storyStatus === "Draft") {
@@ -572,12 +895,13 @@ export function useStoryViewLogic({
             });
           }
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error("Failed to save story:", error);
-        showToast({
-          type: "error",
-          message: "An error occurred while saving the story.",
-        });
+        const errorMessage =
+          error?.response?.data?.message ||
+          error?.message ||
+          "An error occurred while saving the story";
+        throw new Error(errorMessage);
       }
     },
     [
@@ -592,7 +916,7 @@ export function useStoryViewLogic({
       createdStoryId,
       updateError,
       router,
-    ]
+    ],
   );
 
   // Handle cancel action

@@ -62,13 +62,8 @@ export function useStoryFormState({
   const [currentStep, setCurrentStep] = useState<
     "form" | "structure" | "writing" | "additional"
   >(() => {
-    // In edit mode, determine initial step based on story structure
-    if (mode === "edit" && initialData) {
-      // If story has chapters or episodes, go to writing step
-      if (initialData.chapter || initialData.episodes) {
-        return "writing";
-      }
-    }
+    // Always start at form step in edit mode - user can navigate to writing later
+    // This allows editing story details before working on chapters/episodes
     return "form";
   });
 
@@ -76,13 +71,14 @@ export function useStoryFormState({
     // In edit mode, initialize structure from initialData
     if (mode === "edit" && initialData) {
       return {
-        hasChapters: initialData.chapter || false,
-        hasEpisodes: initialData.episodes || false,
+        hasChapters: initialData.chapter === true,
+        hasEpisodes: Array.isArray(initialData.episodes) && initialData.episodes.length > 0,
       };
     }
-    // Default to hasChapters: true for create mode
+    // For create mode, default to no structure (user will select in structure step)
+    // For edit mode without initialData yet, default to false until data loads
     return {
-      hasChapters: true,
+      hasChapters: false,
       hasEpisodes: false,
     };
   });
@@ -91,18 +87,16 @@ export function useStoryFormState({
   useEffect(() => {
     if (mode === "edit" && initialData) {
       setFormData(getInitialFormData(initialData));
-      // Update story structure if chapter/episodes flags are set
-      if (initialData.chapter || initialData.episodes) {
-        setStoryStructure({
-          hasChapters: initialData.chapter || false,
-          hasEpisodes: initialData.episodes || false,
-        });
-        // If story has structure (chapters/episodes), show writing interface
-        setCurrentStep("writing");
-      } else {
-        // For simple stories without chapters/episodes, stay on form
-        setCurrentStep("form");
-      }
+      // Update story structure based on actual data
+      const hasChapters = initialData.chapter === true;
+      const hasEpisodes = Array.isArray(initialData.episodes) && initialData.episodes.length > 0;
+      
+      setStoryStructure({
+        hasChapters,
+        hasEpisodes,
+      });
+      // Always stay on form step in edit mode - user can navigate to writing view via button
+      setCurrentStep("form");
     }
   }, [mode, initialData]);
 

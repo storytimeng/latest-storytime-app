@@ -63,7 +63,10 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
     // Prefetch parent story route
     router.prefetch(`/story/${storyId}`);
 
-    if (!isAuthenticated()) {
+    // Check both store and cookies to avoid false negatives during hydration
+    const hasToken = isAuthenticated() || (typeof window !== 'undefined' && document.cookie.includes('authToken='));
+    
+    if (!hasToken) {
       openAuthModal("login");
       router.push(`/story/${storyId}`);
     }
@@ -137,16 +140,53 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
 
   // The story object contains episode/chapter metadata (id, number, dates)
   // but NOT the actual content. We use this for navigation.
-  const storyEpisodes = (story as any)?.episodes || [];
-  const storyChapters = (story as any)?.chapters || [];
+  const rawStoryEpisodes = (story as any)?.episodes || [];
+  const rawStoryChapters = (story as any)?.chapters || [];
+
+  // Filter out empty chapters/episodes (ones with no title AND no content)
+  // Also check that content/body has actual text (not just whitespace or HTML tags)
+  const hasActualContent = (text: string) => {
+    if (!text) return false;
+    // Remove HTML tags and whitespace to check if there's actual text
+    const stripped = text.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
+    return stripped.length > 0;
+  };
+
+  const storyEpisodes = Array.isArray(rawStoryEpisodes)
+    ? rawStoryEpisodes.filter((ep: any) => 
+        ep && (
+          (ep.title && ep.title.trim()) || 
+          hasActualContent(ep.content || ep.body || '')
+        )
+      )
+    : [];
+  const storyChapters = Array.isArray(rawStoryChapters)
+    ? rawStoryChapters.filter((ch: any) => 
+        ch && (
+          (ch.title && ch.title.trim()) || 
+          hasActualContent(ch.content || ch.body || '')
+        )
+      )
+    : [];
 
   // Determine structure from story data
-  const hasChapters = (story as any)?.chapter === true;
+  const hasChapters = (story as any)?.chapter === true && storyChapters.length > 0;
   const hasEpisodes = !hasChapters && storyEpisodes.length > 0;
 
   // Use the metadata from story object for navigation list
   const effectiveEpisodes = hasEpisodes ? storyEpisodes : [];
   const effectiveChapters = hasChapters ? storyChapters : [];
+
+  // Debug: Log chapter/episode detection
+  console.log('Story Structure Debug:', {
+    storyChapterFlag: (story as any)?.chapter,
+    rawChaptersCount: rawStoryChapters.length,
+    filteredChaptersCount: storyChapters.length,
+    hasChapters,
+    rawEpisodesCount: rawStoryEpisodes.length,
+    filteredEpisodesCount: storyEpisodes.length,
+    hasEpisodes
+  });
 
   // Use counts from story data if available, otherwise use hook counts
   const displayLikeCount = (story as any)?.likeCount ?? likeCount ?? 0;

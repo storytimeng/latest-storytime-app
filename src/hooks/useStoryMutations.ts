@@ -233,7 +233,7 @@ export function useCreateMultipleChapters() {
   const createMultipleChapters = async (
     storyId: string,
     chapters: any[]
-  ): Promise<{ success: boolean; count?: number }> => {
+  ): Promise<{ success: boolean; count?: number; error?: string }> => {
     setIsCreating(true);
     setError(null);
 
@@ -257,18 +257,15 @@ export function useCreateMultipleChapters() {
         success: true,
         count: chapters.length,
       };
-    } catch (err) {
-      const error =
-        err instanceof Error
-          ? err
-          : new Error("Failed to create multiple chapters");
+    } catch (err: any) {
+      const errorMsg = err?.response?.data?.message || err?.message || "Failed to create multiple chapters";
+      const error = new Error(errorMsg);
       console.error("❌ Failed to create multiple chapters:", error);
       setError(error);
-      showToast({
-        type: "error",
-        message: "Failed to create chapters. Please try again.",
-      });
-      return { success: false };
+      return { 
+        success: false,
+        error: errorMsg
+      };
     } finally {
       setIsCreating(false);
     }
@@ -344,7 +341,7 @@ export function useCreateMultipleEpisodes() {
   const createMultipleEpisodes = async (
     storyId: string,
     episodes: any[]
-  ): Promise<{ success: boolean; count?: number }> => {
+  ): Promise<{ success: boolean; count?: number; error?: string }> => {
     setIsCreating(true);
     setError(null);
 
@@ -368,18 +365,15 @@ export function useCreateMultipleEpisodes() {
         success: true,
         count: episodes.length,
       };
-    } catch (err) {
-      const error =
-        err instanceof Error
-          ? err
-          : new Error("Failed to create multiple episodes");
+    } catch (err: any) {
+      const errorMsg = err?.response?.data?.message || err?.message || "Failed to create multiple episodes";
+      const error = new Error(errorMsg);
       console.error("❌ Failed to create multiple episodes:", error);
       setError(error);
-      showToast({
-        type: "error",
-        message: "Failed to create episodes. Please try again.",
-      });
-      return { success: false };
+      return { 
+        success: false,
+        error: errorMsg
+      };
     } finally {
       setIsCreating(false);
     }

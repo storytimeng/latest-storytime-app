@@ -10,25 +10,18 @@ import StoryViewErrorBoundary from "@/components/reusables/StoryViewErrorBoundar
 import { useStoryViewLogic } from "@/src/hooks/useStoryViewLogic";
 import type { StoryViewProps } from "@/types/story";
 
-// Lazy load the heavy StoryForm component
 const StoryForm = lazy(() => import("@/components/reusables/form/storyForm"));
 
-/**
- * StoryView component for creating and editing stories
- * Implements code splitting and lazy loading for optimal performance
- */
 const StoryView: React.FC<StoryViewProps> = ({ mode, storyId }) => {
   const router = useRouter();
   const { openModal: openAuthModal } = useAuthModalStore();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
   useEffect(() => {
-    // Prefetch home route as it's the most common redirect
     router.prefetch("/");
 
     if (!isAuthenticated()) {
       openAuthModal("login");
-      // router.push("/");
     }
   }, [isAuthenticated, openAuthModal, router]);
 
@@ -45,7 +38,6 @@ const StoryView: React.FC<StoryViewProps> = ({ mode, storyId }) => {
     pageTitle,
     backLink,
     handleBack,
-    // Lifted state
     formData,
     formErrors,
     currentStep,
@@ -60,7 +52,6 @@ const StoryView: React.FC<StoryViewProps> = ({ mode, storyId }) => {
     handleStructureNext,
   } = useStoryViewLogic({ mode, storyId });
 
-  // Show loading state while fetching data in edit mode
   if (mode === "edit" && isFetchingStory) {
     return (
       <div className="min-h-screen bg-accent-shade-1 max-w-[28rem] mx-auto">
@@ -120,5 +111,4 @@ const StoryView: React.FC<StoryViewProps> = ({ mode, storyId }) => {
   );
 };
 
-// Memoize the component to prevent unnecessary re-renders
 export default React.memo(StoryView);

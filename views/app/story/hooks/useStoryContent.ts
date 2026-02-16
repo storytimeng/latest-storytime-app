@@ -34,13 +34,32 @@ export function useStoryContent({
     initialContentId || null
   );
 
+  // Helper to check if content has actual text
+  const hasActualContent = (text: string) => {
+    if (!text) return false;
+    const stripped = text.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
+    return stripped.length > 0;
+  };
+
   const activeStory = isUsingOfflineData ? offlineStory : story;
   const activeChapters = isUsingOfflineData ? offlineContent : chapters;
   const activeEpisodes = isUsingOfflineData ? offlineContent : episodes;
 
-  // Determine if we're using chapters or episodes
-  const isChapterMode = activeChapters && activeChapters.length > 0;
-  const isEpisodeMode = !isChapterMode && activeEpisodes && activeEpisodes.length > 0;
+  // Determine if we're using chapters or episodes - ensure they have actual content
+  const isChapterMode = Array.isArray(activeChapters) && activeChapters.length > 0 && 
+    activeChapters.some((ch: any) => 
+      ch && (
+        (ch.title && ch.title.trim()) || 
+        hasActualContent(ch.content || ch.body || '')
+      )
+    );
+  const isEpisodeMode = !isChapterMode && Array.isArray(activeEpisodes) && activeEpisodes.length > 0 && 
+    activeEpisodes.some((ep: any) => 
+      ep && (
+        (ep.title && ep.title.trim()) || 
+        hasActualContent(ep.content || ep.body || '')
+      )
+    );
 
   // Fetch individual chapter/episode on-demand (only when online)
   const { chapter: fetchedChapter, comments: chapterComments, isLoading: isChapterLoading, mutate: mutateChapter } = useChapter(
@@ -87,10 +106,26 @@ export function useStoryContent({
   // Set initial content ID when chapters/episodes load
   useEffect(() => {
     if (!selectedChapterId && activeStory) {
-      if (isChapterMode) {
-        setSelectedChapterId(activeChapters[0]?.id || null);
-      } else if (isEpisodeMode) {
-        setSelectedChapterId(activeEpisodes[0]?.id || null);
+      if (isChapterMode && activeChapters.length > 0) {
+        const firstValidChapter = activeChapters.find((ch: any) => 
+          ch && (
+            (ch.title && ch.title.trim()) || 
+            hasActualContent(ch.content || ch.body || '')
+          )
+        );
+        if (firstValidChapter) {
+          setSelectedChapterId(firstValidChapter.id || null);
+        }
+      } else if (isEpisodeMode && activeEpisodes.length > 0) {
+        const firstValidEpisode = activeEpisodes.find((ep: any) => 
+          ep && (
+            (ep.title && ep.title.trim()) || 
+            hasActualContent(ep.content || ep.body || '')
+          )
+        );
+        if (firstValidEpisode) {
+          setSelectedChapterId(firstValidEpisode.id || null);
+        }
       }
     }
   }, [activeStory, activeChapters, activeEpisodes, isChapterMode, isEpisodeMode, selectedChapterId]);
@@ -150,7 +185,21 @@ export function useStoryContent({
     }
   }, [activeChapters, activeEpisodes, selectedChapterId, isChapterMode, isEpisodeMode]);
 
-  const navigationList = isChapterMode ? activeChapters : isEpisodeMode ? activeEpisodes : [];
+  const navigationList = isChapterMode 
+    ? (activeChapters || []).filter((ch: any) => 
+        ch && (
+          (ch.title && ch.title.trim()) || 
+          hasActualContent(ch.content || ch.body || '')
+        )
+      )
+    : isEpisodeMode 
+      ? (activeEpisodes || []).filter((ep: any) => 
+          ep && (
+            (ep.title && ep.title.trim()) || 
+            hasActualContent(ep.content || ep.body || '')
+          )
+        )
+      : [];
   const hasNavigation = navigationList && navigationList.length > 1;
   const currentIndex = Array.isArray(navigationList)
     ? navigationList.findIndex((i: any) => i.id === selectedChapterId)
