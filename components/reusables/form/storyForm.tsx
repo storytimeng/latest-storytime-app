@@ -335,6 +335,8 @@ const StoryForm: React.FC<StoryFormProps> = ({
   const updatePart = contentStateHook.updatePart;
   const getEditedChapters = contentStateHook.getEditedChapters;
   const getEditedParts = contentStateHook.getEditedParts;
+  const getAllModifiedChapters = contentStateHook.getAllModifiedChapters;
+  const getAllModifiedParts = contentStateHook.getAllModifiedParts;
   const selectedChapterIndex = contentStateHook.selectedChapterIndex;
   const selectedPartIndex = contentStateHook.selectedPartIndex;
   const setSelectedChapterIndex = contentStateHook.setSelectedChapterIndex;
@@ -351,6 +353,8 @@ const StoryForm: React.FC<StoryFormProps> = ({
   const restorePart = contentStateHook.restorePart;
   const getDeletedChapters = contentStateHook.getDeletedChapters;
   const getDeletedParts = contentStateHook.getDeletedParts;
+  const renumberChapters = contentStateHook.renumberChapters;
+  const renumberParts = contentStateHook.renumberParts;
 
   // Error modal state
   const [errorModalOpen, setErrorModalOpen] = useState(false);
@@ -669,9 +673,9 @@ const StoryForm: React.FC<StoryFormProps> = ({
     if (mode === "edit") {
       // Only send edited items
       contentData = storyStructure.hasChapters
-        ? getEditedChapters()
+        ? getAllModifiedChapters()
         : undefined;
-      partsData = !storyStructure.hasChapters ? getEditedParts() : undefined;
+      partsData = !storyStructure.hasChapters ? getAllModifiedParts() : undefined;
 
       console.log("[storyForm] Submitting edited items:", {
         editedChapters: contentData,
@@ -693,8 +697,8 @@ const StoryForm: React.FC<StoryFormProps> = ({
     storyStructure,
     chapters,
     parts,
-    getEditedChapters,
-    getEditedParts,
+    getAllModifiedChapters,
+    getAllModifiedParts,
   ]);
 
   // Wrap submission with error handling (defined after handleSubmit)
@@ -714,21 +718,29 @@ const StoryForm: React.FC<StoryFormProps> = ({
     (authorNote: string, giveConsent: boolean) => {
       const finalData = { ...formData, authorNote, giveConsent };
 
-      // For edit mode, only send edited chapters/episodes
+      // For edit mode, only send edited chapters/episodes and deleted ones
       let contentData: Chapter[] | undefined;
       let partsData: Part[] | undefined;
+      let deletedChaptersData: Chapter[] | undefined;
+      let deletedPartsData: Part[] | undefined;
 
       if (mode === "edit") {
         contentData = storyStructure.hasChapters
-          ? getEditedChapters()
+          ? getAllModifiedChapters()
           : undefined;
-        partsData = !storyStructure.hasChapters ? getEditedParts() : undefined;
+        partsData = !storyStructure.hasChapters ? getAllModifiedParts() : undefined;
+        deletedChaptersData = storyStructure.hasChapters
+          ? getDeletedChapters()
+          : undefined;
+        deletedPartsData = !storyStructure.hasChapters
+          ? getDeletedParts()
+          : undefined;
       } else {
         contentData = storyStructure.hasChapters ? chapters : undefined;
         partsData = !storyStructure.hasChapters ? parts : undefined;
       }
 
-      onSubmit(finalData, contentData, partsData);
+      onSubmit(finalData, contentData, partsData, deletedChaptersData, deletedPartsData);
     },
     [
       formData,
@@ -736,8 +748,10 @@ const StoryForm: React.FC<StoryFormProps> = ({
       chapters,
       parts,
       mode,
-      getEditedChapters,
-      getEditedParts,
+      getAllModifiedChapters,
+      getAllModifiedParts,
+      getDeletedChapters,
+      getDeletedParts,
       onSubmit,
     ],
   );
@@ -1292,14 +1306,29 @@ const StoryForm: React.FC<StoryFormProps> = ({
             })}
           </Accordion>
 
-          {/* Add Chapter Button - Outside Accordion */}
-          <Button
-            variant="ghost"
-            className="flex items-center w-full gap-2 border border-dashed text-complimentary-colour border-complimentary-colour"
-            onClick={addChapter}
-          >
-            <span className={Magnetik_Medium.className}>+ Add Chapter</span>
-          </Button>
+          {/* Add Chapter and Renumber Buttons - Outside Accordion */}
+          <div className="flex gap-3">
+            <Button
+              variant="ghost"
+              className="flex items-center flex-1 gap-2 border border-dashed text-complimentary-colour border-complimentary-colour"
+              onClick={addChapter}
+            >
+              <span className={Magnetik_Medium.className}>+ Add Chapter</span>
+            </Button>
+            <Button
+              variant="ghost"
+              className="flex items-center gap-2 border border-dashed text-primary-colour border-primary-colour"
+              onClick={() => {
+                renumberChapters();
+                showToast({
+                  type: "success",
+                  message: "Chapters renumbered successfully",
+                });
+              }}
+            >
+              <span className={Magnetik_Medium.className}>Renumber</span>
+            </Button>
+          </div>
         </div>
       ) : storyStructure.hasEpisodes ? (
         <div className="space-y-4">
@@ -1429,14 +1458,29 @@ const StoryForm: React.FC<StoryFormProps> = ({
             })}
           </Accordion>
 
-          {/* Add Episode Button - Outside Accordion */}
-          <Button
-            variant="ghost"
-            className="flex items-center w-full gap-2 border border-dashed text-complimentary-colour border-complimentary-colour"
-            onClick={addPart}
-          >
-            <span className={Magnetik_Medium.className}>+ Add Episode</span>
-          </Button>
+          {/* Add Episode and Renumber Buttons - Outside Accordion */}
+          <div className="flex gap-3">
+            <Button
+              variant="ghost"
+              className="flex items-center flex-1 gap-2 border border-dashed text-complimentary-colour border-complimentary-colour"
+              onClick={addPart}
+            >
+              <span className={Magnetik_Medium.className}>+ Add Episode</span>
+            </Button>
+            <Button
+              variant="ghost"
+              className="flex items-center gap-2 border border-dashed text-primary-colour border-primary-colour"
+              onClick={() => {
+                renumberParts();
+                showToast({
+                  type: "success",
+                  message: "Episodes renumbered successfully",
+                });
+              }}
+            >
+              <span className={Magnetik_Medium.className}>Renumber</span>
+            </Button>
+          </div>
         </div>
       ) : (
         <div className="space-y-4">
@@ -1473,8 +1517,18 @@ const StoryForm: React.FC<StoryFormProps> = ({
               const draftData = { ...formData, storyStatus: "Draft" };
               onSubmit(
                 draftData,
-                storyStructure.hasChapters ? chapters : undefined,
-                !storyStructure.hasChapters ? parts : undefined,
+                mode === "edit" && storyStructure.hasChapters
+                  ? getAllModifiedChapters()
+                  : storyStructure.hasChapters
+                    ? chapters
+                    : undefined,
+                mode === "edit" && !storyStructure.hasChapters
+                  ? getAllModifiedParts()
+                  : !storyStructure.hasChapters
+                    ? parts
+                    : undefined,
+                mode === "edit" && storyStructure.hasChapters ? getDeletedChapters() : undefined,
+                mode === "edit" && !storyStructure.hasChapters ? getDeletedParts() : undefined,
               );
             }}
             disabled={isLoading}
@@ -1488,8 +1542,10 @@ const StoryForm: React.FC<StoryFormProps> = ({
                 const publishData = { ...formData, storyStatus: "Published" };
                 onSubmit(
                   publishData,
-                  storyStructure.hasChapters ? chapters : undefined,
-                  !storyStructure.hasChapters ? parts : undefined,
+                  storyStructure.hasChapters ? getAllModifiedChapters() : undefined,
+                  !storyStructure.hasChapters ? getAllModifiedParts() : undefined,
+                  storyStructure.hasChapters ? getDeletedChapters() : undefined,
+                  !storyStructure.hasChapters ? getDeletedParts() : undefined,
                 );
               } else {
                 setCurrentStep("additional");
@@ -1557,6 +1613,8 @@ const StoryForm: React.FC<StoryFormProps> = ({
                 formData,
                 storyStructure.hasChapters ? chapters : undefined,
                 !storyStructure.hasChapters ? parts : undefined,
+                undefined, // deletedChapters - not used in create mode
+                undefined, // deletedParts - not used in create mode
               );
             }}
           />

@@ -41,6 +41,8 @@ interface UseStoryContentReturn {
   markPartForDeletion: (id: number) => void;
   restoreChapter: (id: number) => void;
   restorePart: (id: number) => void;
+  renumberChapters: () => void;
+  renumberParts: () => void;
   loadChapterContent: (
     chapterId: string,
     chapterIndex: number,
@@ -51,6 +53,8 @@ interface UseStoryContentReturn {
   ) => Promise<void>;
   getEditedChapters: () => Chapter[];
   getEditedParts: () => Part[];
+  getAllModifiedChapters: () => Chapter[];
+  getAllModifiedParts: () => Part[];
   getDeletedChapters: () => Chapter[];
   getDeletedParts: () => Part[];
 }
@@ -321,15 +325,36 @@ export function useStoryContent({
     [],
   );
 
-  // Get only edited chapters
+  // Get only edited chapters (excluding deleted ones) - for UPDATE API
   const getEditedChapters = useCallback(() => {
-    return chapters.filter((ch) => editedChapterIds.has(ch.id));
-  }, [chapters, editedChapterIds]);
+    return chapters.filter(
+      (ch) =>
+        editedChapterIds.has(ch.id) && !deletedChapterIds.has(ch.id) && ch.uuid,
+    );
+  }, [chapters, editedChapterIds, deletedChapterIds]);
 
-  // Get only edited parts
+  // Get only edited parts (excluding deleted ones) - for UPDATE API
   const getEditedParts = useCallback(() => {
-    return parts.filter((p) => editedPartIds.has(p.id));
-  }, [parts, editedPartIds]);
+    return parts.filter(
+      (p) => editedPartIds.has(p.id) && !deletedPartIds.has(p.id) && p.uuid,
+    );
+  }, [parts, editedPartIds, deletedPartIds]);
+
+  // Get all modified chapters: new items (no UUID) + edited items (with UUID), excluding deleted
+  const getAllModifiedChapters = useCallback(() => {
+    return chapters.filter(
+      (ch) =>
+        !deletedChapterIds.has(ch.id) &&
+        (!ch.uuid || editedChapterIds.has(ch.id)),
+    );
+  }, [chapters, editedChapterIds, deletedChapterIds]);
+
+  // Get all modified parts: new items (no UUID) + edited items (with UUID), excluding deleted
+  const getAllModifiedParts = useCallback(() => {
+    return parts.filter(
+      (p) => !deletedPartIds.has(p.id) && (!p.uuid || editedPartIds.has(p.id)),
+    );
+  }, [parts, editedPartIds, deletedPartIds]);
 
   // Mark chapter for deletion
   const markChapterForDeletion = useCallback((id: number) => {
@@ -367,6 +392,64 @@ export function useStoryContent({
   // Get parts marked for deletion (only existing ones with UUID)
   const getDeletedParts = useCallback(() => {
     return parts.filter((p) => deletedPartIds.has(p.id) && p.uuid);
+  }, [parts, deletedPartIds]);
+
+  // Renumber chapters sequentially (only non-deleted items, preserves deleted items for deletion)
+  const renumberChapters = useCallback(() => {
+    setChapters((prev) => {
+      let nextId = 1;
+      return prev.map((ch) => {
+        // Skip deleted chapters - they keep their old ID
+        if (deletedChapterIds.has(ch.id)) {
+          return ch;
+        }
+        // Renumber non-deleted chapters
+        const newId = nextId++;
+        return {
+          ...ch,
+          id: newId,
+          title: ch.title.replace(/^Chapter \d+:?\\s*/, `Chapter ${newId}: `),
+        };
+      });
+    });
+
+    // Mark all existing (non-deleted) chapters with UUID as edited since we changed their titles
+    setEditedChapterIds((prev) => {
+      const newSet = new Set(prev);
+      chapters
+        .filter((ch) => ch.uuid && !deletedChapterIds.has(ch.id))
+        .forEach((ch, idx) => newSet.add(idx + 1)); // Use new sequential IDs
+      return newSet;
+    });
+  }, [chapters, deletedChapterIds]);
+
+  // Renumber episodes sequentially (only non-deleted items, preserves deleted items for deletion)
+  const renumberParts = useCallback(() => {
+    setParts((prev) => {
+      let nextId = 1;
+      return prev.map((p) => {
+        // Skip deleted episodes - they keep their old ID
+        if (deletedPartIds.has(p.id)) {
+          return p;
+        }
+        // Renumber non-deleted episodes
+        const newId = nextId++;
+        return {
+          ...p,
+          id: newId,
+          title: p.title.replace(/^Episode \d+:?\\s*/, `Episode ${newId}: `),
+        };
+      });
+    });
+
+    // Mark all existing (non-deleted) episodes with UUID as edited since we changed their titles
+    setEditedPartIds((prev) => {
+      const newSet = new Set(prev);
+      parts
+        .filter((p) => p.uuid && !deletedPartIds.has(p.id))
+        .forEach((p, idx) => newSet.add(idx + 1)); // Use new sequential IDs
+      return newSet;
+    });
   }, [parts, deletedPartIds]);
 
   // Lazy load chapter content by ID
@@ -582,10 +665,14 @@ export function useStoryContent({
     markPartForDeletion,
     restoreChapter,
     restorePart,
+    renumberChapters,
+    renumberParts,
     loadChapterContent,
     loadEpisodeContent,
     getEditedChapters,
     getEditedParts,
+    getAllModifiedChapters,
+    getAllModifiedParts,
     getDeletedChapters,
     getDeletedParts,
   };

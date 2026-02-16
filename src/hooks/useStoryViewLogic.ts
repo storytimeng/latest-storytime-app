@@ -9,6 +9,8 @@ import {
 } from "@/src/hooks/useStoryMutations";
 import { useUpdateMultipleChapters } from "@/src/hooks/useUpdateChapter";
 import { useUpdateMultipleEpisodes } from "@/src/hooks/useUpdateEpisode";
+import { useDeleteMultipleChapters } from "@/src/hooks/useDeleteChapter";
+import { useDeleteMultipleEpisodes } from "@/src/hooks/useDeleteEpisode";
 import { useUserProfile } from "@/src/hooks/useUserProfile";
 import { usersControllerGetProfile } from "@/src/client/sdk.gen";
 import { useUserStore } from "@/src/stores/useUserStore";
@@ -45,6 +47,8 @@ interface UseStoryViewLogicReturn {
     formData: StoryFormData,
     chapters?: Chapter[],
     parts?: Part[],
+    deletedChapters?: Chapter[],
+    deletedParts?: Part[],
   ) => Promise<void>;
   handleCancel: () => void;
   pageTitle: string;
@@ -109,13 +113,19 @@ export function useStoryViewLogic({
     useUpdateMultipleChapters();
   const { updateMultipleEpisodes, isUpdating: isUpdatingEpisodes } =
     useUpdateMultipleEpisodes();
+  const { deleteMultipleChapters, isDeleting: isDeletingChapters } =
+    useDeleteMultipleChapters();
+  const { deleteMultipleEpisodes, isDeleting: isDeletingEpisodes } =
+    useDeleteMultipleEpisodes();
 
   const isCreating =
     isCreatingStory ||
     isCreatingChapters ||
     isCreatingEpisodes ||
     isUpdatingChapters ||
-    isUpdatingEpisodes;
+    isUpdatingEpisodes ||
+    isDeletingChapters ||
+    isDeletingEpisodes;
 
   // Fetch story data for edit mode
   const { story, isLoading: isFetchingStory } = useFetchStory(
@@ -297,7 +307,7 @@ export function useStoryViewLogic({
 
   // Handle form submission
   const handleSubmit = useCallback(
-    async (formData: StoryFormData, _chapters?: Chapter[], _parts?: Part[]) => {
+    async (formData: StoryFormData, _chapters?: Chapter[], _parts?: Part[], deletedChapters?: Chapter[], deletedParts?: Part[]) => {
       try {
         // If we have a createdStoryId, this is publishing chapters/episodes
         // ONLY valid if we are in CREATE mode (step 2 of wizard).
@@ -541,7 +551,102 @@ export function useStoryViewLogic({
           // Handle chapter/episode updates separately
           let contentUpdateSuccess = true;
           let contentUpdateMessage = "";
+          let deletedCount = 0;
+          let createdCount = 0;
 
+          // Delete chapters/episodes first
+          if (deletedChapters && deletedChapters.length > 0) {
+            const chapterUuidsToDelete = deletedChapters
+              .filter((ch) => ch.uuid)
+              .map((ch) => ch.uuid!);
+
+            if (chapterUuidsToDelete.length > 0) {
+              console.log(
+                "[useStoryViewLogic] Deleting chapters:",
+                chapterUuidsToDelete,
+              );
+
+              const deleteResult = await deleteMultipleChapters(chapterUuidsToDelete);
+              deletedCount += deleteResult.deleted;
+
+              if (deleteResult.failed > 0) {
+                contentUpdateMessage += ` ${deleteResult.failed} chapter${deleteResult.failed > 1 ? "s" : ""} failed to delete.`;
+              }
+            }
+          }
+
+          if (deletedParts && deletedParts.length > 0) {
+            const partUuidsToDelete = deletedParts
+              .filter((p) => p.uuid)
+              .map((p) => p.uuid!);
+
+            if (partUuidsToDelete.length > 0) {
+              console.log(
+                "[useStoryViewLogic] Deleting episodes:",
+                partUuidsToDelete,
+              );
+
+              const deleteResult = await deleteMultipleEpisodes(partUuidsToDelete);
+              deletedCount += deleteResult.deleted;
+
+              if (deleteResult.failed > 0) {
+                contentUpdateMessage += ` ${deleteResult.failed} episode${deleteResult.failed > 1 ? "s" : ""} failed to delete.`;
+              }
+            }
+          }
+
+          // Create new chapters/episodes (ones without UUID)
+          if (_chapters && _chapters.length > 0 && storyId) {
+            const newChapters = _chapters.filter((ch) => !ch.uuid);
+
+            if (newChapters.length > 0) {
+              console.log(
+                "[useStoryViewLogic] Creating new chapters:",
+                newChapters,
+              );
+
+              const chaptersPayload = newChapters.map((ch) => ({
+                title: ch.title,
+                body: ch.body,
+              }));
+
+              const result = await createMultipleChapters(
+                storyId,
+                chaptersPayload,
+              );
+
+              if (result?.success) {
+                createdCount += result.count || 0;
+              }
+            }
+          }
+
+          if (_parts && _parts.length > 0 && storyId) {
+            const newParts = _parts.filter((p) => !p.uuid);
+
+            if (newParts.length > 0) {
+              console.log(
+                "[useStoryViewLogic] Creating new episodes:",
+                newParts,
+              );
+
+              const partsPayload = newParts.map((p) => ({
+                title: p.title,
+                body: p.body,
+              }));
+
+              const result = await createMultipleEpisodes(
+                storyId,
+                partsPayload,
+              );
+
+              if (result?.success) {
+                createdCount += result.count || 0;
+              }
+            }
+          }
+
+          // Update existing chapters/episodes
           if (_chapters && _chapters.length > 0) {
             // Filter chapters that have UUIDs (existing chapters)
             const chaptersToUpdate = _chapters.filter((ch) => ch.uuid);
@@ -563,7 +668,7 @@ export function useStoryViewLogic({
               contentUpdateSuccess = result.success;
 
               if (result.updated > 0) {
-                contentUpdateMessage = `${result.updated} chapter${result.updated > 1 ? "s" : ""} updated successfully!`;
+                contentUpdateMessage += ` ${result.updated} chapter${result.updated > 1 ? "s" : ""} updated.`;
               }
 
               if (result.failed > 0) {
@@ -593,13 +698,21 @@ export function useStoryViewLogic({
               contentUpdateSuccess = result.success;
 
               if (result.updated > 0) {
-                contentUpdateMessage = `${result.updated} episode${result.updated > 1 ? "s" : ""} updated successfully!`;
+                contentUpdateMessage += ` ${result.updated} episode${result.updated > 1 ? "s" : ""} updated.`;
               }
 
               if (result.failed > 0) {
                 contentUpdateMessage += ` ${result.failed} episode${result.failed > 1 ? "s" : ""} failed to update.`;
               }
             }
+          }
+
+          // Build summary message
+          if (deletedCount > 0) {
+            contentUpdateMessage = `${deletedCount} item${deletedCount > 1 ? "s" : ""} deleted.${contentUpdateMessage}`;
+          }
+          if (createdCount > 0) {
+            contentUpdateMessage = `${createdCount} item${createdCount > 1 ? "s" : ""} created.${contentUpdateMessage}`;
           }
 
           // Show appropriate success/error messages

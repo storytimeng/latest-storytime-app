@@ -59,7 +59,13 @@ export interface Part {
 export interface StoryFormProps {
   mode: "create" | "edit";
   initialData?: Partial<StoryFormData>;
-  onSubmit: (data: StoryFormData, chapters?: Chapter[], parts?: Part[]) => void;
+  onSubmit: (
+    data: StoryFormData,
+    chapters?: Chapter[],
+    parts?: Part[],
+    deletedChapters?: Chapter[],
+    deletedParts?: Part[],
+  ) => void;
   onCancel?: () => void;
   isLoading?: boolean;
   createdStoryId?: string | null;
