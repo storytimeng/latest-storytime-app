@@ -19,6 +19,8 @@ interface UseStoryContentReturn {
   expandedEpisodes: Set<number>;
   editedChapterIds: Set<number>;
   editedPartIds: Set<number>;
+  deletedChapterIds: Set<number>;
+  deletedPartIds: Set<number>;
   selectedChapterIndex: number | null;
   selectedPartIndex: number | null;
   loadingChapterIds: Set<string>;
@@ -35,6 +37,10 @@ interface UseStoryContentReturn {
   toggleEpisode: (episodeId: number) => void;
   updateChapter: (id: number, field: "title" | "body", value: string) => void;
   updatePart: (id: number, field: "title" | "body", value: string) => void;
+  markChapterForDeletion: (id: number) => void;
+  markPartForDeletion: (id: number) => void;
+  restoreChapter: (id: number) => void;
+  restorePart: (id: number) => void;
   loadChapterContent: (
     chapterId: string,
     chapterIndex: number,
@@ -45,6 +51,8 @@ interface UseStoryContentReturn {
   ) => Promise<void>;
   getEditedChapters: () => Chapter[];
   getEditedParts: () => Part[];
+  getDeletedChapters: () => Chapter[];
+  getDeletedParts: () => Part[];
 }
 
 /**
@@ -70,6 +78,12 @@ export function useStoryContent({
     new Set(),
   );
   const [editedPartIds, setEditedPartIds] = useState<Set<number>>(new Set());
+
+  // Track which chapters/parts are marked for deletion
+  const [deletedChapterIds, setDeletedChapterIds] = useState<Set<number>>(
+    new Set(),
+  );
+  const [deletedPartIds, setDeletedPartIds] = useState<Set<number>>(new Set());
 
   // Track selected chapter/part for focused editing
   const [selectedChapterIndex, setSelectedChapterIndex] = useState<
@@ -317,6 +331,44 @@ export function useStoryContent({
     return parts.filter((p) => editedPartIds.has(p.id));
   }, [parts, editedPartIds]);
 
+  // Mark chapter for deletion
+  const markChapterForDeletion = useCallback((id: number) => {
+    setDeletedChapterIds((prev) => new Set(prev).add(id));
+  }, []);
+
+  // Mark part for deletion
+  const markPartForDeletion = useCallback((id: number) => {
+    setDeletedPartIds((prev) => new Set(prev).add(id));
+  }, []);
+
+  // Restore deleted chapter
+  const restoreChapter = useCallback((id: number) => {
+    setDeletedChapterIds((prev) => {
+      const newSet = new Set(prev);
+      newSet.delete(id);
+      return newSet;
+    });
+  }, []);
+
+  // Restore deleted part
+  const restorePart = useCallback((id: number) => {
+    setDeletedPartIds((prev) => {
+      const newSet = new Set(prev);
+      newSet.delete(id);
+      return newSet;
+    });
+  }, []);
+
+  // Get chapters marked for deletion (only existing ones with UUID)
+  const getDeletedChapters = useCallback(() => {
+    return chapters.filter((ch) => deletedChapterIds.has(ch.id) && ch.uuid);
+  }, [chapters, deletedChapterIds]);
+
+  // Get parts marked for deletion (only existing ones with UUID)
+  const getDeletedParts = useCallback(() => {
+    return parts.filter((p) => deletedPartIds.has(p.id) && p.uuid);
+  }, [parts, deletedPartIds]);
+
   // Lazy load chapter content by ID
   const loadChapterContent = useCallback(
     async (chapterId: string, chapterIndex: number) => {
@@ -508,6 +560,8 @@ export function useStoryContent({
     expandedEpisodes,
     editedChapterIds,
     editedPartIds,
+    deletedChapterIds,
+    deletedPartIds,
     selectedChapterIndex,
     selectedPartIndex,
     loadingChapterIds,
@@ -524,9 +578,15 @@ export function useStoryContent({
     toggleEpisode,
     updateChapter,
     updatePart,
+    markChapterForDeletion,
+    markPartForDeletion,
+    restoreChapter,
+    restorePart,
     loadChapterContent,
     loadEpisodeContent,
     getEditedChapters,
     getEditedParts,
+    getDeletedChapters,
+    getDeletedParts,
   };
 }

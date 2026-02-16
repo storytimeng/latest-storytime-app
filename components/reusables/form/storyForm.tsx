@@ -10,7 +10,15 @@ import React, {
 import { Button } from "@heroui/button";
 import { Select, SelectItem } from "@heroui/select";
 import { Switch } from "@heroui/switch";
-import { ChevronRight, ChevronDown } from "lucide-react";
+import { Accordion, AccordionItem } from "@heroui/accordion";
+import {
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+} from "@heroui/modal";
+import { ChevronRight, Trash2, X, ArrowLeft } from "lucide-react";
 import { Magnetik_Bold, Magnetik_Medium, Magnetik_Regular } from "@/lib/font";
 import FormField from "./formField";
 import TextAreaField from "./textArea";
@@ -335,11 +343,28 @@ const StoryForm: React.FC<StoryFormProps> = ({
   const loadEpisodeContent = contentStateHook.loadEpisodeContent;
   const loadingChapterIds = contentStateHook.loadingChapterIds;
   const loadingPartIds = contentStateHook.loadingPartIds;
+  const deletedChapterIds = contentStateHook.deletedChapterIds;
+  const deletedPartIds = contentStateHook.deletedPartIds;
+  const markChapterForDeletion = contentStateHook.markChapterForDeletion;
+  const markPartForDeletion = contentStateHook.markPartForDeletion;
+  const restoreChapter = contentStateHook.restoreChapter;
+  const restorePart = contentStateHook.restorePart;
+  const getDeletedChapters = contentStateHook.getDeletedChapters;
+  const getDeletedParts = contentStateHook.getDeletedParts;
 
   // Error modal state
   const [errorModalOpen, setErrorModalOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [errorDetails, setErrorDetails] = useState<string | undefined>();
+
+  // Delete confirmation modal state
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<{
+    type: "chapter" | "episode";
+    id: number;
+    title: string;
+    uuid?: string;
+  } | null>(null);
 
   // Windowed loading: Show ±5 episodes/chapters from selected index
   const visibleChapters = useMemo(() => {
@@ -717,6 +742,37 @@ const StoryForm: React.FC<StoryFormProps> = ({
     ],
   );
 
+  // Handle delete modal
+  const handleDeleteClick = useCallback(
+    (type: "chapter" | "episode", id: number, title: string, uuid?: string) => {
+      setItemToDelete({ type, id, title, uuid });
+      setDeleteModalOpen(true);
+    },
+    [],
+  );
+
+  const handleDeleteConfirm = useCallback(() => {
+    if (!itemToDelete) return;
+
+    if (itemToDelete.type === "chapter") {
+      markChapterForDeletion(itemToDelete.id);
+    } else {
+      markPartForDeletion(itemToDelete.id);
+    }
+
+    setDeleteModalOpen(false);
+    setItemToDelete(null);
+    showToast({
+      type: "success",
+      message: `${itemToDelete.type === "chapter" ? "Chapter" : "Episode"} marked for deletion. Save to confirm.`,
+    });
+  }, [itemToDelete, markChapterForDeletion, markPartForDeletion]);
+
+  const handleDeleteCancel = useCallback(() => {
+    setDeleteModalOpen(false);
+    setItemToDelete(null);
+  }, []);
+
   // Handle cover image change
   const handleCoverImageChange = useCallback(
     (imageUrl: string | null) => {
@@ -1086,115 +1142,155 @@ const StoryForm: React.FC<StoryFormProps> = ({
               from selected)
             </div>
           )}
-          <div className="max-h-[600px] overflow-y-auto space-y-6 pr-2">
-            {visibleChapters.map((chapter, index) => {
-              const isExpanded = expandedChapters.has(chapter.id);
-
+          <Accordion
+            variant="splitted"
+            selectionMode="multiple"
+            selectedKeys={Array.from(expandedChapters).map(String)}
+            onSelectionChange={(keys) => {
+              const newSet = new Set(
+                Array.from(keys as Set<string>).map((k) => parseInt(k, 10)),
+              );
+              setExpandedChapters(newSet);
+            }}
+            className="px-0"
+            itemClasses={{
+              base: "mb-4",
+              trigger:
+                "py-4 px-4 bg-white hover:bg-accent-shade-1 rounded-lg data-[hover=true]:bg-accent-shade-1",
+              title: `text-base text-primary-colour font-medium ${Magnetik_Medium.className}`,
+              indicator: "text-primary-colour",
+              content: "px-4 pb-4 pt-0",
+            }}
+          >
+            {visibleChapters.map((chapter) => {
+              const isDeleted = deletedChapterIds.has(chapter.id);
+              
               return (
-                <div
-                  key={chapter.id}
-                  className="overflow-hidden bg-white rounded-lg shadow-sm"
-                >
-                  {/* Chapter Header - Always Visible */}
-                  <div
-                    className="flex items-center justify-between p-4 transition-colors cursor-pointer hover:bg-accent-shade-1"
-                    onClick={() => toggleChapter(chapter.id)}
-                  >
-                    <h3
-                      className={cn(
-                        "text-base text-primary-colour font-medium",
-                        Magnetik_Medium.className,
-                      )}
-                    >
-                      Chapter {chapter.id}:{" "}
-                      {chapter.title || `Chapter ${chapter.id}`}
-                    </h3>
-                    <ChevronDown
-                      className={cn(
-                        "w-5 h-5 text-primary-colour transition-transform",
-                        isExpanded ? "rotate-180" : "",
-                      )}
-                    />
-                  </div>
-
-                  {/* Chapter Content - Collapsible */}
-                  {isExpanded && (
-                    <div className="p-4 pt-0 space-y-4">
-                      <FormField
-                        label={`Chapter ${chapter.id} Title`}
-                        type="text"
-                        id={`chapter-${chapter.id}-title`}
-                        placeholder={`Chapter ${chapter.id}`}
-                        value={chapter.title}
-                        onValueChange={(value) => {
-                          updateChapter(chapter.id, "title", value);
+                <AccordionItem
+                  key={chapter.id.toString()}
+                  aria-label={`Chapter ${chapter.id}`}
+                  title={
+                    <div className="flex items-center justify-between w-full pr-2">
+                      <span
+                        className={cn(
+                          isDeleted && "line-through opacity-50",
+                        )}
+                      >
+                        Chapter {chapter.id}:{" "}
+                        {chapter.title || `Chapter ${chapter.id}`}
+                      </span>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (isDeleted) {
+                            restoreChapter(chapter.id);
+                            showToast({
+                              type: "success",
+                              message: "Chapter restored",
+                            });
+                          } else {
+                            handleDeleteClick(
+                              "chapter",
+                              chapter.id,
+                              chapter.title || `Chapter ${chapter.id}`,
+                              chapter.uuid,
+                            );
+                          }
                         }}
-                      />
-
-                      {storyStructure.hasEpisodes &&
-                        chapter.episodes?.map((episode) => (
-                          <div key={episode.id} className="ml-4">
-                            <FormField
-                              label={`Episode ${episode.id} Title`}
-                              type="text"
-                              id={`episode-${chapter.id}-${episode.id}-title`}
-                              placeholder={`Episode ${episode.id}`}
-                              value={episode.title}
-                              onValueChange={(value) => {
-                                setChapters((prev) =>
-                                  prev.map((ch) =>
-                                    ch.id === chapter.id
-                                      ? {
-                                          ...ch,
-                                          episodes: ch.episodes?.map((ep) =>
-                                            ep.id === episode.id
-                                              ? { ...ep, title: value }
-                                              : ep,
-                                          ),
-                                        }
-                                      : ch,
-                                  ),
-                                );
-                              }}
-                            />
-                          </div>
-                        ))}
-
-                      <div className="relative">
-                        <TextAreaField
-                          label="Content"
-                          htmlFor={`chapter-${chapter.id}-body`}
-                          id={`chapter-${chapter.id}-body`}
-                          isInvalid={false}
-                          errorMessage=""
-                          placeholder="Write your story content here..."
-                          value={chapter.body}
-                          onChange={(value) => {
-                            updateChapter(chapter.id, "body", value);
-                          }}
-                          rows={12}
-                          isRichText={true}
-                        />
-                        {chapter.uuid &&
-                          loadingChapterIds.has(chapter.uuid) && (
-                            <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-white/80">
-                              <div className="flex flex-col items-center gap-2">
-                                <div className="w-8 h-8 border-b-2 rounded-full animate-spin border-complimentary-colour"></div>
-                                <p
-                                  className={`text-sm text-gray-500 ${Magnetik_Regular.className}`}
-                                >
-                                  Loading content...
-                                </p>
-                              </div>
-                            </div>
-                          )}
-                      </div>
+                        className={cn(
+                          "p-2 rounded-md transition-colors",
+                          isDeleted
+                            ? "text-green-600 hover:bg-green-50"
+                            : "text-red-600 hover:bg-red-50",
+                        )}
+                        title={isDeleted ? "Restore chapter" : "Delete chapter"}
+                      >
+                        {isDeleted ? (
+                          <span className="text-sm font-medium">Restore</span>
+                        ) : (
+                          <Trash2 size={18} />
+                        )}
+                      </button>
                     </div>
-                  )}
-                </div>
+                  }
+                  classNames={{
+                    base: cn(isDeleted && "opacity-60"),
+                  }}
+                >
+                  <div className="space-y-4">
+                    <FormField
+                      label={`Chapter ${chapter.id} Title`}
+                      type="text"
+                      id={`chapter-${chapter.id}-title`}
+                      placeholder={`Chapter ${chapter.id}`}
+                      value={chapter.title}
+                      onValueChange={(value) => {
+                        updateChapter(chapter.id, "title", value);
+                      }}
+                    />
+
+                    {storyStructure.hasEpisodes &&
+                      chapter.episodes?.map((episode) => (
+                        <div key={episode.id} className="ml-4">
+                          <FormField
+                            label={`Episode ${episode.id} Title`}
+                            type="text"
+                            id={`episode-${chapter.id}-${episode.id}-title`}
+                            placeholder={`Episode ${episode.id}`}
+                            value={episode.title}
+                            onValueChange={(value) => {
+                              setChapters((prev) =>
+                                prev.map((ch) =>
+                                  ch.id === chapter.id
+                                    ? {
+                                        ...ch,
+                                        episodes: ch.episodes?.map((ep) =>
+                                          ep.id === episode.id
+                                            ? { ...ep, title: value }
+                                            : ep,
+                                        ),
+                                      }
+                                    : ch,
+                                ),
+                              );
+                            }}
+                          />
+                        </div>
+                      ))}
+
+                    <div className="relative">
+                      <TextAreaField
+                        label="Content"
+                        htmlFor={`chapter-${chapter.id}-body`}
+                        id={`chapter-${chapter.id}-body`}
+                        isInvalid={false}
+                        errorMessage=""
+                        placeholder="Write your story content here..."
+                        value={chapter.body}
+                        onChange={(value) => {
+                          updateChapter(chapter.id, "body", value);
+                        }}
+                        rows={12}
+                        isRichText={true}
+                      />
+                      {chapter.uuid && loadingChapterIds.has(chapter.uuid) && (
+                        <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-white/80">
+                          <div className="flex flex-col items-center gap-2">
+                            <div className="w-8 h-8 border-b-2 rounded-full animate-spin border-complimentary-colour"></div>
+                            <p
+                              className={`text-sm text-gray-500 ${Magnetik_Regular.className}`}
+                            >
+                              Loading content...
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </AccordionItem>
               );
             })}
-          </div>
+          </Accordion>
 
           {/* Add Chapter Button - Outside Accordion */}
           <Button
@@ -1213,84 +1309,125 @@ const StoryForm: React.FC<StoryFormProps> = ({
               selected)
             </div>
           )}
-          <div className="max-h-[600px] overflow-y-auto space-y-6 pr-2">
-            {visibleParts.map((part, index) => {
-              const isExpanded = expandedEpisodes.has(part.id);
-
+          <Accordion
+            variant="splitted"
+            selectionMode="multiple"
+            selectedKeys={Array.from(expandedEpisodes).map(String)}
+            onSelectionChange={(keys) => {
+              const newSet = new Set(
+                Array.from(keys as Set<string>).map((k) => parseInt(k, 10)),
+              );
+              setExpandedEpisodes(newSet);
+            }}
+            className="px-0"
+            itemClasses={{
+              base: "mb-4",
+              trigger:
+                "py-4 px-4 bg-white hover:bg-accent-shade-1 rounded-lg data-[hover=true]:bg-accent-shade-1",
+              title: `text-base text-primary-colour font-medium ${Magnetik_Medium.className}`,
+              indicator: "text-primary-colour",
+              content: "px-4 pb-4 pt-0",
+            }}
+          >
+            {visibleParts.map((part) => {
+              const isDeleted = deletedPartIds.has(part.id);
+              
               return (
-                <div
-                  key={part.id}
-                  className="overflow-hidden bg-white rounded-lg shadow-sm"
-                >
-                  {/* Episode Header - Always Visible */}
-                  <div
-                    className="flex items-center justify-between p-4 transition-colors cursor-pointer hover:bg-accent-shade-1"
-                    onClick={() => toggleEpisode(part.id)}
-                  >
-                    <h3
-                      className={cn(
-                        "text-base text-primary-colour font-medium",
-                        Magnetik_Medium.className,
-                      )}
-                    >
-                      Episode {part.id}: {part.title || `Episode ${part.id}`}
-                    </h3>
-                    <ChevronDown
-                      className={cn(
-                        "w-5 h-5 text-primary-colour transition-transform",
-                        isExpanded ? "rotate-180" : "",
-                      )}
-                    />
-                  </div>
-
-                  {/* Episode Content - Collapsible */}
-                  {isExpanded && (
-                    <div className="p-4 pt-0 space-y-4">
-                      <FormField
-                        label="Episode Title"
-                        type="text"
-                        id={`part-${part.id}-title`}
-                        placeholder={part.title}
-                        value={part.title}
-                        onValueChange={(value) => {
-                          updatePart(part.id, "title", value);
-                        }}
-                      />
-
-                      <div className="relative">
-                        <TextAreaField
-                          label="Content"
-                          htmlFor={`part-${part.id}-body`}
-                          id={`part-${part.id}-body`}
-                          isInvalid={false}
-                          errorMessage=""
-                          placeholder="Write your episode content here..."
-                          value={part.body}
-                          onChange={(value) => {
-                            updatePart(part.id, "body", value);
-                          }}
-                          rows={12}
-                          isRichText={true}
-                        />
-                        {part.uuid && loadingPartIds.has(part.uuid) && (
-                          <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-white/80">
-                            <div className="flex flex-col items-center gap-2">
-                              <div className="w-8 h-8 border-b-2 rounded-full animate-spin border-complimentary-colour"></div>
-                              <p
-                                className={`text-sm text-gray-500 ${Magnetik_Regular.className}`}
-                              >
-                                Loading content...
-                              </p>
-                            </div>
-                          </div>
+                <AccordionItem
+                  key={part.id.toString()}
+                  aria-label={`Episode ${part.id}`}
+                  title={
+                    <div className="flex items-center justify-between w-full pr-2">
+                      <span
+                        className={cn(
+                          isDeleted && "line-through opacity-50",
                         )}
-                      </div>
+                      >
+                        Episode {part.id}: {part.title || `Episode ${part.id}`}
+                      </span>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (isDeleted) {
+                            restorePart(part.id);
+                            showToast({
+                              type: "success",
+                              message: "Episode restored",
+                            });
+                          } else {
+                            handleDeleteClick(
+                              "episode",
+                              part.id,
+                              part.title || `Episode ${part.id}`,
+                              part.uuid,
+                            );
+                          }
+                        }}
+                        className={cn(
+                          "p-2 rounded-md transition-colors",
+                          isDeleted
+                            ? "text-green-600 hover:bg-green-50"
+                            : "text-red-600 hover:bg-red-50",
+                        )}
+                        title={isDeleted ? "Restore episode" : "Delete episode"}
+                      >
+                        {isDeleted ? (
+                          <span className="text-sm font-medium">Restore</span>
+                        ) : (
+                          <Trash2 size={18} />
+                        )}
+                      </button>
                     </div>
-                  )}
-                </div>
+                  }
+                  classNames={{
+                    base: cn(isDeleted && "opacity-60"),
+                  }}
+                >
+                  <div className="space-y-4">
+                    <FormField
+                      label="Episode Title"
+                      type="text"
+                      id={`part-${part.id}-title`}
+                      placeholder={part.title}
+                      value={part.title}
+                      onValueChange={(value) => {
+                        updatePart(part.id, "title", value);
+                      }}
+                    />
+
+                    <div className="relative">
+                      <TextAreaField
+                        label="Content"
+                        htmlFor={`part-${part.id}-body`}
+                        id={`part-${part.id}-body`}
+                        isInvalid={false}
+                        errorMessage=""
+                        placeholder="Write your episode content here..."
+                        value={part.body}
+                        onChange={(value) => {
+                          updatePart(part.id, "body", value);
+                        }}
+                        rows={12}
+                        isRichText={true}
+                      />
+                      {part.uuid && loadingPartIds.has(part.uuid) && (
+                        <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-white/80">
+                          <div className="flex flex-col items-center gap-2">
+                            <div className="w-8 h-8 border-b-2 rounded-full animate-spin border-complimentary-colour"></div>
+                            <p
+                              className={`text-sm text-gray-500 ${Magnetik_Regular.className}`}
+                            >
+                              Loading content...
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </AccordionItem>
               );
             })}
-          </div>
+          </Accordion>
 
           {/* Add Episode Button - Outside Accordion */}
           <Button
@@ -1433,6 +1570,63 @@ const StoryForm: React.FC<StoryFormProps> = ({
         message={errorMessage}
         details={errorDetails}
       />
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={deleteModalOpen}
+        onClose={handleDeleteCancel}
+        placement="bottom"
+        classNames={{
+          backdrop: "bg-black/50",
+          base: "bg-universal-white rounded-t-3xl m-0 mb-0 max-w-[28rem] mx-auto",
+          closeButton: "hidden",
+        }}
+      >
+        <ModalContent>
+          <ModalHeader className="flex items-center justify-between px-6 pt-6 pb-4">
+            <button onClick={handleDeleteCancel} className="text-primary-colour">
+              <ArrowLeft size={20} />
+            </button>
+            <h2
+              className={`flex-1 text-center body-text-small-medium-auto text-primary-colour ${Magnetik_Medium.className}`}
+            >
+              Delete {itemToDelete?.type === "chapter" ? "Chapter" : "Episode"}
+            </h2>
+            <button onClick={handleDeleteCancel} className="text-primary-colour">
+              <X size={20} />
+            </button>
+          </ModalHeader>
+
+          <ModalBody className="px-6 py-8">
+            <p
+              className={`text-center body-text-small-medium-auto text-primary-colour ${Magnetik_Regular.className}`}
+            >
+              Are you sure you want to delete &ldquo;{itemToDelete?.title}
+              &rdquo;?
+            </p>
+            <p
+              className={`mt-4 text-center text-sm text-red-600 ${Magnetik_Regular.className}`}
+            >
+              This {itemToDelete?.type} will be deleted when you save.
+            </p>
+          </ModalBody>
+
+          <ModalFooter className="flex gap-4 px-6 pt-0 pb-8">
+            <Button
+              onPress={handleDeleteCancel}
+              className={`flex-1 py-7 text-base bg-transparent border-2 rounded-full border-primary-colour text-primary-colour ${Magnetik_Medium.className}`}
+            >
+              Cancel
+            </Button>
+            <Button
+              onPress={handleDeleteConfirm}
+              className={`flex-1 py-7 text-base rounded-full bg-red-600 hover:bg-red-700 text-white ${Magnetik_Medium.className}`}
+            >
+              Delete
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </div>
   );
 };
