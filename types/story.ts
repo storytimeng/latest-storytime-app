@@ -40,6 +40,9 @@ export interface Chapter {
   title: string;
   body: string;
   episodes?: Episode[];
+  createdAt?: string;
+  updatedAt?: string;
+  chapterNumber?: number;
 }
 
 export interface Episode {
@@ -54,6 +57,9 @@ export interface Part {
   uuid?: string; // API's UUID for fetching full content
   title: string;
   body: string;
+  createdAt?: string;
+  updatedAt?: string;
+  episodeNumber?: number;
 }
 
 export interface StoryFormProps {

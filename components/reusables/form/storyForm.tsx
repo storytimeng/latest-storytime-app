@@ -266,6 +266,28 @@ const AdditionalInfoModal: React.FC<AdditionalInfoModalProps> = ({
   );
 };
 
+// Helper function to format timestamps
+const formatTimestamp = (timestamp?: string): string => {
+  if (!timestamp) return "";
+  const date = new Date(timestamp);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return "Just now";
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: date.getFullYear() !== now.getFullYear() ? "numeric" : undefined,
+  });
+};
+
 // Main Story Form Component
 const StoryForm: React.FC<StoryFormProps> = ({
   mode,
@@ -675,7 +697,9 @@ const StoryForm: React.FC<StoryFormProps> = ({
       contentData = storyStructure.hasChapters
         ? getAllModifiedChapters()
         : undefined;
-      partsData = !storyStructure.hasChapters ? getAllModifiedParts() : undefined;
+      partsData = !storyStructure.hasChapters
+        ? getAllModifiedParts()
+        : undefined;
 
       console.log("[storyForm] Submitting edited items:", {
         editedChapters: contentData,
@@ -728,7 +752,9 @@ const StoryForm: React.FC<StoryFormProps> = ({
         contentData = storyStructure.hasChapters
           ? getAllModifiedChapters()
           : undefined;
-        partsData = !storyStructure.hasChapters ? getAllModifiedParts() : undefined;
+        partsData = !storyStructure.hasChapters
+          ? getAllModifiedParts()
+          : undefined;
         deletedChaptersData = storyStructure.hasChapters
           ? getDeletedChapters()
           : undefined;
@@ -740,7 +766,13 @@ const StoryForm: React.FC<StoryFormProps> = ({
         partsData = !storyStructure.hasChapters ? parts : undefined;
       }
 
-      onSubmit(finalData, contentData, partsData, deletedChaptersData, deletedPartsData);
+      onSubmit(
+        finalData,
+        contentData,
+        partsData,
+        deletedChaptersData,
+        deletedPartsData,
+      );
     },
     [
       formData,
@@ -941,13 +973,21 @@ const StoryForm: React.FC<StoryFormProps> = ({
                 })}
               {(storyStructure.hasChapters ? chapters.length : parts.length) >
                 5 && (
-                <p className="py-2 text-xs text-center text-gray-500">
-                  +
-                  {(storyStructure.hasChapters
-                    ? chapters.length
-                    : parts.length) - 5}{" "}
-                  more {storyStructure.hasChapters ? "chapters" : "episodes"}
-                </p>
+                <Button
+                  variant="light"
+                  size="sm"
+                  onClick={() => setCurrentStep("writing")}
+                  className="w-full py-2 text-xs text-gray-600 hover:text-primary-colour"
+                >
+                  <span className={Magnetik_Regular.className}>
+                    +
+                    {(storyStructure.hasChapters
+                      ? chapters.length
+                      : parts.length) - 5}{" "}
+                    more {storyStructure.hasChapters ? "chapters" : "episodes"}{" "}
+                    - Click to view all
+                  </span>
+                </Button>
               )}
             </div>
             <Button
@@ -1151,10 +1191,17 @@ const StoryForm: React.FC<StoryFormProps> = ({
       {storyStructure.hasChapters ? (
         <div className="space-y-4">
           {chapters.length > 10 && selectedChapterIndex !== null && (
-            <div className="mb-2 text-sm text-gray-500">
-              Showing {visibleChapters.length} of {chapters.length} chapters (±5
-              from selected)
-            </div>
+            <Button
+              size="sm"
+              variant="light"
+              className="mb-2 text-sm text-gray-600 hover:text-primary-colour"
+              onClick={() => setCurrentStep("writing")}
+            >
+              <span className={Magnetik_Regular.className}>
+                Showing {visibleChapters.length} of {chapters.length} chapters
+                (±5 from selected) - Click to view all
+              </span>
+            </Button>
           )}
           <Accordion
             variant="splitted"
@@ -1176,23 +1223,60 @@ const StoryForm: React.FC<StoryFormProps> = ({
               content: "px-4 pb-4 pt-0",
             }}
           >
-            {visibleChapters.map((chapter) => {
+            {visibleChapters.map((chapter, chapterIndex) => {
               const isDeleted = deletedChapterIds.has(chapter.id);
-              
+
               return (
                 <AccordionItem
-                  key={chapter.id.toString()}
+                  key={chapter.uuid || `chapter-${chapter.id}`}
                   aria-label={`Chapter ${chapter.id}`}
                   title={
                     <div className="flex items-center justify-between w-full pr-2">
-                      <span
-                        className={cn(
-                          isDeleted && "line-through opacity-50",
+                      <div className="flex flex-col gap-0.5 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-gray-600">Chapter</span>
+                          <input
+                            type="number"
+                            min="1"
+                            value={chapter.chapterNumber ?? chapter.id}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              const num = parseInt(e.target.value);
+                              if (!isNaN(num) && num > 0) {
+                                updateChapter(chapter.id, "chapterNumber", num);
+                              }
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            className={cn(
+                              "w-16 px-2 py-1 text-sm border rounded",
+                              isDeleted && "opacity-50",
+                            )}
+                            disabled={isDeleted}
+                          />
+                          <span
+                            className={cn(
+                              isDeleted && "line-through opacity-50",
+                            )}
+                          >
+                            : {chapter.title || `Chapter ${chapter.id}`}
+                          </span>
+                        </div>
+                        {(chapter.createdAt || chapter.updatedAt) && (
+                          <span className="text-xs text-gray-500">
+                            {chapter.createdAt && (
+                              <span>
+                                Created: {formatTimestamp(chapter.createdAt)}
+                              </span>
+                            )}
+                            {chapter.updatedAt &&
+                              chapter.updatedAt !== chapter.createdAt && (
+                                <span className="ml-3">
+                                  Updated: {formatTimestamp(chapter.updatedAt)}
+                                </span>
+                              )}
+                          </span>
                         )}
-                      >
-                        Chapter {chapter.id}:{" "}
-                        {chapter.title || `Chapter ${chapter.id}`}
-                      </span>
+                      </div>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -1333,10 +1417,17 @@ const StoryForm: React.FC<StoryFormProps> = ({
       ) : storyStructure.hasEpisodes ? (
         <div className="space-y-4">
           {parts.length > 10 && selectedPartIndex !== null && (
-            <div className="mb-2 text-sm text-gray-500">
-              Showing {visibleParts.length} of {parts.length} episodes (±5 from
-              selected)
-            </div>
+            <Button
+              size="sm"
+              variant="light"
+              className="mb-2 text-sm text-gray-600 hover:text-primary-colour"
+              onClick={() => setCurrentStep("writing")}
+            >
+              <span className={Magnetik_Regular.className}>
+                Showing {visibleParts.length} of {parts.length} episodes (±5
+                from selected)
+              </span>
+            </Button>
           )}
           <Accordion
             variant="splitted"
@@ -1358,22 +1449,60 @@ const StoryForm: React.FC<StoryFormProps> = ({
               content: "px-4 pb-4 pt-0",
             }}
           >
-            {visibleParts.map((part) => {
+            {visibleParts.map((part, partIndex) => {
               const isDeleted = deletedPartIds.has(part.id);
-              
+
               return (
                 <AccordionItem
-                  key={part.id.toString()}
+                  key={part.uuid || `episode-${part.id}`}
                   aria-label={`Episode ${part.id}`}
                   title={
                     <div className="flex items-center justify-between w-full pr-2">
-                      <span
-                        className={cn(
-                          isDeleted && "line-through opacity-50",
+                      <div className="flex flex-col gap-0.5 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-gray-600">Episode</span>
+                          <input
+                            type="number"
+                            min="1"
+                            value={part.episodeNumber ?? part.id}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              const num = parseInt(e.target.value);
+                              if (!isNaN(num) && num > 0) {
+                                updatePart(part.id, "episodeNumber", num);
+                              }
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            className={cn(
+                              "w-16 px-2 py-1 text-sm border rounded",
+                              isDeleted && "opacity-50",
+                            )}
+                            disabled={isDeleted}
+                          />
+                          <span
+                            className={cn(
+                              isDeleted && "line-through opacity-50",
+                            )}
+                          >
+                            : {part.title || `Episode ${part.id}`}
+                          </span>
+                        </div>
+                        {(part.createdAt || part.updatedAt) && (
+                          <span className="text-xs text-gray-500">
+                            {part.createdAt && (
+                              <span>
+                                Created: {formatTimestamp(part.createdAt)}
+                              </span>
+                            )}
+                            {part.updatedAt &&
+                              part.updatedAt !== part.createdAt && (
+                                <span className="ml-3">
+                                  Updated: {formatTimestamp(part.updatedAt)}
+                                </span>
+                              )}
+                          </span>
                         )}
-                      >
-                        Episode {part.id}: {part.title || `Episode ${part.id}`}
-                      </span>
+                      </div>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -1527,8 +1656,12 @@ const StoryForm: React.FC<StoryFormProps> = ({
                   : !storyStructure.hasChapters
                     ? parts
                     : undefined,
-                mode === "edit" && storyStructure.hasChapters ? getDeletedChapters() : undefined,
-                mode === "edit" && !storyStructure.hasChapters ? getDeletedParts() : undefined,
+                mode === "edit" && storyStructure.hasChapters
+                  ? getDeletedChapters()
+                  : undefined,
+                mode === "edit" && !storyStructure.hasChapters
+                  ? getDeletedParts()
+                  : undefined,
               );
             }}
             disabled={isLoading}
@@ -1542,8 +1675,12 @@ const StoryForm: React.FC<StoryFormProps> = ({
                 const publishData = { ...formData, storyStatus: "Published" };
                 onSubmit(
                   publishData,
-                  storyStructure.hasChapters ? getAllModifiedChapters() : undefined,
-                  !storyStructure.hasChapters ? getAllModifiedParts() : undefined,
+                  storyStructure.hasChapters
+                    ? getAllModifiedChapters()
+                    : undefined,
+                  !storyStructure.hasChapters
+                    ? getAllModifiedParts()
+                    : undefined,
                   storyStructure.hasChapters ? getDeletedChapters() : undefined,
                   !storyStructure.hasChapters ? getDeletedParts() : undefined,
                 );
@@ -1642,7 +1779,10 @@ const StoryForm: React.FC<StoryFormProps> = ({
       >
         <ModalContent>
           <ModalHeader className="flex items-center justify-between px-6 pt-6 pb-4">
-            <button onClick={handleDeleteCancel} className="text-primary-colour">
+            <button
+              onClick={handleDeleteCancel}
+              className="text-primary-colour"
+            >
               <ArrowLeft size={20} />
             </button>
             <h2
@@ -1650,7 +1790,10 @@ const StoryForm: React.FC<StoryFormProps> = ({
             >
               Delete {itemToDelete?.type === "chapter" ? "Chapter" : "Episode"}
             </h2>
-            <button onClick={handleDeleteCancel} className="text-primary-colour">
+            <button
+              onClick={handleDeleteCancel}
+              className="text-primary-colour"
+            >
               <X size={20} />
             </button>
           </ModalHeader>

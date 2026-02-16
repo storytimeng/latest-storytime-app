@@ -239,11 +239,14 @@ export function useStoryViewLogic({
         Array.isArray(story.chapters) &&
         story.chapters.length > 0
       ) {
-        const mappedChapters = story.chapters.map((ch: any) => ({
-          id: ch.chapterNumber || ch.id,
+        const mappedChapters = story.chapters.map((ch: any, index: number) => ({
+          id: index + 1, // Use array index for unique local ID
           uuid: ch.id, // Store the API's UUID
-          title: ch.title || `Chapter ${ch.chapterNumber || ch.id}`,
+          title: ch.title || `Chapter ${ch.chapterNumber || index + 1}`,
           body: ch.content || ch.body || "",
+          chapterNumber: ch.chapterNumber,
+          createdAt: ch.createdAt,
+          updatedAt: ch.updatedAt,
         }));
         console.log(
           "[useStoryViewLogic] Setting initialChapters from API chapters:",
@@ -260,11 +263,14 @@ export function useStoryViewLogic({
         Array.isArray(story.episodes) &&
         story.episodes.length > 0
       ) {
-        const mappedEpisodes = story.episodes.map((ep: any) => ({
-          id: ep.episodeNumber || ep.id,
+        const mappedEpisodes = story.episodes.map((ep: any, index: number) => ({
+          id: index + 1, // Use array index for unique local ID
           uuid: ep.id, // Store the API's UUID
-          title: ep.title || `Episode ${ep.episodeNumber || ep.id}`,
+          title: ep.title || `Episode ${ep.episodeNumber || index + 1}`,
           body: ep.content || ep.body || "",
+          episodeNumber: ep.episodeNumber,
+          createdAt: ep.createdAt,
+          updatedAt: ep.updatedAt,
         }));
         console.log(
           "[useStoryViewLogic] Setting initialParts from API episodes:",
@@ -307,7 +313,13 @@ export function useStoryViewLogic({
 
   // Handle form submission
   const handleSubmit = useCallback(
-    async (formData: StoryFormData, _chapters?: Chapter[], _parts?: Part[], deletedChapters?: Chapter[], deletedParts?: Part[]) => {
+    async (
+      formData: StoryFormData,
+      _chapters?: Chapter[],
+      _parts?: Part[],
+      deletedChapters?: Chapter[],
+      deletedParts?: Part[],
+    ) => {
       try {
         // If we have a createdStoryId, this is publishing chapters/episodes
         // ONLY valid if we are in CREATE mode (step 2 of wizard).
@@ -566,7 +578,8 @@ export function useStoryViewLogic({
                 chapterUuidsToDelete,
               );
 
-              const deleteResult = await deleteMultipleChapters(chapterUuidsToDelete);
+              const deleteResult =
+                await deleteMultipleChapters(chapterUuidsToDelete);
               deletedCount += deleteResult.deleted;
 
               if (deleteResult.failed > 0) {
@@ -586,7 +599,8 @@ export function useStoryViewLogic({
                 partUuidsToDelete,
               );
 
-              const deleteResult = await deleteMultipleEpisodes(partUuidsToDelete);
+              const deleteResult =
+                await deleteMultipleEpisodes(partUuidsToDelete);
               deletedCount += deleteResult.deleted;
 
               if (deleteResult.failed > 0) {
@@ -657,13 +671,19 @@ export function useStoryViewLogic({
                 chaptersToUpdate,
               );
 
-              const result = await updateMultipleChapters(
-                chaptersToUpdate.map((ch) => ({
-                  uuid: ch.uuid!,
-                  title: ch.title,
-                  body: ch.body,
-                })),
+              const updatePayload = chaptersToUpdate.map((ch) => ({
+                uuid: ch.uuid!,
+                title: ch.title,
+                body: ch.body,
+                chapterNumber: ch.chapterNumber,
+              }));
+
+              console.log(
+                "[useStoryViewLogic] Chapter update payload:",
+                updatePayload,
               );
+
+              const result = await updateMultipleChapters(updatePayload);
 
               contentUpdateSuccess = result.success;
 
@@ -687,13 +707,19 @@ export function useStoryViewLogic({
                 episodesToUpdate,
               );
 
-              const result = await updateMultipleEpisodes(
-                episodesToUpdate.map((p) => ({
-                  uuid: p.uuid!,
-                  title: p.title,
-                  body: p.body,
-                })),
+              const updatePayload = episodesToUpdate.map((p) => ({
+                uuid: p.uuid!,
+                title: p.title,
+                body: p.body,
+                episodeNumber: p.episodeNumber,
+              }));
+
+              console.log(
+                "[useStoryViewLogic] Episode update payload:",
+                updatePayload,
               );
+
+              const result = await updateMultipleEpisodes(updatePayload);
 
               contentUpdateSuccess = result.success;
 

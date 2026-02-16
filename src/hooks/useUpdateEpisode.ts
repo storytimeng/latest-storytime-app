@@ -77,7 +77,12 @@ export function useUpdateMultipleEpisodes() {
 
   const updateMultipleEpisodes = useCallback(
     async (
-      episodes: Array<{ uuid: string; title?: string; body?: string }>,
+      episodes: Array<{
+        uuid: string;
+        title?: string;
+        body?: string;
+        episodeNumber?: number;
+      }>,
     ): Promise<{ success: boolean; updated: number; failed: number }> => {
       setIsUpdating(true);
       setError(null);
@@ -92,6 +97,8 @@ export function useUpdateMultipleEpisodes() {
             const payload: UpdateEpisodePayload = {};
             if (episode.title !== undefined) payload.title = episode.title;
             if (episode.body !== undefined) payload.content = episode.body;
+            if (episode.episodeNumber !== undefined)
+              payload.episodeNumber = episode.episodeNumber;
 
             const response = await storiesControllerUpdateEpisode({
               path: { episodeId: episode.uuid },

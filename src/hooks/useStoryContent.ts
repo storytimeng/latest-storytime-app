@@ -35,8 +35,16 @@ interface UseStoryContentReturn {
   addPart: () => void;
   toggleChapter: (chapterId: number) => void;
   toggleEpisode: (episodeId: number) => void;
-  updateChapter: (id: number, field: "title" | "body", value: string) => void;
-  updatePart: (id: number, field: "title" | "body", value: string) => void;
+  updateChapter: (
+    id: number,
+    field: "title" | "body" | "chapterNumber",
+    value: string | number,
+  ) => void;
+  updatePart: (
+    id: number,
+    field: "title" | "body" | "episodeNumber",
+    value: string | number,
+  ) => void;
   markChapterForDeletion: (id: number) => void;
   markPartForDeletion: (id: number) => void;
   restoreChapter: (id: number) => void;
@@ -276,8 +284,13 @@ export function useStoryContent({
           : undefined,
       },
     ]);
-    // Expand the newly added chapter
-    setExpandedChapters(new Set([newChapterId]));
+    // Expand the newly added chapter (add to existing set, don't replace)
+    setExpandedChapters((prev) => new Set(prev).add(newChapterId));
+    // Mark as edited (it's new)
+    setEditedChapterIds((prev) => new Set(prev).add(newChapterId));
+    // Focus on the new chapter
+    setSelectedChapterIndex(newChapterId - 1);
+    console.log(`[useStoryContent] Chapter ${newChapterId} added and expanded`);
   }, [chapters.length, storyStructure.hasEpisodes]);
 
   // Add part/episode
@@ -287,23 +300,39 @@ export function useStoryContent({
       ...prev,
       { id: newPartId, title: `Part ${newPartId}`, body: "" },
     ]);
-    // Expand the newly added episode
-    setExpandedEpisodes(new Set([newPartId]));
+    // Expand the newly added episode (add to existing set, don't replace)
+    setExpandedEpisodes((prev) => new Set(prev).add(newPartId));
     // Mark as edited (it's new)
     setEditedPartIds((prev) => new Set(prev).add(newPartId));
+    // Focus on the new episode
+    setSelectedPartIndex(newPartId - 1);
+    console.log(`[useStoryContent] Episode ${newPartId} added and expanded`);
   }, [parts.length]);
 
   // Update chapter with dirty tracking
   const updateChapter = useCallback(
-    (id: number, field: "title" | "body", value: string) => {
+    (
+      id: number,
+      field: "title" | "body" | "chapterNumber",
+      value: string | number,
+    ) => {
       setChapters((prev) =>
         prev.map((ch) => (ch.id === id ? { ...ch, [field]: value } : ch)),
       );
 
-      // Mark as edited if changed from initial
-      const initial = initialChaptersData.current.get(id);
-      if (initial && initial[field] !== value) {
+      // Always mark as edited when changing chapterNumber (even if chapter not fully loaded)
+      // For title/body, only mark if changed from initial
+      if (field === "chapterNumber") {
         setEditedChapterIds((prev) => new Set(prev).add(id));
+        console.log(
+          `[useStoryContent] Chapter ${id} marked as edited (chapterNumber changed to ${value})`,
+        );
+      } else {
+        // Mark as edited if changed from initial
+        const initial = initialChaptersData.current.get(id);
+        if (initial && (initial as any)[field] !== value) {
+          setEditedChapterIds((prev) => new Set(prev).add(id));
+        }
       }
     },
     [],
@@ -311,15 +340,28 @@ export function useStoryContent({
 
   // Update part with dirty tracking
   const updatePart = useCallback(
-    (id: number, field: "title" | "body", value: string) => {
+    (
+      id: number,
+      field: "title" | "body" | "episodeNumber",
+      value: string | number,
+    ) => {
       setParts((prev) =>
         prev.map((p) => (p.id === id ? { ...p, [field]: value } : p)),
       );
 
-      // Mark as edited if changed from initial
-      const initial = initialPartsData.current.get(id);
-      if (initial && initial[field] !== value) {
+      // Always mark as edited when changing episodeNumber (even if episode not fully loaded)
+      // For title/body, only mark if changed from initial
+      if (field === "episodeNumber") {
         setEditedPartIds((prev) => new Set(prev).add(id));
+        console.log(
+          `[useStoryContent] Episode ${id} marked as edited (episodeNumber changed to ${value})`,
+        );
+      } else {
+        // Mark as edited if changed from initial
+        const initial = initialPartsData.current.get(id);
+        if (initial && (initial as any)[field] !== value) {
+          setEditedPartIds((prev) => new Set(prev).add(id));
+        }
       }
     },
     [],
@@ -327,33 +369,83 @@ export function useStoryContent({
 
   // Get only edited chapters (excluding deleted ones) - for UPDATE API
   const getEditedChapters = useCallback(() => {
-    return chapters.filter(
+    const edited = chapters.filter(
       (ch) =>
         editedChapterIds.has(ch.id) && !deletedChapterIds.has(ch.id) && ch.uuid,
     );
+    console.log("[useStoryContent] getEditedChapters:", {
+      editedChapterIds: Array.from(editedChapterIds),
+      deletedChapterIds: Array.from(deletedChapterIds),
+      totalChapters: chapters.length,
+      editedChapters: edited.map((ch) => ({
+        id: ch.id,
+        uuid: ch.uuid,
+        chapterNumber: ch.chapterNumber,
+        title: ch.title,
+      })),
+    });
+    return edited;
   }, [chapters, editedChapterIds, deletedChapterIds]);
 
   // Get only edited parts (excluding deleted ones) - for UPDATE API
   const getEditedParts = useCallback(() => {
-    return parts.filter(
+    const edited = parts.filter(
       (p) => editedPartIds.has(p.id) && !deletedPartIds.has(p.id) && p.uuid,
     );
+    console.log("[useStoryContent] getEditedParts:", {
+      editedPartIds: Array.from(editedPartIds),
+      deletedPartIds: Array.from(deletedPartIds),
+      totalParts: parts.length,
+      editedParts: edited.map((p) => ({
+        id: p.id,
+        uuid: p.uuid,
+        episodeNumber: p.episodeNumber,
+        title: p.title,
+      })),
+    });
+    return edited;
   }, [parts, editedPartIds, deletedPartIds]);
 
   // Get all modified chapters: new items (no UUID) + edited items (with UUID), excluding deleted
   const getAllModifiedChapters = useCallback(() => {
-    return chapters.filter(
+    const modified = chapters.filter(
       (ch) =>
         !deletedChapterIds.has(ch.id) &&
         (!ch.uuid || editedChapterIds.has(ch.id)),
     );
+    console.log("[useStoryContent] getAllModifiedChapters:", {
+      editedChapterIds: Array.from(editedChapterIds),
+      deletedChapterIds: Array.from(deletedChapterIds),
+      totalChapters: chapters.length,
+      modifiedChapters: modified.map((ch) => ({
+        id: ch.id,
+        uuid: ch.uuid,
+        chapterNumber: ch.chapterNumber,
+        title: ch.title,
+        hasUuid: !!ch.uuid,
+      })),
+    });
+    return modified;
   }, [chapters, editedChapterIds, deletedChapterIds]);
 
   // Get all modified parts: new items (no UUID) + edited items (with UUID), excluding deleted
   const getAllModifiedParts = useCallback(() => {
-    return parts.filter(
+    const modified = parts.filter(
       (p) => !deletedPartIds.has(p.id) && (!p.uuid || editedPartIds.has(p.id)),
     );
+    console.log("[useStoryContent] getAllModifiedParts:", {
+      editedPartIds: Array.from(editedPartIds),
+      deletedPartIds: Array.from(deletedPartIds),
+      totalParts: parts.length,
+      modifiedParts: modified.map((p) => ({
+        id: p.id,
+        uuid: p.uuid,
+        episodeNumber: p.episodeNumber,
+        title: p.title,
+        hasUuid: !!p.uuid,
+      })),
+    });
+    return modified;
   }, [parts, editedPartIds, deletedPartIds]);
 
   // Mark chapter for deletion
@@ -397,20 +489,30 @@ export function useStoryContent({
   // Renumber chapters sequentially (only non-deleted items, preserves deleted items for deletion)
   const renumberChapters = useCallback(() => {
     setChapters((prev) => {
-      let nextId = 1;
-      return prev.map((ch) => {
-        // Skip deleted chapters - they keep their old ID
-        if (deletedChapterIds.has(ch.id)) {
-          return ch;
+      // Separate deleted and non-deleted chapters
+      const deleted = prev.filter((ch) => deletedChapterIds.has(ch.id));
+      const nonDeleted = prev.filter((ch) => !deletedChapterIds.has(ch.id));
+
+      // Sort non-deleted by createdAt (oldest first), fallback to current order
+      nonDeleted.sort((a, b) => {
+        if (a.createdAt && b.createdAt) {
+          return (
+            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+          );
         }
-        // Renumber non-deleted chapters
-        const newId = nextId++;
-        return {
-          ...ch,
-          id: newId,
-          title: ch.title.replace(/^Chapter \d+:?\\s*/, `Chapter ${newId}: `),
-        };
+        return 0; // Keep original order if no timestamps
       });
+
+      // Renumber non-deleted chapters sequentially
+      const renumbered = nonDeleted.map((ch, index) => ({
+        ...ch,
+        id: index + 1,
+        chapterNumber: index + 1,
+        title: ch.title.replace(/^Chapter \d+:?\\s*/, `Chapter ${index + 1}: `),
+      }));
+
+      // Combine renumbered non-deleted with deleted (keep deleted at end)
+      return [...renumbered, ...deleted];
     });
 
     // Mark all existing (non-deleted) chapters with UUID as edited since we changed their titles
@@ -426,20 +528,30 @@ export function useStoryContent({
   // Renumber episodes sequentially (only non-deleted items, preserves deleted items for deletion)
   const renumberParts = useCallback(() => {
     setParts((prev) => {
-      let nextId = 1;
-      return prev.map((p) => {
-        // Skip deleted episodes - they keep their old ID
-        if (deletedPartIds.has(p.id)) {
-          return p;
+      // Separate deleted and non-deleted episodes
+      const deleted = prev.filter((p) => deletedPartIds.has(p.id));
+      const nonDeleted = prev.filter((p) => !deletedPartIds.has(p.id));
+
+      // Sort non-deleted by createdAt (oldest first), fallback to current order
+      nonDeleted.sort((a, b) => {
+        if (a.createdAt && b.createdAt) {
+          return (
+            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+          );
         }
-        // Renumber non-deleted episodes
-        const newId = nextId++;
-        return {
-          ...p,
-          id: newId,
-          title: p.title.replace(/^Episode \d+:?\\s*/, `Episode ${newId}: `),
-        };
+        return 0; // Keep original order if no timestamps
       });
+
+      // Renumber non-deleted episodes sequentially
+      const renumbered = nonDeleted.map((p, index) => ({
+        ...p,
+        id: index + 1,
+        episodeNumber: index + 1,
+        title: p.title.replace(/^Episode \d+:?\\s*/, `Episode ${index + 1}: `),
+      }));
+
+      // Combine renumbered non-deleted with deleted (keep deleted at end)
+      return [...renumbered, ...deleted];
     });
 
     // Mark all existing (non-deleted) episodes with UUID as edited since we changed their titles
@@ -506,6 +618,10 @@ export function useStoryContent({
                     ...ch,
                     title: chapterData.title || ch.title,
                     body: chapterData.content || ch.body || "",
+                    createdAt: chapterData.createdAt,
+                    updatedAt: chapterData.updatedAt,
+                    chapterNumber:
+                      chapterData.chapterNumber ?? ch.chapterNumber,
                   }
                 : ch,
             );
@@ -599,6 +715,9 @@ export function useStoryContent({
                     ...p,
                     title: episodeData.title || p.title,
                     body: episodeData.content || p.body || "",
+                    createdAt: episodeData.createdAt,
+                    updatedAt: episodeData.updatedAt,
+                    episodeNumber: episodeData.episodeNumber ?? p.episodeNumber,
                   }
                 : p,
             );

@@ -11,7 +11,7 @@ interface UpdateChapterPayload {
 interface UseUpdateChapterReturn {
   updateChapter: (
     chapterId: string,
-    payload: UpdateChapterPayload
+    payload: UpdateChapterPayload,
   ) => Promise<boolean>;
   isUpdating: boolean;
   error: Error | null;
@@ -25,7 +25,10 @@ export function useUpdateChapter(): UseUpdateChapterReturn {
   const [error, setError] = useState<Error | null>(null);
 
   const updateChapter = useCallback(
-    async (chapterId: string, payload: UpdateChapterPayload): Promise<boolean> => {
+    async (
+      chapterId: string,
+      payload: UpdateChapterPayload,
+    ): Promise<boolean> => {
       setIsUpdating(true);
       setError(null);
 
@@ -36,21 +39,26 @@ export function useUpdateChapter(): UseUpdateChapterReturn {
         });
 
         if (response.data) {
-          console.log(`[useUpdateChapter] Chapter ${chapterId} updated successfully`);
+          console.log(
+            `[useUpdateChapter] Chapter ${chapterId} updated successfully`,
+          );
           return true;
         }
 
         return false;
       } catch (err: any) {
         const errorMessage = err?.message || "Failed to update chapter";
-        console.error(`[useUpdateChapter] Error updating chapter ${chapterId}:`, err);
+        console.error(
+          `[useUpdateChapter] Error updating chapter ${chapterId}:`,
+          err,
+        );
         setError(new Error(errorMessage));
         return false;
       } finally {
         setIsUpdating(false);
       }
     },
-    []
+    [],
   );
 
   return {
@@ -69,7 +77,12 @@ export function useUpdateMultipleChapters() {
 
   const updateMultipleChapters = useCallback(
     async (
-      chapters: Array<{ uuid: string; title?: string; body?: string }>
+      chapters: Array<{
+        uuid: string;
+        title?: string;
+        body?: string;
+        chapterNumber?: number;
+      }>,
     ): Promise<{ success: boolean; updated: number; failed: number }> => {
       setIsUpdating(true);
       setError(null);
@@ -84,6 +97,8 @@ export function useUpdateMultipleChapters() {
             const payload: UpdateChapterPayload = {};
             if (chapter.title !== undefined) payload.title = chapter.title;
             if (chapter.body !== undefined) payload.content = chapter.body;
+            if (chapter.chapterNumber !== undefined)
+              payload.chapterNumber = chapter.chapterNumber;
 
             const response = await storiesControllerUpdateChapter({
               path: { chapterId: chapter.uuid },
@@ -92,12 +107,17 @@ export function useUpdateMultipleChapters() {
 
             if (response.data) {
               updated++;
-              console.log(`[useUpdateMultipleChapters] Chapter ${chapter.uuid} updated`);
+              console.log(
+                `[useUpdateMultipleChapters] Chapter ${chapter.uuid} updated`,
+              );
             } else {
               failed++;
             }
           } catch (chapterError) {
-            console.error(`[useUpdateMultipleChapters] Failed to update chapter ${chapter.uuid}:`, chapterError);
+            console.error(
+              `[useUpdateMultipleChapters] Failed to update chapter ${chapter.uuid}:`,
+              chapterError,
+            );
             failed++;
           }
         }
@@ -112,7 +132,7 @@ export function useUpdateMultipleChapters() {
         setIsUpdating(false);
       }
     },
-    []
+    [],
   );
 
   return {
