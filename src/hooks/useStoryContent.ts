@@ -15,8 +15,8 @@ interface UseStoryContentProps {
 interface UseStoryContentReturn {
   chapters: Chapter[];
   parts: Part[];
-  expandedChapters: Set<number>;
-  expandedEpisodes: Set<number>;
+  expandedChapters: Set<string>;
+  expandedEpisodes: Set<string>;
   editedChapterIds: Set<number>;
   editedPartIds: Set<number>;
   deletedChapterIds: Set<number>;
@@ -27,14 +27,14 @@ interface UseStoryContentReturn {
   loadingPartIds: Set<string>;
   setChapters: React.Dispatch<React.SetStateAction<Chapter[]>>;
   setParts: React.Dispatch<React.SetStateAction<Part[]>>;
-  setExpandedChapters: React.Dispatch<React.SetStateAction<Set<number>>>;
-  setExpandedEpisodes: React.Dispatch<React.SetStateAction<Set<number>>>;
+  setExpandedChapters: React.Dispatch<React.SetStateAction<Set<string>>>;
+  setExpandedEpisodes: React.Dispatch<React.SetStateAction<Set<string>>>;
   setSelectedChapterIndex: (index: number | null) => void;
   setSelectedPartIndex: (index: number | null) => void;
   addChapter: () => void;
   addPart: () => void;
-  toggleChapter: (chapterId: number) => void;
-  toggleEpisode: (episodeId: number) => void;
+  toggleChapter: (chapterKey: string) => void;
+  toggleEpisode: (episodeKey: string) => void;
   updateChapter: (
     id: number,
     field: "title" | "body" | "chapterNumber",
@@ -161,18 +161,22 @@ export function useStoryContent({
 
   // Accordion state for collapsing chapters/episodes
   // In edit mode with existing content, expand the first item by default
-  const [expandedChapters, setExpandedChapters] = useState<Set<number>>(() => {
+  // Store keys (uuid or chapter-${id}) instead of IDs for direct matching with AccordionItem keys
+  const [expandedChapters, setExpandedChapters] = useState<Set<string>>(() => {
     if (initialChapters && initialChapters.length > 0) {
-      return new Set([initialChapters[0].id]);
+      const firstKey =
+        initialChapters[0].uuid || `chapter-${initialChapters[0].id}`;
+      return new Set([firstKey]);
     }
-    return new Set([1]);
+    return new Set(["chapter-1"]);
   });
 
-  const [expandedEpisodes, setExpandedEpisodes] = useState<Set<number>>(() => {
+  const [expandedEpisodes, setExpandedEpisodes] = useState<Set<string>>(() => {
     if (initialParts && initialParts.length > 0) {
-      return new Set([initialParts[0].id]);
+      const firstKey = initialParts[0].uuid || `episode-${initialParts[0].id}`;
+      return new Set([firstKey]);
     }
-    return new Set([1]);
+    return new Set(["episode-1"]);
   });
 
   // Update chapters when initialChapters changes (for edit mode when data loads)
@@ -188,7 +192,9 @@ export function useStoryContent({
         initialChapters,
       );
       setChapters(initialChapters);
-      setExpandedChapters(new Set([initialChapters[0].id]));
+      const firstKey =
+        initialChapters[0].uuid || `chapter-${initialChapters[0].id}`;
+      setExpandedChapters(new Set([firstKey]));
 
       // Store initial data for dirty tracking
       const initialMap = new Map<number, Chapter>();
@@ -225,7 +231,8 @@ export function useStoryContent({
         })),
       });
       setParts(initialParts);
-      setExpandedEpisodes(new Set([initialParts[0].id]));
+      const firstKey = initialParts[0].uuid || `episode-${initialParts[0].id}`;
+      setExpandedEpisodes(new Set([firstKey]));
 
       // Store initial data for dirty tracking
       const initialMap = new Map<number, Part>();
@@ -244,27 +251,27 @@ export function useStoryContent({
     }
   }, [initialParts?.length]); // Only depend on length, not the array itself
 
-  // Toggle chapter expansion
-  const toggleChapter = useCallback((chapterId: number) => {
+  // Toggle chapter expansion (accepts key: uuid or chapter-${id})
+  const toggleChapter = useCallback((chapterKey: string) => {
     setExpandedChapters((prev) => {
       const newSet = new Set(prev);
-      if (newSet.has(chapterId)) {
-        newSet.delete(chapterId);
+      if (newSet.has(chapterKey)) {
+        newSet.delete(chapterKey);
       } else {
-        newSet.add(chapterId);
+        newSet.add(chapterKey);
       }
       return newSet;
     });
   }, []);
 
-  // Toggle episode expansion
-  const toggleEpisode = useCallback((episodeId: number) => {
+  // Toggle episode expansion (accepts key: uuid or episode-${id})
+  const toggleEpisode = useCallback((episodeKey: string) => {
     setExpandedEpisodes((prev) => {
       const newSet = new Set(prev);
-      if (newSet.has(episodeId)) {
-        newSet.delete(episodeId);
+      if (newSet.has(episodeKey)) {
+        newSet.delete(episodeKey);
       } else {
-        newSet.add(episodeId);
+        newSet.add(episodeKey);
       }
       return newSet;
     });
@@ -273,6 +280,7 @@ export function useStoryContent({
   // Add chapter
   const addChapter = useCallback(() => {
     const newChapterId = chapters.length + 1;
+    const newChapterKey = `chapter-${newChapterId}`;
     setChapters((prev) => [
       ...prev,
       {
@@ -285,7 +293,7 @@ export function useStoryContent({
       },
     ]);
     // Expand the newly added chapter (add to existing set, don't replace)
-    setExpandedChapters((prev) => new Set(prev).add(newChapterId));
+    setExpandedChapters((prev) => new Set(prev).add(newChapterKey));
     // Mark as edited (it's new)
     setEditedChapterIds((prev) => new Set(prev).add(newChapterId));
     // Focus on the new chapter
@@ -296,18 +304,91 @@ export function useStoryContent({
   // Add part/episode
   const addPart = useCallback(() => {
     const newPartId = parts.length + 1;
+    const newPartKey = `episode-${newPartId}`;
     setParts((prev) => [
       ...prev,
-      { id: newPartId, title: `Part ${newPartId}`, body: "" },
+      { id: newPartId, title: `Episode ${newPartId}`, body: "" },
     ]);
     // Expand the newly added episode (add to existing set, don't replace)
-    setExpandedEpisodes((prev) => new Set(prev).add(newPartId));
+    setExpandedEpisodes((prev) => new Set(prev).add(newPartKey));
     // Mark as edited (it's new)
     setEditedPartIds((prev) => new Set(prev).add(newPartId));
     // Focus on the new episode
     setSelectedPartIndex(newPartId - 1);
     console.log(`[useStoryContent] Episode ${newPartId} added and expanded`);
   }, [parts.length]);
+
+  // Helper to find unique chapter number (adds .1, .2, etc. if number exists)
+  const findUniqueChapterNumber = useCallback(
+    (
+      desiredNumber: number,
+      currentChapterId: number,
+      allChapters: Chapter[],
+    ) => {
+      // Check if this number is already used by another chapter
+      const numberExists = allChapters.some(
+        (ch) =>
+          ch.id !== currentChapterId && ch.chapterNumber === desiredNumber,
+      );
+
+      if (!numberExists) {
+        return desiredNumber;
+      }
+
+      // Find next available decimal variant (1.1, 1.2, etc.)
+      let decimal = 1;
+      let uniqueNumber = parseFloat(`${desiredNumber}.${decimal}`);
+
+      while (
+        allChapters.some(
+          (ch) =>
+            ch.id !== currentChapterId && ch.chapterNumber === uniqueNumber,
+        )
+      ) {
+        decimal++;
+        uniqueNumber = parseFloat(`${desiredNumber}.${decimal}`);
+      }
+
+      console.log(
+        `[useStoryContent] Chapter number ${desiredNumber} exists, using ${uniqueNumber}`,
+      );
+      return uniqueNumber;
+    },
+    [],
+  );
+
+  // Helper to find unique episode number (adds .1, .2, etc. if number exists)
+  const findUniqueEpisodeNumber = useCallback(
+    (desiredNumber: number, currentEpisodeId: number, allParts: Part[]) => {
+      // Check if this number is already used by another episode
+      const numberExists = allParts.some(
+        (p) => p.id !== currentEpisodeId && p.episodeNumber === desiredNumber,
+      );
+
+      if (!numberExists) {
+        return desiredNumber;
+      }
+
+      // Find next available decimal variant (1.1, 1.2, etc.)
+      let decimal = 1;
+      let uniqueNumber = parseFloat(`${desiredNumber}.${decimal}`);
+
+      while (
+        allParts.some(
+          (p) => p.id !== currentEpisodeId && p.episodeNumber === uniqueNumber,
+        )
+      ) {
+        decimal++;
+        uniqueNumber = parseFloat(`${desiredNumber}.${decimal}`);
+      }
+
+      console.log(
+        `[useStoryContent] Episode number ${desiredNumber} exists, using ${uniqueNumber}`,
+      );
+      return uniqueNumber;
+    },
+    [],
+  );
 
   // Update chapter with dirty tracking
   const updateChapter = useCallback(
@@ -316,9 +397,20 @@ export function useStoryContent({
       field: "title" | "body" | "chapterNumber",
       value: string | number,
     ) => {
-      setChapters((prev) =>
-        prev.map((ch) => (ch.id === id ? { ...ch, [field]: value } : ch)),
-      );
+      setChapters((prev) => {
+        // If updating chapterNumber, ensure it's unique
+        if (field === "chapterNumber") {
+          const numValue =
+            typeof value === "string" ? parseFloat(value) : value;
+          const uniqueNumber = findUniqueChapterNumber(numValue, id, prev);
+          return prev.map((ch) =>
+            ch.id === id ? { ...ch, [field]: uniqueNumber } : ch,
+          );
+        }
+        return prev.map((ch) =>
+          ch.id === id ? { ...ch, [field]: value } : ch,
+        );
+      });
 
       // Always mark as edited when changing chapterNumber (even if chapter not fully loaded)
       // For title/body, only mark if changed from initial
@@ -335,7 +427,7 @@ export function useStoryContent({
         }
       }
     },
-    [],
+    [findUniqueChapterNumber],
   );
 
   // Update part with dirty tracking
@@ -345,9 +437,18 @@ export function useStoryContent({
       field: "title" | "body" | "episodeNumber",
       value: string | number,
     ) => {
-      setParts((prev) =>
-        prev.map((p) => (p.id === id ? { ...p, [field]: value } : p)),
-      );
+      setParts((prev) => {
+        // If updating episodeNumber, ensure it's unique
+        if (field === "episodeNumber") {
+          const numValue =
+            typeof value === "string" ? parseFloat(value) : value;
+          const uniqueNumber = findUniqueEpisodeNumber(numValue, id, prev);
+          return prev.map((p) =>
+            p.id === id ? { ...p, [field]: uniqueNumber } : p,
+          );
+        }
+        return prev.map((p) => (p.id === id ? { ...p, [field]: value } : p));
+      });
 
       // Always mark as edited when changing episodeNumber (even if episode not fully loaded)
       // For title/body, only mark if changed from initial
@@ -364,7 +465,7 @@ export function useStoryContent({
         }
       }
     },
-    [],
+    [findUniqueEpisodeNumber],
   );
 
   // Get only edited chapters (excluding deleted ones) - for UPDATE API
