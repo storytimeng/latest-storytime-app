@@ -447,13 +447,16 @@ const StoryForm: React.FC<StoryFormProps> = ({
     if (currentStep === "writing" && mode === "edit" && storyId) {
       if (selectedChapterIndex !== null && chapters[selectedChapterIndex]) {
         const selectedChapter = chapters[selectedChapterIndex];
+        const chapterKey =
+          selectedChapter.uuid || `chapter-${selectedChapter.id}`;
         console.log("[storyForm] Auto-expanding chapter:", {
           selectedChapterIndex,
           chapterId: selectedChapter.id,
           chapterUuid: selectedChapter.uuid,
+          chapterKey,
           title: selectedChapter.title,
         });
-        setExpandedChapters(new Set([selectedChapter.id]));
+        setExpandedChapters(new Set([chapterKey]));
 
         // Load chapter content if it has a UUID and we haven't attempted yet
         if (
@@ -466,13 +469,15 @@ const StoryForm: React.FC<StoryFormProps> = ({
       }
       if (selectedPartIndex !== null && parts[selectedPartIndex]) {
         const selectedPart = parts[selectedPartIndex];
+        const partKey = selectedPart.uuid || `episode-${selectedPart.id}`;
         console.log("[storyForm] Auto-expanding episode:", {
           selectedPartIndex,
           partId: selectedPart.id,
           partUuid: selectedPart.uuid,
+          partKey,
           title: selectedPart.title,
         });
-        setExpandedEpisodes(new Set([selectedPart.id]));
+        setExpandedEpisodes(new Set([partKey]));
 
         // Load episode content if it has a UUID and we haven't attempted yet
         if (
@@ -504,8 +509,11 @@ const StoryForm: React.FC<StoryFormProps> = ({
       expandedChapters.size > 0 &&
       chapters.length > 0
     ) {
-      expandedChapters.forEach((chapterId) => {
-        const chapterIndex = chapters.findIndex((ch) => ch.id === chapterId);
+      expandedChapters.forEach((chapterKey) => {
+        // Find chapter by matching key (uuid or chapter-${id})
+        const chapterIndex = chapters.findIndex(
+          (ch) => ch.uuid === chapterKey || `chapter-${ch.id}` === chapterKey,
+        );
         if (chapterIndex !== -1) {
           const chapter = chapters[chapterIndex];
           // Load if has UUID and we haven't attempted to load it yet
@@ -514,7 +522,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
             !attemptedChapterLoads.current.has(chapter.uuid)
           ) {
             console.log("[storyForm] Loading content for expanded chapter:", {
-              chapterId,
+              chapterKey,
               chapterIndex,
               uuid: chapter.uuid,
             });
@@ -534,8 +542,11 @@ const StoryForm: React.FC<StoryFormProps> = ({
       expandedEpisodes.size > 0 &&
       parts.length > 0
     ) {
-      expandedEpisodes.forEach((episodeId) => {
-        const episodeIndex = parts.findIndex((p) => p.id === episodeId);
+      expandedEpisodes.forEach((episodeKey) => {
+        // Find episode by matching key (uuid or episode-${id})
+        const episodeIndex = parts.findIndex(
+          (p) => p.uuid === episodeKey || `episode-${p.id}` === episodeKey,
+        );
         if (episodeIndex !== -1) {
           const episode = parts[episodeIndex];
           // Load if has UUID and we haven't attempted to load it yet
@@ -544,7 +555,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
             !attemptedEpisodeLoads.current.has(episode.uuid)
           ) {
             console.log("[storyForm] Loading content for expanded episode:", {
-              episodeId,
+              episodeKey,
               episodeIndex,
               uuid: episode.uuid,
             });
@@ -876,7 +887,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
 
       {/* Description */}
       <TextAreaField
-        label="Story Description"
+        label="Story Blurb"
         htmlFor="description"
         id="description"
         placeholder="Describe your story..."
@@ -1206,12 +1217,9 @@ const StoryForm: React.FC<StoryFormProps> = ({
           <Accordion
             variant="splitted"
             selectionMode="multiple"
-            selectedKeys={Array.from(expandedChapters).map(String)}
+            selectedKeys={expandedChapters}
             onSelectionChange={(keys) => {
-              const newSet = new Set(
-                Array.from(keys as Set<string>).map((k) => parseInt(k, 10)),
-              );
-              setExpandedChapters(newSet);
+              setExpandedChapters(new Set(keys as Set<string>));
             }}
             className="px-0"
             itemClasses={{
@@ -1237,12 +1245,13 @@ const StoryForm: React.FC<StoryFormProps> = ({
                           <span className="text-sm text-gray-600">Chapter</span>
                           <input
                             type="number"
-                            min="1"
+                            min="0"
+                            step="0.1"
                             value={chapter.chapterNumber ?? chapter.id}
                             onChange={(e) => {
                               e.stopPropagation();
-                              const num = parseInt(e.target.value);
-                              if (!isNaN(num) && num > 0) {
+                              const num = parseFloat(e.target.value);
+                              if (!isNaN(num) && num >= 0) {
                                 updateChapter(chapter.id, "chapterNumber", num);
                               }
                             }}
@@ -1404,6 +1413,8 @@ const StoryForm: React.FC<StoryFormProps> = ({
               className="flex items-center gap-2 border border-dashed text-primary-colour border-primary-colour"
               onClick={() => {
                 renumberChapters();
+                // Reset expanded state to first chapter after renumbering
+                setExpandedChapters(new Set(["chapter-1"]));
                 showToast({
                   type: "success",
                   message: "Chapters renumbered successfully",
@@ -1432,12 +1443,9 @@ const StoryForm: React.FC<StoryFormProps> = ({
           <Accordion
             variant="splitted"
             selectionMode="multiple"
-            selectedKeys={Array.from(expandedEpisodes).map(String)}
+            selectedKeys={expandedEpisodes}
             onSelectionChange={(keys) => {
-              const newSet = new Set(
-                Array.from(keys as Set<string>).map((k) => parseInt(k, 10)),
-              );
-              setExpandedEpisodes(newSet);
+              setExpandedEpisodes(new Set(keys as Set<string>));
             }}
             className="px-0"
             itemClasses={{
@@ -1463,12 +1471,13 @@ const StoryForm: React.FC<StoryFormProps> = ({
                           <span className="text-sm text-gray-600">Episode</span>
                           <input
                             type="number"
-                            min="1"
+                            min="0"
+                            step="0.1"
                             value={part.episodeNumber ?? part.id}
                             onChange={(e) => {
                               e.stopPropagation();
-                              const num = parseInt(e.target.value);
-                              if (!isNaN(num) && num > 0) {
+                              const num = parseFloat(e.target.value);
+                              if (!isNaN(num) && num >= 0) {
                                 updatePart(part.id, "episodeNumber", num);
                               }
                             }}
@@ -1601,6 +1610,8 @@ const StoryForm: React.FC<StoryFormProps> = ({
               className="flex items-center gap-2 border border-dashed text-primary-colour border-primary-colour"
               onClick={() => {
                 renumberParts();
+                // Reset expanded state to first episode after renumbering
+                setExpandedEpisodes(new Set(["episode-1"]));
                 showToast({
                   type: "success",
                   message: "Episodes renumbered successfully",
