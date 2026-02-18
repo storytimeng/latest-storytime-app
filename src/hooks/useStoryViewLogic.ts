@@ -466,13 +466,17 @@ export function useStoryViewLogic({
         // Check if content already exists via props or logic before proceeding
         // The API integration below looks correct
 
+        // Content logic:
+        // - For stories WITH chapters/episodes: content can be description (for CREATE) or empty
+        // - For stories WITHOUT chapters/episodes: content is the actual story text from formData.content
+        // - Description and content are SEPARATE fields and should not be mixed in updates
         const contentText =
           hasChapters || hasEpisodes
-            ? formData.description
+            ? formData.content || formData.description || "" // Use description as fallback for CREATE
             : formData.content ||
               (_parts && _parts.length > 0
                 ? _parts.map((p) => `${p.title}\n${p.body}`).join("\n\n")
-                : formData.description);
+                : "");
 
         if (mode === "edit" && storyId) {
           // Update existing story - only send changed fields
@@ -481,9 +485,21 @@ export function useStoryViewLogic({
           if (formData.title !== initialData?.title) {
             updatePayload.title = formData.title;
           }
-          if (contentText !== initialData?.content) {
-            updatePayload.content = contentText;
+
+          // Update description if changed
+          if (formData.description !== initialData?.description) {
+            (updatePayload as any).description = formData.description;
           }
+
+          // Update content if changed (separate from description)
+          if (
+            formData.content !== initialData?.content &&
+            formData.content !== undefined &&
+            formData.content !== null
+          ) {
+            updatePayload.content = formData.content;
+          }
+
           if (
             JSON.stringify(formData.selectedGenres) !==
             JSON.stringify(initialData?.selectedGenres)
@@ -543,6 +559,12 @@ export function useStoryViewLogic({
           // Update story metadata (excludes chapters/episodes)
           let storyUpdateSuccess = true;
           if (Object.keys(updatePayload).length > 0) {
+            console.log("[useStoryViewLogic] Updating story with payload:", {
+              storyId,
+              updatePayload,
+              note: "content field should only contain formData.content, NOT description",
+            });
+
             storyUpdateSuccess = await updateStory(
               storyId,
               updatePayload as any,
