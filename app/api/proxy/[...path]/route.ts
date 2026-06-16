@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const BACKEND_URL =
-  process.env.NEXT_PUBLIC_API_URL || "https://end.digitalcoresystem.com";
+  process.env.NEXT_PUBLIC_API_URL ||
+  "https://storytime-backend-1-0.onrender.com";
 
 const DEBUG_PROXY = process.env.NEXT_PUBLIC_DEBUG_PROXY === "true";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ path: string[] }> }
+  { params }: { params: Promise<{ path: string[] }> },
 ) {
   const { path } = await params;
   return proxyRequest(request, path, "GET");
@@ -15,7 +16,7 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ path: string[] }> }
+  { params }: { params: Promise<{ path: string[] }> },
 ) {
   const { path } = await params;
   return proxyRequest(request, path, "POST");
@@ -23,7 +24,7 @@ export async function POST(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: Promise<{ path: string[] }> }
+  { params }: { params: Promise<{ path: string[] }> },
 ) {
   const { path } = await params;
   return proxyRequest(request, path, "PUT");
@@ -31,7 +32,7 @@ export async function PUT(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ path: string[] }> }
+  { params }: { params: Promise<{ path: string[] }> },
 ) {
   const { path } = await params;
   return proxyRequest(request, path, "PATCH");
@@ -39,7 +40,7 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ path: string[] }> }
+  { params }: { params: Promise<{ path: string[] }> },
 ) {
   const { path } = await params;
   return proxyRequest(request, path, "DELETE");
@@ -48,7 +49,7 @@ export async function DELETE(
 async function proxyRequest(
   request: NextRequest,
   path: string[],
-  method: string
+  method: string,
 ) {
   const apiPath = path.join("/");
   const url = `${BACKEND_URL}/${apiPath}`;
@@ -122,7 +123,7 @@ async function proxyRequest(
     // Log response on server console
     console.log(
       `[PROXY RESPONSE ${response.status}]`,
-      parsedResponse || responseData.substring(0, 200)
+      parsedResponse || responseData.substring(0, 200),
     );
 
     // If debug mode is enabled, add debug info to response
@@ -137,24 +138,27 @@ async function proxyRequest(
     }
 
     // Create response - let Next.js handle it properly
-    const nextResponse = (response.status === 204 || response.status === 205 || response.status === 304)
-      ? new NextResponse(null, {
-          status: response.status,
-          statusText: response.statusText,
-        })
-      : parsedResponse
-      ? NextResponse.json(parsedResponse, {
-          status: response.status,
-          statusText: response.statusText,
-        })
-      : new NextResponse(responseData, {
-          status: response.status,
-          statusText: response.statusText,
-          headers: {
-            "Content-Type":
-              response.headers.get("content-type") || "text/plain",
-          },
-        });
+    const nextResponse =
+      response.status === 204 ||
+      response.status === 205 ||
+      response.status === 304
+        ? new NextResponse(null, {
+            status: response.status,
+            statusText: response.statusText,
+          })
+        : parsedResponse
+          ? NextResponse.json(parsedResponse, {
+              status: response.status,
+              statusText: response.statusText,
+            })
+          : new NextResponse(responseData, {
+              status: response.status,
+              statusText: response.statusText,
+              headers: {
+                "Content-Type":
+                  response.headers.get("content-type") || "text/plain",
+              },
+            });
 
     // Copy safe response headers
     response.headers.forEach((value, key) => {
@@ -175,11 +179,11 @@ async function proxyRequest(
     nextResponse.headers.set("Access-Control-Allow-Origin", "*");
     nextResponse.headers.set(
       "Access-Control-Allow-Methods",
-      "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+      "GET, POST, PUT, PATCH, DELETE, OPTIONS",
     );
     nextResponse.headers.set(
       "Access-Control-Allow-Headers",
-      "Content-Type, Authorization, X-Requested-With"
+      "Content-Type, Authorization, X-Requested-With",
     );
 
     return nextResponse;
@@ -206,7 +210,7 @@ async function proxyRequest(
           },
         }),
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

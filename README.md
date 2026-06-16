@@ -47,7 +47,7 @@ Create a `.env.local` file in the root directory with the following variables:
 NEXT_PUBLIC_CACHE_EXPIRY_DAYS=30
 
 # API Configuration
-NEXT_PUBLIC_API_URL=https://end.digitalcoresystem.com
+NEXT_PUBLIC_API_URL=https://storytime-backend-1-0.onrender.com
 NEXT_PUBLIC_PROXY=true
 ```
 
