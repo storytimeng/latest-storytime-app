@@ -234,8 +234,8 @@ importers:
         specifier: ^1.0.7
         version: 1.0.7(tailwindcss@4.1.11)
       uuid:
-        specifier: ^13.0.0
-        version: 13.0.0
+        specifier: ^10.0.0
+        version: 10.0.0
       zod:
         specifier: ^4.1.12
         version: 4.1.12
@@ -246,6 +246,9 @@ importers:
       '@eslint/compat':
         specifier: ^2.0.0
         version: 2.0.0(eslint@9.25.1(jiti@2.6.1))
+      '@eslint/js':
+        specifier: ^9.18.0
+        version: 9.25.1
       '@hey-api/openapi-ts':
         specifier: ^0.88.0
         version: 0.88.0(typescript@5.6.3)
@@ -267,6 +270,9 @@ importers:
       '@types/react-dom':
         specifier: 18.3.0
         version: 18.3.0
+      '@types/uuid':
+        specifier: ^10.0.0
+        version: 10.0.0
       '@typescript-eslint/eslint-plugin':
         specifier: 8.34.1
         version: 8.34.1(@typescript-eslint/parser@8.34.1(eslint@9.25.1(jiti@2.6.1))(typescript@5.6.3))(eslint@9.25.1(jiti@2.6.1))(typescript@5.6.3)
@@ -2066,6 +2072,9 @@ packages:
 
   '@types/use-sync-external-store@0.0.6':
     resolution: {integrity: sha512-zFDAD+tlpf2r4asuHEj0XH6pY6i0g5NeAHPn+15wk3BV6JA69eERFXC1gyGThDkVa1zCyKr5jox1+2LbV/AMLg==}
+
+  '@types/uuid@10.0.0':
+    resolution: {integrity: sha512-7gqG38EyHgyP1S+7+xomFtL+ZNHcKv6DwNaCZmJmo1vgMugyF3TCnXVg4t1uk89mLNwnLtnY3TpOpCOyp1/xHQ==}
 
   '@typescript-eslint/eslint-plugin@8.34.1':
     resolution: {integrity: sha512-STXcN6ebF6li4PxwNeFnqF8/2BNDvBupf2OPx2yWNzr6mKNGF7q49VM00Pz5FaomJyqvbXpY6PhO+T9w139YEQ==}
@@ -4188,8 +4197,9 @@ packages:
     peerDependencies:
       react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
 
-  uuid@13.0.0:
-    resolution: {integrity: sha512-XQegIaBTVUjSHliKqcnFqYypAd4S+WCYt5NIeRs6w/UAry7z8Y9j5ZwRRL4kzq9U3sD6v+85er9FvkEaBpji2w==}
+  uuid@10.0.0:
+    resolution: {integrity: sha512-8XkAphELsDnEGrDxUOHB3RGvXz6TeuYSGEZBOjtTtPm2lwhGBjLgOzLHB63IUWfBpNucQjND6d3AOudO+H3RWQ==}
+    deprecated: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
     hasBin: true
 
   w3c-keyname@2.2.8:
@@ -6711,6 +6721,8 @@ snapshots:
 
   '@types/use-sync-external-store@0.0.6': {}
 
+  '@types/uuid@10.0.0': {}
+
   '@typescript-eslint/eslint-plugin@8.34.1(@typescript-eslint/parser@8.34.1(eslint@9.25.1(jiti@2.6.1))(typescript@5.6.3))(eslint@9.25.1(jiti@2.6.1))(typescript@5.6.3)':
     dependencies:
       '@eslint-community/regexpp': 4.12.2
@@ -9136,7 +9148,7 @@ snapshots:
     dependencies:
       react: 18.3.1
 
-  uuid@13.0.0: {}
+  uuid@10.0.0: {}
 
   w3c-keyname@2.2.8: {}
 
