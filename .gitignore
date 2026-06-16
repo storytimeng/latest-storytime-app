@@ -2,8 +2,8 @@
 
 # dependencies
 /node_modules
-/.pnp
-.pnp.js
+
+
 
 # testing
 /coverage
@@ -44,7 +44,7 @@ next-env.d.ts
 /public/worker-*.js.map
 /public/fallback-*.js
 
-pnpm-lock.yaml
+
 yarn.lock
 package-lock.json
 bun.lockb
