@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@heroui/button";
 import { Loader2, CheckCircle2, XCircle } from "lucide-react";
-import Link from "next/link";
 import {
   Magnetik_Medium,
   Magnetik_Regular,
@@ -12,59 +11,104 @@ import {
 } from "@/lib/font";
 import { verifySubscription } from "@/src/lib/subscriptions";
 import { usePremiumFeatures } from "@/src/hooks/usePremiumFeatures";
+import { useAuthStore } from "@/src/stores/useAuthStore";
+import { useAuthModalStore } from "@/src/stores/useAuthModalStore";
+import {
+  hasAuthSession,
+  hydrateAuthFromCookies,
+  prepareAuthSession,
+} from "@/src/lib/authSession";
+
+const PENDING_PAYMENT_REFERENCE_KEY = "pendingPaymentReference";
 
 export default function PremiumCallbackPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const reference = searchParams.get("reference") || searchParams.get("trxref");
+  const reference =
+    searchParams.get("reference") ||
+    searchParams.get("trxref") ||
+    (typeof window !== "undefined"
+      ? sessionStorage.getItem(PENDING_PAYMENT_REFERENCE_KEY)
+      : null);
+  const token = useAuthStore((state) => state.token);
+  const openAuthModal = useAuthModalStore((state) => state.openModal);
   const { refreshPremiumStatus } = usePremiumFeatures();
 
+  const [sessionReady, setSessionReady] = useState(false);
   const [status, setStatus] = useState<"loading" | "success" | "error">(
     "loading",
   );
-  const [message, setMessage] = useState("Verifying your payment...");
+  const [message, setMessage] = useState("Restoring your session...");
 
   useEffect(() => {
+    if (reference && typeof window !== "undefined") {
+      sessionStorage.setItem(PENDING_PAYMENT_REFERENCE_KEY, reference);
+    }
+  }, [reference]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const restoreSession = async () => {
+      hydrateAuthFromCookies();
+      await prepareAuthSession();
+      if (!cancelled) setSessionReady(true);
+    };
+
+    void restoreSession();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const runVerification = useCallback(async () => {
     if (!reference) {
       setStatus("error");
       setMessage("Missing payment reference.");
       return;
     }
 
-    let cancelled = false;
+    if (!hasAuthSession()) {
+      setStatus("error");
+      setMessage(
+        "We could not restore your session automatically. Sign in to confirm your payment.",
+      );
+      return;
+    }
 
-    const verify = async () => {
-      try {
-        const result = await verifySubscription(reference);
-        if (cancelled) return;
+    setStatus("loading");
+    setMessage("Verifying your payment...");
 
-        if (result.isPremium || result.status === "success") {
-          refreshPremiumStatus();
-          setStatus("success");
-          setMessage(
-            "Payment successful. Premium is now active on your account.",
-          );
-        } else {
-          setStatus("error");
-          setMessage("Payment verification did not complete successfully.");
-        }
-      } catch (error: unknown) {
-        if (cancelled) return;
-        setStatus("error");
+    try {
+      const result = await verifySubscription(reference);
+
+      if (result.isPremium || result.status === "success") {
+        sessionStorage.removeItem(PENDING_PAYMENT_REFERENCE_KEY);
+        refreshPremiumStatus();
+        setStatus("success");
         setMessage(
-          error instanceof Error
-            ? error.message
-            : "We could not verify your payment.",
+          "Payment successful. Premium is now active on your account.",
         );
+        return;
       }
-    };
 
-    void verify();
-
-    return () => {
-      cancelled = true;
-    };
+      setStatus("error");
+      setMessage("Payment verification did not complete successfully.");
+    } catch (error: unknown) {
+      setStatus("error");
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "We could not verify your payment.",
+      );
+    }
   }, [reference, refreshPremiumStatus]);
+
+  useEffect(() => {
+    if (!sessionReady) return;
+    void runVerification();
+  }, [sessionReady, token, runVerification]);
 
   return (
     <div className="min-h-screen bg-accent-shade-1 max-w-[28rem] mx-auto px-4 py-16">
@@ -109,13 +153,21 @@ export default function PremiumCallbackPage() {
 
           {status === "error" && (
             <>
-              <Link href="/premium" className="w-full">
+              <Button
+                className={`w-full bg-primary-shade-6 text-universal-white ${Magnetik_Medium.className}`}
+                onPress={() => void runVerification()}
+              >
+                Retry verification
+              </Button>
+              {!hasAuthSession() && (
                 <Button
-                  className={`w-full bg-primary-shade-6 text-universal-white ${Magnetik_Medium.className}`}
+                  variant="bordered"
+                  className="w-full"
+                  onPress={() => openAuthModal("login")}
                 >
-                  Try again
+                  Sign in to confirm payment
                 </Button>
-              </Link>
+              )}
               <Button
                 variant="bordered"
                 className="w-full"

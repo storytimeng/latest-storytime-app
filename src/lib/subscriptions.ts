@@ -1,5 +1,7 @@
 import Cookies from "js-cookie";
 import { getAuthToken } from "@/src/stores/useAuthStore";
+import { prepareAuthSession } from "@/src/lib/authSession";
+import { refreshTokens } from "@/src/lib/tokenManager";
 
 export type SupportedCurrency = "NGN" | "USD" | "GHS" | "ZAR" | "KES";
 
@@ -85,23 +87,41 @@ async function subscriptionFetch<T>(
   path: string,
   init?: RequestInit,
 ): Promise<T> {
-  const token =
-    (typeof getAuthToken === "function" ? getAuthToken() : undefined) ||
-    Cookies.get("authToken");
+  const buildHeaders = (accessToken?: string) => {
+    const headers = new Headers(init?.headers);
+    headers.set("Content-Type", "application/json");
+    if (accessToken) {
+      headers.set(
+        "Authorization",
+        accessToken.startsWith("Bearer")
+          ? accessToken
+          : `Bearer ${accessToken}`,
+      );
+    }
+    return headers;
+  };
 
-  const headers = new Headers(init?.headers);
-  headers.set("Content-Type", "application/json");
-  if (token) {
-    headers.set(
-      "Authorization",
-      token.startsWith("Bearer") ? token : `Bearer ${token}`,
-    );
+  const request = async (accessToken?: string) => {
+    const token =
+      accessToken ||
+      (await prepareAuthSession()) ||
+      (typeof getAuthToken === "function" ? getAuthToken() : undefined) ||
+      Cookies.get("authToken");
+
+    return fetch(`${getBaseUrl()}${path}`, {
+      ...init,
+      headers: buildHeaders(token),
+    });
+  };
+
+  let response = await request();
+
+  if (response.status === 401) {
+    const refreshed = await refreshTokens();
+    if (refreshed?.token) {
+      response = await request(refreshed.token);
+    }
   }
-
-  const response = await fetch(`${getBaseUrl()}${path}`, {
-    ...init,
-    headers,
-  });
 
   const json = await response.json().catch(() => ({}));
 
