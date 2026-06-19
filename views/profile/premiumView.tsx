@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { Button } from "@heroui/button";
+import { Modal, ModalContent } from "@heroui/modal";
 import { ArrowLeft, Volume2, Download, Bookmark, Loader2 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -16,6 +17,7 @@ import {
   fetchDefaultCurrency,
   fetchSubscriptionPlans,
   initializeSubscription,
+  reactivateSubscription,
   SupportedCurrency,
   SubscriptionPlan,
 } from "@/src/lib/subscriptions";
@@ -26,6 +28,8 @@ import {
 import { usePremiumFeatures } from "@/src/hooks/usePremiumFeatures";
 import { useAuthStore } from "@/src/stores/useAuthStore";
 import { useAuthModalStore } from "@/src/stores/useAuthModalStore";
+import CancelPremiumModal from "@/components/reusables/customUI/CancelPremiumModal";
+import { showToast } from "@/lib/showNotification";
 
 const features = [
   {
@@ -67,12 +71,16 @@ const PremiumView = () => {
     isPremium,
     isLoading: premiumLoading,
     premiumExpiresAt,
+    isSubscriptionCancelled,
+    refreshPremiumStatus,
   } = usePremiumFeatures();
 
   const [selectedPlan, setSelectedPlan] = useState("6months");
   const [currency, setCurrency] = useState<SupportedCurrency | null>(null);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+  const [isReactivating, setIsReactivating] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -145,6 +153,40 @@ const PremiumView = () => {
     }
   };
 
+  const handleOpenCancelModal = () => {
+    if (!isAuthenticated()) {
+      openAuthModal("login");
+      return;
+    }
+    setIsCancelModalOpen(true);
+  };
+
+  const handleReactivate = async () => {
+    if (!isAuthenticated()) {
+      openAuthModal("login");
+      return;
+    }
+
+    setIsReactivating(true);
+    try {
+      const result = await reactivateSubscription();
+      refreshPremiumStatus();
+      showToast({
+        type: "success",
+        message: result.message,
+        duration: 4000,
+      });
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Unable to reactivate subscription";
+      showToast({ type: "error", message });
+    } finally {
+      setIsReactivating(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-accent-shade-1 max-w-[28rem] mx-auto">
       <div className="px-4 pt-5 pb-4">
@@ -181,11 +223,17 @@ const PremiumView = () => {
             <p
               className={`text-sm text-complimentary-colour leading-relaxed max-w-[16rem] ${Magnetik_Medium.className}`}
             >
-              Your Premium membership is active
-              {premiumExpiresAt
-                ? ` until ${formatExpiryDate(premiumExpiresAt)}`
-                : ""}
-              .
+              {isSubscriptionCancelled
+                ? `Premium access continues until ${
+                    premiumExpiresAt
+                      ? formatExpiryDate(premiumExpiresAt)
+                      : "your period ends"
+                  }. Your subscription is cancelled.`
+                : `Your Premium membership is active${
+                    premiumExpiresAt
+                      ? ` until ${formatExpiryDate(premiumExpiresAt)}`
+                      : ""
+                  }.`}
             </p>
           )}
         </div>
@@ -303,7 +351,9 @@ const PremiumView = () => {
                 <p
                   className={`text-primary-colour text-[14px] ${Magnetik_Medium.className}`}
                 >
-                  Enjoy unlimited access to your Premium benefits.
+                  {isSubscriptionCancelled
+                    ? "You can reactivate anytime before your access ends."
+                    : "Enjoy unlimited access to your Premium benefits."}
                 </p>
                 <Button
                   as={Link}
@@ -313,11 +363,48 @@ const PremiumView = () => {
                 >
                   Start reading
                 </Button>
+                {isSubscriptionCancelled ? (
+                  <Button
+                    variant="bordered"
+                    className={`w-full border-complimentary-colour text-complimentary-colour ${Magnetik_Medium.className}`}
+                    onPress={handleReactivate}
+                    isLoading={isReactivating}
+                    isDisabled={isReactivating}
+                  >
+                    Reactivate subscription
+                  </Button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleOpenCancelModal}
+                    className={`text-sm text-primary-shade-4 hover:text-primary-colour transition-colors ${Magnetik_Regular.className}`}
+                  >
+                    Cancel subscription
+                  </button>
+                )}
               </>
             )
           )}
         </div>
       </div>
+
+      <Modal
+        isOpen={isCancelModalOpen}
+        onOpenChange={setIsCancelModalOpen}
+        placement="center"
+        scrollBehavior="inside"
+      >
+        <ModalContent>
+          {(onClose) => (
+            <CancelPremiumModal
+              isOpen={isCancelModalOpen}
+              premiumExpiresAt={premiumExpiresAt}
+              onClose={onClose}
+              onCancelled={refreshPremiumStatus}
+            />
+          )}
+        </ModalContent>
+      </Modal>
     </div>
   );
 };
