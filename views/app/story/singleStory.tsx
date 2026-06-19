@@ -22,6 +22,7 @@ import {
 import Image from "next/image";
 import { Magnetik_Regular, Magnetik_Bold } from "@/lib";
 import { cn } from "@/lib";
+import { genreCategoryPath } from "@/lib/genre";
 import { getStoryCoverSrc } from "@/lib/storyCover";
 import { StoryCoverImage } from "@/components/reusables/customUI";
 import {
@@ -112,7 +113,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
     // Prefetch genre routes if available
     if (story?.genres) {
       story.genres.forEach((genre: any) => {
-        router.prefetch(`/category?genre=${encodeURIComponent(genre)}`);
+        router.prefetch(genreCategoryPath(String(genre)));
       });
     }
   }, [router, story?.genres]);

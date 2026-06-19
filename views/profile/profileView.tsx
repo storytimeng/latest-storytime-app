@@ -35,6 +35,7 @@ import { useGenres } from "@/src/hooks/useGenres";
 import { useAmbassadorOverview } from "@/src/hooks/useAmbassador";
 import { Tooltip } from "@heroui/tooltip";
 import { cn } from "@/lib";
+import { genreCategoryPath } from "@/lib/genre";
 
 const ProfileView = () => {
   const router = useRouter();
@@ -108,7 +109,7 @@ const ProfileView = () => {
       label: "My Downloads",
       icon: "⬇️",
       type: "page",
-      path: "/downloads",
+      path: "/library?tab=downloads",
     },
     { id: "reading", label: "Reading time", icon: "⏰", type: "modal" },
     { id: "writing", label: "Writing time", icon: "✍️", type: "modal" },
@@ -136,19 +137,19 @@ const ProfileView = () => {
     router.prefetch("/home");
     router.prefetch("/pen");
     router.prefetch("/library");
-    router.prefetch("/downloads");
+    router.prefetch("/library?tab=downloads");
 
     // Prefetch user's favorite genres
     if (userGenres.length > 0) {
       userGenres.forEach((genre) => {
-        router.prefetch(`/category?genre=${encodeURIComponent(genre)}`);
+        router.prefetch(genreCategoryPath(genre));
       });
     }
   }, [activeModal, router, userGenres]);
 
   // Handle genre click - navigate to category page
   const handleGenreClick = (genre: string) => {
-    router.push(`/category?genre=${encodeURIComponent(genre)}`);
+    router.push(genreCategoryPath(genre));
   };
 
   const handleOptionClick = (option: (typeof profileOptions)[0]) => {
