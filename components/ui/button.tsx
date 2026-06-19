@@ -31,24 +31,23 @@ interface Props extends Omit<BaseProps, "className" | "variant" | "onPress"> {
 const cn = (...xs: Array<string | false | null | undefined>) =>
   xs.filter(Boolean).join(" ");
 
+/** Shared sizing for paired action buttons (Yes/No, Save/Cancel, etc.) */
+const actionLayout =
+  "inline-flex items-center justify-center min-h-12 h-12 rounded-2xl px-6 body-text-small-medium-auto transition-colors disabled:opacity-50";
+
 const variantClasses: Record<Variant, string> = {
-  primary:
-    "bg-primary-colour hover:bg-primary-shade-6 text-universal-white rounded-2xl py-4 px-6 body-text-small-medium-auto transition-colors disabled:opacity-50",
+  primary: `${actionLayout} bg-primary-colour hover:bg-primary-shade-6 text-universal-white`,
   secondary:
-    "bg-accent-shade-2 text-complimentary-colour rounded-[12px] py-2 px-4 body-text-small-medium-auto transition-colors disabled:opacity-50",
-  large:
-    "w-full bg-primary-colour hover:bg-primary-shade-6 text-universal-white py-4 rounded-2xl body-text-small-medium-auto transition-colors disabled:opacity-50",
-  small:
-    "w-full h-[48px] bg-primary-colour hover:bg-primary-shade-6 text-universal-white rounded-[8px] py-4 px-6 body-text-small-medium-auto transition-colors disabled:opacity-50",
-  bordered:
-    "w-full h-[48px] rounded-[8px] border border-primary-colour bg-transparent text-primary-colour py-2 px-4 body-text-small-regular-auto",
+    "bg-accent-shade-2 text-complimentary-colour rounded-2xl min-h-12 h-12 px-6 inline-flex items-center justify-center body-text-small-medium-auto transition-colors disabled:opacity-50",
+  large: `w-full ${actionLayout} bg-primary-colour hover:bg-primary-shade-6 text-universal-white`,
+  small: `w-full ${actionLayout} bg-primary-colour hover:bg-primary-shade-6 text-universal-white`,
+  bordered: `${actionLayout} border-2 border-primary-colour bg-transparent text-primary-colour hover:bg-accent-shade-1`,
   ghost:
     "bg-transparent text-primary-colour hover:underline px-2 py-1 body-text-small-regular-auto",
   icon: "inline-flex items-center justify-center w-10 h-10 p-0 rounded-full bg-accent-shade-2 text-complimentary-colour body-text-small-medium-auto",
-  danger:
-    "w-[165px] rounded-[8px] bg-red-600 text-universal-white py-2 px-4 hover:bg-red-700 body-text-big-medium-auto transition-colors",
+  danger: `${actionLayout} bg-red-600 text-universal-white hover:bg-red-700`,
   dashed:
-    "w-[335px] h-[48px] rounded-[8px] border border-dashed border-complimentary-colour bg-transparent text-complimentary-colour py-2 px-4 body-text-small-regular-auto",
+    "w-full min-h-12 h-12 rounded-2xl border border-dashed border-complimentary-colour bg-transparent text-complimentary-colour px-6 inline-flex items-center justify-center body-text-small-regular-auto",
   google:
     "mb-12 w-full flex items-center justify-center space-x-2 border-2 border-light-grey-2 hover:border-primary-colour hover:bg-accent-shade-3 bg-accent-colour py-3 rounded-3xl body-text-smallest-auto-regular text-primary-colour transition-colors",
   skip: "w-full bg-transparent border-none text-primary-colour hover:text-primary-shade-6 body-text-small-regular-auto p-2 min-w-0 h-auto transition-colors",
@@ -64,7 +63,7 @@ export const Button = forwardRef<HTMLButtonElement, Props>(function Button(
     onPress,
     ...rest
   },
-  ref
+  ref,
 ) {
   const [isInternalLoading, setIsInternalLoading] = useState(false);
   const vClass = variantClasses[variant] ?? variantClasses.primary;

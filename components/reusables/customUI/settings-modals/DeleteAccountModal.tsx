@@ -41,10 +41,10 @@ const DeleteAccountModal = () => {
           </div>
 
           <div className="flex gap-3 mt-6">
-            <Button color="default" variant="bordered" className="flex-1">
+            <Button variant="bordered" className="flex-1">
               Cancel
             </Button>
-            <Button color="danger" className="flex-1">
+            <Button variant="danger" className="flex-1">
               Delete Account
             </Button>
           </div>
