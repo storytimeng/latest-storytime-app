@@ -7,8 +7,16 @@ import {
   Trash2,
   LogOut,
   Database,
+  Crown,
 } from "lucide-react";
 import { SettingOption } from "@/components/reusables/customUI/SettingsOption";
+
+export const SUBSCRIPTION_SETTING_OPTION: SettingOption = {
+  id: "subscription",
+  label: "Subscription",
+  icon: <Crown size={20} />,
+  hasToggle: false,
+};
 
 /**
  * Settings configuration

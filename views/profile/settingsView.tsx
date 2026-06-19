@@ -1,7 +1,8 @@
 "use client";
 
-import React from "react";
+import React, { useMemo } from "react";
 import { Modal, ModalContent, ModalHeader, ModalBody } from "@heroui/modal";
+import useSWR from "swr";
 import {
   PageHeader,
   ProfileCard,
@@ -11,24 +12,65 @@ import {
   DeleteAccountModal,
   ClearCacheModal,
   LogoutModal,
+  SubscriptionModal,
   SettingsList,
 } from "@/components/reusables/customUI";
 import { Magnetik_Bold, Magnetik_Regular } from "@/lib/font";
 import { useModalNavigation } from "@/hooks/useModalNavigation";
-import { SETTINGS_OPTIONS } from "@/config/settings";
-import { useSupportStore, SupportViewType } from "@/src/stores/useSupportStore";
+import {
+  SETTINGS_OPTIONS,
+  SUBSCRIPTION_SETTING_OPTION,
+} from "@/config/settings";
+import { useSupportStore } from "@/src/stores/useSupportStore";
 import { useOnlineStatus } from "@/src/hooks/useOnlineStatus";
+import { usePremiumFeatures } from "@/src/hooks/usePremiumFeatures";
+import { useAuthStore } from "@/src/stores/useAuthStore";
+import { fetchPaymentHistory } from "@/src/lib/subscriptions";
 import { showToast } from "@/lib/showNotification";
 
-/**
- * SettingsView Component
- * Main settings page with profile card and settings options
- * Uses modal navigation via URL parameters for better UX
- */
 const SettingsView = () => {
   const { isOpen, activeModal, openModal, closeModal } = useModalNavigation();
   const openSupportModal = useSupportStore((state) => state.openModal);
   const isOnline = useOnlineStatus();
+  const { isAuthenticated } = useAuthStore();
+  const {
+    isPremium,
+    isSubscriptionCancelled,
+    isLoading: premiumLoading,
+  } = usePremiumFeatures();
+
+  const isLoggedIn = isAuthenticated();
+
+  const { data: paymentHistory } = useSWR(
+    isLoggedIn ? "subscription-history" : null,
+    fetchPaymentHistory,
+    { revalidateOnFocus: false },
+  );
+
+  const hasPaymentHistory = (paymentHistory?.payments?.length ?? 0) > 0;
+
+  const settingsOptions = useMemo(() => {
+    const showSubscription =
+      isLoggedIn &&
+      !premiumLoading &&
+      (isPremium || isSubscriptionCancelled || hasPaymentHistory);
+
+    if (!showSubscription) {
+      return SETTINGS_OPTIONS;
+    }
+
+    const options = [...SETTINGS_OPTIONS];
+    const securityIndex = options.findIndex((opt) => opt.id === "security");
+    const insertAt = securityIndex >= 0 ? securityIndex + 1 : 1;
+    options.splice(insertAt, 0, SUBSCRIPTION_SETTING_OPTION);
+    return options;
+  }, [
+    isLoggedIn,
+    premiumLoading,
+    isPremium,
+    isSubscriptionCancelled,
+    hasPaymentHistory,
+  ]);
 
   const handleOptionClick = (id: string) => {
     if (id === "faqs") {
@@ -53,6 +95,9 @@ const SettingsView = () => {
     switch (activeModal) {
       case "security":
         return <SecurityModal />;
+
+      case "subscription":
+        return <SubscriptionModal />;
 
       case "faqs":
         return <FAQsModal />;
@@ -89,7 +134,6 @@ const SettingsView = () => {
 
   return (
     <div className="min-h-screen bg-accent-shade-1">
-      {/* Header */}
       <div className="px-4 pt-4 pb-6">
         <PageHeader
           title="Settings"
@@ -99,7 +143,6 @@ const SettingsView = () => {
           showBackButton={true}
         />
 
-        {/* Profile Section */}
         <div className="mt-6">
           <ProfileCard
             containerClassName="bg-transparent px-0 pb-0 mt-0"
@@ -110,17 +153,18 @@ const SettingsView = () => {
         </div>
       </div>
 
-      {/* Settings Options */}
-      <SettingsList options={SETTINGS_OPTIONS} onOptionClick={handleOptionClick} />
+      <SettingsList
+        options={settingsOptions}
+        onOptionClick={handleOptionClick}
+      />
 
-      {/* Modal */}
       <Modal
         isOpen={isOpen}
         onClose={closeModal}
         className="m-0"
         classNames={{
           wrapper: "items-end",
-          base: "m-0 max-h-[80vh]",
+          base: "m-0 max-h-[85vh]",
           backdrop: "bg-black/50",
         }}
       >
