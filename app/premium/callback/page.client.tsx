@@ -33,6 +33,7 @@ export default function PremiumCallbackPage() {
   const openAuthModal = useAuthModalStore((state) => state.openModal);
   const token = useAuthStore((state) => state.token);
   const { refreshPremiumStatus } = usePremiumFeatures();
+  const refreshPremiumStatusRef = useRef(refreshPremiumStatus);
 
   const [sessionReady, setSessionReady] = useState(false);
   const [status, setStatus] = useState<"loading" | "success" | "error">(
@@ -43,6 +44,11 @@ export default function PremiumCallbackPage() {
   const verifyInFlightRef = useRef(false);
   const verifiedRef = useRef(false);
   const awaitingLoginRef = useRef(false);
+  const autoVerifyAttemptedRef = useRef(false);
+
+  useEffect(() => {
+    refreshPremiumStatusRef.current = refreshPremiumStatus;
+  }, [refreshPremiumStatus]);
 
   useEffect(() => {
     if (reference && typeof window !== "undefined") {
@@ -66,59 +72,71 @@ export default function PremiumCallbackPage() {
     };
   }, []);
 
-  const runVerification = useCallback(async () => {
-    if (verifiedRef.current || verifyInFlightRef.current) return;
+  const runVerification = useCallback(
+    async (manual = false) => {
+      if (verifiedRef.current || verifyInFlightRef.current) return;
 
-    if (!reference) {
-      setStatus("error");
-      setMessage("Missing payment reference.");
-      return;
-    }
+      if (!reference) {
+        setStatus("error");
+        setMessage("Missing payment reference.");
+        return;
+      }
 
-    if (!hasAuthSession()) {
-      awaitingLoginRef.current = true;
-      setStatus("error");
-      setMessage(
-        "We could not restore your session automatically. Sign in to confirm your payment.",
-      );
-      return;
-    }
-
-    verifyInFlightRef.current = true;
-    setStatus("loading");
-    setMessage("Verifying your payment...");
-
-    try {
-      const result = await verifySubscription(reference);
-
-      if (result.isPremium || result.status === "success") {
-        verifiedRef.current = true;
-        awaitingLoginRef.current = false;
-        sessionStorage.removeItem(PENDING_PAYMENT_REFERENCE_KEY);
-        refreshPremiumStatus();
-        setStatus("success");
+      if (!hasAuthSession()) {
+        awaitingLoginRef.current = true;
+        setStatus("error");
         setMessage(
-          "Payment successful. Premium is now active on your account.",
+          "We could not restore your session automatically. Sign in to confirm your payment.",
         );
         return;
       }
 
-      setStatus("error");
-      setMessage("Payment verification did not complete successfully.");
-    } catch (error: unknown) {
-      setStatus("error");
-      setMessage(
-        error instanceof Error
-          ? error.message
-          : "We could not verify your payment.",
-      );
-    } finally {
-      verifyInFlightRef.current = false;
-    }
-  }, [reference, refreshPremiumStatus]);
+      verifyInFlightRef.current = true;
+      setStatus("loading");
+      setMessage("Verifying your payment...");
+
+      try {
+        const result = await verifySubscription(reference);
+
+        if (result.isPremium || result.status === "success") {
+          verifiedRef.current = true;
+          awaitingLoginRef.current = false;
+          sessionStorage.removeItem(PENDING_PAYMENT_REFERENCE_KEY);
+          refreshPremiumStatusRef.current();
+          setStatus("success");
+          setMessage(
+            "Payment successful. Premium is now active on your account.",
+          );
+          return;
+        }
+
+        setStatus("error");
+        setMessage("Payment verification did not complete successfully.");
+      } catch (error: unknown) {
+        setStatus("error");
+        setMessage(
+          error instanceof Error
+            ? error.message
+            : "We could not verify your payment.",
+        );
+      } finally {
+        verifyInFlightRef.current = false;
+        if (!manual) {
+          autoVerifyAttemptedRef.current = true;
+        }
+      }
+    },
+    [reference],
+  );
 
   useEffect(() => {
-    if (!sessionReady || verifiedRef.current) return;
+    if (
+      !sessionReady ||
+      verifiedRef.current ||
+      autoVerifyAttemptedRef.current
+    ) {
+      return;
+    }
     void runVerification();
   }, [sessionReady, runVerification]);
 
@@ -177,7 +195,7 @@ export default function PremiumCallbackPage() {
             <>
               <Button
                 className={`w-full bg-primary-shade-6 text-universal-white ${Magnetik_Medium.className}`}
-                onPress={() => void runVerification()}
+                onPress={() => void runVerification(true)}
               >
                 Retry verification
               </Button>

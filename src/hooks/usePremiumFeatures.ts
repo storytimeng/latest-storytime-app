@@ -65,6 +65,10 @@ export const usePremiumFeatures = (): UsePremiumFeaturesReturn => {
     [features],
   );
 
+  const refreshPremiumStatus = useCallback(() => {
+    void mutate();
+  }, [mutate]);
+
   return {
     isPremium,
     features,
@@ -74,8 +78,6 @@ export const usePremiumFeatures = (): UsePremiumFeaturesReturn => {
     isSubscriptionCancelled,
     currentPlanCode: data?.activeSubscription?.planCode ?? null,
     currentPlanName: data?.activeSubscription?.planName ?? null,
-    refreshPremiumStatus: () => {
-      void mutate();
-    },
+    refreshPremiumStatus,
   };
 };
