@@ -3,13 +3,13 @@
 import { Card } from "@heroui/card";
 import { Avatar } from "@heroui/avatar";
 import { MessageCircle, ThumbsUp } from "lucide-react";
-import Image from "next/image";
-import React, { useState } from "react";
+import React from "react";
 import {
   Magnetik_Medium,
   Magnetik_SemiBold,
   Magnetik_Regular,
 } from "@/lib/font";
+import { StoryCoverImage } from "./StoryCoverImage";
 
 interface Story {
   id: number;
@@ -28,12 +28,6 @@ interface StoryCardProps {
 }
 
 const StoryCard = ({ story }: StoryCardProps) => {
-  const [imageError, setImageError] = useState(false);
-
-  const handleImageError = () => {
-    setImageError(true);
-  };
-
   const getInitials = (author: string) => {
     if (!author || author === "Anonymous") return "A";
     return author
@@ -46,25 +40,15 @@ const StoryCard = ({ story }: StoryCardProps) => {
   return (
     <Card className="w-full border-none rounded-lg">
       <div className="relative">
-        {imageError ? (
-          <div className="flex items-center justify-center w-full rounded-lg h-28 bg-muted">
-            <span className="text-xs text-muted-foreground">
-              No image available
-            </span>
-          </div>
-        ) : (
-          <Image
-            src={story.image}
-            alt={story.title}
-            width={160}
-            height={120}
-            className="object-cover w-full rounded-lg h-28"
-            onError={handleImageError}
-            priority={false}
-            unoptimized={false}
-            loading="lazy"
-          />
-        )}
+        <StoryCoverImage
+          src={story.image}
+          alt={story.title}
+          width={160}
+          height={120}
+          className="object-cover w-full rounded-lg h-28"
+          priority={false}
+          loading="lazy"
+        />
         <div className="absolute top-2 right-2">
           <div
             className={`bg-[#FFEBD0] text-[10px] rounded-md px-2 py-1 text-[#361B17] ${Magnetik_Regular.className}`}

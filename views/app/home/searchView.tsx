@@ -9,6 +9,7 @@ import React, { useState } from "react";
 import { useGenres } from "@/src/hooks/useGenres";
 import { useDebounce } from "@/src/hooks/useDebounce";
 import { useSearchStories } from "@/src/hooks/useStoryCategories";
+import { getStoryCoverSrc } from "@/lib/storyCover";
 
 const SearchView = () => {
   const [search, setSearch] = useState("");
@@ -57,7 +58,10 @@ const SearchView = () => {
         <div className="space-y-4">
           {/* Search Bar and Back Button */}
           <div className="flex items-center gap-4">
-            <Link href="/home" className="flex items-center gap-2 cursor-pointer">
+            <Link
+              href="/home"
+              className="flex items-center gap-2 cursor-pointer"
+            >
               <ArrowLeft size={20} className="text-secondary" />
             </Link>
             <div className="flex-1">
@@ -168,8 +172,12 @@ const SearchView = () => {
                   key={story.id}
                   title={story.title}
                   genre={story.genres?.[0] || "Unknown"}
-                  author={(story.author as any)?.penName || story.author?.name || "Anonymous"}
-                  image={story.imageUrl || "/images/placeholder.jpg"}
+                  author={
+                    (story.author as any)?.penName ||
+                    story.author?.name ||
+                    "Anonymous"
+                  }
+                  image={getStoryCoverSrc(story.imageUrl)}
                   hasWarning={(story as any).storyStatus === "ongoing"}
                   onClick={() => handleStoryClick(story.id)}
                 />

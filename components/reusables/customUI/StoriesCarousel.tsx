@@ -2,11 +2,11 @@
 
 import { motion, useMotionValue, useTransform, animate } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { StoryResponseDto } from "@/src/client/types.gen";
+import { StoryCoverImage } from "./StoryCoverImage";
 
 interface StoriesCarouselProps {
   stories: StoryResponseDto[];
@@ -96,7 +96,7 @@ export function StoriesCarousel({
             const offset = x.get();
             const newIndex = Math.round(-offset / width);
             setCurrentIndex(
-              Math.max(0, Math.min(newIndex, stories.length - 1))
+              Math.max(0, Math.min(newIndex, stories.length - 1)),
             );
           }}
         >
@@ -106,8 +106,6 @@ export function StoriesCarousel({
               (story.author as any)?.penName ||
               story.author?.name ||
               "Anonymous";
-            const displayImage =
-              story.imageUrl || "/images/storytime-fallback.png";
 
             return (
               <motion.div
@@ -118,19 +116,15 @@ export function StoriesCarousel({
                   href={`/story/${story.id}`}
                   className="block w-full h-full"
                 >
-                  {displayImage ? (
-                    <Image
-                      src={displayImage}
-                      alt={story.title}
-                      className="w-full h-full object-cover rounded-xl"
-                      width={400}
-                      height={208}
-                      priority={story.id === currentStory.id}
-                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-primary-shade-3 to-primary-shade-6 rounded-xl" />
-                  )}
+                  <StoryCoverImage
+                    src={story.imageUrl}
+                    alt={story.title}
+                    className="w-full h-full object-cover rounded-xl"
+                    width={400}
+                    height={208}
+                    priority={story.id === currentStory.id}
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                  />
 
                   {/* Genre Badge */}
                   {story.genres && story.genres.length > 0 && (

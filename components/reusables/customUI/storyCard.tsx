@@ -3,11 +3,12 @@
 import { Card } from "@heroui/card";
 import { ThumbsUp, Pencil, Trash2, Eye } from "lucide-react";
 import Image from "next/image";
-import React, { useState } from "react";
+import React from "react";
 import Link from "next/link";
 import { Magnetik_Regular } from "@/lib/font";
 import { cn } from "@/lib/utils";
 import { StoryResponseDto, AuthorDto } from "@/src/client/types.gen";
+import { StoryCoverImage } from "./StoryCoverImage";
 
 // Extend AuthorDto to include fields that may be in the API response
 interface ExtendedAuthor extends AuthorDto {
@@ -49,10 +50,7 @@ const StoryCard = ({
   onDelete,
   onClick,
 }: StoryCardProps) => {
-  const [imageError, setImageError] = useState(false);
   const isPenMode = mode === "pen";
-
-  const handleImageError = () => setImageError(true);
   const handleCardClick = () => onClick?.(story.id);
   const handleEdit = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -74,7 +72,6 @@ const StoryCard = ({
         : story.author?.firstName || story.author?.lastName) ||
       story.author?.name ||
       "Anonymous";
-  const displayImage = story.imageUrl || "/images/storytime-fallback.png"; // Fallback image
   const displayGenre = story.genres?.[0] || "Uncategorized";
 
   const storyLink = `/story/${story.id}`;
@@ -89,32 +86,18 @@ const StoryCard = ({
       onClick={isPenMode ? handleCardClick : undefined}
     >
       <div className="relative group">
-        {imageError ? (
-          <Image
-            src="/images/storytime-fallback.png"
-            alt={story.title}
-            width={200}
-            height={150}
-            className={cn(
-              "w-full object-cover rounded-lg transition-transform group-hover:scale-[1.03]",
-              isPenMode ? "aspect-[10/9]" : "h-28",
-            )}
-          />
-        ) : (
-          <Image
-            src={displayImage}
-            alt={story.title}
-            width={200}
-            height={150}
-            className={cn(
-              "w-full object-cover rounded-lg transition-transform group-hover:scale-[1.03]",
-              isPenMode ? "aspect-[10/9]" : "h-28",
-            )}
-            onError={handleImageError}
-            loading="lazy"
-            sizes="(max-width: 768px) 160px, 200px"
-          />
-        )}
+        <StoryCoverImage
+          src={story.imageUrl}
+          alt={story.title}
+          width={200}
+          height={150}
+          className={cn(
+            "w-full object-cover rounded-lg transition-transform group-hover:scale-[1.03]",
+            isPenMode ? "aspect-[10/9]" : "h-28",
+          )}
+          loading="lazy"
+          sizes="(max-width: 768px) 160px, 200px"
+        />
 
         {/* Badge (genre) - same for both modes but different placement */}
         <div
