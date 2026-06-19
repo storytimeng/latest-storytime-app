@@ -100,6 +100,14 @@ const PremiumView = () => {
 
   const plans: SubscriptionPlan[] = plansData?.plans ?? [];
 
+  useEffect(() => {
+    if (plans.length === 0) return;
+    const hasSelection = plans.some((plan) => plan.code === selectedPlan);
+    if (hasSelection) return;
+    const defaultPlan = plans.find((plan) => plan.isPopular) ?? plans[0];
+    setSelectedPlan(defaultPlan.code);
+  }, [plans, selectedPlan]);
+
   const selectedPlanData = useMemo(
     () => plans.find((plan) => plan.code === selectedPlan),
     [plans, selectedPlan],
@@ -149,7 +157,9 @@ const PremiumView = () => {
       refreshPremiumStatus();
     } catch (error: unknown) {
       const message =
-        error instanceof Error ? error.message : "Unable to cancel subscription";
+        error instanceof Error
+          ? error.message
+          : "Unable to cancel subscription";
       setCheckoutError(message);
     } finally {
       setIsCancelling(false);
@@ -327,7 +337,10 @@ const PremiumView = () => {
             size="lg"
             onPress={handleCheckout}
             isDisabled={
-              isCheckingOut || plansLoading || !selectedPlanData || !currencyReady
+              isCheckingOut ||
+              plansLoading ||
+              !selectedPlanData ||
+              !currencyReady
             }
             isLoading={isCheckingOut}
           >
