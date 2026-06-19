@@ -3,6 +3,9 @@ import { getAuthToken } from "@/src/stores/useAuthStore";
 
 export type SupportedCurrency = "NGN" | "USD" | "GHS" | "ZAR" | "KES";
 
+/** Active billing currency — Paystack merchant is NGN-only for now */
+export const BILLING_CURRENCY: SupportedCurrency = "NGN";
+
 export interface SubscriptionPlan {
   id: string;
   code: string;

@@ -17,10 +17,7 @@ interface SubscriptionUpgradePanelProps {
 
 const PLAN_ORDER = ["1month", "6months", "1year"];
 
-function isHigherTier(
-  currentCode: string,
-  selectedCode: string,
-): boolean {
+function isHigherTier(currentCode: string, selectedCode: string): boolean {
   const currentIndex = PLAN_ORDER.indexOf(currentCode);
   const selectedIndex = PLAN_ORDER.indexOf(selectedCode);
   if (currentIndex < 0 || selectedIndex < 0) return false;
@@ -34,7 +31,6 @@ const SubscriptionUpgradePanel: React.FC<SubscriptionUpgradePanelProps> = ({
   variant = currentPlanCode ? "upgrade" : "new",
 }) => {
   const {
-    currency,
     plans,
     plansLoading,
     plansReady,
@@ -49,8 +45,8 @@ const SubscriptionUpgradePanel: React.FC<SubscriptionUpgradePanelProps> = ({
   const { checkout, isCheckingOut, checkoutError } = useSubscriptionCheckout();
 
   const handleCheckout = async () => {
-    if (!selectedPlanData || !currency) return;
-    await checkout(selectedPlanData.code, currency);
+    if (!selectedPlanData) return;
+    await checkout(selectedPlanData.code);
   };
 
   const isExtending =
