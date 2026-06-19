@@ -117,6 +117,7 @@ export interface AdditionalInfoModalProps {
   onClose: () => void;
   onSubmit: (authorNote: string, giveConsent: boolean) => void;
   onSkip: () => void;
+  isLoading?: boolean;
 }
 
 // API Response Types

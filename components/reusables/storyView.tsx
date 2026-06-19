@@ -29,6 +29,7 @@ const StoryView: React.FC<StoryViewProps> = ({ mode, storyId }) => {
     initialData,
     createdStoryId,
     isCreating,
+    isSubmitting,
     isUpdating,
     isFetchingStory,
     handleSubmit,
@@ -86,7 +87,7 @@ const StoryView: React.FC<StoryViewProps> = ({ mode, storyId }) => {
               initialData={initialData}
               onSubmit={handleSubmit}
               onCancel={handleCancel}
-              isLoading={isCreating || isUpdating}
+              isLoading={isCreating || isSubmitting || isUpdating}
               createdStoryId={createdStoryId}
               initialChapters={initialChapters}
               initialParts={initialParts}
