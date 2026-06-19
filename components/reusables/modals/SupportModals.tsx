@@ -22,16 +22,12 @@ import {
 } from "@heroui/modal";
 import { Accordion, AccordionItem } from "@heroui/accordion";
 
-function isHtmlContent(value: string): boolean {
-  return /<[a-z][\s\S]*>/i.test(value.trim());
-}
-
 function FaqAnswer({ answer }: { answer: string }) {
   if (isHtmlContent(answer)) {
     return (
       <div
         className={`prose prose-sm prose-invert max-w-none text-sm text-primary/70 leading-relaxed ${Magnetik_Regular.className}`}
-        dangerouslySetInnerHTML={{ __html: answer }}
+        dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(answer) }}
       />
     );
   }
