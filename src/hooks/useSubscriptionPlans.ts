@@ -3,15 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 import useSWR from "swr";
 import {
-  fetchDefaultCurrency,
+  BILLING_CURRENCY,
   fetchSubscriptionPlans,
   SubscriptionPlan,
-  SupportedCurrency,
 } from "@/src/lib/subscriptions";
-import {
-  detectUserCountryCode,
-  getDefaultCurrencyForUser,
-} from "@/src/lib/currency";
 import { suggestUpgradePlanCode } from "@/src/lib/subscription-ui";
 
 interface UseSubscriptionPlansOptions {
@@ -23,34 +18,13 @@ export function useSubscriptionPlans({
   enabled = true,
   currentPlanCode = null,
 }: UseSubscriptionPlansOptions = {}) {
-  const [currency, setCurrency] = useState<SupportedCurrency | null>(null);
+  const currency = BILLING_CURRENCY;
   const [selectedPlan, setSelectedPlan] = useState("6months");
   const [userPickedPlan, setUserPickedPlan] = useState(false);
 
-  useEffect(() => {
-    if (!enabled) return;
-
-    let cancelled = false;
-
-    const resolveCurrency = async () => {
-      const country = detectUserCountryCode();
-      try {
-        const result = await fetchDefaultCurrency(country);
-        if (!cancelled) setCurrency(result.currency);
-      } catch {
-        if (!cancelled) setCurrency(getDefaultCurrencyForUser());
-      }
-    };
-
-    void resolveCurrency();
-    return () => {
-      cancelled = true;
-    };
-  }, [enabled]);
-
   const { data: plansData, isLoading: plansLoading } = useSWR(
-    enabled && currency ? ["subscription-plans", currency] : null,
-    () => fetchSubscriptionPlans(currency!),
+    enabled ? ["subscription-plans", currency] : null,
+    () => fetchSubscriptionPlans(currency),
     { revalidateOnFocus: false },
   );
 
@@ -74,8 +48,8 @@ export function useSubscriptionPlans({
   return {
     currency,
     plans,
-    plansLoading: enabled && (!currency || plansLoading),
-    plansReady: enabled && Boolean(currency) && !plansLoading && plans.length > 0,
+    plansLoading: enabled && plansLoading,
+    plansReady: enabled && !plansLoading && plans.length > 0,
     selectedPlan,
     selectedPlanData,
     selectPlan,

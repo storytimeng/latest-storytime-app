@@ -1,7 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { initializeSubscription, SupportedCurrency } from "@/src/lib/subscriptions";
+import {
+  initializeSubscription,
+  BILLING_CURRENCY,
+} from "@/src/lib/subscriptions";
 import { useAuthStore } from "@/src/stores/useAuthStore";
 import { useAuthModalStore } from "@/src/stores/useAuthModalStore";
 
@@ -11,7 +14,7 @@ export function useSubscriptionCheckout() {
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
-  const checkout = async (planCode: string, currency: SupportedCurrency) => {
+  const checkout = async (planCode: string) => {
     setCheckoutError(null);
 
     if (!isAuthenticated()) {
@@ -21,7 +24,7 @@ export function useSubscriptionCheckout() {
 
     setIsCheckingOut(true);
     try {
-      const result = await initializeSubscription(planCode, currency);
+      const result = await initializeSubscription(planCode, BILLING_CURRENCY);
       window.location.href = result.authorizationUrl;
       return true;
     } catch (error: unknown) {

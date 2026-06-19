@@ -13,14 +13,12 @@ interface SubscriptionUpgradePanelProps {
   compact?: boolean;
   showHeading?: boolean;
   variant?: "new" | "upgrade";
+  layout?: "page" | "modal";
 }
 
 const PLAN_ORDER = ["1month", "6months", "1year"];
 
-function isHigherTier(
-  currentCode: string,
-  selectedCode: string,
-): boolean {
+function isHigherTier(currentCode: string, selectedCode: string): boolean {
   const currentIndex = PLAN_ORDER.indexOf(currentCode);
   const selectedIndex = PLAN_ORDER.indexOf(selectedCode);
   if (currentIndex < 0 || selectedIndex < 0) return false;
@@ -32,9 +30,9 @@ const SubscriptionUpgradePanel: React.FC<SubscriptionUpgradePanelProps> = ({
   compact = false,
   showHeading = true,
   variant = currentPlanCode ? "upgrade" : "new",
+  layout = "page",
 }) => {
   const {
-    currency,
     plans,
     plansLoading,
     plansReady,
@@ -49,8 +47,8 @@ const SubscriptionUpgradePanel: React.FC<SubscriptionUpgradePanelProps> = ({
   const { checkout, isCheckingOut, checkoutError } = useSubscriptionCheckout();
 
   const handleCheckout = async () => {
-    if (!selectedPlanData || !currency) return;
-    await checkout(selectedPlanData.code, currency);
+    if (!selectedPlanData) return;
+    await checkout(selectedPlanData.code);
   };
 
   const isExtending =
@@ -78,18 +76,23 @@ const SubscriptionUpgradePanel: React.FC<SubscriptionUpgradePanelProps> = ({
     return `Switches you to ${planDurationLabel(selectedPlan)}. New time is added from your current end date.`;
   })();
 
+  const isModalLayout = layout === "modal";
+  const useCompactPicker = compact || isModalLayout;
+
   return (
-    <div className="space-y-4">
+    <div className={isModalLayout ? "space-y-2" : "space-y-4"}>
       {showHeading && (
-        <div className="space-y-1 text-center">
+        <div className={isModalLayout ? "space-y-0" : "space-y-1 text-center"}>
           <p
-            className={`text-primary-colour text-[14px] ${Magnetik_Medium.className}`}
+            className={`text-primary-colour ${
+              isModalLayout ? "text-xs" : "text-[14px]"
+            } ${isModalLayout ? "text-left" : "text-center"} ${Magnetik_Medium.className}`}
           >
             {variant === "upgrade"
               ? "Change or extend your plan"
               : "Choose your plan"}
           </p>
-          {variant === "upgrade" && (
+          {variant === "upgrade" && !isModalLayout && (
             <p
               className={`text-xs text-primary-shade-4 leading-relaxed ${Magnetik_Regular.className}`}
             >
@@ -106,7 +109,7 @@ const SubscriptionUpgradePanel: React.FC<SubscriptionUpgradePanelProps> = ({
         onSelectPlan={selectPlan}
         currentPlanCode={currentPlanCode}
         isLoading={plansLoading}
-        compact={compact}
+        compact={useCompactPicker}
       />
 
       {checkoutError && (
@@ -117,7 +120,7 @@ const SubscriptionUpgradePanel: React.FC<SubscriptionUpgradePanelProps> = ({
         </p>
       )}
 
-      {helperText && plansReady && (
+      {helperText && plansReady && !isModalLayout && (
         <p
           className={`text-xs text-primary-shade-4 text-center leading-relaxed ${Magnetik_Regular.className}`}
         >
@@ -126,8 +129,10 @@ const SubscriptionUpgradePanel: React.FC<SubscriptionUpgradePanelProps> = ({
       )}
 
       <Button
-        className={`w-full bg-primary-shade-6 text-universal-white py-4 text-lg ${Magnetik_Medium.className}`}
-        size="lg"
+        className={`w-full bg-primary-shade-6 text-universal-white ${Magnetik_Medium.className} ${
+          isModalLayout ? "min-h-10 h-10 text-sm rounded-xl" : "py-4 text-lg"
+        }`}
+        size={isModalLayout ? "md" : "lg"}
         onPress={handleCheckout}
         isDisabled={isCheckingOut || !plansReady || !selectedPlanData}
         isLoading={isCheckingOut}

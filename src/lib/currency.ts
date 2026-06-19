@@ -1,6 +1,9 @@
 import type { SupportedCurrency } from "@/src/lib/subscriptions";
 
-export const DEFAULT_CURRENCY: SupportedCurrency = "USD";
+export const DEFAULT_CURRENCY: SupportedCurrency = "NGN";
+
+/** Active billing currency — Paystack merchant is NGN-only for now */
+export const BILLING_CURRENCY: SupportedCurrency = "NGN";
 
 const COUNTRY_CURRENCY_MAP: Record<string, SupportedCurrency> = {
   NG: "NGN",
@@ -13,12 +16,11 @@ const COUNTRY_CURRENCY_MAP: Record<string, SupportedCurrency> = {
 export function resolveCurrencyFromCountry(
   countryCode?: string | null,
 ): SupportedCurrency {
-  if (!countryCode) return DEFAULT_CURRENCY;
-  const normalized = countryCode.trim().toUpperCase();
-  return COUNTRY_CURRENCY_MAP[normalized] ?? DEFAULT_CURRENCY;
+  void countryCode;
+  return BILLING_CURRENCY;
 }
 
-/** Detect user country from browser locale / timezone; default USD for unlisted regions */
+/** Detect user country from browser locale / timezone */
 export function detectUserCountryCode(): string | null {
   if (typeof window === "undefined") return null;
 

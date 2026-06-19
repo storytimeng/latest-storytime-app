@@ -25,7 +25,7 @@ const SubscriptionPlanPicker: React.FC<SubscriptionPlanPickerProps> = ({
 }) => {
   if (isLoading) {
     return (
-      <div className="flex justify-center py-8">
+      <div className={`flex justify-center ${compact ? "py-4" : "py-8"}`}>
         <Loader2 className="w-6 h-6 animate-spin text-primary-colour" />
       </div>
     );
@@ -42,8 +42,8 @@ const SubscriptionPlanPicker: React.FC<SubscriptionPlanPickerProps> = ({
             key={plan.id}
             type="button"
             onClick={() => onSelectPlan(plan.code)}
-            className={`relative rounded-2xl border-2 transition-all duration-200 ${
-              compact ? "p-3" : "p-4"
+            className={`relative border-2 transition-all duration-200 ${
+              compact ? "rounded-xl p-2.5" : "rounded-2xl p-4"
             } ${
               isSelected
                 ? "border-complimentary-colour bg-complimentary-colour text-universal-white"
@@ -59,9 +59,13 @@ const SubscriptionPlanPicker: React.FC<SubscriptionPlanPickerProps> = ({
                 Current
               </span>
             )}
-            <div className="space-y-3 text-center">
+            <div
+              className={`text-center ${compact ? "space-y-1.5" : "space-y-3"}`}
+            >
               <div
-                className={`text-[12px] leading-tight ${
+                className={`leading-tight ${
+                  compact ? "text-[10px]" : "text-[12px]"
+                } ${
                   isSelected ? "text-universal-white" : "text-primary-shade-4"
                 } ${Magnetik_Regular.className}`}
               >
@@ -72,7 +76,9 @@ const SubscriptionPlanPicker: React.FC<SubscriptionPlanPickerProps> = ({
                   ))}
               </div>
               <div
-                className={`text-md font-bold text-center ${
+                className={`font-bold text-center ${
+                  compact ? "text-sm" : "text-md"
+                } ${
                   isSelected ? "text-universal-white" : "text-primary-colour"
                 } ${Magnetik_Bold.className}`}
               >
