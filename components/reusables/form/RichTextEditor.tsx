@@ -70,6 +70,8 @@ const RichTextEditor = ({
   minHeight = "min-h-[200px]",
 }: RichTextEditorProps) => {
   const bubbleMenuRef = useRef<HTMLDivElement>(null);
+  /** Tracks the last HTML emitted via onChange so prop round-trips don't reset the editor. */
+  const lastEmittedHtmlRef = useRef(value);
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -101,20 +103,33 @@ const RichTextEditor = ({
       },
     },
     onUpdate: ({ editor }) => {
-      onChange(editor.getHTML());
+      const html = editor.getHTML();
+      lastEmittedHtmlRef.current = html;
+      onChange(html);
     },
   });
 
-  // Keep editor in sync when loading existing story content
+  // Sync external value changes (e.g. async chapter load) without clobbering active edits.
   useEffect(() => {
     if (!editor) return;
 
-    const currentHtml = editor.getHTML();
-    const nextValue = value || "";
+    // Prop update came from this editor's own onChange — nothing to apply.
+    if (value === lastEmittedHtmlRef.current) return;
 
-    if (nextValue !== currentHtml) {
-      editor.commands.setContent(nextValue, { emitUpdate: false });
+    const isEditorEmpty = editor.getText().trim() === "";
+    // User is actively editing non-empty content; ignore external prop changes.
+    if (editor.isFocused && !isEditorEmpty) return;
+
+    const nextValue = value || "";
+    const currentHtml = editor.getHTML();
+
+    if (nextValue === currentHtml) {
+      lastEmittedHtmlRef.current = nextValue;
+      return;
     }
+
+    editor.commands.setContent(nextValue, { emitUpdate: false });
+    lastEmittedHtmlRef.current = nextValue;
   }, [value, editor]);
 
   if (!editor) {
