@@ -160,6 +160,26 @@ export async function fetchPremiumStatus() {
   return subscriptionFetch<PremiumStatus>("/subscriptions/status");
 }
 
+export interface PaymentHistoryItem {
+  id: string;
+  reference: string;
+  status: string;
+  amount: string;
+  currency: string;
+  formattedAmount: string;
+  planCode?: string;
+  planName?: string;
+  channel?: string | null;
+  paidAt: string | null;
+  createdAt: string;
+}
+
+export async function fetchPaymentHistory() {
+  return subscriptionFetch<{ payments: PaymentHistoryItem[] }>(
+    "/subscriptions/history",
+  );
+}
+
 export async function initializeSubscription(
   planCode: string,
   currency: SupportedCurrency,

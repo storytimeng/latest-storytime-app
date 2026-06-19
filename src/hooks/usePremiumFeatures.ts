@@ -23,6 +23,8 @@ export interface UsePremiumFeaturesReturn {
   checkFeature: (feature: keyof PremiumFeatures) => boolean;
   premiumExpiresAt: string | null;
   isSubscriptionCancelled: boolean;
+  currentPlanCode: string | null;
+  currentPlanName: string | null;
   refreshPremiumStatus: () => void;
 }
 
@@ -70,6 +72,8 @@ export const usePremiumFeatures = (): UsePremiumFeaturesReturn => {
     checkFeature,
     premiumExpiresAt: data?.expiresAt ?? null,
     isSubscriptionCancelled,
+    currentPlanCode: data?.activeSubscription?.planCode ?? null,
+    currentPlanName: data?.activeSubscription?.planName ?? null,
     refreshPremiumStatus: () => {
       void mutate();
     },
