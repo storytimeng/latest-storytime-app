@@ -115,9 +115,9 @@ const SubscriptionModal: React.FC = () => {
         </h2>
       </ModalHeader>
       <ModalBody className="pb-6">
-        <div className="space-y-5">
+        <div className="flex flex-col gap-3">
           {isPremium ? (
-            <div className="rounded-xl border border-light-grey-2 bg-universal-white p-4 space-y-3">
+            <div className="shrink-0 rounded-xl border border-light-grey-2 bg-universal-white p-3 space-y-2">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p
@@ -154,7 +154,7 @@ const SubscriptionModal: React.FC = () => {
               )}
             </div>
           ) : (
-            <div className="rounded-xl border border-light-grey-2 bg-universal-white p-4">
+            <div className="shrink-0 rounded-xl border border-light-grey-2 bg-universal-white p-3">
               <p
                 className={`text-sm text-primary-shade-4 ${Magnetik_Regular.className}`}
               >
@@ -163,71 +163,73 @@ const SubscriptionModal: React.FC = () => {
             </div>
           )}
 
-          {isPremium && (
-            <div className="rounded-xl border border-light-grey-2 bg-light-grey-1/50 p-4">
-              <SubscriptionUpgradePanel
-                variant="upgrade"
-                currentPlanCode={currentPlanCode}
-                compact
-                showHeading
-              />
-            </div>
-          )}
-
-          <div>
+          <section className="flex min-h-0 flex-col">
             <h3
-              className={`text-sm text-primary-colour mb-3 ${Magnetik_SemiBold.className}`}
+              className={`text-sm text-primary-colour mb-2 ${Magnetik_SemiBold.className}`}
             >
               Payment history
             </h3>
-            {historyLoading ? (
-              <div className="flex justify-center py-6">
-                <Loader2 className="w-5 h-5 animate-spin text-primary-colour" />
-              </div>
-            ) : payments.length === 0 ? (
-              <p
-                className={`text-sm text-primary-shade-4 py-4 text-center rounded-xl bg-light-grey-1 ${Magnetik_Regular.className}`}
-              >
-                No payments yet.
-              </p>
-            ) : (
-              <ul className="max-h-48 overflow-y-auto space-y-2 pr-1">
-                {payments.map((payment) => (
-                  <li
-                    key={payment.id}
-                    className="flex items-center justify-between gap-3 rounded-lg border border-light-grey-2 bg-universal-white px-3 py-2.5"
-                  >
-                    <div className="min-w-0">
-                      <p
-                        className={`text-sm text-primary-colour truncate ${Magnetik_Medium.className}`}
-                      >
-                        {payment.planName ?? "Premium plan"}
-                      </p>
-                      <p
-                        className={`text-xs text-primary-shade-4 ${Magnetik_Regular.className}`}
-                      >
-                        {formatDate(payment.paidAt ?? payment.createdAt)}
-                      </p>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <p
-                        className={`text-sm text-primary-colour ${Magnetik_SemiBold.className}`}
-                      >
-                        {payment.formattedAmount}
-                      </p>
-                      <span
-                        className={`text-[10px] px-1.5 py-0.5 rounded ${statusBadgeClass(payment.status)} ${Magnetik_Medium.className}`}
-                      >
-                        {statusLabel(payment.status)}
-                      </span>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
+            <div className="min-h-[10.5rem] max-h-[13.5rem] overflow-y-auto rounded-xl border border-light-grey-2 bg-light-grey-1/40 p-2">
+              {historyLoading ? (
+                <div className="flex h-full min-h-[10.5rem] items-center justify-center">
+                  <Loader2 className="w-5 h-5 animate-spin text-primary-colour" />
+                </div>
+              ) : payments.length === 0 ? (
+                <p
+                  className={`flex min-h-[10.5rem] items-center justify-center text-sm text-primary-shade-4 text-center px-4 ${Magnetik_Regular.className}`}
+                >
+                  No payments yet.
+                </p>
+              ) : (
+                <ul className="space-y-2">
+                  {payments.map((payment) => (
+                    <li
+                      key={payment.id}
+                      className="flex items-center justify-between gap-3 rounded-lg border border-light-grey-2 bg-universal-white px-3 py-2.5"
+                    >
+                      <div className="min-w-0">
+                        <p
+                          className={`text-sm text-primary-colour truncate ${Magnetik_Medium.className}`}
+                        >
+                          {payment.planName ?? "Premium plan"}
+                        </p>
+                        <p
+                          className={`text-xs text-primary-shade-4 ${Magnetik_Regular.className}`}
+                        >
+                          {formatDate(payment.paidAt ?? payment.createdAt)}
+                        </p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p
+                          className={`text-sm text-primary-colour ${Magnetik_SemiBold.className}`}
+                        >
+                          {payment.formattedAmount}
+                        </p>
+                        <span
+                          className={`text-[10px] px-1.5 py-0.5 rounded ${statusBadgeClass(payment.status)} ${Magnetik_Medium.className}`}
+                        >
+                          {statusLabel(payment.status)}
+                        </span>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </section>
 
-          <div className="flex flex-col gap-3 pt-1">
+          {isPremium && (
+            <section className="shrink-0 border-t border-light-grey-2 pt-3">
+              <SubscriptionUpgradePanel
+                variant="upgrade"
+                layout="modal"
+                currentPlanCode={currentPlanCode}
+                showHeading
+              />
+            </section>
+          )}
+
+          <div className="flex shrink-0 flex-col gap-2 pt-1">
             {!isPremium && (
               <Button
                 as={Link}
