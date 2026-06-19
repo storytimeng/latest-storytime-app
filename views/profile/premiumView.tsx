@@ -1,34 +1,22 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useState } from "react";
 import { Button } from "@heroui/button";
 import { Modal, ModalContent } from "@heroui/modal";
 import { ArrowLeft, Volume2, Download, Bookmark, Loader2 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import useSWR from "swr";
 import {
-  Magnetik_Bold,
   Magnetik_Medium,
   Magnetik_Regular,
   Magnetik_SemiBold,
 } from "@/lib/font";
-import {
-  fetchDefaultCurrency,
-  fetchSubscriptionPlans,
-  initializeSubscription,
-  reactivateSubscription,
-  SupportedCurrency,
-  SubscriptionPlan,
-} from "@/src/lib/subscriptions";
-import {
-  detectUserCountryCode,
-  getDefaultCurrencyForUser,
-} from "@/src/lib/currency";
+import { reactivateSubscription } from "@/src/lib/subscriptions";
 import { usePremiumFeatures } from "@/src/hooks/usePremiumFeatures";
 import { useAuthStore } from "@/src/stores/useAuthStore";
 import { useAuthModalStore } from "@/src/stores/useAuthModalStore";
 import CancelPremiumModal from "@/components/reusables/customUI/CancelPremiumModal";
+import SubscriptionUpgradePanel from "@/components/reusables/customUI/SubscriptionUpgradePanel";
 import { showToast } from "@/lib/showNotification";
 
 const features = [
@@ -49,13 +37,6 @@ const features = [
   },
 ];
 
-function formatPlanDuration(name: string, durationDays: number): string {
-  if (durationDays >= 365) return "One (1)\nYear";
-  if (durationDays >= 180) return "Six (6)\nMonths";
-  if (durationDays >= 30) return "One (1)\nMonth";
-  return name.replace(" ", "\n");
-}
-
 function formatExpiryDate(isoDate: string): string {
   return new Date(isoDate).toLocaleDateString(undefined, {
     year: "numeric",
@@ -72,86 +53,15 @@ const PremiumView = () => {
     isLoading: premiumLoading,
     premiumExpiresAt,
     isSubscriptionCancelled,
+    currentPlanCode,
     refreshPremiumStatus,
   } = usePremiumFeatures();
 
-  const [selectedPlan, setSelectedPlan] = useState("6months");
-  const [currency, setCurrency] = useState<SupportedCurrency | null>(null);
-  const [isCheckingOut, setIsCheckingOut] = useState(false);
-  const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [isReactivating, setIsReactivating] = useState(false);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    const resolveCurrency = async () => {
-      const country = detectUserCountryCode();
-      try {
-        const result = await fetchDefaultCurrency(country);
-        if (!cancelled) setCurrency(result.currency);
-      } catch {
-        if (!cancelled) setCurrency(getDefaultCurrencyForUser());
-      }
-    };
-
-    void resolveCurrency();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const { data: plansData, isLoading: plansLoading } = useSWR(
-    currency && !isPremium ? ["subscription-plans", currency] : null,
-    () => fetchSubscriptionPlans(currency!),
-    { revalidateOnFocus: false },
-  );
-
-  const plans: SubscriptionPlan[] = plansData?.plans ?? [];
-
-  useEffect(() => {
-    if (plans.length === 0) return;
-    const hasSelection = plans.some((plan) => plan.code === selectedPlan);
-    if (hasSelection) return;
-    const defaultPlan = plans.find((plan) => plan.isPopular) ?? plans[0];
-    setSelectedPlan(defaultPlan.code);
-  }, [plans, selectedPlan]);
-
-  const selectedPlanData = useMemo(
-    () => plans.find((plan) => plan.code === selectedPlan),
-    [plans, selectedPlan],
-  );
-
-  const showCheckout = !isPremium && !premiumLoading;
-  const plansReady = Boolean(currency) && !plansLoading && plans.length > 0;
-
-  const handleCheckout = async () => {
-    setCheckoutError(null);
-
-    if (!isAuthenticated()) {
-      openAuthModal("login");
-      return;
-    }
-
-    if (!selectedPlanData || !currency) {
-      setCheckoutError("Please select a plan.");
-      return;
-    }
-
-    setIsCheckingOut(true);
-    try {
-      const result = await initializeSubscription(
-        selectedPlanData.code,
-        currency,
-      );
-      window.location.href = result.authorizationUrl;
-    } catch (error: unknown) {
-      const message =
-        error instanceof Error ? error.message : "Unable to start checkout";
-      setCheckoutError(message);
-      setIsCheckingOut(false);
-    }
-  };
+  const showNewCheckout = !isPremium && !premiumLoading;
+  const showUpgrade = isPremium && !premiumLoading;
 
   const handleOpenCancelModal = () => {
     if (!isAuthenticated()) {
@@ -260,90 +170,25 @@ const PremiumView = () => {
           ))}
         </div>
 
-        {showCheckout && (
-          <div className="space-y-4">
-            {!plansReady ? (
-              <div className="flex justify-center py-8">
-                <Loader2 className="w-6 h-6 animate-spin text-primary-colour" />
-              </div>
-            ) : (
-              <div className="grid grid-cols-3 gap-3">
-                {plans.map((plan) => (
-                  <button
-                    key={plan.id}
-                    type="button"
-                    onClick={() => setSelectedPlan(plan.code)}
-                    className={`relative p-4 rounded-2xl border-2 transition-all duration-200 ${
-                      selectedPlan === plan.code
-                        ? "border-complimentary-colour bg-complimentary-colour text-universal-white"
-                        : plan.isPopular
-                          ? "border-complimentary-colour/30 bg-complimentary-colour/5 text-primary-colour"
-                          : "border-light-grey-2 bg-universal-white text-primary-colour"
-                    } ${
-                      plan.isPopular && selectedPlan !== plan.code
-                        ? "shadow-md"
-                        : ""
-                    }`}
-                  >
-                    <div className="space-y-3 text-center">
-                      <div
-                        className={`text-[12px] leading-tight ${
-                          selectedPlan === plan.code
-                            ? "text-universal-white"
-                            : "text-primary-shade-4"
-                        } ${Magnetik_Regular.className}`}
-                      >
-                        {formatPlanDuration(plan.name, plan.durationDays)
-                          .split("\n")
-                          .map((line, i) => (
-                            <div key={i}>{line}</div>
-                          ))}
-                      </div>
+        {showNewCheckout && (
+          <SubscriptionUpgradePanel variant="new" showHeading />
+        )}
 
-                      <div
-                        className={`text-md font-bold text-center ${
-                          selectedPlan === plan.code
-                            ? "text-universal-white"
-                            : "text-primary-colour"
-                        } ${Magnetik_Bold.className}`}
-                      >
-                        {plan.formattedPrice}
-                      </div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+        {showUpgrade && (
+          <SubscriptionUpgradePanel
+            variant="upgrade"
+            currentPlanCode={currentPlanCode}
+            showHeading
+          />
         )}
 
         <div className="space-y-6 text-center">
-          {showCheckout ? (
-            <>
-              <p
-                className={`text-primary-colour text-[14px] ${Magnetik_Medium.className}`}
-              >
-                Upgrade your experience with Storytime today!
-              </p>
-
-              {checkoutError && (
-                <p
-                  className={`text-sm text-red-600 ${Magnetik_Regular.className}`}
-                >
-                  {checkoutError}
-                </p>
-              )}
-
-              <Button
-                className={`w-full bg-primary-shade-6 text-universal-white py-4 text-lg ${Magnetik_Medium.className}`}
-                size="lg"
-                onPress={handleCheckout}
-                isDisabled={isCheckingOut || !plansReady || !selectedPlanData}
-                isLoading={isCheckingOut}
-              >
-                {isCheckingOut ? "Processing..." : "Pay"}
-              </Button>
-            </>
+          {showNewCheckout ? (
+            <p
+              className={`text-primary-shade-4 text-xs ${Magnetik_Regular.className}`}
+            >
+              Secure payment. Cancel anytime from Settings.
+            </p>
           ) : (
             isPremium &&
             !premiumLoading && (

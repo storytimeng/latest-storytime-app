@@ -19,6 +19,8 @@ import {
 } from "@/src/lib/subscriptions";
 import { showToast } from "@/lib/showNotification";
 import CancelPremiumModal from "@/components/reusables/customUI/CancelPremiumModal";
+import SubscriptionUpgradePanel from "@/components/reusables/customUI/SubscriptionUpgradePanel";
+import { planDurationLabel } from "@/src/lib/subscription-ui";
 
 function formatDate(isoDate: string): string {
   return new Date(isoDate).toLocaleDateString(undefined, {
@@ -66,6 +68,8 @@ const SubscriptionModal: React.FC = () => {
     isPremium,
     premiumExpiresAt,
     isSubscriptionCancelled,
+    currentPlanCode,
+    currentPlanName,
     refreshPremiumStatus,
   } = usePremiumFeatures();
 
@@ -126,7 +130,9 @@ const SubscriptionModal: React.FC = () => {
                   >
                     {isSubscriptionCancelled
                       ? "Cancelled — access until expiry"
-                      : "Active membership"}
+                      : currentPlanName
+                        ? `${planDurationLabel(currentPlanCode ?? "")} plan`
+                        : "Active membership"}
                   </p>
                 </div>
                 <span
@@ -143,7 +149,7 @@ const SubscriptionModal: React.FC = () => {
                 >
                   {isSubscriptionCancelled
                     ? `Access ends ${formatDate(premiumExpiresAt)}`
-                    : `Renews through ${formatDate(premiumExpiresAt)}`}
+                    : `Access through ${formatDate(premiumExpiresAt)}`}
                 </p>
               )}
             </div>
@@ -154,6 +160,17 @@ const SubscriptionModal: React.FC = () => {
               >
                 You do not have an active Premium subscription.
               </p>
+            </div>
+          )}
+
+          {isPremium && (
+            <div className="rounded-xl border border-light-grey-2 bg-light-grey-1/50 p-4">
+              <SubscriptionUpgradePanel
+                variant="upgrade"
+                currentPlanCode={currentPlanCode}
+                compact
+                showHeading
+              />
             </div>
           )}
 
@@ -211,14 +228,16 @@ const SubscriptionModal: React.FC = () => {
           </div>
 
           <div className="flex flex-col gap-3 pt-1">
-            <Button
-              as={Link}
-              href="/premium"
-              variant="primary"
-              className="w-full"
-            >
-              {isPremium ? "Upgrade subscription" : "Get Premium"}
-            </Button>
+            {!isPremium && (
+              <Button
+                as={Link}
+                href="/premium"
+                variant="primary"
+                className="w-full"
+              >
+                Get Premium
+              </Button>
+            )}
 
             {isPremium && isSubscriptionCancelled && (
               <Button
