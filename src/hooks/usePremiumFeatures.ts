@@ -1,7 +1,11 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
+import useSWR from "swr";
 import { useUserStore } from "@/src/stores/useUserStore";
+import { useAuthStore } from "@/src/stores/useAuthStore";
+import { fetchPremiumStatus } from "@/src/lib/subscriptions";
+import { useTTSStore } from "@/src/stores/useTTSStore";
 
 export interface PremiumFeatures {
   ttsEnabled: boolean;
@@ -17,49 +21,53 @@ export interface UsePremiumFeaturesReturn {
   features: PremiumFeatures;
   isLoading: boolean;
   checkFeature: (feature: keyof PremiumFeatures) => boolean;
+  premiumExpiresAt: string | null;
+  refreshPremiumStatus: () => void;
 }
 
-/**
- * Hook for checking premium feature access
- *
- * TODO: Connect to premium API endpoint when available
- * Current implementation returns isPremium: true as a stub
- */
 export const usePremiumFeatures = (): UsePremiumFeaturesReturn => {
   const { user } = useUserStore();
+  const { isAuthenticated } = useAuthStore();
+  const setIsPremium = useTTSStore((state) => state.setIsPremium);
+  const isLoggedIn = isAuthenticated();
 
-  // TODO: Replace with actual API call when premium endpoint is available
-  // Example:
-  // const { data, isLoading } = useSWR(
-  //   user ? '/api/premium/status' : null,
-  //   fetcher
-  // );
+  const { data, error, isLoading, mutate } = useSWR(
+    isLoggedIn ? "premium-status" : null,
+    async () => fetchPremiumStatus(),
+    {
+      revalidateOnFocus: true,
+      shouldRetryOnError: false,
+    },
+  );
 
-  // Stub implementation - default to premium for all users
-  const isPremium = true; // Change to false to test non-premium experience
-  const isLoading = false;
+  const isPremium = data?.isPremium ?? user?.isPremium ?? false;
 
-  // Define which features require premium
+  useEffect(() => {
+    setIsPremium(isPremium);
+  }, [isPremium, setIsPremium]);
+
   const features: PremiumFeatures = {
-    ttsEnabled: true, // Basic TTS is free
-    advancedVoices: isPremium, // Premium voices require subscription
-    playbackSpeedControl: isPremium, // Speed control is premium
-    pitchControl: isPremium, // Pitch adjustment is premium
-    volumeControl: true, // Volume is always free
-    playFromHere: isPremium, // Jump-to feature is premium
+    ttsEnabled: true,
+    advancedVoices: isPremium,
+    playbackSpeedControl: isPremium,
+    pitchControl: isPremium,
+    volumeControl: true,
+    playFromHere: isPremium,
   };
 
   const checkFeature = useCallback(
-    (feature: keyof PremiumFeatures): boolean => {
-      return features[feature];
-    },
-    [features]
+    (feature: keyof PremiumFeatures): boolean => features[feature],
+    [features],
   );
 
   return {
     isPremium,
     features,
-    isLoading,
+    isLoading: isLoggedIn ? isLoading && !data && !error : false,
     checkFeature,
+    premiumExpiresAt: data?.expiresAt ?? null,
+    refreshPremiumStatus: () => {
+      void mutate();
+    },
   };
 };

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import { usePremiumFeatures, PremiumFeatures } from "@/src/hooks/usePremiumFeatures";
 import { Lock } from "lucide-react";
 import { Button } from "@heroui/button";
@@ -79,12 +80,13 @@ const LockedFeatureUI: React.FC<LockedFeatureUIProps> = ({
   message,
   onUpgrade,
 }) => {
+  const router = useRouter();
+
   const handleUpgrade = () => {
     if (onUpgrade) {
       onUpgrade();
     } else {
-      // TODO: Navigate to premium upgrade page or show modal
-      console.log("Upgrade to premium clicked");
+      router.push("/premium");
     }
   };
 

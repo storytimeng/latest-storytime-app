@@ -19,6 +19,8 @@ export interface UserProfile {
   authorId?: string;
   readerId?: string;
   createdAt?: string;
+  isPremium?: boolean;
+  premiumExpiresAt?: string | null;
 }
 
 interface UserState {

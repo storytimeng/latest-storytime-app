@@ -63,7 +63,7 @@ const initialState = {
   totalSentences: 0,
   estimatedDurationSeconds: 0,
   elapsedSeconds: 0,
-  isPremium: true, // Default to true until premium API is ready
+  isPremium: false,
 };
 
 export const useTTSStore = create<TTSState>()(
