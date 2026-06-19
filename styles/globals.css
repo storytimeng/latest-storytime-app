@@ -493,7 +493,9 @@
 
   /* === TTS STYLES === */
   .tts-sentence {
-    transition: background-color 0.2s ease, padding 0.2s ease;
+    transition:
+      background-color 0.2s ease,
+      padding 0.2s ease;
     border-radius: 2px;
   }
 
@@ -518,7 +520,8 @@
 
   /* TTS Audio waveform animation for playing state */
   @keyframes tts-pulse {
-    0%, 100% {
+    0%,
+    100% {
       opacity: 1;
     }
     50% {
@@ -528,5 +531,62 @@
 
   .tts-playing-indicator {
     animation: tts-pulse 1.5s ease-in-out infinite;
+  }
+
+  /* Story reader + rich text editor output */
+  .story-rich-text {
+    line-height: 1.8;
+    word-break: break-word;
+  }
+
+  .story-rich-text p {
+    margin-bottom: 1.25rem;
+  }
+
+  .story-rich-text p:last-child {
+    margin-bottom: 0;
+  }
+
+  .story-rich-text h1,
+  .story-rich-text h2,
+  .story-rich-text h3 {
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
+    font-weight: 600;
+    line-height: 1.35;
+  }
+
+  .story-rich-text ul,
+  .story-rich-text ol {
+    margin: 0.75rem 0 1.25rem;
+    padding-left: 1.5rem;
+  }
+
+  .story-rich-text li {
+    margin-bottom: 0.35rem;
+  }
+
+  .story-rich-text blockquote {
+    margin: 1rem 0;
+    padding-left: 1rem;
+    border-left: 3px solid var(--complimentary-colour);
+    color: var(--primary-shade-4);
+    font-style: italic;
+  }
+
+  .story-rich-text a {
+    color: var(--complimentary-colour);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .story-rich-text strong,
+  .story-rich-text b {
+    font-weight: 600;
+  }
+
+  .story-rich-text em,
+  .story-rich-text i {
+    font-style: italic;
   }
 }
