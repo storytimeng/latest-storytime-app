@@ -23,8 +23,9 @@ const LogoutModal: React.FC<LogoutModalProps> = ({ onClose }) => {
         type: "success",
         message: "Logged out successfully",
       });
-      router.push("/auth/login");
-      onClose?.();
+      // Replace (don't push) so back button won't return to settings.
+      // Do not call onClose here — it navigates back to /settings? and cancels this redirect.
+      router.replace("/auth/login");
     } catch (error) {
       console.error("Logout error:", error);
       showToast({
@@ -37,29 +38,25 @@ const LogoutModal: React.FC<LogoutModalProps> = ({ onClose }) => {
   return (
     <>
       <ModalHeader>
-        <h2 className={`text-xl text-primary-colour ${Magnetik_Bold.className}`}>
+        <h2
+          className={`text-xl text-primary-colour ${Magnetik_Bold.className}`}
+        >
           Log Out
         </h2>
       </ModalHeader>
       <ModalBody className="pb-6">
         <div className="space-y-6">
-          <p className={`text-primary-colour text-center ${Magnetik_Regular.className}`}>
+          <p
+            className={`text-primary-colour text-center ${Magnetik_Regular.className}`}
+          >
             Are you sure you want to log out?
           </p>
 
           <div className="flex gap-3">
-            <Button
-              variant="bordered"
-              className="flex-1"
-              onPress={onClose}
-            >
+            <Button variant="bordered" className="flex-1" onPress={onClose}>
               No
             </Button>
-            <Button
-              variant="primary"
-              className="flex-1"
-              onPress={handleLogout}
-            >
+            <Button variant="primary" className="flex-1" onPress={handleLogout}>
               Yes
             </Button>
           </div>

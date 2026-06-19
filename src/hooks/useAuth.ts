@@ -18,12 +18,15 @@ import {
   authControllerLogout,
 } from "../client/sdk.gen";
 import { setAuthToken, useAuthStore } from "../stores/useAuthStore";
+import { useUserStore } from "../stores/useUserStore";
+import { useAuthModalStore } from "../stores/useAuthModalStore";
 import type {
   LoginDto,
   AuthResponseDto,
   RegisterDto,
   RegisterResponseDto,
-  VerifyEmailDto,AuthControllerVerifyEmailResponse,
+  VerifyEmailDto,
+  AuthControllerVerifyEmailResponse,
   ResendOtpDto,
   ForgotPasswordDto,
   ResetPasswordDto,
@@ -32,25 +35,27 @@ import type {
 /**
  * Generic auth mutation helper
  * Handles common patterns: error handling, type safety, and response unwrapping
- * 
+ *
  * HeyAPI returns: { data?: T, error?: unknown, response: Response }
  */
 function useAuthMutation<TRequest, TResponse>(
-  mutationFn: (body: TRequest) => Promise<{ data?: TResponse; error?: unknown; response: Response }>,
+  mutationFn: (
+    body: TRequest,
+  ) => Promise<{ data?: TResponse; error?: unknown; response: Response }>,
   options?: {
     onSuccess?: (data: TResponse) => void | Promise<void>;
-  }
+  },
 ) {
   const mutation = useSWRMutation(
     // Use a unique key per mutation to avoid conflicts
     `auth-mutation-${mutationFn.name}`,
     async (_key: string, { arg }: { arg: TRequest }) => {
       const response = await mutationFn(arg);
-      
+
       if (response.error) {
         throw response.error;
       }
-      
+
       if (!response.data) {
         throw new Error("No data returned from mutation");
       }
@@ -63,7 +68,7 @@ function useAuthMutation<TRequest, TResponse>(
     },
     {
       throwOnError: true,
-    }
+    },
   );
 
   return {
@@ -90,13 +95,15 @@ export function useLogin() {
       // Handle token persistence
       console.log("Login response:", response);
       const responseData = response.data as any;
-      const accessToken = responseData?.accessToken || responseData?.data?.accessToken;
-      const refreshToken = responseData?.refreshToken || responseData?.data?.refreshToken;
+      const accessToken =
+        responseData?.accessToken || responseData?.data?.accessToken;
+      const refreshToken =
+        responseData?.refreshToken || responseData?.data?.refreshToken;
 
       if (accessToken) {
         console.log("Setting auth token:", accessToken);
         setAuthToken(accessToken, refreshToken);
-        
+
         if (remember) {
           console.log("Setting persistent cookie");
           Cookies.set("authToken", accessToken, {
@@ -105,7 +112,7 @@ export function useLogin() {
             sameSite: "strict",
           });
           if (refreshToken) {
-             Cookies.set("refreshToken", refreshToken, {
+            Cookies.set("refreshToken", refreshToken, {
               expires: 30,
               secure: process.env.NODE_ENV === "production",
               sameSite: "strict",
@@ -123,7 +130,7 @@ export function useLogin() {
         // Revalidate user profile after successful login
         mutate("profile");
       },
-    }
+    },
   );
 }
 
@@ -133,11 +140,9 @@ export function useLogin() {
  * User must verify email before accessing the platform
  */
 export function useRegister() {
-  return useAuthMutation<RegisterDto, RegisterResponseDto>(
-    async (userData) => {
-      return await authControllerRegister({ body: userData });
-    }
-  );
+  return useAuthMutation<RegisterDto, RegisterResponseDto>(async (userData) => {
+    return await authControllerRegister({ body: userData });
+  });
 }
 
 /**
@@ -150,7 +155,9 @@ export function useVerifyEmail() {
 
   return useAuthMutation<VerifyEmailDto, AuthControllerVerifyEmailResponse>(
     async (verificationData) => {
-      const response = await authControllerVerifyEmail({ body: verificationData });
+      const response = await authControllerVerifyEmail({
+        body: verificationData,
+      });
 
       // Auto-authenticate after email verification
       if (response.data?.access_token) {
@@ -163,7 +170,7 @@ export function useVerifyEmail() {
       onSuccess: () => {
         mutate("profile");
       },
-    }
+    },
   );
 }
 
@@ -172,11 +179,9 @@ export function useVerifyEmail() {
  * Requests a new OTP code for email verification
  */
 export function useResendOtp() {
-  return useAuthMutation<ResendOtpDto, unknown>(
-    async (emailData) => {
-      return await authControllerResendOtp({ body: emailData });
-    }
-  );
+  return useAuthMutation<ResendOtpDto, unknown>(async (emailData) => {
+    return await authControllerResendOtp({ body: emailData });
+  });
 }
 
 /**
@@ -185,13 +190,11 @@ export function useResendOtp() {
  * Stores email transiently for reset completion
  */
 export function useForgotPassword() {
-  return useAuthMutation<ForgotPasswordDto, unknown>(
-    async (emailData) => {
-      // Store email in auth store for reset flow
-      useAuthStore.getState().setReset(emailData.email, undefined);
-      return await authControllerForgotPassword({ body: emailData });
-    }
-  );
+  return useAuthMutation<ForgotPasswordDto, unknown>(async (emailData) => {
+    // Store email in auth store for reset flow
+    useAuthStore.getState().setReset(emailData.email, undefined);
+    return await authControllerForgotPassword({ body: emailData });
+  });
 }
 
 /**
@@ -209,25 +212,32 @@ export function useResetPassword() {
         // Clear transient reset data
         useAuthStore.getState().clearReset();
       },
-    }
+    },
   );
 }
 
 /**
  * Logout hook
- * Invalidates current session and clears auth state
+ * Invalidates current session and clears all local auth state
  */
 export function useLogout() {
   const { mutate } = useSWRConfig();
 
   const logout = useCallback(async () => {
     try {
-      await authControllerLogout();
+      const token = useAuthStore.getState().token || Cookies.get("authToken");
+      if (token) {
+        await authControllerLogout();
+      }
+    } catch {
+      // Still clear local session if the API call fails (expired token, offline, etc.)
     } finally {
-      // Clear auth state even if API call fails
       useAuthStore.getState().clear();
+      useUserStore.getState().clearUser();
+      useAuthModalStore.getState().closeModal();
       Cookies.remove("authToken");
-      mutate("profile", undefined, { revalidate: false });
+      Cookies.remove("refreshToken");
+      await mutate(() => true, undefined, { revalidate: false });
     }
   }, [mutate]);
 
