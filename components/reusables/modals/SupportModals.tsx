@@ -11,6 +11,7 @@ import {
   supportControllerFindActive,
 } from "@/src/client";
 import { Magnetik_Bold, Magnetik_Medium, Magnetik_Regular } from "@/lib/font";
+import { isHtmlContent, sanitizeRichHtml } from "@/lib/sanitizeRichHtml";
 import { Skeleton } from "@heroui/skeleton";
 import {
   Modal,
