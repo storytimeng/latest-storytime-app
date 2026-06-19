@@ -2,12 +2,11 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { Button } from "@heroui/button";
-import { Select, SelectItem } from "@heroui/select";
+import { Modal, ModalContent } from "@heroui/modal";
 import { ArrowLeft, Volume2, Download, Bookmark, Loader2 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import useSWR from "swr";
-import { useRouter } from "next/navigation";
 import {
   Magnetik_Bold,
   Magnetik_Medium,
@@ -15,11 +14,10 @@ import {
   Magnetik_SemiBold,
 } from "@/lib/font";
 import {
-  CURRENCY_OPTIONS,
-  cancelSubscription,
   fetchDefaultCurrency,
   fetchSubscriptionPlans,
   initializeSubscription,
+  reactivateSubscription,
   SupportedCurrency,
   SubscriptionPlan,
 } from "@/src/lib/subscriptions";
@@ -30,6 +28,8 @@ import {
 import { usePremiumFeatures } from "@/src/hooks/usePremiumFeatures";
 import { useAuthStore } from "@/src/stores/useAuthStore";
 import { useAuthModalStore } from "@/src/stores/useAuthModalStore";
+import CancelPremiumModal from "@/components/reusables/customUI/CancelPremiumModal";
+import { showToast } from "@/lib/showNotification";
 
 const features = [
   {
@@ -56,20 +56,31 @@ function formatPlanDuration(name: string, durationDays: number): string {
   return name.replace(" ", "\n");
 }
 
+function formatExpiryDate(isoDate: string): string {
+  return new Date(isoDate).toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+}
+
 const PremiumView = () => {
-  const router = useRouter();
   const { isAuthenticated } = useAuthStore();
   const openAuthModal = useAuthModalStore((state) => state.openModal);
-  const { isPremium, premiumExpiresAt, refreshPremiumStatus } =
-    usePremiumFeatures();
+  const {
+    isPremium,
+    isLoading: premiumLoading,
+    premiumExpiresAt,
+    isSubscriptionCancelled,
+    refreshPremiumStatus,
+  } = usePremiumFeatures();
 
   const [selectedPlan, setSelectedPlan] = useState("6months");
-  const [currency, setCurrency] = useState<SupportedCurrency>("USD");
-  const [currencyReady, setCurrencyReady] = useState(false);
+  const [currency, setCurrency] = useState<SupportedCurrency | null>(null);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
-  const [isCancelling, setIsCancelling] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
-  const [cancelMessage, setCancelMessage] = useState<string | null>(null);
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+  const [isReactivating, setIsReactivating] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -81,8 +92,6 @@ const PremiumView = () => {
         if (!cancelled) setCurrency(result.currency);
       } catch {
         if (!cancelled) setCurrency(getDefaultCurrencyForUser());
-      } finally {
-        if (!cancelled) setCurrencyReady(true);
       }
     };
 
@@ -93,8 +102,8 @@ const PremiumView = () => {
   }, []);
 
   const { data: plansData, isLoading: plansLoading } = useSWR(
-    currencyReady ? ["subscription-plans", currency] : null,
-    () => fetchSubscriptionPlans(currency),
+    currency && !isPremium ? ["subscription-plans", currency] : null,
+    () => fetchSubscriptionPlans(currency!),
     { revalidateOnFocus: false },
   );
 
@@ -113,6 +122,9 @@ const PremiumView = () => {
     [plans, selectedPlan],
   );
 
+  const showCheckout = !isPremium && !premiumLoading;
+  const plansReady = Boolean(currency) && !plansLoading && plans.length > 0;
+
   const handleCheckout = async () => {
     setCheckoutError(null);
 
@@ -121,7 +133,7 @@ const PremiumView = () => {
       return;
     }
 
-    if (!selectedPlanData) {
+    if (!selectedPlanData || !currency) {
       setCheckoutError("Please select a plan.");
       return;
     }
@@ -141,28 +153,37 @@ const PremiumView = () => {
     }
   };
 
-  const handleCancel = async () => {
-    setCancelMessage(null);
-    setCheckoutError(null);
+  const handleOpenCancelModal = () => {
+    if (!isAuthenticated()) {
+      openAuthModal("login");
+      return;
+    }
+    setIsCancelModalOpen(true);
+  };
 
+  const handleReactivate = async () => {
     if (!isAuthenticated()) {
       openAuthModal("login");
       return;
     }
 
-    setIsCancelling(true);
+    setIsReactivating(true);
     try {
-      const result = await cancelSubscription();
-      setCancelMessage(result.message);
+      const result = await reactivateSubscription();
       refreshPremiumStatus();
+      showToast({
+        type: "success",
+        message: result.message,
+        duration: 4000,
+      });
     } catch (error: unknown) {
       const message =
         error instanceof Error
           ? error.message
-          : "Unable to cancel subscription";
-      setCheckoutError(message);
+          : "Unable to reactivate subscription";
+      showToast({ type: "error", message });
     } finally {
-      setIsCancelling(false);
+      setIsReactivating(false);
     }
   };
 
@@ -194,15 +215,25 @@ const PremiumView = () => {
             Storytime Premium
           </h1>
 
-          {isPremium && (
+          {premiumLoading && isAuthenticated() && (
+            <Loader2 className="w-5 h-5 animate-spin text-complimentary-colour" />
+          )}
+
+          {isPremium && !premiumLoading && (
             <p
-              className={`text-sm text-complimentary-colour ${Magnetik_Medium.className}`}
+              className={`text-sm text-complimentary-colour leading-relaxed max-w-[16rem] ${Magnetik_Medium.className}`}
             >
-              You are a Premium member
-              {premiumExpiresAt
-                ? ` until ${new Date(premiumExpiresAt).toLocaleDateString()}`
-                : ""}
-              .
+              {isSubscriptionCancelled
+                ? `Premium access continues until ${
+                    premiumExpiresAt
+                      ? formatExpiryDate(premiumExpiresAt)
+                      : "your period ends"
+                  }. Your subscription is cancelled.`
+                : `Your Premium membership is active${
+                    premiumExpiresAt
+                      ? ` until ${formatExpiryDate(premiumExpiresAt)}`
+                      : ""
+                  }.`}
             </p>
           )}
         </div>
@@ -229,145 +260,151 @@ const PremiumView = () => {
           ))}
         </div>
 
-        <div className="space-y-4">
-          <Select
-            label="Currency"
-            selectedKeys={[currency]}
-            onSelectionChange={(keys) => {
-              const value = Array.from(keys)[0] as SupportedCurrency;
-              if (value) setCurrency(value);
-            }}
-            classNames={{
-              label: Magnetik_Medium.className,
-              value: Magnetik_Regular.className,
-            }}
-          >
-            {CURRENCY_OPTIONS.map((option) => (
-              <SelectItem key={option.code}>{option.label}</SelectItem>
-            ))}
-          </Select>
+        {showCheckout && (
+          <div className="space-y-4">
+            {!plansReady ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="w-6 h-6 animate-spin text-primary-colour" />
+              </div>
+            ) : (
+              <div className="grid grid-cols-3 gap-3">
+                {plans.map((plan) => (
+                  <button
+                    key={plan.id}
+                    type="button"
+                    onClick={() => setSelectedPlan(plan.code)}
+                    className={`relative p-4 rounded-2xl border-2 transition-all duration-200 ${
+                      selectedPlan === plan.code
+                        ? "border-complimentary-colour bg-complimentary-colour text-universal-white"
+                        : plan.isPopular
+                          ? "border-complimentary-colour/30 bg-complimentary-colour/5 text-primary-colour"
+                          : "border-light-grey-2 bg-universal-white text-primary-colour"
+                    } ${
+                      plan.isPopular && selectedPlan !== plan.code
+                        ? "shadow-md"
+                        : ""
+                    }`}
+                  >
+                    <div className="space-y-3 text-center">
+                      <div
+                        className={`text-[12px] leading-tight ${
+                          selectedPlan === plan.code
+                            ? "text-universal-white"
+                            : "text-primary-shade-4"
+                        } ${Magnetik_Regular.className}`}
+                      >
+                        {formatPlanDuration(plan.name, plan.durationDays)
+                          .split("\n")
+                          .map((line, i) => (
+                            <div key={i}>{line}</div>
+                          ))}
+                      </div>
 
-          {plansData?.isInternationalDefault && (
-            <p
-              className={`text-xs text-primary-shade-4 ${Magnetik_Regular.className}`}
-            >
-              Prices are shown in US Dollars for your region. You can switch
-              currency above if needed.
-            </p>
-          )}
-
-          {plansLoading ? (
-            <div className="flex justify-center py-8">
-              <Loader2 className="w-6 h-6 animate-spin text-primary-colour" />
-            </div>
-          ) : (
-            <div className="grid grid-cols-3 gap-3">
-              {plans.map((plan) => (
-                <button
-                  key={plan.id}
-                  onClick={() => setSelectedPlan(plan.code)}
-                  className={`relative p-4 rounded-2xl border-2 transition-all duration-200 ${
-                    selectedPlan === plan.code
-                      ? "border-complimentary-colour bg-complimentary-colour text-universal-white"
-                      : plan.isPopular
-                        ? "border-complimentary-colour/30 bg-complimentary-colour/5 text-primary-colour"
-                        : "border-light-grey-2 bg-universal-white text-primary-colour"
-                  } ${
-                    plan.isPopular && selectedPlan !== plan.code
-                      ? "shadow-md"
-                      : ""
-                  }`}
-                >
-                  <div className="space-y-3 text-center">
-                    <div
-                      className={`text-[12px] leading-tight ${
-                        selectedPlan === plan.code
-                          ? "text-universal-white"
-                          : "text-primary-shade-4"
-                      } ${Magnetik_Regular.className}`}
-                    >
-                      {formatPlanDuration(plan.name, plan.durationDays)
-                        .split("\n")
-                        .map((line, i) => (
-                          <div key={i}>{line}</div>
-                        ))}
+                      <div
+                        className={`text-md font-bold text-center ${
+                          selectedPlan === plan.code
+                            ? "text-universal-white"
+                            : "text-primary-colour"
+                        } ${Magnetik_Bold.className}`}
+                      >
+                        {plan.formattedPrice}
+                      </div>
                     </div>
-
-                    <div
-                      className={`text-md font-bold text-center ${
-                        selectedPlan === plan.code
-                          ? "text-universal-white"
-                          : "text-primary-colour"
-                      } ${Magnetik_Bold.className}`}
-                    >
-                      {plan.formattedPrice}
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="space-y-6 text-center">
-          <p
-            className={`text-primary-colour text-[14px] ${Magnetik_Medium.className}`}
-          >
-            {isPremium
-              ? "Extend your Premium access with another plan."
-              : "Upgrade your experience with Storytime today!"}
-          </p>
+          {showCheckout ? (
+            <>
+              <p
+                className={`text-primary-colour text-[14px] ${Magnetik_Medium.className}`}
+              >
+                Upgrade your experience with Storytime today!
+              </p>
 
-          {checkoutError && (
-            <p className={`text-sm text-red-600 ${Magnetik_Regular.className}`}>
-              {checkoutError}
-            </p>
+              {checkoutError && (
+                <p
+                  className={`text-sm text-red-600 ${Magnetik_Regular.className}`}
+                >
+                  {checkoutError}
+                </p>
+              )}
+
+              <Button
+                className={`w-full bg-primary-shade-6 text-universal-white py-4 text-lg ${Magnetik_Medium.className}`}
+                size="lg"
+                onPress={handleCheckout}
+                isDisabled={isCheckingOut || !plansReady || !selectedPlanData}
+                isLoading={isCheckingOut}
+              >
+                {isCheckingOut ? "Processing..." : "Pay"}
+              </Button>
+            </>
+          ) : (
+            isPremium &&
+            !premiumLoading && (
+              <>
+                <p
+                  className={`text-primary-colour text-[14px] ${Magnetik_Medium.className}`}
+                >
+                  {isSubscriptionCancelled
+                    ? "You can reactivate anytime before your access ends."
+                    : "Enjoy unlimited access to your Premium benefits."}
+                </p>
+                <Button
+                  as={Link}
+                  href="/home"
+                  className={`w-full bg-primary-shade-6 text-universal-white py-4 text-lg ${Magnetik_Medium.className}`}
+                  size="lg"
+                >
+                  Start reading
+                </Button>
+                {isSubscriptionCancelled ? (
+                  <Button
+                    variant="bordered"
+                    className={`w-full border-complimentary-colour text-complimentary-colour ${Magnetik_Medium.className}`}
+                    onPress={handleReactivate}
+                    isLoading={isReactivating}
+                    isDisabled={isReactivating}
+                  >
+                    Reactivate subscription
+                  </Button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleOpenCancelModal}
+                    className={`text-sm text-primary-shade-4 hover:text-primary-colour transition-colors ${Magnetik_Regular.className}`}
+                  >
+                    Cancel subscription
+                  </button>
+                )}
+              </>
+            )
           )}
-
-          {cancelMessage && (
-            <p
-              className={`text-sm text-complimentary-colour ${Magnetik_Regular.className}`}
-            >
-              {cancelMessage}
-            </p>
-          )}
-
-          <Button
-            className={`w-full bg-primary-shade-6 text-universal-white py-4 text-lg ${Magnetik_Medium.className}`}
-            size="lg"
-            onPress={handleCheckout}
-            isDisabled={
-              isCheckingOut ||
-              plansLoading ||
-              !selectedPlanData ||
-              !currencyReady
-            }
-            isLoading={isCheckingOut}
-          >
-            {isCheckingOut ? "Redirecting to Paystack..." : "Pay with Paystack"}
-          </Button>
-
-          {isPremium && (
-            <Button
-              variant="bordered"
-              className="w-full"
-              onPress={handleCancel}
-              isLoading={isCancelling}
-              isDisabled={isCancelling}
-            >
-              Cancel subscription
-            </Button>
-          )}
-
-          <button
-            type="button"
-            onClick={() => router.push("/home")}
-            className={`text-sm text-primary-shade-4 underline ${Magnetik_Regular.className}`}
-          >
-            Maybe later
-          </button>
         </div>
       </div>
+
+      <Modal
+        isOpen={isCancelModalOpen}
+        onOpenChange={setIsCancelModalOpen}
+        placement="center"
+        scrollBehavior="inside"
+      >
+        <ModalContent>
+          {(onClose) => (
+            <CancelPremiumModal
+              isOpen={isCancelModalOpen}
+              premiumExpiresAt={premiumExpiresAt}
+              onClose={onClose}
+              onCancelled={refreshPremiumStatus}
+            />
+          )}
+        </ModalContent>
+      </Modal>
     </div>
   );
 };

@@ -22,6 +22,7 @@ export interface UsePremiumFeaturesReturn {
   isLoading: boolean;
   checkFeature: (feature: keyof PremiumFeatures) => boolean;
   premiumExpiresAt: string | null;
+  isSubscriptionCancelled: boolean;
   refreshPremiumStatus: () => void;
 }
 
@@ -41,6 +42,8 @@ export const usePremiumFeatures = (): UsePremiumFeaturesReturn => {
   );
 
   const isPremium = data?.isPremium ?? user?.isPremium ?? false;
+  const isSubscriptionCancelled =
+    data?.activeSubscription?.status === "cancelled";
 
   useEffect(() => {
     setIsPremium(isPremium);
@@ -66,6 +69,7 @@ export const usePremiumFeatures = (): UsePremiumFeaturesReturn => {
     isLoading: isLoggedIn ? isLoading && !data && !error : false,
     checkFeature,
     premiumExpiresAt: data?.expiresAt ?? null,
+    isSubscriptionCancelled,
     refreshPremiumStatus: () => {
       void mutate();
     },

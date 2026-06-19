@@ -147,6 +147,15 @@ export async function cancelSubscription() {
   }>("/subscriptions/cancel", { method: "POST" });
 }
 
+export async function reactivateSubscription() {
+  return subscriptionFetch<{
+    reactivated: boolean;
+    message: string;
+    expiresAt: string | null;
+    planCode: string | null;
+  }>("/subscriptions/reactivate", { method: "POST" });
+}
+
 export async function fetchPremiumStatus() {
   return subscriptionFetch<PremiumStatus>("/subscriptions/status");
 }
@@ -155,10 +164,13 @@ export async function initializeSubscription(
   planCode: string,
   currency: SupportedCurrency,
 ) {
-  return subscriptionFetch<InitializePaymentResult>("/subscriptions/initialize", {
-    method: "POST",
-    body: JSON.stringify({ planCode, currency }),
-  });
+  return subscriptionFetch<InitializePaymentResult>(
+    "/subscriptions/initialize",
+    {
+      method: "POST",
+      body: JSON.stringify({ planCode, currency }),
+    },
+  );
 }
 
 export async function verifySubscription(reference: string) {

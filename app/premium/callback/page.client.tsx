@@ -42,9 +42,7 @@ export default function PremiumCallbackPage() {
           refreshPremiumStatus();
           setStatus("success");
           setMessage(
-            result.plan
-              ? `Premium activated: ${result.plan.name}. Enjoy your upgraded Storytime experience!`
-              : "Payment successful. Premium is now active on your account.",
+            "Payment successful. Premium is now active on your account.",
           );
         } else {
           setStatus("error");
@@ -91,7 +89,7 @@ export default function PremiumCallbackPage() {
           {message}
         </p>
 
-        {reference && (
+        {reference && status !== "success" && (
           <p
             className={`text-xs text-primary-shade-4 ${Magnetik_Regular.className}`}
           >
