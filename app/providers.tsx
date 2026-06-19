@@ -15,6 +15,7 @@ import { AuthGuard } from "@/components/AuthGuard";
 // Hey-API client setup (runs immediately)
 import "../src/setup";
 import { getAuthToken } from "../src/stores/useAuthStore";
+import { hydrateAuthFromCookies } from "../src/lib/authSession";
 
 export interface ProvidersProps {
   children: React.ReactNode;
@@ -32,6 +33,10 @@ declare module "@react-types/shared" {
 export function Providers({ children, themeProps }: ProvidersProps) {
   const router = useRouter();
 
+  React.useEffect(() => {
+    hydrateAuthFromCookies();
+  }, []);
+
   return (
     <HeroUIProvider navigate={router.push}>
       <NextThemesProvider {...themeProps}>
@@ -41,12 +46,39 @@ export function Providers({ children, themeProps }: ProvidersProps) {
         <SWRConfig
           value={{
             fetcher: async (resource: string, init?: RequestInit) => {
-              // use fetch and include auth header from cookie (client-side)
               const headers = new Headers(init?.headers);
-              const token = getAuthToken() || Cookies.get("authToken");
+              const { prepareAuthSession } = await import(
+                "../src/lib/authSession"
+              );
+              const token =
+                (await prepareAuthSession()) ||
+                getAuthToken() ||
+                Cookies.get("authToken");
               if (token) headers.set("Authorization", `Bearer ${token}`);
               const res = await fetch(resource, { ...init, headers });
               if (!res.ok) {
+                if (res.status === 401) {
+                  const { refreshTokens } = await import(
+                    "../src/lib/tokenManager"
+                  );
+                  const refreshed = await refreshTokens();
+                  if (refreshed?.token) {
+                    headers.set("Authorization", `Bearer ${refreshed.token}`);
+                    const retryRes = await fetch(resource, {
+                      ...init,
+                      headers,
+                    });
+                    if (retryRes.ok) {
+                      const retryType =
+                        retryRes.headers.get("content-type") || "";
+                      if (retryType.includes("application/json")) {
+                        return retryRes.json();
+                      }
+                      return retryRes.text();
+                    }
+                  }
+                }
+
                 const text = await res.text();
                 const err = new Error(text || res.statusText);
                 // @ts-ignore

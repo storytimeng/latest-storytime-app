@@ -25,6 +25,9 @@ export function useSubscriptionCheckout() {
     setIsCheckingOut(true);
     try {
       const result = await initializeSubscription(planCode, BILLING_CURRENCY);
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("pendingPaymentReference", result.reference);
+      }
       window.location.href = result.authorizationUrl;
       return true;
     } catch (error: unknown) {

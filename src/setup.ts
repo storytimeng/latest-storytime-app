@@ -2,6 +2,7 @@ import Cookies from "js-cookie";
 import { client } from "./client/client.gen";
 import { createClientConfig } from "./heyapi-runtime";
 import { getAuthToken } from "./stores/useAuthStore";
+import { isAuthExemptPath } from "@/src/lib/authSession";
 import { refreshTokens, ensureValidToken } from "./lib/tokenManager";
 import { setupApiInterceptor } from "@/lib/offline/apiInterceptor";
 
@@ -182,19 +183,22 @@ try {
           processQueue(new Error("Token refresh failed"));
           isRefreshing = false;
 
-          // Clear auth and show auth modal
-          const { clearAuth } = await import("./stores/useAuthStore");
-          clearAuth();
+          const onPaymentReturn =
+            typeof window !== "undefined" &&
+            isAuthExemptPath(window.location.pathname);
 
-          // Open auth modal instead of redirecting
-          if (typeof window !== "undefined") {
-            const { useAuthModalStore } = await import(
-              "./stores/useAuthModalStore"
-            );
-            useAuthModalStore.getState().openModal("login");
+          if (!onPaymentReturn) {
+            const { clearAuth } = await import("./stores/useAuthStore");
+            clearAuth();
+
+            if (typeof window !== "undefined") {
+              const { useAuthModalStore } = await import(
+                "./stores/useAuthModalStore"
+              );
+              useAuthModalStore.getState().openModal("login");
+            }
           }
 
-          // Return 401 response so components can handle it gracefully
           return response;
         }
       } catch (error) {
@@ -202,17 +206,21 @@ try {
         processQueue(error);
         isRefreshing = false;
 
-        // Clear auth and show auth modal
-        const { clearAuth } = await import("./stores/useAuthStore");
-        clearAuth();
-        if (typeof window !== "undefined") {
-          const { useAuthModalStore } = await import(
-            "./stores/useAuthModalStore"
-          );
-          useAuthModalStore.getState().openModal("login");
+        const onPaymentReturn =
+          typeof window !== "undefined" &&
+          isAuthExemptPath(window.location.pathname);
+
+        if (!onPaymentReturn) {
+          const { clearAuth } = await import("./stores/useAuthStore");
+          clearAuth();
+          if (typeof window !== "undefined") {
+            const { useAuthModalStore } = await import(
+              "./stores/useAuthModalStore"
+            );
+            useAuthModalStore.getState().openModal("login");
+          }
         }
 
-        // Return 401 response so components can handle it gracefully
         return response;
       }
     }

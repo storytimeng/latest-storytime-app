@@ -105,6 +105,8 @@ export async function refreshTokens(): Promise<{
     if (expiry) {
       Cookies.set(TOKEN_EXPIRY_KEY, expiry.toString(), {
         secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        expires: new Date(expiry),
       });
       console.log("✅ Token expiry set:", new Date(expiry).toISOString());
     }
@@ -137,7 +139,7 @@ export async function ensureValidToken(): Promise<string | null> {
   }
 
   console.log(
-    "[ensureValidToken] Token expired or expiring soon, refreshing..."
+    "[ensureValidToken] Token expired or expiring soon, refreshing...",
   );
   const result = await refreshTokens();
 

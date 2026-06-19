@@ -1,28 +1,49 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { useAuthStore } from "@/src/stores/useAuthStore";
 import { useAuthModalStore } from "@/src/stores/useAuthModalStore";
-import { usePathname } from "next/navigation";
+import {
+  hasAuthSession,
+  hydrateAuthFromCookies,
+  isAuthExemptPath,
+  prepareAuthSession,
+} from "@/src/lib/authSession";
 
 /**
- * AuthGuard component that monitors authentication state
- * and displays the auth modal when user is logged out
+ * Monitors authentication on protected routes and shows the login modal when needed.
+ * Payment return URLs are exempt so Paystack redirects are not interrupted.
  */
 export const AuthGuard = () => {
   const pathname = usePathname();
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const token = useAuthStore((state) => state.token);
   const { openModal, isOpen } = useAuthModalStore();
+  const [sessionReady, setSessionReady] = useState(false);
 
   useEffect(() => {
-    // Skip auth check for auth-related pages
-    const isAuthPage = pathname?.startsWith("/auth");
+    let cancelled = false;
 
-    // If user is not authenticated and not on an auth page, show modal
-    if (!isAuthenticated() && !isAuthPage && !isOpen) {
+    const restoreSession = async () => {
+      hydrateAuthFromCookies();
+      await prepareAuthSession();
+      if (!cancelled) setSessionReady(true);
+    };
+
+    void restoreSession();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!sessionReady || isAuthExemptPath(pathname) || isOpen) return;
+
+    if (!hasAuthSession()) {
       openModal("login");
     }
-  }, [isAuthenticated, pathname, openModal, isOpen]);
+  }, [sessionReady, pathname, token, openModal, isOpen]);
 
   return null;
 };
