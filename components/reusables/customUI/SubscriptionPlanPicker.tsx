@@ -32,7 +32,7 @@ const SubscriptionPlanPicker: React.FC<SubscriptionPlanPickerProps> = ({
   }
 
   return (
-    <div className={`grid grid-cols-3 gap-3 ${compact ? "gap-2" : ""}`}>
+    <div className={`grid grid-cols-3 ${compact ? "gap-2" : "gap-3"}`}>
       {plans.map((plan) => {
         const isSelected = selectedPlan === plan.code;
         const isCurrent = currentPlanCode === plan.code;
