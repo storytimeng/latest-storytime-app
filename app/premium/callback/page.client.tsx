@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@heroui/button";
 import { Loader2, CheckCircle2, XCircle } from "lucide-react";
@@ -30,8 +30,8 @@ export default function PremiumCallbackPage() {
     (typeof window !== "undefined"
       ? sessionStorage.getItem(PENDING_PAYMENT_REFERENCE_KEY)
       : null);
-  const token = useAuthStore((state) => state.token);
   const openAuthModal = useAuthModalStore((state) => state.openModal);
+  const token = useAuthStore((state) => state.token);
   const { refreshPremiumStatus } = usePremiumFeatures();
 
   const [sessionReady, setSessionReady] = useState(false);
@@ -39,6 +39,10 @@ export default function PremiumCallbackPage() {
     "loading",
   );
   const [message, setMessage] = useState("Restoring your session...");
+
+  const verifyInFlightRef = useRef(false);
+  const verifiedRef = useRef(false);
+  const awaitingLoginRef = useRef(false);
 
   useEffect(() => {
     if (reference && typeof window !== "undefined") {
@@ -63,6 +67,8 @@ export default function PremiumCallbackPage() {
   }, []);
 
   const runVerification = useCallback(async () => {
+    if (verifiedRef.current || verifyInFlightRef.current) return;
+
     if (!reference) {
       setStatus("error");
       setMessage("Missing payment reference.");
@@ -70,6 +76,7 @@ export default function PremiumCallbackPage() {
     }
 
     if (!hasAuthSession()) {
+      awaitingLoginRef.current = true;
       setStatus("error");
       setMessage(
         "We could not restore your session automatically. Sign in to confirm your payment.",
@@ -77,6 +84,7 @@ export default function PremiumCallbackPage() {
       return;
     }
 
+    verifyInFlightRef.current = true;
     setStatus("loading");
     setMessage("Verifying your payment...");
 
@@ -84,6 +92,8 @@ export default function PremiumCallbackPage() {
       const result = await verifySubscription(reference);
 
       if (result.isPremium || result.status === "success") {
+        verifiedRef.current = true;
+        awaitingLoginRef.current = false;
         sessionStorage.removeItem(PENDING_PAYMENT_REFERENCE_KEY);
         refreshPremiumStatus();
         setStatus("success");
@@ -102,11 +112,23 @@ export default function PremiumCallbackPage() {
           ? error.message
           : "We could not verify your payment.",
       );
+    } finally {
+      verifyInFlightRef.current = false;
     }
   }, [reference, refreshPremiumStatus]);
 
   useEffect(() => {
-    if (!sessionReady) return;
+    if (!sessionReady || verifiedRef.current) return;
+    void runVerification();
+  }, [sessionReady, runVerification]);
+
+  useEffect(() => {
+    if (!sessionReady || !awaitingLoginRef.current || verifiedRef.current) {
+      return;
+    }
+    if (!token) return;
+
+    awaitingLoginRef.current = false;
     void runVerification();
   }, [sessionReady, token, runVerification]);
 

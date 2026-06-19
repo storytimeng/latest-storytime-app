@@ -15,7 +15,11 @@ import { AuthGuard } from "@/components/AuthGuard";
 // Hey-API client setup (runs immediately)
 import "../src/setup";
 import { getAuthToken } from "../src/stores/useAuthStore";
-import { hydrateAuthFromCookies } from "../src/lib/authSession";
+import {
+  hydrateAuthFromCookies,
+  prepareAuthSession,
+} from "../src/lib/authSession";
+import { refreshTokens } from "../src/lib/tokenManager";
 
 export interface ProvidersProps {
   children: React.ReactNode;
@@ -47,9 +51,6 @@ export function Providers({ children, themeProps }: ProvidersProps) {
           value={{
             fetcher: async (resource: string, init?: RequestInit) => {
               const headers = new Headers(init?.headers);
-              const { prepareAuthSession } = await import(
-                "../src/lib/authSession"
-              );
               const token =
                 (await prepareAuthSession()) ||
                 getAuthToken() ||
@@ -58,9 +59,6 @@ export function Providers({ children, themeProps }: ProvidersProps) {
               const res = await fetch(resource, { ...init, headers });
               if (!res.ok) {
                 if (res.status === 401) {
-                  const { refreshTokens } = await import(
-                    "../src/lib/tokenManager"
-                  );
                   const refreshed = await refreshTokens();
                   if (refreshed?.token) {
                     headers.set("Authorization", `Bearer ${refreshed.token}`);
