@@ -11,9 +11,35 @@ import {
   supportControllerFindActive,
 } from "@/src/client";
 import { Magnetik_Bold, Magnetik_Medium, Magnetik_Regular } from "@/lib/font";
+import { isHtmlContent, sanitizeRichHtml } from "@/lib/sanitizeRichHtml";
 import { Skeleton } from "@heroui/skeleton";
-import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter } from "@heroui/modal";
+import {
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+} from "@heroui/modal";
 import { Accordion, AccordionItem } from "@heroui/accordion";
+
+function FaqAnswer({ answer }: { answer: string }) {
+  if (isHtmlContent(answer)) {
+    return (
+      <div
+        className={`prose prose-sm prose-invert max-w-none text-sm text-primary/70 leading-relaxed ${Magnetik_Regular.className}`}
+        dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(answer) }}
+      />
+    );
+  }
+
+  return (
+    <p
+      className={`text-sm text-primary/70 leading-relaxed whitespace-pre-wrap ${Magnetik_Regular.className}`}
+    >
+      {answer}
+    </p>
+  );
+}
 
 export const SupportModals = () => {
   const { isOpen, view, closeModal, setView } = useSupportStore();
@@ -22,51 +48,64 @@ export const SupportModals = () => {
 
   // SWR Fetchers
   const fetchFAQs = async () => {
-    const response = await faqsControllerFindAll() as any;
+    const response = (await faqsControllerFindAll()) as any;
     let result = response?.data?.data || response?.data;
     if (result?.faqs) result = result.faqs;
-    return result;
+    if (!Array.isArray(result)) return [];
+    return [...result].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
   };
 
   const fetchTerms = async () => {
-    const response = await termsAndPolicyControllerGetTerms() as any;
+    const response = (await termsAndPolicyControllerGetTerms()) as any;
     return response?.data?.data || response?.data;
   };
 
   const fetchPrivacy = async () => {
-    const response = await termsAndPolicyControllerGetPrivacyPolicy() as any;
+    const response = (await termsAndPolicyControllerGetPrivacyPolicy()) as any;
     return response?.data?.data || response?.data;
   };
 
   const fetchSupport = async () => {
-    const response = await supportControllerFindActive() as any;
+    const response = (await supportControllerFindActive()) as any;
     return response?.data?.data || response?.data;
   };
 
   // SWR Hooks
-  const { data: faqsData, isLoading: isLoadingFAQs } = useSWR(
-    isOpen ? "support-faqs" : null,
-    fetchFAQs,
-    { dedupingInterval: CACHE_TIME, revalidateOnFocus: false }
-  );
+  const {
+    data: faqsData,
+    isLoading: isLoadingFAQs,
+    error: errorFAQs,
+  } = useSWR(isOpen ? "support-faqs" : null, fetchFAQs, {
+    dedupingInterval: CACHE_TIME,
+    revalidateOnFocus: false,
+  });
 
-  const { data: termsData, isLoading: isLoadingTerms } = useSWR(
-    isOpen ? "support-terms" : null,
-    fetchTerms,
-    { dedupingInterval: CACHE_TIME, revalidateOnFocus: false }
-  );
+  const {
+    data: termsData,
+    isLoading: isLoadingTerms,
+    error: errorTerms,
+  } = useSWR(isOpen ? "support-terms" : null, fetchTerms, {
+    dedupingInterval: CACHE_TIME,
+    revalidateOnFocus: false,
+  });
 
-  const { data: privacyData, isLoading: isLoadingPrivacy } = useSWR(
-    isOpen ? "support-privacy" : null,
-    fetchPrivacy,
-    { dedupingInterval: CACHE_TIME, revalidateOnFocus: false }
-  );
+  const {
+    data: privacyData,
+    isLoading: isLoadingPrivacy,
+    error: errorPrivacy,
+  } = useSWR(isOpen ? "support-privacy" : null, fetchPrivacy, {
+    dedupingInterval: CACHE_TIME,
+    revalidateOnFocus: false,
+  });
 
-  const { data: supportData, isLoading: isLoadingSupport } = useSWR(
-    isOpen ? "support-info" : null,
-    fetchSupport,
-    { dedupingInterval: CACHE_TIME, revalidateOnFocus: false }
-  );
+  const {
+    data: supportData,
+    isLoading: isLoadingSupport,
+    error: errorSupport,
+  } = useSWR(isOpen ? "support-info" : null, fetchSupport, {
+    dedupingInterval: CACHE_TIME,
+    revalidateOnFocus: false,
+  });
 
   // Prefetching logic
   useEffect(() => {
@@ -80,20 +119,46 @@ export const SupportModals = () => {
   }, [isOpen]);
 
   // Map data and loading state based on current view
-  const { data, isLoading } = useMemo(() => {
+  const { data, isLoading, error } = useMemo(() => {
     switch (view) {
       case "faqs":
-        return { data: faqsData, isLoading: isLoadingFAQs };
+        return { data: faqsData, isLoading: isLoadingFAQs, error: errorFAQs };
       case "terms":
-        return { data: termsData, isLoading: isLoadingTerms };
+        return {
+          data: termsData,
+          isLoading: isLoadingTerms,
+          error: errorTerms,
+        };
       case "privacy":
-        return { data: privacyData, isLoading: isLoadingPrivacy };
+        return {
+          data: privacyData,
+          isLoading: isLoadingPrivacy,
+          error: errorPrivacy,
+        };
       case "support":
-        return { data: supportData, isLoading: isLoadingSupport };
+        return {
+          data: supportData,
+          isLoading: isLoadingSupport,
+          error: errorSupport,
+        };
       default:
-        return { data: null, isLoading: false };
+        return { data: null, isLoading: false, error: undefined };
     }
-  }, [view, faqsData, termsData, privacyData, supportData, isLoadingFAQs, isLoadingTerms, isLoadingPrivacy, isLoadingSupport]);
+  }, [
+    view,
+    faqsData,
+    termsData,
+    privacyData,
+    supportData,
+    isLoadingFAQs,
+    isLoadingTerms,
+    isLoadingPrivacy,
+    isLoadingSupport,
+    errorFAQs,
+    errorTerms,
+    errorPrivacy,
+    errorSupport,
+  ]);
 
   if (!isOpen) return null;
 
@@ -105,6 +170,17 @@ export const SupportModals = () => {
           <Skeleton className="h-4 w-full rounded-lg" />
           <Skeleton className="h-4 w-full rounded-lg" />
           <Skeleton className="h-4 w-5/6 rounded-lg" />
+        </div>
+      );
+    }
+
+    if (error) {
+      return (
+        <div className="text-center py-8 text-primary/60">
+          <p className="text-sm">Could not load this page.</p>
+          <p className="text-xs mt-1 text-primary/40">
+            Please check your connection and try again.
+          </p>
         </div>
       );
     }
@@ -122,7 +198,7 @@ export const SupportModals = () => {
         return (
           <div className="space-y-4">
             {Array.isArray(data) && data.length > 0 ? (
-              <Accordion 
+              <Accordion
                 variant="splitted"
                 className="px-0"
                 itemClasses={{
@@ -133,11 +209,8 @@ export const SupportModals = () => {
                 }}
               >
                 {data.map((faq: any) => (
-                  <AccordionItem 
-                    key={faq.id} 
-                    title={faq.question}
-                  >
-                    {faq.answer}
+                  <AccordionItem key={faq.id} title={faq.question}>
+                    <FaqAnswer answer={faq.answer} />
                   </AccordionItem>
                 ))}
               </Accordion>
@@ -152,56 +225,84 @@ export const SupportModals = () => {
       case "privacy":
         return (
           <div className="prose prose-sm prose-invert max-w-none">
-            <h3 className={`text-xl font-bold text-primary mb-4 ${Magnetik_Bold.className}`}>
+            <h3
+              className={`text-xl font-bold text-primary mb-4 ${Magnetik_Bold.className}`}
+            >
               {view === "terms" ? "Terms of Service" : "Privacy Policy"}
             </h3>
-            <div 
+            <div
               className={`text-sm text-primary/80 leading-relaxed whitespace-pre-wrap ${Magnetik_Regular.className}`}
-              dangerouslySetInnerHTML={{ __html: data.content || data }}
+              dangerouslySetInnerHTML={{
+                __html: sanitizeRichHtml(
+                  typeof data === "string" ? data : data.content || "",
+                ),
+              }}
             />
           </div>
         );
       case "support":
         return (
           <div className="space-y-6">
-            <h3 className={`text-xl font-bold text-primary mb-2 ${Magnetik_Bold.className}`}>
+            <h3
+              className={`text-xl font-bold text-primary mb-2 ${Magnetik_Bold.className}`}
+            >
               Contact Support
             </h3>
-            <p className={`text-sm text-primary/70 mb-6 ${Magnetik_Regular.className}`}>
-              Need help? Reach out to our team through any of the channels below.
+            <p
+              className={`text-sm text-primary/70 mb-6 ${Magnetik_Regular.className}`}
+            >
+              Need help? Reach out to our team through any of the channels
+              below.
             </p>
-            
+
             <div className="space-y-4">
               {data.email && (
-                <a href={`mailto:${data.email}`} className="flex items-center gap-4 p-4 bg-white/5 rounded-xl hover:bg-white/10 transition-colors">
+                <a
+                  href={`mailto:${data.email}`}
+                  className="flex items-center gap-4 p-4 bg-white/5 rounded-xl hover:bg-white/10 transition-colors"
+                >
                   <div className="w-10 h-10 flex items-center justify-center bg-primary/10 rounded-full text-primary">
                     <Mail size={20} />
                   </div>
                   <div>
                     <p className="text-xs text-primary/40">Email</p>
-                    <p className="text-sm font-medium text-primary">{data.email}</p>
+                    <p className="text-sm font-medium text-primary">
+                      {data.email}
+                    </p>
                   </div>
                 </a>
               )}
               {data.phone && (
-                <a href={`tel:${data.phone}`} className="flex items-center gap-4 p-4 bg-white/5 rounded-xl hover:bg-white/10 transition-colors">
+                <a
+                  href={`tel:${data.phone}`}
+                  className="flex items-center gap-4 p-4 bg-white/5 rounded-xl hover:bg-white/10 transition-colors"
+                >
                   <div className="w-10 h-10 flex items-center justify-center bg-primary/10 rounded-full text-primary">
                     <Phone size={20} />
                   </div>
                   <div>
                     <p className="text-xs text-primary/40">Phone</p>
-                    <p className="text-sm font-medium text-primary">{data.phone}</p>
+                    <p className="text-sm font-medium text-primary">
+                      {data.phone}
+                    </p>
                   </div>
                 </a>
               )}
               {data.whatsapp && (
-                <a href={`https://wa.me/${data.whatsapp}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 p-4 bg-white/5 rounded-xl hover:bg-white/10 transition-colors">
+                <a
+                  href={`https://wa.me/${data.whatsapp}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-4 p-4 bg-white/5 rounded-xl hover:bg-white/10 transition-colors"
+                >
                   <div className="w-10 h-10 flex items-center justify-center bg-primary/10 rounded-full text-primary">
                     <MessageSquare size={20} />
                   </div>
                   <div>
                     <p className="text-xs text-primary/40">WhatsApp</p>
-                    <p className="text-sm font-medium text-primary">Chat with us</p>
+                    <p className="text-sm font-medium text-primary">
+                      Chat with us
+                    </p>
                   </div>
                 </a>
               )}
@@ -212,8 +313,8 @@ export const SupportModals = () => {
   };
 
   return (
-    <Modal 
-      isOpen={isOpen} 
+    <Modal
+      isOpen={isOpen}
       onClose={closeModal}
       scrollBehavior="inside"
       size="2xl"
@@ -251,24 +352,30 @@ export const SupportModals = () => {
           <>
             <ModalHeader className="flex flex-col gap-1">
               <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-                {(["faqs", "terms", "privacy", "support"] as SupportViewType[]).map((t) => (
+                {(
+                  ["faqs", "terms", "privacy", "support"] as SupportViewType[]
+                ).map((t) => (
                   <button
                     key={t}
                     onClick={() => setView(t)}
                     className={`text-xs sm:text-sm font-medium whitespace-nowrap px-3 sm:px-4 py-1.5 sm:py-2 rounded-full transition-all ${
-                      view === t 
-                        ? "bg-primary text-white shadow-lg shadow-primary/20" 
+                      view === t
+                        ? "bg-primary text-white shadow-lg shadow-primary/20"
                         : "text-primary/40 hover:text-primary hover:bg-white/5"
                     }`}
                   >
-                    {t === "faqs" ? "FAQs" : t === "terms" ? "Terms" : t === "privacy" ? "Privacy" : "Support"}
+                    {t === "faqs"
+                      ? "FAQs"
+                      : t === "terms"
+                        ? "Terms"
+                        : t === "privacy"
+                          ? "Privacy"
+                          : "Support"}
                   </button>
                 ))}
               </div>
             </ModalHeader>
-            <ModalBody>
-              {renderContent()}
-            </ModalBody>
+            <ModalBody>{renderContent()}</ModalBody>
             <ModalFooter className="justify-center">
               <p className="text-[10px] text-primary/20 uppercase tracking-widest font-bold">
                 Storytime © {new Date().getFullYear()}

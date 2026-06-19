@@ -1,19 +1,7 @@
 "use client";
 
-interface Notification {
-  id: string;
-  type: string;
-  title: string;
-  message: string;
-  createdAt: string;
-  updatedAt?: string;
-  emailSentAt?: string;
-  isRead: boolean;
-}
-
-import React, { useState } from "react";
+import { useState } from "react";
 import { ChevronRight, Trash2, CheckCheck } from "lucide-react";
-import Image from "next/image";
 import {
   Modal,
   ModalContent,
@@ -24,10 +12,25 @@ import {
 import { Button } from "@heroui/button";
 import { Skeleton } from "@heroui/skeleton";
 import { Magnetik_Medium, Magnetik_Regular } from "@/lib/font";
-import { PageHeader } from "@/components/reusables/customUI";
+import {
+  getNotificationPreview,
+  isHtmlContent,
+  sanitizeRichHtml,
+} from "@/lib/sanitizeRichHtml";
 import { useNotifications } from "@/src/hooks/useNotifications";
 import { useOnlineStatus } from "@/src/hooks/useOnlineStatus";
 import { cn } from "@/lib/utils";
+
+interface Notification {
+  id: string;
+  type: string;
+  title: string;
+  message: string;
+  createdAt: string;
+  updatedAt?: string;
+  emailSentAt?: string;
+  isRead: boolean;
+}
 
 const NotificationView = () => {
   const {
@@ -40,13 +43,8 @@ const NotificationView = () => {
   } = useNotifications();
   const isOnline = useOnlineStatus();
 
-  // Debug: log notifications data
-  React.useEffect(() => {
-    console.log("Notifications:", notifications);
-  }, [notifications]);
-
   const [selectedNotification, setSelectedNotification] = useState<any | null>(
-    null
+    null,
   );
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -103,12 +101,16 @@ const NotificationView = () => {
           backLink="/home"
           className="mb-0 pt-0"
         />
-        */} {unreadCount > 0 && (
+        */}{" "}
+        {unreadCount > 0 && (
           <Button
             size="sm"
             variant="flat"
             onPress={() => isOnline && markAllAsRead()}
-            className={cn("text-xs text-complimentary-colour bg-transparent", !isOnline && "opacity-50 cursor-not-allowed")}
+            className={cn(
+              "text-xs text-complimentary-colour bg-transparent",
+              !isOnline && "opacity-50 cursor-not-allowed",
+            )}
             disabled={!isOnline}
           >
             Mark all read
@@ -147,7 +149,7 @@ const NotificationView = () => {
                 "p-4 transition-shadow duration-200 border rounded-xl hover:shadow-md relative overflow-hidden",
                 notification.isRead
                   ? "bg-universal-white border-gray-100"
-                  : "bg-blue-50/50 border-blue-100"
+                  : "bg-blue-50/50 border-blue-100",
               )}
             >
               {!notification.isRead && (
@@ -177,7 +179,7 @@ const NotificationView = () => {
                   <p
                     className={`text-gray-600 text-[12px] mb-3 leading-relaxed line-clamp-2 ${Magnetik_Regular.className}`}
                   >
-                    {notification.message}
+                    {getNotificationPreview(notification.message)}
                   </p>
 
                   {/* Divider */}
@@ -192,13 +194,18 @@ const NotificationView = () => {
                         notification.createdAt ||
                           notification.updatedAt ||
                           notification.emailSentAt ||
-                          ""
+                          "",
                       )}
                     </span>
 
                     <div className="flex items-center gap-3">
                       <button
-                        className={cn("text-gray-400 transition-colors", isOnline ? "hover:text-red-500" : "opacity-30 cursor-not-allowed")}
+                        className={cn(
+                          "text-gray-400 transition-colors",
+                          isOnline
+                            ? "hover:text-red-500"
+                            : "opacity-30 cursor-not-allowed",
+                        )}
                         disabled={!isOnline}
                         onClick={(e) => {
                           e.stopPropagation();
@@ -258,11 +265,21 @@ const NotificationView = () => {
           <ModalBody className="px-6 py-4">
             <div className="space-y-4">
               {/* Message */}
-              <p
-                className={`text-primary-shade-4 text-base leading-relaxed ${Magnetik_Regular.className}`}
-              >
-                {selectedNotification?.message}
-              </p>
+              {selectedNotification?.type === "admin_message" &&
+              isHtmlContent(selectedNotification.message) ? (
+                <div
+                  className={`text-primary-shade-4 text-base leading-relaxed prose prose-sm max-w-none ${Magnetik_Regular.className}`}
+                  dangerouslySetInnerHTML={{
+                    __html: sanitizeRichHtml(selectedNotification.message),
+                  }}
+                />
+              ) : (
+                <p
+                  className={`text-primary-shade-4 text-base leading-relaxed ${Magnetik_Regular.className}`}
+                >
+                  {selectedNotification?.message}
+                </p>
+              )}
 
               {/* Timestamp */}
               <div className="pt-2 border-t border-light-grey-2 flex justify-between items-center">
