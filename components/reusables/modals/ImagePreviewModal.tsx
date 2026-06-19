@@ -2,7 +2,7 @@ import React, { useEffect } from "react";
 import { Button } from "@heroui/button";
 import { X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import Image from "next/image";
+import { StoryCoverImage } from "@/components/reusables/customUI/StoryCoverImage";
 
 interface ImagePreviewModalProps {
   isOpen: boolean;
@@ -19,7 +19,6 @@ export const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({
   altText = "Image preview",
   layoutId,
 }) => {
-  // Lock body scroll when modal is open
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = "hidden";
@@ -37,7 +36,6 @@ export const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({
     <AnimatePresence>
       {isOpen && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center">
-          {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -46,9 +44,8 @@ export const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({
             className="absolute inset-0 bg-black/95 backdrop-blur-xl"
             onClick={onOpenChange}
           >
-            {/* Blurred Background Image */}
             <div className="absolute inset-0 overflow-hidden opacity-40">
-              <Image
+              <StoryCoverImage
                 src={imageUrl}
                 alt="Background"
                 fill
@@ -58,7 +55,6 @@ export const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({
             </div>
           </motion.div>
 
-          {/* Close Button */}
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -76,10 +72,7 @@ export const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({
             </Button>
           </motion.div>
 
-          {/* Main Image Container */}
           <div className="relative z-10 w-full h-full p-4 flex items-center justify-center pointer-events-none">
-            {/* Layer 1: Transition Image (Cropped, Layout Animated) */}
-            {/* This layer handles the smooth geometry transition from the thumbnail */}
             <motion.div
               layoutId={layoutId}
               className="relative h-[80vh] aspect-[2/3] shadow-2xl overflow-hidden rounded-xl bg-transparent"
@@ -87,10 +80,10 @@ export const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({
                 type: "spring",
                 stiffness: 300,
                 damping: 30,
-                mass: 0.8
+                mass: 0.8,
               }}
             >
-              <Image
+              <StoryCoverImage
                 src={imageUrl}
                 alt={altText}
                 fill
@@ -99,8 +92,6 @@ export const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({
               />
             </motion.div>
 
-            {/* Layer 2: Full Image (Uncropped, Fade Animated) */}
-            {/* This layer fades in to show the complete image details */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -110,7 +101,7 @@ export const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({
               onClick={(e) => e.stopPropagation()}
             >
               <div className="relative w-full h-full max-w-5xl max-h-[85vh] shadow-2xl drop-shadow-2xl">
-                <Image
+                <StoryCoverImage
                   src={imageUrl}
                   alt={altText}
                   fill
@@ -125,4 +116,3 @@ export const ImagePreviewModal: React.FC<ImagePreviewModalProps> = ({
     </AnimatePresence>
   );
 };
-

@@ -22,6 +22,8 @@ import {
 import Image from "next/image";
 import { Magnetik_Regular, Magnetik_Bold } from "@/lib";
 import { cn } from "@/lib";
+import { getStoryCoverSrc } from "@/lib/storyCover";
+import { StoryCoverImage } from "@/components/reusables/customUI";
 import {
   useStory,
   useStoryLikes,
@@ -814,7 +816,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
     penName?: string;
   };
   const author = story.author as ExtendedAuthorDto;
-  const displayImage = story.imageUrl || "/images/storytime-fallback.png";
+  const displayImage = getStoryCoverSrc(story.imageUrl);
   const status = (story as any).storyStatus || "Ongoing";
   const isExclusive = (story as any).onlyOnStorytime || false;
   const viewCount = (story as any).viewCount || 0;
@@ -870,8 +872,8 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
       {/* Full-Width Hero Image */}
       <div className="relative w-full h-[55vh] min-h-[320px] max-h-[420px] overflow-hidden">
         {/* Hero Background Image */}
-        <Image
-          src={displayImage}
+        <StoryCoverImage
+          src={story.imageUrl}
           alt={story.title}
           fill
           className="object-cover"

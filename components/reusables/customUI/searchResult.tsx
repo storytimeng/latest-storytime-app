@@ -1,8 +1,8 @@
 import { X, Dot, Search } from "lucide-react";
-import Image from "next/image";
 import React from "react";
 import { Magnetik_Regular, Magnetik_Bold } from "@/lib";
 import { cn } from "@/lib";
+import { StoryCoverImage } from "./StoryCoverImage";
 
 interface SearchResultProps {
   title: string;
@@ -29,7 +29,7 @@ const SearchResult = ({
       >
         <div className="flex items-center gap-4 flex-1">
           <Search className="w-6 h-6 text-primary-shade-2" />
-          <Image
+          <StoryCoverImage
             src={image}
             alt={title}
             width={100}
@@ -40,7 +40,7 @@ const SearchResult = ({
             <p
               className={cn(
                 "text-primary-colour text-[14px]",
-                Magnetik_Bold.className
+                Magnetik_Bold.className,
               )}
             >
               {title}
@@ -51,7 +51,7 @@ const SearchResult = ({
                   <p
                     className={cn(
                       "text-primary-colour text-[10px]",
-                      Magnetik_Regular.className
+                      Magnetik_Regular.className,
                     )}
                   >
                     Warning
@@ -62,7 +62,7 @@ const SearchResult = ({
               <p
                 className={cn(
                   "text-[10px] text-primary-colour",
-                  Magnetik_Regular.className
+                  Magnetik_Regular.className,
                 )}
               >
                 {genre}
@@ -71,7 +71,7 @@ const SearchResult = ({
               <p
                 className={cn(
                   "text-[10px] text-primary-colour",
-                  Magnetik_Regular.className
+                  Magnetik_Regular.className,
                 )}
               >
                 By {author}

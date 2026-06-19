@@ -1,12 +1,12 @@
 "use client";
 
+import React from "react";
 import { Button } from "@heroui/button";
 import { Edit, Trash2 } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
-import React, { useState } from "react";
 import { Magnetik_Medium, Magnetik_Regular } from "@/lib/font";
 import { cn } from "@/lib/utils";
+import { StoryCoverImage } from "./StoryCoverImage";
 
 interface MyStory {
   id: string;
@@ -31,13 +31,6 @@ const MyStoriesCard = ({
   onEdit,
   onDelete,
 }: MyStoriesCardProps) => {
-  const [imageError, setImageError] = useState(false);
-
-  const handleImageError = () => {
-    console.error(`Image failed to load for story ${story.id}`);
-    setImageError(true);
-  };
-
   const handleEdit = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -72,20 +65,13 @@ const MyStoriesCard = ({
       <div className="space-y-3">
         {/* Story Cover */}
         <div className="relative aspect-[3/4] rounded-lg overflow-hidden bg-light-grey-2">
-          {imageError ? (
-            <div className="flex items-center justify-center w-full h-full bg-light-grey-2">
-              <span className="text-xs text-primary-shade-4">No image</span>
-            </div>
-          ) : (
-            <Image
-              src={story.coverImage}
-              alt={story.title}
-              fill
-              className="object-cover"
-              onError={handleImageError}
-              loading="lazy"
-            />
-          )}
+          <StoryCoverImage
+            src={story.coverImage}
+            alt={story.title}
+            fill
+            className="object-cover"
+            loading="lazy"
+          />
 
           {/* Action buttons */}
           <div className="absolute flex gap-1 top-2 right-2">
@@ -120,7 +106,7 @@ const MyStoriesCard = ({
             </h3>
             <span
               className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${getStatusColor(
-                story.status
+                story.status,
               )} ${Magnetik_Regular.className}`}
             >
               ({story.status})

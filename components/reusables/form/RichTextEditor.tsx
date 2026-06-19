@@ -17,6 +17,8 @@ import {
   Redo,
   Strikethrough,
   Mic,
+  Link2,
+  Unlink,
 } from "lucide-react";
 import { Button } from "@heroui/button";
 import { Popover, PopoverTrigger, PopoverContent } from "@heroui/popover";
@@ -103,12 +105,15 @@ const RichTextEditor = ({
     },
   });
 
-  // Update editor content if value changes externally
+  // Keep editor in sync when loading existing story content
   useEffect(() => {
-    if (editor && value !== editor.getHTML()) {
-      if (editor.getText() === "" && value !== "<p></p>") {
-        editor.commands.setContent(value);
-      }
+    if (!editor) return;
+
+    const currentHtml = editor.getHTML();
+    const nextValue = value || "";
+
+    if (nextValue !== currentHtml) {
+      editor.commands.setContent(nextValue, { emitUpdate: false });
     }
   }, [value, editor]);
 
@@ -190,6 +195,42 @@ const RichTextEditor = ({
           title="Quote"
         >
           <Quote size={18} />
+        </MenuButton>
+
+        <div className="w-px h-5 mx-1 bg-gray-300" />
+
+        <MenuButton
+          onClick={() => {
+            const previousUrl = editor.getAttributes("link").href as
+              | string
+              | undefined;
+            const url = window.prompt(
+              "Enter link URL",
+              previousUrl || "https://",
+            );
+            if (url === null) return;
+            if (url === "") {
+              editor.chain().focus().extendMarkRange("link").unsetLink().run();
+              return;
+            }
+            editor
+              .chain()
+              .focus()
+              .extendMarkRange("link")
+              .setLink({ href: url })
+              .run();
+          }}
+          isActive={editor.isActive("link")}
+          title="Add link"
+        >
+          <Link2 size={18} />
+        </MenuButton>
+        <MenuButton
+          onClick={() => editor.chain().focus().unsetLink().run()}
+          disabled={!editor.isActive("link")}
+          title="Remove link"
+        >
+          <Unlink size={18} />
         </MenuButton>
 
         <div className="w-px h-5 mx-1 bg-gray-300" />

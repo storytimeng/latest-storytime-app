@@ -4,11 +4,11 @@ import React, { useState } from "react";
 import { Button } from "@heroui/button";
 import { Search, Filter, BookOpen } from "lucide-react";
 import Link from "next/link";
-import Image from "next/image";
 import { Magnetik_Bold, Magnetik_Medium, Magnetik_Regular } from "@/lib/font";
+import { getStoryCoverSrc } from "@/lib/storyCover";
 import { useSearchParams } from "next/navigation";
 import { useReadingHistory } from "@/src/hooks/useReadingHistory";
-import { PageHeader } from "@/components/reusables";
+import { PageHeader, StoryCoverImage } from "@/components/reusables";
 
 interface LibraryItem {
   id: string;
@@ -22,8 +22,14 @@ interface LibraryItem {
 
 const LibraryView = () => {
   const searchParams = useSearchParams();
-  const initialTab = searchParams.get("tab") as "All" | "Reading" | "Completed" | "Want to Read" | "History" | null;
-  
+  const initialTab = searchParams.get("tab") as
+    | "All"
+    | "Reading"
+    | "Completed"
+    | "Want to Read"
+    | "History"
+    | null;
+
   const [activeTab, setActiveTab] = useState<
     "All" | "Reading" | "Completed" | "Want to Read" | "History"
   >(initialTab || "All");
@@ -36,12 +42,12 @@ const LibraryView = () => {
     const story = item.story;
     const progress = 0; // Reading history doesn't include progress
     const status = story.storyStatus === "complete" ? "Completed" : "Reading";
-    
+
     return {
       id: story.id,
       title: story.title,
       author: story.author?.penName || "Anonymous",
-      coverImage: story.imageUrl || "/images/nature.jpg",
+      coverImage: getStoryCoverSrc(story.imageUrl),
       genre: "Fiction", // Reading history doesn't include genres
       status: status,
       progress: progress,
@@ -49,23 +55,32 @@ const LibraryView = () => {
   });
 
   const filteredItems = libraryItems.filter((item) => {
-    const matchesTab = activeTab === "All" || activeTab === "History" || item.status === activeTab;
+    const matchesTab =
+      activeTab === "All" ||
+      activeTab === "History" ||
+      item.status === activeTab;
     const matchesSearch =
       item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.author.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesTab && matchesSearch;
   });
 
-  const tabs = ["All", "Reading", "Completed", "Want to Read", "History"] as const;
+  const tabs = [
+    "All",
+    "Reading",
+    "Completed",
+    "Want to Read",
+    "History",
+  ] as const;
 
   return (
     <div className="min-h-screen bg-accent-shade-1 max-w-[28rem] mx-auto">
       {/* Header with PageHeader and Pen button */}
       <div className="px-4 pt-4">
         <div className="flex items-center justify-between">
-          <PageHeader 
-            title="📚 Library" 
-            showBackButton 
+          <PageHeader
+            title="📚 Library"
+            showBackButton
             backLink="/home"
             titleClassName={`text-xl text-primary-colour ${Magnetik_Bold.className}`}
             className="mb-0"
@@ -138,7 +153,7 @@ const LibraryView = () => {
           >
             {searchQuery
               ? "Try adjusting your search terms or browse all stories."
-              : activeTab === "History" 
+              : activeTab === "History"
                 ? "You haven't read any stories yet."
                 : "Start building your library by adding stories you love!"}
           </p>
@@ -155,9 +170,9 @@ const LibraryView = () => {
       {/* Library Items */}
       <div className="px-4 pb-24">
         {isLoadingHistory ? (
-           <div className="flex justify-center py-10">
-             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-colour"></div>
-           </div>
+          <div className="flex justify-center py-10">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-colour"></div>
+          </div>
         ) : (
           <div className="space-y-4">
             {filteredItems.map((item) => (
@@ -165,7 +180,7 @@ const LibraryView = () => {
                 <div className="flex gap-3 p-3 transition-shadow border rounded-lg bg-universal-white border-light-grey-3 hover:shadow-sm">
                   {/* Cover Image */}
                   <div className="relative flex-shrink-0 w-16 h-20 overflow-hidden rounded-lg bg-light-grey-2">
-                    <Image
+                    <StoryCoverImage
                       src={item.coverImage}
                       alt={item.title}
                       fill

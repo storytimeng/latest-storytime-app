@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   useCreateStory,
@@ -41,6 +41,7 @@ interface UseStoryViewLogicReturn {
   initialParts: Part[] | undefined;
   createdStoryId: string | null;
   isCreating: boolean;
+  isSubmitting: boolean;
   isUpdating: boolean;
   isFetchingStory: boolean;
   handleSubmit: (
@@ -97,6 +98,8 @@ export function useStoryViewLogic({
   const [createdStoryId, setCreatedStoryId] = useState<string | null>(
     storyId || null,
   );
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const isSubmittingRef = useRef(false);
 
   // Lifted form state
   const formState = useStoryFormState({ initialData, mode });
@@ -320,6 +323,11 @@ export function useStoryViewLogic({
       deletedChapters?: Chapter[],
       deletedParts?: Part[],
     ) => {
+      if (isSubmittingRef.current) return;
+
+      isSubmittingRef.current = true;
+      setIsSubmitting(true);
+
       try {
         // If we have a createdStoryId, this is publishing chapters/episodes
         // ONLY valid if we are in CREATE mode (step 2 of wizard).
@@ -924,6 +932,9 @@ export function useStoryViewLogic({
           error?.message ||
           "An error occurred while saving the story";
         throw new Error(errorMessage);
+      } finally {
+        isSubmittingRef.current = false;
+        setIsSubmitting(false);
       }
     },
     [
@@ -960,6 +971,7 @@ export function useStoryViewLogic({
     initialParts,
     createdStoryId,
     isCreating,
+    isSubmitting,
     isUpdating,
     isFetchingStory,
     handleSubmit,

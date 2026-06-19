@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@heroui/input";
 
 import RichTextEditor from "./RichTextEditor";
+import { stripHtmlForWordCount } from "@/lib/storyContentFormat";
 
 interface TextFieldProps {
   label: string;
@@ -50,9 +51,10 @@ const TextAreaField: React.FC<TextFieldProps> = ({
     onChange(value);
   };
 
-  // Calculate word count
-  const wordCount = value
-    ? value.trim().split(/\s+/).filter(Boolean).length
+  // Calculate word count (strip HTML when using the rich text editor)
+  const countableText = isRichText ? stripHtmlForWordCount(value) : value || "";
+  const wordCount = countableText
+    ? countableText.split(/\s+/).filter(Boolean).length
     : 0;
 
   // Determine counter color based on word count
@@ -149,19 +151,19 @@ const TextAreaField: React.FC<TextFieldProps> = ({
         }}
         onKeyDown={(e) => {
           if (e.key === "Enter") {
-             // Let Enter work normally in textarea? Using e.preventDefault() here stops newlines?
-             // The original code PREVENTED default enter behavior? That seems wrong for a textarea unless it's a single-line input.
-             // Line 116 in original: "if (e.key === 'Enter') e.preventDefault()"
-             // This is usually for Form submission on Enter. But for TextArea?
-             // Let's keep original behavior if it was there, but it's weird for a textarea.
-             // Actually, usually you WANT Enter to make a new line in a textarea. 
-             // Preventing it means you can't type paragraphs.
-             // I will remove the preventDefault unless I see a strong reason.
-             // Wait, looking at original code line 116: it DOES prevent default. Why? 
-             // Maybe to submit form? But typically Shift+Enter is newline and Enter is submit? Or vice versa?
-             // Standard Textarea: Enter = Newline. 
-             // I'll leave it as is if I'm not touching non-RTE mode logic significantly, 
-             // BUT for RichTextEditor, Tiptap handles events itself.
+            // Let Enter work normally in textarea? Using e.preventDefault() here stops newlines?
+            // The original code PREVENTED default enter behavior? That seems wrong for a textarea unless it's a single-line input.
+            // Line 116 in original: "if (e.key === 'Enter') e.preventDefault()"
+            // This is usually for Form submission on Enter. But for TextArea?
+            // Let's keep original behavior if it was there, but it's weird for a textarea.
+            // Actually, usually you WANT Enter to make a new line in a textarea.
+            // Preventing it means you can't type paragraphs.
+            // I will remove the preventDefault unless I see a strong reason.
+            // Wait, looking at original code line 116: it DOES prevent default. Why?
+            // Maybe to submit form? But typically Shift+Enter is newline and Enter is submit? Or vice versa?
+            // Standard Textarea: Enter = Newline.
+            // I'll leave it as is if I'm not touching non-RTE mode logic significantly,
+            // BUT for RichTextEditor, Tiptap handles events itself.
           }
         }}
       />

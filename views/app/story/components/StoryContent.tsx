@@ -12,6 +12,7 @@ import React, {
   useRef,
   useState,
 } from "react";
+import { normalizeStoryHtml } from "@/lib/storyContentFormat";
 // Custom TTS Hook
 import { useTTSContext } from "@/components/providers/TTSProvider";
 import { useTTS } from "@/src/hooks/useTTS";
@@ -67,7 +68,7 @@ export const StoryContent = React.memo(
 
     // Sanitize first
     const sanitizedContent = useMemo(() => {
-      return DOMPurify.sanitize(content, {
+      return DOMPurify.sanitize(normalizeStoryHtml(content), {
         ALLOWED_TAGS: [
           "b",
           "i",
@@ -88,193 +89,221 @@ export const StoryContent = React.memo(
           "span",
           "div",
           "img",
+          "blockquote",
         ],
+        ALLOWED_ATTR: ["href", "target", "rel", "src", "alt", "class"],
       });
     }, [content]);
 
     // Helper to split HTML content into sentences
-    const splitHtmlIntoSentences = useCallback((htmlContent: string, globalStartIndex: number) => {
-      const tempDiv = document.createElement('div');
-      tempDiv.innerHTML = htmlContent;
+    const splitHtmlIntoSentences = useCallback(
+      (htmlContent: string, globalStartIndex: number) => {
+        const tempDiv = document.createElement("div");
+        tempDiv.innerHTML = htmlContent;
 
-      const segments: {
-        text: string;
-        html: string;
-        displayHtml: string; // New field for identifying HTML without directives
-        index: number;
-      }[] = [];
+        const segments: {
+          text: string;
+          html: string;
+          displayHtml: string; // New field for identifying HTML without directives
+          index: number;
+        }[] = [];
 
-      let currentText = "";
-      let currentHtml = "";
-      let currentIndex = globalStartIndex;
+        let currentText = "";
+        let currentHtml = "";
+        let currentIndex = globalStartIndex;
 
-      const flushSegment = () => {
-        if (currentText.trim()) {
-           // Create display HTML by removing directives pattern [[...]]
-           // We use a regex to strip them.
-           const displayHtml = currentHtml.replace(/\[\[.*?\]\]/g, "");
-           
-           segments.push({
-             text: currentText.trim(),
-             html: currentHtml.trim(),
-             displayHtml: displayHtml.trim(),
-             index: currentIndex++
-           });
-        }
-        currentText = "";
-        currentHtml = "";
-      };
+        const flushSegment = () => {
+          if (currentText.trim()) {
+            // Create display HTML by removing directives pattern [[...]]
+            // We use a regex to strip them.
+            const displayHtml = currentHtml.replace(/\[\[.*?\]\]/g, "");
 
-      // Recursive node traversal
-      const traverse = (node: Node) => {
-        if (node.nodeType === Node.TEXT_NODE) {
-           const text = node.textContent || "";
-           
-           // Split by punctuation, but respect ellipses and directives
-           // Strategy: Match potential delimiters sequences: . ! ? 
-           // We'll iterate through matches.
-           
-           const regex = /([.!?]+)(?=\s|$)|(\[\[.*?\]\])/g;
-           // We want to capture delimiters to include them OR check them.
-           // Actually, splitting by regex with capture gives us parts.
-           
-           // Improved manual scanning might be safer for ellipses check
-           // Let's iterate character by character or use a smarter split.
-           
-           // Let's use split but include delimiters.
-           // regex: /([.!?]+(?:(?=\s)|$))/
-           
-           const delimRegex = /([.!?]+(?:(?=\s)|$))/g;
-           const parts = text.split(delimRegex);
-           
-           for (let i = 0; i < parts.length; i++) {
+            segments.push({
+              text: currentText.trim(),
+              html: currentHtml.trim(),
+              displayHtml: displayHtml.trim(),
+              index: currentIndex++,
+            });
+          }
+          currentText = "";
+          currentHtml = "";
+        };
+
+        // Recursive node traversal
+        const traverse = (node: Node) => {
+          if (node.nodeType === Node.TEXT_NODE) {
+            const text = node.textContent || "";
+
+            // Split by punctuation, but respect ellipses and directives
+            // Strategy: Match potential delimiters sequences: . ! ?
+            // We'll iterate through matches.
+
+            const regex = /([.!?]+)(?=\s|$)|(\[\[.*?\]\])/g;
+            // We want to capture delimiters to include them OR check them.
+            // Actually, splitting by regex with capture gives us parts.
+
+            // Improved manual scanning might be safer for ellipses check
+            // Let's iterate character by character or use a smarter split.
+
+            // Let's use split but include delimiters.
+            // regex: /([.!?]+(?:(?=\s)|$))/
+
+            const delimRegex = /([.!?]+(?:(?=\s)|$))/g;
+            const parts = text.split(delimRegex);
+
+            for (let i = 0; i < parts.length; i++) {
               const part = parts[i];
               if (!part) continue;
-              
+
               const isDelimiter = /^[.!?]+$/.test(part);
-              
+
               if (isDelimiter) {
-                  // Check for ellipsis (2 or more dots)
-                  if (part.indexOf('..') !== -1) {
-                      // It is an ellipsis (or ..), treat as text
-                      currentText += part;
-                      currentHtml += part;
-                  } else {
-                      // It is a real sentence end (., !, ?)
-                      currentText += part;
-                      currentHtml += part;
-                      flushSegment();
-                  }
-              } else {
+                // Check for ellipsis (2 or more dots)
+                if (part.indexOf("..") !== -1) {
+                  // It is an ellipsis (or ..), treat as text
                   currentText += part;
                   currentHtml += part;
+                } else {
+                  // It is a real sentence end (., !, ?)
+                  currentText += part;
+                  currentHtml += part;
+                  flushSegment();
+                }
+              } else {
+                currentText += part;
+                currentHtml += part;
               }
-           }
-        } else if (node.nodeType === Node.ELEMENT_NODE) {
-          const el = node as Element;
-          if (el.tagName === 'BR') {
-             currentText += "\n";
-             currentHtml += "<br>";
-          } else {
-             // For inline elements like <b>, <i>, <a>
-             // Atomic handling
-             currentText += el.textContent;
-             currentHtml += el.outerHTML;
-             
-             // Check end of content ensuring we ignore ellipses
-             const content = el.textContent || "";
-             const match = content.match(/([.!?]+)\s*$/);
-             if (match) {
-                 const punct = match[1];
-                 if (punct.indexOf('..') === -1) {
-                     flushSegment();
-                 }
-             }
+            }
+          } else if (node.nodeType === Node.ELEMENT_NODE) {
+            const el = node as Element;
+            if (el.tagName === "BR") {
+              currentText += "\n";
+              currentHtml += "<br>";
+            } else {
+              // For inline elements like <b>, <i>, <a>
+              // Atomic handling
+              currentText += el.textContent;
+              currentHtml += el.outerHTML;
+
+              // Check end of content ensuring we ignore ellipses
+              const content = el.textContent || "";
+              const match = content.match(/([.!?]+)\s*$/);
+              if (match) {
+                const punct = match[1];
+                if (punct.indexOf("..") === -1) {
+                  flushSegment();
+                }
+              }
+            }
           }
-        }
-      };
+        };
 
-      Array.from(tempDiv.childNodes).forEach(traverse);
-      
-      // Flush remaining
-      flushSegment();
+        Array.from(tempDiv.childNodes).forEach(traverse);
 
-      return segments;
-    }, []);
+        // Flush remaining
+        flushSegment();
+
+        return segments;
+      },
+      [],
+    );
 
     // Parse content into blocks and sentences
     const { displayBlocks, allSentences } = useMemo(() => {
-      if (typeof window === "undefined") return { displayBlocks: [], allSentences: [] };
+      if (typeof window === "undefined")
+        return { displayBlocks: [], allSentences: [] };
 
       const blocks: {
         tagName: string;
-        sentences: { text: string; html: string; displayHtml: string; index: number }[];
+        sentences: {
+          text: string;
+          html: string;
+          displayHtml: string;
+          index: number;
+        }[];
       }[] = [];
-      
-      const flatSentences: { text: string; index: number; startOffset: number; endOffset: number; html?: string }[] = [];
-      
+
+      const flatSentences: {
+        text: string;
+        index: number;
+        startOffset: number;
+        endOffset: number;
+        html?: string;
+      }[] = [];
+
       let globalIndex = 0;
 
       // 1. Initial rough split by visual blocks/paragraphs
       const div = document.createElement("div");
       div.innerHTML = sanitizedContent;
-      
+
       const processBlockNode = (node: Node) => {
-         const el = node as Element;
-         const tagName = (node.nodeName || "P").toLowerCase();
-         const isBlock = ['p', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li'].includes(tagName);
-         
-         if (isBlock || (node.nodeType === Node.TEXT_NODE && node.textContent?.trim())) {
-             
-             let innerHTML = "";
-             let effectiveTagName = tagName;
+        const el = node as Element;
+        const tagName = (node.nodeName || "P").toLowerCase();
+        const isBlock = [
+          "p",
+          "div",
+          "h1",
+          "h2",
+          "h3",
+          "h4",
+          "h5",
+          "h6",
+          "li",
+        ].includes(tagName);
 
-             if (node.nodeType === Node.TEXT_NODE) {
-                 innerHTML = node.textContent || "";
-                 effectiveTagName = "p";
-             } else {
-                 innerHTML = el.innerHTML;
-             }
+        if (
+          isBlock ||
+          (node.nodeType === Node.TEXT_NODE && node.textContent?.trim())
+        ) {
+          let innerHTML = "";
+          let effectiveTagName = tagName;
 
-             // Use the helper to split
-             const blockSegments = splitHtmlIntoSentences(innerHTML, globalIndex);
-             
-             // Update global index based on segments count
-             globalIndex += blockSegments.length;
-             
-             // Map to structures
-             const blockSentences = blockSegments.map(s => ({
-                 text: s.text,
-                 html: s.html,
-                 displayHtml: s.displayHtml,
-                 index: s.index
-             }));
-             
-             blockSegments.forEach(s => {
-                 flatSentences.push({
-                     text: s.text,
-                     index: s.index,
-                     startOffset: 0,
-                     endOffset: 0,
-                     html: s.html // TTS needs directives? Yes.
-                 });
-             });
-             
-             if (blockSentences.length > 0) {
-                 blocks.push({
-                     tagName: effectiveTagName,
-                     sentences: blockSentences
-                 });
-             }
-         } else if (node.nodeType === Node.ELEMENT_NODE) {
-             Array.from(node.childNodes).forEach(processBlockNode);
-         }
+          if (node.nodeType === Node.TEXT_NODE) {
+            innerHTML = node.textContent || "";
+            effectiveTagName = "p";
+          } else {
+            innerHTML = el.innerHTML;
+          }
+
+          // Use the helper to split
+          const blockSegments = splitHtmlIntoSentences(innerHTML, globalIndex);
+
+          // Update global index based on segments count
+          globalIndex += blockSegments.length;
+
+          // Map to structures
+          const blockSentences = blockSegments.map((s) => ({
+            text: s.text,
+            html: s.html,
+            displayHtml: s.displayHtml,
+            index: s.index,
+          }));
+
+          blockSegments.forEach((s) => {
+            flatSentences.push({
+              text: s.text,
+              index: s.index,
+              startOffset: 0,
+              endOffset: 0,
+              html: s.html, // TTS needs directives? Yes.
+            });
+          });
+
+          if (blockSentences.length > 0) {
+            blocks.push({
+              tagName: effectiveTagName,
+              sentences: blockSentences,
+            });
+          }
+        } else if (node.nodeType === Node.ELEMENT_NODE) {
+          Array.from(node.childNodes).forEach(processBlockNode);
+        }
       };
-      
+
       Array.from(div.childNodes).forEach(processBlockNode);
 
       return { displayBlocks: blocks, allSentences: flatSentences };
-      
     }, [sanitizedContent, splitHtmlIntoSentences]);
 
     // Initialize TTS
@@ -327,7 +356,7 @@ export const StoryContent = React.memo(
           sentenceIndex: index,
         });
       },
-      []
+      [],
     );
 
     // Handle long press for mobile
@@ -340,7 +369,7 @@ export const StoryContent = React.memo(
           showContextMenu(touch.clientX, touch.clientY - 50, index);
         }, 500); // 500ms long press
       },
-      [showContextMenu]
+      [showContextMenu],
     );
 
     const handleTouchEnd = useCallback(() => {
@@ -354,7 +383,7 @@ export const StoryContent = React.memo(
       const touch = e.touches[0];
       const distance = Math.sqrt(
         Math.pow(touch.clientX - touchStartPos.current.x, 2) +
-          Math.pow(touch.clientY - touchStartPos.current.y, 2)
+          Math.pow(touch.clientY - touchStartPos.current.y, 2),
       );
 
       // Cancel if moved more than 10px
@@ -369,17 +398,17 @@ export const StoryContent = React.memo(
       (e: React.MouseEvent, index: number) => {
         e.preventDefault();
         e.stopPropagation();
-        
+
         // If we are already playing, just jump there
         seekToSentence(index);
         // Ensure play is active
         if (!storeIsPlaying) {
-            play();
+          play();
         }
       },
-      [seekToSentence, play, storeIsPlaying]
+      [seekToSentence, play, storeIsPlaying],
     );
-    
+
     // Handle double click for context menu (Desktop alternatives)
     const handleSegmentDoubleClick = useCallback(
       (e: React.MouseEvent, index: number) => {
@@ -392,7 +421,7 @@ export const StoryContent = React.memo(
         const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
         showContextMenu(e.clientX, rect.top, index);
       },
-      [showContextMenu]
+      [showContextMenu],
     );
 
     const handlePlayFromHere = useCallback(
@@ -404,7 +433,7 @@ export const StoryContent = React.memo(
         play();
         setContextMenu((prev) => ({ ...prev, isOpen: false }));
       },
-      [contextMenu.sentenceIndex, seekToSentence, play]
+      [contextMenu.sentenceIndex, seekToSentence, play],
     );
 
     const closeContextMenu = useCallback(() => {
@@ -446,7 +475,7 @@ export const StoryContent = React.memo(
     useEffect(() => {
       if (storeIsPlaying && !storeIsPaused && contentRef.current) {
         const activeElement = contentRef.current.querySelector(
-          `[data-sentence-index="${storeCurrentIndex}"]`
+          `[data-sentence-index="${storeCurrentIndex}"]`,
         );
         if (activeElement) {
           activeElement.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -466,7 +495,7 @@ export const StoryContent = React.memo(
             style={{
               left: Math.min(
                 Math.max(contextMenu.x, 80),
-                window.innerWidth - 80
+                window.innerWidth - 80,
               ),
               top: Math.max(contextMenu.y - 48, 60),
               transform: "translateX(-50%)",
@@ -489,26 +518,32 @@ export const StoryContent = React.memo(
           >
             {displayBlocks.length > 0 ? (
               displayBlocks.map((block, bIdx) => {
-                 // Determine Block Wrapper
-                 const Tag = block.tagName as keyof JSX.IntrinsicElements;
-                 
-                 return (
-                   <div key={bIdx} className="mb-4">
-                      <Tag className="block mb-2">
-                       {block.sentences.map((sent) => {
-                          const isActive = storeIsPlaying && sent.index === storeCurrentIndex;
-                          const isPausedAt = storeIsPaused && sent.index === storeCurrentIndex;
-                          
-                          return (
-                            <span
-                              key={sent.index}
-                              data-sentence-index={sent.index}
-                              onClick={(e) => handleSegmentClick(e, sent.index)}
-                              onDoubleClick={(e) => handleSegmentDoubleClick(e, sent.index)}
-                              onTouchStart={(e) => handleTouchStart(e, sent.index)}
-                              onTouchEnd={handleTouchEnd}
-                              onTouchMove={handleTouchMove}
-                              className={`transition-all duration-200 rounded px-1 -mx-1 cursor-pointer
+                // Determine Block Wrapper
+                const Tag = block.tagName as keyof JSX.IntrinsicElements;
+
+                return (
+                  <div key={bIdx} className="mb-4">
+                    <Tag className="block mb-2">
+                      {block.sentences.map((sent) => {
+                        const isActive =
+                          storeIsPlaying && sent.index === storeCurrentIndex;
+                        const isPausedAt =
+                          storeIsPaused && sent.index === storeCurrentIndex;
+
+                        return (
+                          <span
+                            key={sent.index}
+                            data-sentence-index={sent.index}
+                            onClick={(e) => handleSegmentClick(e, sent.index)}
+                            onDoubleClick={(e) =>
+                              handleSegmentDoubleClick(e, sent.index)
+                            }
+                            onTouchStart={(e) =>
+                              handleTouchStart(e, sent.index)
+                            }
+                            onTouchEnd={handleTouchEnd}
+                            onTouchMove={handleTouchMove}
+                            className={`transition-all duration-200 rounded px-1 -mx-1 cursor-pointer
                                 ${
                                   isActive
                                     ? "bg-complimentary-colour/20 text-black shadow-sm font-medium"
@@ -516,15 +551,19 @@ export const StoryContent = React.memo(
                                       ? "bg-primary-colour/15 text-black"
                                       : "hover:bg-accent-colour/20"
                                 }`}
-                            >
-                              <span dangerouslySetInnerHTML={{ __html: sent.displayHtml }} />
-                              {/* Add a generic space after sentence to prevent running together visually if split stripped it? 
+                          >
+                            <span
+                              dangerouslySetInnerHTML={{
+                                __html: sent.displayHtml,
+                              }}
+                            />
+                            {/* Add a generic space after sentence to prevent running together visually if split stripped it? 
                                   Our parsing logic usually keeps the space in the sentence.
                               */}
-                            </span>
-                          );
-                       })}
-                     </Tag>
+                          </span>
+                        );
+                      })}
+                    </Tag>
                   </div>
                 );
               })
@@ -551,15 +590,28 @@ export const StoryContent = React.memo(
 
           {description && (
             <div
-              className={`text-primary-shade-4 text-sm leading-relaxed ${Magnetik_Regular.className}`}
-            >
-              {description}
-            </div>
+              className={`text-primary-shade-4 text-sm leading-relaxed story-rich-text ${Magnetik_Regular.className}`}
+              dangerouslySetInnerHTML={{
+                __html: DOMPurify.sanitize(normalizeStoryHtml(description), {
+                  ALLOWED_TAGS: [
+                    "b",
+                    "i",
+                    "em",
+                    "strong",
+                    "a",
+                    "p",
+                    "br",
+                    "span",
+                  ],
+                  ALLOWED_ATTR: ["href", "target", "rel", "class"],
+                }),
+              }}
+            />
           )}
         </div>
       </div>
     );
-  }
+  },
 );
 
 StoryContent.displayName = "StoryContent";

@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import { Button } from "@heroui/button";
-import Image from "next/image";
 import { Magnetik_Medium, Magnetik_Regular } from "@/lib/font";
 import { cn } from "@/lib/utils";
+import { StoryCoverImage } from "./StoryCoverImage";
 
 interface Story {
   id: string;
@@ -32,12 +32,6 @@ const PenStoryCard: React.FC<PenStoryCardProps> = ({
   onDelete,
   onClick,
 }) => {
-  const [imageError, setImageError] = useState(false);
-
-  const handleImageError = () => {
-    setImageError(true);
-  };
-
   const handleEdit = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -78,20 +72,13 @@ const PenStoryCard: React.FC<PenStoryCardProps> = ({
       <div className="space-y-3">
         {/* Story Cover */}
         <div className="relative aspect-[3/4] rounded-lg overflow-hidden bg-light-grey-2 group">
-          {imageError ? (
-            <div className="flex items-center justify-center w-full h-full bg-light-grey-2">
-              <span className="text-2xl">📖</span>
-            </div>
-          ) : (
-            <Image
-              src={story.coverImage}
-              alt={story.title}
-              fill
-              className="object-cover transition-transform group-hover:scale-105"
-              onError={handleImageError}
-              loading="lazy"
-            />
-          )}
+          <StoryCoverImage
+            src={story.coverImage}
+            alt={story.title}
+            fill
+            className="object-cover transition-transform group-hover:scale-105"
+            loading="lazy"
+          />
 
           {/* Action buttons */}
           <div className="absolute flex gap-1 transition-opacity opacity-0 top-2 right-2 group-hover:opacity-100">
@@ -126,7 +113,7 @@ const PenStoryCard: React.FC<PenStoryCardProps> = ({
             </h3>
             <span
               className={`text-xs px-2 py-1 rounded-full whitespace-nowrap ${getStatusColor(
-                story.status
+                story.status,
               )} ${Magnetik_Regular.className}`}
             >
               ({story.status})

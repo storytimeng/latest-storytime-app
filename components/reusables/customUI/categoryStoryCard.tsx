@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import { Heart, MessageCircle } from "lucide-react";
 import { Magnetik_Bold, Magnetik_Medium, Magnetik_Regular } from "@/lib/font";
-import Image from "next/image";
 import { cn } from "@/lib/utils";
 import MarqueeText from "./marqueeText";
+import { StoryCoverImage } from "./StoryCoverImage";
 
 interface Story {
   id: number;
@@ -24,34 +24,18 @@ interface CategoryStoryCardProps {
 }
 
 const CategoryStoryCard = ({ story, className }: CategoryStoryCardProps) => {
-  const [imageError, setImageError] = useState(false);
-
-  const handleImageError = () => {
-    console.error(`Image failed to load for story ${story.id}`);
-    setImageError(true);
-  };
-
   return (
     <div
       className={cn("bg-white rounded-xl overflow-hidden shadow-sm", className)}
     >
       {/* Story Image */}
       <div className="relative h-32">
-        {imageError ? (
-          <div className="w-full h-full bg-muted flex items-center justify-center">
-            <span className="text-xs text-muted-foreground">
-              No image available
-            </span>
-          </div>
-        ) : (
-          <Image
-            src={story.image}
-            alt={story.title}
-            fill
-            className="object-cover"
-            onError={handleImageError}
-          />
-        )}
+        <StoryCoverImage
+          src={story.image}
+          alt={story.title}
+          fill
+          className="object-cover"
+        />
         {/* Genre Tag */}
         <div className="absolute top-2 right-2">
           <span className="bg-primary-colour text-white text-xs px-2 py-1 rounded">

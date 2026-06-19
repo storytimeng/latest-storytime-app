@@ -194,6 +194,7 @@ const AdditionalInfoModal: React.FC<AdditionalInfoModalProps> = ({
   onClose,
   onSubmit,
   onSkip,
+  isLoading = false,
 }) => {
   const [authorNote, setAuthorNote] = useState("");
   const [giveConsent, setGiveConsent] = useState(false);
@@ -209,7 +210,12 @@ const AdditionalInfoModal: React.FC<AdditionalInfoModalProps> = ({
           >
             Additional Information
           </h2>
-          <Button variant="ghost" size="sm" onClick={onClose}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClose}
+            isDisabled={isLoading}
+          >
             ✕
           </Button>
         </div>
@@ -250,13 +256,16 @@ const AdditionalInfoModal: React.FC<AdditionalInfoModalProps> = ({
           <Button
             className={`w-full bg-primary-shade-6 text-universal-white py-3 ${Magnetik_Medium.className}`}
             onClick={() => onSubmit(authorNote, giveConsent)}
+            isDisabled={isLoading}
+            isLoading={isLoading}
           >
-            Publish Story
+            {isLoading ? "Publishing..." : "Publish Story"}
           </Button>
           <Button
             variant="ghost"
             className={`w-full text-primary-colour ${Magnetik_Regular.className}`}
             onClick={onSkip}
+            isDisabled={isLoading}
           >
             Skip to Publish Story
           </Button>
@@ -751,6 +760,8 @@ const StoryForm: React.FC<StoryFormProps> = ({
   // Handle additional info submission
   const handleAdditionalInfoSubmit = useCallback(
     (authorNote: string, giveConsent: boolean) => {
+      if (isLoading) return;
+
       const finalData = { ...formData, authorNote, giveConsent };
 
       // For edit mode, only send edited chapters/episodes and deleted ones
@@ -796,6 +807,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
       getDeletedChapters,
       getDeletedParts,
       onSubmit,
+      isLoading,
     ],
   );
 
@@ -1654,6 +1666,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
             variant="bordered"
             className={`flex-1 border-light-grey-2 text-primary-colour ${Magnetik_Regular.className}`}
             onClick={() => {
+              if (isLoading) return;
               const draftData = { ...formData, storyStatus: "Draft" };
               onSubmit(
                 draftData,
@@ -1676,12 +1689,14 @@ const StoryForm: React.FC<StoryFormProps> = ({
               );
             }}
             disabled={isLoading}
+            isLoading={isLoading}
           >
-            Save as Draft
+            {isLoading ? "Saving..." : "Save as Draft"}
           </Button>
           <Button
             className={`flex-1 bg-primary-shade-6 text-universal-white ${Magnetik_Medium.className}`}
             onClick={() => {
+              if (isLoading) return;
               if (mode === "edit") {
                 const publishData = { ...formData, storyStatus: "Published" };
                 onSubmit(
@@ -1700,8 +1715,9 @@ const StoryForm: React.FC<StoryFormProps> = ({
               }
             }}
             disabled={isLoading}
+            isLoading={isLoading && mode === "edit"}
           >
-            Publish
+            {isLoading && mode === "edit" ? "Publishing..." : "Publish"}
           </Button>
         </div>
       );
@@ -1725,7 +1741,13 @@ const StoryForm: React.FC<StoryFormProps> = ({
           disabled={isLoading}
           isLoading={isLoading}
         >
-          {mode === "edit" ? "Update Story" : "Continue"}
+          {isLoading
+            ? mode === "edit"
+              ? "Updating..."
+              : "Saving..."
+            : mode === "edit"
+              ? "Update Story"
+              : "Continue"}
         </Button>
       </div>
     );
@@ -1756,7 +1778,9 @@ const StoryForm: React.FC<StoryFormProps> = ({
             isOpen={currentStep === "additional"}
             onClose={() => setCurrentStep("writing")}
             onSubmit={handleAdditionalInfoSubmit}
+            isLoading={isLoading}
             onSkip={() => {
+              if (isLoading) return;
               onSubmit(
                 formData,
                 storyStructure.hasChapters ? chapters : undefined,
