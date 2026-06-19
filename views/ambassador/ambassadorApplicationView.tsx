@@ -2,18 +2,29 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@heroui/button";
-import { Input, Textarea } from "@heroui/input";
-import { Checkbox } from "@heroui/checkbox";
-import { Loader2 } from "lucide-react";
-import { Magnetik_Medium } from "@/lib/font";
-import { AmbassadorHeader } from "@/components/ambassador/AmbassadorHeader";
+import { ArrowLeft, Check } from "lucide-react";
+import Link from "next/link";
+import { cn } from "@/lib";
 import {
-  AmbassadorStepIndicator,
-  AmbassadorTypeCard,
-} from "@/components/ambassador/AmbassadorComponents";
+  Magnetik_Bold,
+  Magnetik_Medium,
+  Magnetik_Regular,
+  Magnetik_SemiBold,
+} from "@/lib/font";
+import {
+  ApplicationProgressBar,
+  ApplicationStepHeader,
+  FieldError,
+  FormErrorBanner,
+  FormTextArea,
+  FormTextInput,
+  HelperText,
+  OptionCard,
+  PrimaryFormButton,
+  RequiredLabel,
+  YesNoCards,
+} from "@/components/ambassador/application-form-ui";
 import { useUserProfile } from "@/src/hooks/useUserProfile";
-import { useGenres } from "@/src/hooks/useGenres";
 import {
   submitAmbassadorApplication,
   type AmbassadorType,
@@ -21,367 +32,734 @@ import {
 } from "@/src/lib/ambassadors";
 import { showToast } from "@/lib/showNotification";
 
-const STEPS = ["Know You", "Journey", "Community", "Commit"];
+const PROFILE_TYPES = [
+  "Secondary school student",
+  "University student",
+  "Polytechnic / College of Education student",
+  "Member of a reading club",
+  "Reading club/community lead",
+  "Educator",
+  "Other (specify)",
+] as const;
 
-const PLATFORM_OPTIONS = [
-  "Instagram",
-  "Twitter/X",
-  "TikTok",
-  "WhatsApp",
-  "Facebook",
-  "LinkedIn",
-  "Campus groups",
-  "Other",
+const PROMOTION_METHODS = [
+  "Social media promotion",
+  "Campus/community outreach",
+  "Hosting reading circles",
+  "Hosting writing challenges",
+  "One-on-one referrals",
+  "Content creation (videos/posts)",
+  "Other (specify)",
+] as const;
+
+const STORYTIME_ROLES = [
+  "I am primarily a writer",
+  "I am primarily a reader",
+  "I am both",
+  "I am still exploring",
+] as const;
+
+const COMMITMENTS = [
+  "I understand that being an Ambassador is a responsibility-based role.",
+  "I agree to represent Storytime with integrity and professionalism.",
+  "I am willing to submit monthly activity reports.",
+  "I understand that performance will be reviewed monthly.",
+] as const;
+
+const MOTIVATION_MIN = 250;
+const OTHER_PROFILE_TYPE = "Other (specify)";
+const OTHER_PROMOTION = "Other (specify)";
+
+type FormStep = 1 | 2 | 3 | 4;
+type ViewPhase = FormStep | "success";
+
+type ErrorField =
+  | "cityState"
+  | "profileTypes"
+  | "otherProfileType"
+  | "motivation"
+  | "promotionMethods"
+  | "otherPromotion"
+  | "partOfCommunity"
+  | "storytimeRole"
+  | "conflictHandling"
+  | "commitments"
+  | "form";
+
+type StepErrors = Partial<Record<ErrorField, string>>;
+
+const ERROR_FIELD_ORDER: ErrorField[] = [
+  "form",
+  "cityState",
+  "profileTypes",
+  "otherProfileType",
+  "motivation",
+  "promotionMethods",
+  "otherPromotion",
+  "partOfCommunity",
+  "storytimeRole",
+  "conflictHandling",
+  "commitments",
 ];
+
+function parseSubmitError(error: unknown): string {
+  if (error instanceof Error) {
+    const raw = error.message.trim();
+    if (!raw) return "We couldn't submit your application. Please try again.";
+
+    try {
+      const parsed = JSON.parse(raw) as { message?: string | string[] };
+      if (Array.isArray(parsed.message)) {
+        return parsed.message.join(". ");
+      }
+      if (typeof parsed.message === "string" && parsed.message) {
+        return parsed.message;
+      }
+    } catch {
+      // message is plain text
+    }
+
+    if (raw.toLowerCase().includes("already")) {
+      return "You already have a pending ambassador application.";
+    }
+
+    return raw;
+  }
+
+  return "We couldn't submit your application. Please try again.";
+}
+
+function scrollToFirstError(errors: StepErrors) {
+  const firstField = ERROR_FIELD_ORDER.find((field) => errors[field]);
+  if (!firstField) return;
+
+  const targetId =
+    firstField === "form" ? "application-form-error" : `field-${firstField}`;
+
+  requestAnimationFrame(() => {
+    document.getElementById(targetId)?.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+    });
+  });
+}
+
+function parseCityState(cityState: string): { city: string; country: string } {
+  const parts = cityState
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  if (parts.length >= 2) {
+    return {
+      city: parts.slice(0, -1).join(", "),
+      country: parts[parts.length - 1],
+    };
+  }
+
+  return { city: cityState.trim(), country: "Nigeria" };
+}
+
+function toggleSelection<T extends string>(list: T[], value: T): T[] {
+  return list.includes(value)
+    ? list.filter((item) => item !== value)
+    : [...list, value];
+}
+
+function ApplicationSuccessScreen() {
+  const router = useRouter();
+
+  return (
+    <div className="min-h-screen bg-accent-shade-1 max-w-md mx-auto px-6 flex flex-col items-center justify-center text-center pb-12">
+      <div className="w-24 h-24 rounded-full bg-[#34A853] flex items-center justify-center mb-6">
+        <Check className="w-12 h-12 text-white" strokeWidth={3} />
+      </div>
+      <h1
+        className={cn(
+          Magnetik_Bold.className,
+          "text-2xl text-primary-colour mb-3",
+        )}
+      >
+        Application Submitted!!
+      </h1>
+      <p
+        className={cn(
+          Magnetik_Regular.className,
+          "text-sm text-grey-2 leading-relaxed mb-8 max-w-xs",
+        )}
+      >
+        Your application has been submitted successfully. Our team will
+        carefully review your responses and get back to you soon.
+      </p>
+      <PrimaryFormButton onClick={() => router.push("/")}>
+        Return to Home
+      </PrimaryFormButton>
+      <Link
+        href="/ambassador/status"
+        className={cn(
+          Magnetik_Medium.className,
+          "mt-4 text-sm text-primary-colour underline-offset-2 hover:underline",
+        )}
+      >
+        View My Application Status
+      </Link>
+    </div>
+  );
+}
 
 export default function AmbassadorApplicationView() {
   const router = useRouter();
   const { user } = useUserProfile();
-  const { genres: apiGenres } = useGenres();
-  const [step, setStep] = useState(1);
+  const [phase, setPhase] = useState<ViewPhase>(1);
   const [submitting, setSubmitting] = useState(false);
+  const [focusedField, setFocusedField] = useState<string | null>(null);
+  const [errors, setErrors] = useState<StepErrors>({});
+
+  const [cityState, setCityState] = useState("");
+  const [profileTypes, setProfileTypes] = useState<string[]>([]);
+  const [otherProfileType, setOtherProfileType] = useState("");
+  const [institution, setInstitution] = useState("");
 
   const [type, setType] = useState<AmbassadorType>("campus");
-  const [fullName, setFullName] = useState(
-    user ? `${user.firstName || ""} ${user.lastName || ""}`.trim() : "",
+  const [motivation, setMotivation] = useState("");
+  const [promotionMethods, setPromotionMethods] = useState<string[]>([]);
+  const [otherPromotion, setOtherPromotion] = useState("");
+
+  const [partOfCommunity, setPartOfCommunity] = useState<"yes" | "no" | null>(
+    null,
   );
-  const [email, setEmail] = useState(user?.email || "");
-  const [phone, setPhone] = useState("");
-  const [city, setCity] = useState("");
-  const [country, setCountry] = useState("Nigeria");
-  const [institution, setInstitution] = useState("");
-  const [instagram, setInstagram] = useState("");
-  const [twitter, setTwitter] = useState("");
-  const [tiktok, setTiktok] = useState("");
-  const [linkedin, setLinkedin] = useState("");
-  const [whyJoin, setWhyJoin] = useState("");
-  const [readingExperience, setReadingExperience] = useState("");
-  const [writingExperience, setWritingExperience] = useState("");
-  const [favoriteGenres, setFavoriteGenres] = useState<string[]>([]);
-  const [communityDescription, setCommunityDescription] = useState("");
-  const [estimatedReach, setEstimatedReach] = useState("100");
-  const [hasLedCommunityBefore, setHasLedCommunityBefore] = useState(false);
-  const [communityPlatforms, setCommunityPlatforms] = useState<string[]>([]);
-  const [weeklyHours, setWeeklyHours] = useState("5");
-  const [agreedToTerms, setAgreedToTerms] = useState(false);
-  const [agreedToGuidelines, setAgreedToGuidelines] = useState(false);
+  const [storytimeRole, setStorytimeRole] = useState<string | null>(null);
+  const [conflictHandling, setConflictHandling] = useState("");
 
-  const genreOptions = apiGenres?.length
-    ? apiGenres
-    : ["Romance", "Fantasy", "Drama", "Thriller", "Comedy", "Adventure"];
+  const [commitments, setCommitments] = useState<boolean[]>(
+    COMMITMENTS.map(() => false),
+  );
 
-  const toggleGenre = (genre: string) => {
-    setFavoriteGenres((prev) =>
-      prev.includes(genre) ? prev.filter((g) => g !== genre) : [...prev, genre],
-    );
+  const step = phase === "success" ? 4 : phase;
+
+  const clearError = (field: ErrorField) => {
+    setErrors((prev) => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
   };
 
-  const togglePlatform = (platform: string) => {
-    setCommunityPlatforms((prev) =>
-      prev.includes(platform)
-        ? prev.filter((p) => p !== platform)
-        : [...prev, platform],
-    );
-  };
-
-  const validateStep = (): string | null => {
-    switch (step) {
-      case 1:
-        if (!fullName.trim()) return "Full name is required.";
-        if (!email.trim()) return "Email is required.";
-        if (!city.trim()) return "City is required.";
-        if (!country.trim()) return "Country is required.";
-        if (type === "campus" && !institution.trim()) {
-          return "Institution is required for campus ambassadors.";
-        }
-        return null;
-      case 2:
-        if (whyJoin.trim().length < 50) {
-          return "Tell us why you want to join (at least 50 characters).";
-        }
-        if (readingExperience.trim().length < 20) {
-          return "Describe your reading experience (at least 20 characters).";
-        }
-        if (favoriteGenres.length === 0) {
-          return "Select at least one favorite genre.";
-        }
-        return null;
-      case 3:
-        if (communityDescription.trim().length < 30) {
-          return "Describe how you'll engage your community.";
-        }
-        if (communityPlatforms.length === 0) {
-          return "Select at least one platform.";
-        }
-        return null;
-      case 4:
-        if (!agreedToTerms || !agreedToGuidelines) {
-          return "You must agree to the terms and guidelines.";
-        }
-        return null;
-      default:
-        return null;
+  const handleBack = () => {
+    if (submitting) return;
+    if (phase === 1) {
+      router.push("/ambassador");
+      return;
     }
+    if (phase !== "success") {
+      setErrors({});
+      setPhase((phase - 1) as FormStep);
+    }
+  };
+
+  const validateStep = (currentStep: FormStep): StepErrors => {
+    const nextErrors: StepErrors = {};
+
+    switch (currentStep) {
+      case 1:
+        if (!cityState.trim()) {
+          nextErrors.cityState = "Please enter your city and state.";
+        }
+        if (profileTypes.length === 0) {
+          nextErrors.profileTypes =
+            "Select at least one option that describes you.";
+        }
+        if (
+          profileTypes.includes(OTHER_PROFILE_TYPE) &&
+          !otherProfileType.trim()
+        ) {
+          nextErrors.otherProfileType = "Please specify your profile type.";
+        }
+        break;
+      case 2:
+        if (motivation.trim().length < MOTIVATION_MIN) {
+          nextErrors.motivation = `Please write at least ${MOTIVATION_MIN} characters about your motivation.`;
+        }
+        if (promotionMethods.length === 0) {
+          nextErrors.promotionMethods =
+            "Select at least one way you plan to promote Storytime.";
+        }
+        if (
+          promotionMethods.includes(OTHER_PROMOTION) &&
+          !otherPromotion.trim()
+        ) {
+          nextErrors.otherPromotion =
+            "Please describe your other promotion methods.";
+        }
+        break;
+      case 3:
+        if (!partOfCommunity) {
+          nextErrors.partOfCommunity =
+            "Please let us know if you are part of an organized community.";
+        }
+        if (!storytimeRole) {
+          nextErrors.storytimeRole =
+            "Select which best describes you on Storytime.";
+        }
+        if (conflictHandling.trim().length < 20) {
+          nextErrors.conflictHandling =
+            "Please share how you would handle conflict or harmful content (at least 20 characters).";
+        }
+        break;
+      case 4:
+        if (!commitments.every(Boolean)) {
+          nextErrors.commitments =
+            "Please agree to all ambassador commitments before submitting.";
+        }
+        break;
+      default:
+        const _exhaustive: never = currentStep;
+        return _exhaustive;
+    }
+
+    return nextErrors;
+  };
+
+  const buildPayload = (): CreateApplicationPayload => {
+    const { city, country } = parseCityState(cityState);
+
+    const normalizedProfileTypes = profileTypes.map((item) =>
+      item === OTHER_PROFILE_TYPE && otherProfileType.trim()
+        ? OTHER_PROFILE_TYPE
+        : item,
+    );
+
+    const normalizedPromotionMethods = promotionMethods.map((item) =>
+      item === OTHER_PROMOTION ? OTHER_PROMOTION : item,
+    );
+
+    return {
+      type,
+      city,
+      country,
+      institution: institution.trim() || undefined,
+      profileTypes: normalizedProfileTypes,
+      otherProfileType: profileTypes.includes(OTHER_PROFILE_TYPE)
+        ? otherProfileType.trim() || undefined
+        : undefined,
+      whyJoin: motivation.trim(),
+      promotionMethods: normalizedPromotionMethods,
+      otherPromotionDetail: promotionMethods.includes(OTHER_PROMOTION)
+        ? otherPromotion.trim() || undefined
+        : undefined,
+      partOfOrganizedCommunity: partOfCommunity === "yes",
+      storytimeRole: storytimeRole || "",
+      conflictHandling: conflictHandling.trim(),
+      agreedToResponsibility: commitments[0],
+      agreedToIntegrity: commitments[1],
+      agreedToMonthlyReports: commitments[2],
+      agreedToPerformanceReview: commitments[3],
+    };
   };
 
   const handleNext = async () => {
-    const error = validateStep();
-    if (error) {
-      showToast({ type: "error", message: error });
+    if (phase === "success" || submitting) return;
+
+    const currentStep = phase;
+    const stepErrors = validateStep(currentStep);
+
+    if (Object.keys(stepErrors).length > 0) {
+      setErrors(stepErrors);
+      scrollToFirstError(stepErrors);
+      showToast({
+        type: "error",
+        message: "Please fix the highlighted fields to continue.",
+      });
       return;
     }
 
-    if (step < 4) {
-      setStep(step + 1);
+    setErrors({});
+
+    if (currentStep !== 4) {
+      setPhase((currentStep + 1) as FormStep);
       return;
     }
-
-    const payload: CreateApplicationPayload = {
-      type,
-      fullName: fullName.trim(),
-      email: email.trim(),
-      phone: phone.trim() || undefined,
-      city: city.trim(),
-      country: country.trim(),
-      institution: institution.trim() || undefined,
-      instagram: instagram.trim() || undefined,
-      twitter: twitter.trim() || undefined,
-      tiktok: tiktok.trim() || undefined,
-      linkedin: linkedin.trim() || undefined,
-      whyJoin: whyJoin.trim(),
-      readingExperience: readingExperience.trim(),
-      writingExperience: writingExperience.trim() || undefined,
-      favoriteGenres,
-      communityDescription: communityDescription.trim(),
-      estimatedReach: parseInt(estimatedReach, 10) || 0,
-      hasLedCommunityBefore,
-      communityPlatforms,
-      weeklyHoursCommitment: parseInt(weeklyHours, 10) || 1,
-      agreedToTerms,
-      agreedToGuidelines,
-    };
 
     setSubmitting(true);
     try {
-      await submitAmbassadorApplication(payload);
-      showToast({
-        type: "success",
-        message: "Application submitted successfully!",
-      });
-      router.push("/ambassador/status");
+      if (!user?.email) {
+        throw new Error("Please sign in before submitting your application.");
+      }
+
+      await submitAmbassadorApplication(buildPayload());
+      setPhase("success");
     } catch (err) {
-      showToast({
-        type: "error",
-        message:
-          err instanceof Error ? err.message : "Failed to submit application",
-      });
+      const message = parseSubmitError(err);
+      setErrors({ form: message });
+      scrollToFirstError({ form: message });
+      showToast({ type: "error", message });
     } finally {
       setSubmitting(false);
     }
   };
 
+  if (phase === "success") {
+    return <ApplicationSuccessScreen />;
+  }
+
   return (
-    <div className="min-h-screen bg-accent-shade-1 max-w-md mx-auto pb-24">
-      <AmbassadorHeader title="Ambassador Application" backHref="/ambassador" />
-      <AmbassadorStepIndicator steps={STEPS} currentStep={step} />
+    <div
+      className="min-h-screen bg-accent-shade-1 max-w-md mx-auto flex flex-col"
+      aria-busy={submitting}
+    >
+      <div className="pt-4">
+        <button
+          type="button"
+          onClick={handleBack}
+          disabled={submitting}
+          className="px-4 text-primary-colour disabled:opacity-50 disabled:cursor-not-allowed"
+          aria-label="Go back"
+        >
+          <ArrowLeft className="w-6 h-6" />
+        </button>
+        <ApplicationProgressBar step={step} />
+      </div>
 
-      <div className="px-4 space-y-4">
-        {step === 1 && (
-          <>
-            <p className={`${Magnetik_Medium.className} text-primary-colour`}>
-              Choose your ambassador type
-            </p>
-            <AmbassadorTypeCard
-              emoji="🎓"
-              title="Campus Ambassador"
-              description="For students representing Storytime on campus."
-              selected={type === "campus"}
-              onClick={() => setType("campus")}
-            />
-            <AmbassadorTypeCard
-              emoji="🌍"
-              title="Community Ambassador"
-              description="For creators and community leaders online."
-              selected={type === "community"}
-              onClick={() => setType("community")}
-            />
-            <Input
-              label="Full name"
-              value={fullName}
-              onValueChange={setFullName}
-            />
-            <Input label="Email" value={email} onValueChange={setEmail} />
-            <Input
-              label="Phone (optional)"
-              value={phone}
-              onValueChange={setPhone}
-            />
-            <Input label="City" value={city} onValueChange={setCity} />
-            <Input label="Country" value={country} onValueChange={setCountry} />
-            {type === "campus" && (
-              <Input
-                label="Institution / School"
-                value={institution}
-                onValueChange={setInstitution}
-              />
-            )}
-            <Input
-              label="Instagram (optional)"
-              value={instagram}
-              onValueChange={setInstagram}
-            />
-            <Input
-              label="Twitter/X (optional)"
-              value={twitter}
-              onValueChange={setTwitter}
-            />
-          </>
-        )}
-
-        {step === 2 && (
-          <>
-            <Textarea
-              label="Why do you want to be a Storytime Ambassador?"
-              minRows={4}
-              value={whyJoin}
-              onValueChange={setWhyJoin}
-            />
-            <Textarea
-              label="Your reading journey"
-              minRows={3}
-              value={readingExperience}
-              onValueChange={setReadingExperience}
-            />
-            <Textarea
-              label="Your writing experience (optional)"
-              minRows={3}
-              value={writingExperience}
-              onValueChange={setWritingExperience}
-            />
-            <p className="text-sm text-primary-colour">Favorite genres</p>
-            <div className="flex flex-wrap gap-2">
-              {genreOptions.map((g: string) => (
-                <button
-                  key={g}
-                  type="button"
-                  onClick={() => toggleGenre(g)}
-                  className={`px-3 py-1 rounded-full text-xs border ${
-                    favoriteGenres.includes(g)
-                      ? "bg-primary-colour text-white border-primary-colour"
-                      : "bg-white text-primary-colour border-grey-4"
-                  }`}
-                >
-                  {g}
-                </button>
-              ))}
-            </div>
-          </>
-        )}
-
-        {step === 3 && (
-          <>
-            <Textarea
-              label="How will you grow the Storytime community?"
-              minRows={4}
-              value={communityDescription}
-              onValueChange={setCommunityDescription}
-            />
-            <Input
-              label="Estimated reach (people)"
-              type="number"
-              value={estimatedReach}
-              onValueChange={setEstimatedReach}
-            />
-            <Checkbox
-              isSelected={hasLedCommunityBefore}
-              onValueChange={setHasLedCommunityBefore}
-            >
-              I have led a community or group before
-            </Checkbox>
-            <p className="text-sm text-primary-colour">Platforms you use</p>
-            <div className="flex flex-wrap gap-2">
-              {PLATFORM_OPTIONS.map((p) => (
-                <button
-                  key={p}
-                  type="button"
-                  onClick={() => togglePlatform(p)}
-                  className={`px-3 py-1 rounded-full text-xs border ${
-                    communityPlatforms.includes(p)
-                      ? "bg-primary-colour text-white border-primary-colour"
-                      : "bg-white text-primary-colour border-grey-4"
-                  }`}
-                >
-                  {p}
-                </button>
-              ))}
-            </div>
-          </>
-        )}
-
-        {step === 4 && (
-          <>
-            <Input
-              label="Weekly hours you can commit"
-              type="number"
-              value={weeklyHours}
-              onValueChange={setWeeklyHours}
-            />
-            <Checkbox
-              isSelected={agreedToTerms}
-              onValueChange={setAgreedToTerms}
-            >
-              I agree to the Storytime Ambassador Terms
-            </Checkbox>
-            <Checkbox
-              isSelected={agreedToGuidelines}
-              onValueChange={setAgreedToGuidelines}
-            >
-              I agree to follow the Ambassador Community Guidelines
-            </Checkbox>
-            <div className="bg-white rounded-xl p-4 text-sm text-grey-2">
-              <p className="text-primary-colour font-magnetik-medium mb-2">
-                Review summary
-              </p>
-              <p>
-                <strong>Type:</strong>{" "}
-                {type === "campus"
-                  ? "Campus Ambassador"
-                  : "Community Ambassador"}
-              </p>
-              <p>
-                <strong>Location:</strong> {city}, {country}
-              </p>
-              <p>
-                <strong>Weekly commitment:</strong> {weeklyHours} hours
-              </p>
-            </div>
-          </>
-        )}
-
-        <div className="flex gap-3 pt-4">
-          {step > 1 && (
-            <Button
-              variant="bordered"
-              className="flex-1 border-primary-colour text-primary-colour"
-              onPress={() => setStep(step - 1)}
-            >
-              Back
-            </Button>
-          )}
-          <Button
-            className="flex-1 bg-primary-colour text-white"
-            onPress={handleNext}
-            isDisabled={submitting}
-          >
-            {submitting ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : step === 4 ? (
-              "Submit Application"
-            ) : (
-              "Continue"
-            )}
-          </Button>
+      <div className="flex-1 px-4 py-5 space-y-5 overflow-y-auto pb-4">
+        <div id="application-form-error">
+          <FormErrorBanner message={errors.form} />
         </div>
+
+        {phase === 1 && (
+          <>
+            <ApplicationStepHeader
+              title="Let's get to know you"
+              subtitle="Tell us a bit about yourself and where you're from."
+            />
+            <div className="space-y-2">
+              <RequiredLabel>City &amp; State</RequiredLabel>
+              <FormTextInput
+                id="field-cityState"
+                value={cityState}
+                onChange={(value) => {
+                  setCityState(value);
+                  clearError("cityState");
+                }}
+                placeholder="e.g., Lagos, Nigeria"
+                focused={focusedField === "cityState"}
+                onFocus={() => setFocusedField("cityState")}
+                onBlur={() => setFocusedField(null)}
+                disabled={submitting}
+                invalid={!!errors.cityState}
+                errorMessage={errors.cityState}
+              />
+              <HelperText>
+                This helps us connect you with local opportunities
+              </HelperText>
+            </div>
+
+            <div className="space-y-3" id="field-profileTypes">
+              <RequiredLabel>Which best describes you?</RequiredLabel>
+              <div className="space-y-3">
+                {PROFILE_TYPES.map((option) => (
+                  <OptionCard
+                    key={option}
+                    label={option}
+                    selected={profileTypes.includes(option)}
+                    onClick={() => {
+                      setProfileTypes((prev) => toggleSelection(prev, option));
+                      clearError("profileTypes");
+                    }}
+                    disabled={submitting}
+                    invalid={!!errors.profileTypes}
+                  />
+                ))}
+              </div>
+              <FieldError message={errors.profileTypes} />
+              {profileTypes.includes(OTHER_PROFILE_TYPE) && (
+                <FormTextInput
+                  id="field-otherProfileType"
+                  value={otherProfileType}
+                  onChange={(value) => {
+                    setOtherProfileType(value);
+                    clearError("otherProfileType");
+                  }}
+                  placeholder="Please specify"
+                  focused={focusedField === "otherProfileType"}
+                  onFocus={() => setFocusedField("otherProfileType")}
+                  onBlur={() => setFocusedField(null)}
+                  disabled={submitting}
+                  invalid={!!errors.otherProfileType}
+                  errorMessage={errors.otherProfileType}
+                />
+              )}
+              <HelperText>Select all that apply</HelperText>
+            </div>
+
+            <div className="space-y-2">
+              <RequiredLabel>
+                Name of your school, institution, or community (if applicable)
+              </RequiredLabel>
+              <FormTextInput
+                value={institution}
+                onChange={setInstitution}
+                placeholder="Short answer"
+                focused={focusedField === "institution"}
+                onFocus={() => setFocusedField("institution")}
+                onBlur={() => setFocusedField(null)}
+                disabled={submitting}
+              />
+              <HelperText>Optional but encouraged.</HelperText>
+            </div>
+          </>
+        )}
+
+        {phase === 2 && (
+          <>
+            <ApplicationStepHeader
+              title="Your ambassador journey"
+              subtitle="Choose your role and share your passion for Storytime."
+            />
+
+            <div className="space-y-3">
+              <RequiredLabel>
+                Which ambassador role are you most interested in?
+              </RequiredLabel>
+              <OptionCard
+                label="Campus Ambassador"
+                description="Lead the Storytime movement in your school or university. Connect with student communities and inspire fellow students."
+                selected={type === "campus"}
+                onClick={() => setType("campus")}
+                type="radio"
+                disabled={submitting}
+              />
+              <OptionCard
+                label="Community Ambassador"
+                description="Engage with broader reading communities online and offline. Inspire readers and writers beyond campus walls."
+                selected={type === "community"}
+                onClick={() => setType("community")}
+                type="radio"
+                disabled={submitting}
+              />
+              <HelperText>
+                Campus ambassadors focus on schools and universities, while
+                community ambassadors engage with broader reading communities.
+              </HelperText>
+            </div>
+
+            <div className="space-y-2" id="field-motivation">
+              <RequiredLabel>
+                Why do you want to be a Storytime Ambassador?
+              </RequiredLabel>
+              <FormTextArea
+                id="field-motivation"
+                value={motivation}
+                onChange={(value) => {
+                  setMotivation(value);
+                  clearError("motivation");
+                }}
+                placeholder="Write 3–5 clear sentences about your motivation"
+                rows={5}
+                focused={focusedField === "motivation"}
+                onFocus={() => setFocusedField("motivation")}
+                onBlur={() => setFocusedField(null)}
+                disabled={submitting}
+                invalid={!!errors.motivation}
+                errorMessage={errors.motivation}
+              />
+              <div className="flex items-center justify-between gap-2">
+                <HelperText>
+                  Write 3–5 clear sentences about your motivation
+                </HelperText>
+                <p
+                  className={cn(
+                    Magnetik_Regular.className,
+                    "text-xs shrink-0",
+                    motivation.length >= MOTIVATION_MIN
+                      ? "text-grey-3"
+                      : "text-complimentary-colour",
+                  )}
+                >
+                  {motivation.length}/{MOTIVATION_MIN} characters minimum
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-3" id="field-promotionMethods">
+              <RequiredLabel>
+                How do you plan to promote Storytime?
+              </RequiredLabel>
+              <div className="space-y-3">
+                {PROMOTION_METHODS.map((option) => (
+                  <OptionCard
+                    key={option}
+                    label={option}
+                    selected={promotionMethods.includes(option)}
+                    onClick={() => {
+                      setPromotionMethods((prev) =>
+                        toggleSelection(prev, option),
+                      );
+                      clearError("promotionMethods");
+                    }}
+                    disabled={submitting}
+                    invalid={!!errors.promotionMethods}
+                  />
+                ))}
+              </div>
+              <FieldError message={errors.promotionMethods} />
+              {promotionMethods.includes(OTHER_PROMOTION) && (
+                <FormTextInput
+                  id="field-otherPromotion"
+                  value={otherPromotion}
+                  onChange={(value) => {
+                    setOtherPromotion(value);
+                    clearError("otherPromotion");
+                  }}
+                  placeholder="Describe your promotion methods"
+                  focused={focusedField === "otherPromotion"}
+                  onFocus={() => setFocusedField("otherPromotion")}
+                  onBlur={() => setFocusedField(null)}
+                  disabled={submitting}
+                  invalid={!!errors.otherPromotion}
+                  errorMessage={errors.otherPromotion}
+                />
+              )}
+              <HelperText>Required.</HelperText>
+            </div>
+          </>
+        )}
+
+        {phase === 3 && (
+          <>
+            <ApplicationStepHeader
+              title="Your community & identity"
+              subtitle="Help us understand your network and how you engage with Storytime."
+            />
+
+            <div className="space-y-3" id="field-partOfCommunity">
+              <RequiredLabel>
+                Are you currently part of any organized community where you can
+                promote Storytime?
+              </RequiredLabel>
+              <YesNoCards
+                value={partOfCommunity}
+                onChange={(value) => {
+                  setPartOfCommunity(value);
+                  clearError("partOfCommunity");
+                }}
+                disabled={submitting}
+                invalid={!!errors.partOfCommunity}
+              />
+              <FieldError message={errors.partOfCommunity} />
+            </div>
+
+            <div className="space-y-3" id="field-storytimeRole">
+              <RequiredLabel>
+                Which best describes you on Storytime?
+              </RequiredLabel>
+              <div className="space-y-3">
+                {STORYTIME_ROLES.map((option) => (
+                  <OptionCard
+                    key={option}
+                    label={option}
+                    selected={storytimeRole === option}
+                    onClick={() => {
+                      setStorytimeRole(option);
+                      clearError("storytimeRole");
+                    }}
+                    type="radio"
+                    disabled={submitting}
+                    invalid={!!errors.storytimeRole}
+                  />
+                ))}
+              </div>
+              <FieldError message={errors.storytimeRole} />
+            </div>
+
+            <div className="space-y-2" id="field-conflictHandling">
+              <p
+                className={cn(
+                  Magnetik_Regular.className,
+                  "text-xs text-grey-3",
+                )}
+              >
+                Be specific
+              </p>
+              <RequiredLabel>
+                Storytime is a safe creative space. How would you handle
+                conflict, harmful content, or misinformation within your
+                community?
+              </RequiredLabel>
+              <FormTextArea
+                id="field-conflictHandling"
+                value={conflictHandling}
+                onChange={(value) => {
+                  setConflictHandling(value);
+                  clearError("conflictHandling");
+                }}
+                placeholder="Short paragraph"
+                rows={5}
+                focused={focusedField === "conflictHandling"}
+                onFocus={() => setFocusedField("conflictHandling")}
+                onBlur={() => setFocusedField(null)}
+                disabled={submitting}
+                invalid={!!errors.conflictHandling}
+                errorMessage={errors.conflictHandling}
+              />
+            </div>
+          </>
+        )}
+
+        {phase === 4 && (
+          <>
+            <ApplicationStepHeader
+              title="Almost there! 🎉"
+              subtitle="Review your commitment as a Storytime Ambassador."
+            />
+
+            <div className="space-y-3" id="field-commitments">
+              <p
+                className={cn(
+                  Magnetik_SemiBold.className,
+                  "text-sm text-primary-colour",
+                )}
+              >
+                Ambassador Commitments
+              </p>
+              <HelperText>
+                By checking all boxes below, you agree to uphold these
+                responsibilities:
+              </HelperText>
+              <div className="space-y-3">
+                {COMMITMENTS.map((text, index) => (
+                  <OptionCard
+                    key={text}
+                    label={text}
+                    selected={commitments[index]}
+                    onClick={() => {
+                      setCommitments((prev) => {
+                        const next = [...prev];
+                        next[index] = !next[index];
+                        return next;
+                      });
+                      clearError("commitments");
+                    }}
+                    disabled={submitting}
+                    invalid={!!errors.commitments}
+                  />
+                ))}
+              </div>
+              <FieldError message={errors.commitments} />
+            </div>
+          </>
+        )}
+      </div>
+
+      <div className="px-4 pb-8 pt-2">
+        <PrimaryFormButton
+          onClick={handleNext}
+          loading={submitting}
+          disabled={submitting}
+          loadingLabel="Submitting application..."
+        >
+          {phase === 4 ? "Submit Application" : "Next"}
+        </PrimaryFormButton>
       </div>
     </div>
   );

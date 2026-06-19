@@ -23,7 +23,18 @@ export interface AmbassadorApplication {
   city: string;
   country: string;
   institution?: string;
+  profileTypes: string[];
+  otherProfileType?: string;
   whyJoin: string;
+  promotionMethods: string[];
+  otherPromotionDetail?: string;
+  partOfOrganizedCommunity: boolean;
+  storytimeRole?: string;
+  conflictHandling?: string;
+  agreedToResponsibility: boolean;
+  agreedToIntegrity: boolean;
+  agreedToMonthlyReports: boolean;
+  agreedToPerformanceReview: boolean;
   readingExperience: string;
   writingExperience?: string;
   favoriteGenres: string[];
@@ -100,27 +111,21 @@ export interface MonthlyReport {
 
 export interface CreateApplicationPayload {
   type: AmbassadorType;
-  fullName: string;
-  email: string;
-  phone?: string;
   city: string;
   country: string;
   institution?: string;
-  instagram?: string;
-  twitter?: string;
-  tiktok?: string;
-  linkedin?: string;
+  profileTypes: string[];
+  otherProfileType?: string;
   whyJoin: string;
-  readingExperience: string;
-  writingExperience?: string;
-  favoriteGenres: string[];
-  communityDescription: string;
-  estimatedReach: number;
-  hasLedCommunityBefore: boolean;
-  communityPlatforms: string[];
-  weeklyHoursCommitment: number;
-  agreedToTerms: boolean;
-  agreedToGuidelines: boolean;
+  promotionMethods: string[];
+  otherPromotionDetail?: string;
+  partOfOrganizedCommunity: boolean;
+  storytimeRole: string;
+  conflictHandling: string;
+  agreedToResponsibility: boolean;
+  agreedToIntegrity: boolean;
+  agreedToMonthlyReports: boolean;
+  agreedToPerformanceReview: boolean;
 }
 
 function getBaseUrl(): string {
