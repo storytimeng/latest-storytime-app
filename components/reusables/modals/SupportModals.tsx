@@ -232,7 +232,11 @@ export const SupportModals = () => {
             </h3>
             <div
               className={`text-sm text-primary/80 leading-relaxed whitespace-pre-wrap ${Magnetik_Regular.className}`}
-              dangerouslySetInnerHTML={{ __html: data.content || data }}
+              dangerouslySetInnerHTML={{
+                __html: sanitizeRichHtml(
+                  typeof data === "string" ? data : data.content || "",
+                ),
+              }}
             />
           </div>
         );

@@ -1,6 +1,6 @@
 import DOMPurify from "dompurify";
 
-const RICH_HTML_SANITIZE_CONFIG: DOMPurify.Config = {
+const RICH_HTML_SANITIZE_CONFIG = {
   ALLOWED_TAGS: [
     "b",
     "i",
@@ -24,10 +24,11 @@ const RICH_HTML_SANITIZE_CONFIG: DOMPurify.Config = {
     "blockquote",
   ],
   ALLOWED_ATTR: ["href", "target", "rel", "src", "alt", "class"],
+  RETURN_TRUSTED_TYPE: false,
 };
 
 export function sanitizeRichHtml(html: string): string {
-  return DOMPurify.sanitize(html, RICH_HTML_SANITIZE_CONFIG);
+  return String(DOMPurify.sanitize(html, RICH_HTML_SANITIZE_CONFIG));
 }
 
 export function isHtmlContent(value: string): boolean {
