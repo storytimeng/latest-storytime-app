@@ -1,19 +1,7 @@
 "use client";
 
-interface Notification {
-  id: string;
-  type: string;
-  title: string;
-  message: string;
-  createdAt: string;
-  updatedAt?: string;
-  emailSentAt?: string;
-  isRead: boolean;
-}
-
 import { useState } from "react";
 import { ChevronRight, Trash2, CheckCheck } from "lucide-react";
-import Image from "next/image";
 import {
   Modal,
   ModalContent,
@@ -24,25 +12,24 @@ import {
 import { Button } from "@heroui/button";
 import { Skeleton } from "@heroui/skeleton";
 import { Magnetik_Medium, Magnetik_Regular } from "@/lib/font";
-import { PageHeader } from "@/components/reusables/customUI";
+import {
+  getNotificationPreview,
+  isHtmlContent,
+  sanitizeRichHtml,
+} from "@/lib/sanitizeRichHtml";
 import { useNotifications } from "@/src/hooks/useNotifications";
 import { useOnlineStatus } from "@/src/hooks/useOnlineStatus";
 import { cn } from "@/lib/utils";
 
-function isHtmlContent(value: string): boolean {
-  return /<[a-z][\s\S]*>/i.test(value.trim());
-}
-
-function stripHtml(value: string): string {
-  return value
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&nbsp;/gi, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function getNotificationPreview(message: string): string {
-  return isHtmlContent(message) ? stripHtml(message) : message;
+interface Notification {
+  id: string;
+  type: string;
+  title: string;
+  message: string;
+  createdAt: string;
+  updatedAt?: string;
+  emailSentAt?: string;
+  isRead: boolean;
 }
 
 const NotificationView = () => {
@@ -283,7 +270,7 @@ const NotificationView = () => {
                 <div
                   className={`text-primary-shade-4 text-base leading-relaxed prose prose-sm max-w-none ${Magnetik_Regular.className}`}
                   dangerouslySetInnerHTML={{
-                    __html: selectedNotification.message,
+                    __html: sanitizeRichHtml(selectedNotification.message),
                   }}
                 />
               ) : (
