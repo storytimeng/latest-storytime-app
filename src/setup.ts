@@ -2,7 +2,7 @@ import Cookies from "js-cookie";
 import { client } from "./client/client.gen";
 import { createClientConfig } from "./heyapi-runtime";
 import { getAuthToken } from "./stores/useAuthStore";
-import { isAuthExemptPath } from "@/src/lib/authSession";
+import { isAuthExemptPath, hasAuthSession } from "@/src/lib/authSession";
 import { refreshTokens, ensureValidToken } from "./lib/tokenManager";
 import { setupApiInterceptor } from "@/lib/offline/apiInterceptor";
 
@@ -59,6 +59,11 @@ try {
 
       if (isAuthEndpoint) {
         console.log("[Interceptor] 401 from auth endpoint, skipping refresh");
+        return response;
+      }
+
+      if (!hasAuthSession() && !Cookies.get("refreshToken")) {
+        console.log("[Interceptor] 401 for anonymous user, skipping refresh");
         return response;
       }
 
@@ -186,17 +191,12 @@ try {
           const onPaymentReturn =
             typeof window !== "undefined" &&
             isAuthExemptPath(window.location.pathname);
+          const hadSession =
+            hasAuthSession() || Boolean(Cookies.get("refreshToken"));
 
-          if (!onPaymentReturn) {
+          if (!onPaymentReturn && hadSession) {
             const { clearAuth } = await import("./stores/useAuthStore");
             clearAuth();
-
-            if (typeof window !== "undefined") {
-              const { useAuthModalStore } = await import(
-                "./stores/useAuthModalStore"
-              );
-              useAuthModalStore.getState().openModal("login");
-            }
           }
 
           return response;
@@ -209,16 +209,12 @@ try {
         const onPaymentReturn =
           typeof window !== "undefined" &&
           isAuthExemptPath(window.location.pathname);
+        const hadSession =
+          hasAuthSession() || Boolean(Cookies.get("refreshToken"));
 
-        if (!onPaymentReturn) {
+        if (!onPaymentReturn && hadSession) {
           const { clearAuth } = await import("./stores/useAuthStore");
           clearAuth();
-          if (typeof window !== "undefined") {
-            const { useAuthModalStore } = await import(
-              "./stores/useAuthModalStore"
-            );
-            useAuthModalStore.getState().openModal("login");
-          }
         }
 
         return response;

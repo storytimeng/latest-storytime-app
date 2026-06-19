@@ -27,8 +27,6 @@ import { useUserProfile } from "@/src/hooks/useUserProfile";
 import { useLibrary } from "@/src/hooks/useLibrary";
 import { useDeleteStory } from "@/src/hooks/useStoryMutations";
 import type { StoryResponseDto } from "@/src/client/types.gen";
-import { useAuthStore } from "@/src/stores/useAuthStore";
-import { useAuthModalStore } from "@/src/stores/useAuthModalStore";
 
 // Locally extend StoryResponseDto for UI needs
 type ExtendedStory = StoryResponseDto & {
@@ -43,20 +41,12 @@ type TabKey = "Recent" | "Ongoing" | "Published" | "Drafts";
 
 const PenView = () => {
   const router = useRouter();
-  const { openModal: openAuthModal } = useAuthModalStore();
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
   useEffect(() => {
-    // Prefetch static routes
     router.prefetch("/");
     router.prefetch("/library");
     router.prefetch("/new-story");
-
-    if (!isAuthenticated()) {
-      openAuthModal("login");
-      // router.push("/");
-    }
-  }, [isAuthenticated, openAuthModal, router]);
+  }, [router]);
 
   const [selectedTab, setSelectedTab] = useState<TabKey>("Recent");
   const [showAllStories, setShowAllStories] = useState(false);
