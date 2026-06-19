@@ -22,6 +22,7 @@ import {
   EditProfileModal,
   EditGenresModal,
   LeaderboardModal,
+  BecomeAmbassadorModal,
   DefaultModal,
 } from "@/components/reusables/customUI";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -31,6 +32,7 @@ import { useUserAchievements } from "@/src/hooks/useUserAchievements";
 import { useApiUserStats } from "@/src/hooks/useApiUserStats";
 import { useOnlineStatus } from "@/src/hooks/useOnlineStatus";
 import { useGenres } from "@/src/hooks/useGenres";
+import { useAmbassadorOverview } from "@/src/hooks/useAmbassador";
 import { Tooltip } from "@heroui/tooltip";
 import { cn } from "@/lib";
 
@@ -54,6 +56,30 @@ const ProfileView = () => {
   const { badges, certificates } = useUserAchievements();
   const { stats } = useApiUserStats();
   const { genres: apiGenres } = useGenres();
+  const { overview: ambassadorOverview } = useAmbassadorOverview();
+
+  const ambassadorOption = ambassadorOverview?.isAmbassador
+    ? {
+        id: "ambassador-dashboard",
+        label: "Ambassador Dashboard",
+        icon: "🌟",
+        type: "page" as const,
+        path: "/ambassador/dashboard",
+      }
+    : ambassadorOverview?.application?.status === "pending"
+      ? {
+          id: "ambassador-status",
+          label: "Application Status",
+          icon: "⏳",
+          type: "page" as const,
+          path: "/ambassador/status",
+        }
+      : {
+          id: "ambassador",
+          label: "Become an Ambassador",
+          icon: "🌟",
+          type: "modal" as const,
+        };
 
   const profileOptions = [
     {
@@ -87,6 +113,7 @@ const ProfileView = () => {
     { id: "reading", label: "Reading time", icon: "⏰", type: "modal" },
     { id: "writing", label: "Writing time", icon: "✍️", type: "modal" },
     { id: "leaderboard", label: "Leaderboard", icon: "🏅", type: "modal" },
+    ambassadorOption,
     {
       id: "history",
       label: "Reading History",
@@ -98,22 +125,22 @@ const ProfileView = () => {
 
   // Use user's favorite genres from profile, fallback to API genres, then defaults
   const userGenres = user?.favoriteGenres || user?.genres || [];
-  const genres = userGenres.length > 0 ? userGenres : (apiGenres || []);
+  const genres = userGenres.length > 0 ? userGenres : apiGenres || [];
 
   useEffect(() => {
     if (activeModal) {
       setLastActiveModal(activeModal);
     }
-    
+
     // Prefetch common routes
     router.prefetch("/home");
     router.prefetch("/pen");
     router.prefetch("/library");
     router.prefetch("/downloads");
-    
+
     // Prefetch user's favorite genres
     if (userGenres.length > 0) {
-      userGenres.forEach(genre => {
+      userGenres.forEach((genre) => {
         router.prefetch(`/category?genre=${encodeURIComponent(genre)}`);
       });
     }
@@ -170,6 +197,8 @@ const ProfileView = () => {
         return <EditGenresModal />;
       case "leaderboard":
         return <LeaderboardModal />;
+      case "ambassador":
+        return <BecomeAmbassadorModal />;
       default:
         const option = profileOptions.find((opt) => opt.id === modalToRender);
         if (!option) return null;
@@ -197,10 +226,10 @@ const ProfileView = () => {
           />
 
           {/* Profile Section */}
-          <ProfileCard 
-            showSettings={true} 
-            useLiveData={true} 
-            hideEditButton={!isOnline} 
+          <ProfileCard
+            showSettings={true}
+            useLiveData={true}
+            hideEditButton={!isOnline}
           />
 
           {/* Badge/Certificate Card - Bleeding into next section */}
@@ -265,9 +294,13 @@ const ProfileView = () => {
                 </h3>
                 <button
                   onClick={() =>
-                    isOnline && router.push("?modal=edit-genres", { scroll: false })
+                    isOnline &&
+                    router.push("?modal=edit-genres", { scroll: false })
                   }
-                  className={cn("text-primary-colour p-1", !isOnline && "opacity-50 cursor-not-allowed")}
+                  className={cn(
+                    "text-primary-colour p-1",
+                    !isOnline && "opacity-50 cursor-not-allowed",
+                  )}
                   disabled={!isOnline}
                 >
                   <span className="text-xl">✎</span>

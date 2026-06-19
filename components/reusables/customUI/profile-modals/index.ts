@@ -10,3 +10,4 @@ export { DefaultModal } from "./DefaultModal";
 export { EditProfileModal } from "./EditProfileModal";
 export { EditGenresModal } from "./EditGenresModal";
 export { LeaderboardModal } from "./LeaderboardModal";
+export { BecomeAmbassadorModal } from "./BecomeAmbassadorModal";
