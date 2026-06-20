@@ -1,42 +1,143 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
-import { Magnetik_Medium, Magnetik_SemiBold } from "@/lib/font";
-import { AmbassadorHeader } from "@/components/ambassador/AmbassadorHeader";
 import {
-  QuickActionCard,
-  ScoreProgressBar,
-} from "@/components/ambassador/AmbassadorComponents";
+  AmbassadorCelebrationModal,
+  AmbassadorCertificateModal,
+  AmbassadorHubHeader,
+  ImpactStatsGrid,
+  MilestoneCard,
+  MonthlyProgressCard,
+  QuickActionsList,
+} from "@/components/ambassador/AmbassadorHubComponents";
+import { useUserProfile } from "@/src/hooks/useUserProfile";
+import {
+  buildMonthlyGoals,
+  formatTrendDelta,
+  getAmbassadorLevelLabel,
+  getCurrentMonthLabel,
+  getDaysRemainingInMonth,
+  getMonthlyProgressPercent,
+  getSixMonthCertificateDate,
+  isSixMonthMilestone,
+} from "@/src/lib/ambassador-dashboard";
 import {
   fetchAmbassadorDashboard,
+  fetchAmbassadorLeaderboard,
   type AmbassadorDashboard,
 } from "@/src/lib/ambassadors";
+import { showToast } from "@/lib/showNotification";
 
-const TIER_EMOJI: Record<string, string> = {
-  bronze: "🥉",
-  silver: "🥈",
-  gold: "🥇",
-  platinum: "💎",
-};
+const CELEBRATION_SEEN_KEY = "storytime-ambassador-6month-celebration-seen";
 
 export default function AmbassadorDashboardView() {
   const router = useRouter();
+  const { user } = useUserProfile();
   const [data, setData] = useState<AmbassadorDashboard | null>(null);
+  const [rank, setRank] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [certificateOpen, setCertificateOpen] = useState(false);
+  const [celebrationOpen, setCelebrationOpen] = useState(false);
 
   useEffect(() => {
-    fetchAmbassadorDashboard()
-      .then(setData)
-      .catch((err) => {
-        setError(
-          err instanceof Error ? err.message : "Failed to load dashboard",
+    let cancelled = false;
+
+    async function load() {
+      try {
+        const dashboard = await fetchAmbassadorDashboard();
+        if (cancelled) return;
+
+        setData(dashboard);
+
+        const leaderboard = await fetchAmbassadorLeaderboard(
+          dashboard.ambassador.type,
         );
-      })
-      .finally(() => setLoading(false));
+        if (cancelled) return;
+
+        const userRank = leaderboard.leaderboard.find(
+          (entry) => entry.ambassadorId === dashboard.ambassador.id,
+        )?.rank;
+        setRank(userRank ?? null);
+      } catch (err) {
+        if (!cancelled) {
+          setError(
+            err instanceof Error ? err.message : "Failed to load dashboard",
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    load();
+    return () => {
+      cancelled = true;
+    };
   }, []);
+
+  const displayName = useMemo(() => {
+    if (!user) return "Ambassador";
+    return (
+      `${user.firstName || ""} ${user.lastName || ""}`.trim() ||
+      user.penName ||
+      "Ambassador"
+    );
+  }, [user]);
+
+  const avatarUrl =
+    user?.profilePicture ||
+    user?.avatar ||
+    "/person-with-sunglasses-smiling.jpg";
+
+  const monthlyGoals = useMemo(() => {
+    if (!data) return [];
+    return buildMonthlyGoals(data.currentMonthlyReport, data.ambassador.type);
+  }, [data]);
+
+  const progressPercent = getMonthlyProgressPercent(monthlyGoals);
+  const showMilestone = data
+    ? isSixMonthMilestone(data.ambassador.acceptedAt)
+    : false;
+  const certificateDate = data
+    ? getSixMonthCertificateDate(data.ambassador.acceptedAt)
+    : "";
+
+  useEffect(() => {
+    if (!showMilestone || loading) return;
+    const seen = localStorage.getItem(CELEBRATION_SEEN_KEY) === "true";
+    if (!seen) {
+      setCelebrationOpen(true);
+    }
+  }, [showMilestone, loading]);
+
+  const handleProgressAction = () => {
+    if (progressPercent >= 100) return;
+    router.push("/ambassador/report");
+  };
+
+  const handleCertificateDone = () => {
+    showToast({
+      type: "success",
+      message: "Certificate 1 was saved to your device successfully.",
+      duration: 3000,
+    });
+  };
+
+  const handleCelebrationViewDetails = () => {
+    localStorage.setItem(CELEBRATION_SEEN_KEY, "true");
+    setCelebrationOpen(false);
+    setCertificateOpen(true);
+  };
+
+  const handleCelebrationClose = () => {
+    localStorage.setItem(CELEBRATION_SEEN_KEY, "true");
+    setCelebrationOpen(false);
+  };
 
   if (loading) {
     return (
@@ -48,122 +149,91 @@ export default function AmbassadorDashboardView() {
 
   if (error || !data) {
     return (
-      <div className="min-h-screen bg-accent-shade-1 max-w-md mx-auto">
-        <AmbassadorHeader title="Ambassador Dashboard" />
-        <div className="px-4 py-8 text-center text-grey-2">
-          <p>{error || "Unable to load dashboard."}</p>
-          <button
-            className="mt-4 text-primary-colour underline"
-            onClick={() => router.push("/ambassador")}
-          >
-            Go back
-          </button>
-        </div>
+      <div className="min-h-screen bg-accent-shade-1 max-w-md mx-auto px-4 py-8 text-center text-grey-2">
+        <p>{error || "Unable to load dashboard."}</p>
+        <button
+          type="button"
+          className="mt-4 text-primary-colour underline"
+          onClick={() => router.push("/profile")}
+        >
+          Go back
+        </button>
       </div>
     );
   }
 
-  const { ambassador, stats } = data;
-  const typeLabel =
-    ambassador.type === "campus" ? "Campus Ambassador" : "Community Ambassador";
+  const { ambassador, stats, currentMonthlyReport } = data;
+  const referralsThisMonth = currentMonthlyReport?.newReferrals ?? 0;
+  const eventsThisMonth = currentMonthlyReport?.eventsHosted ?? 0;
+  const referralTrend = formatTrendDelta(referralsThisMonth);
+  const eventsTrend = formatTrendDelta(eventsThisMonth);
+
+  const impactStats = [
+    {
+      value: stats.totalReferrals,
+      label: "Total Referrals",
+      trend: referralTrend.text,
+      positive: referralTrend.positive,
+    },
+    {
+      value: 0,
+      label: "Stories via Referrals",
+      trend: formatTrendDelta(0).text,
+      positive: false,
+    },
+    {
+      value: eventsThisMonth,
+      label: "Events Hosted",
+      trend: eventsTrend.text,
+      positive: eventsTrend.positive,
+    },
+    {
+      value: stats.totalScore,
+      label: "Ambassador Score",
+      trend: rank ? `↑ Rank #${rank}` : "↑ Rank —",
+      positive: true,
+    },
+  ];
 
   return (
-    <div className="min-h-screen bg-accent-shade-1 max-w-md mx-auto pb-24">
-      <AmbassadorHeader title="Ambassador Dashboard" />
+    <div className="min-h-screen bg-accent-shade-1 max-w-md mx-auto pb-10">
+      <AmbassadorHubHeader
+        displayName={displayName}
+        avatarUrl={avatarUrl}
+        levelLabel={getAmbassadorLevelLabel(ambassador.type)}
+      />
 
-      <div className="px-4 py-6 space-y-6">
-        <div className="bg-primary-colour rounded-xl p-5 text-white">
-          <p className="text-sm opacity-90">{typeLabel}</p>
-          <div className="flex items-center justify-between mt-2">
-            <div>
-              <p className={`${Magnetik_SemiBold.className} text-2xl`}>
-                {stats.totalScore} pts
-              </p>
-              <p className="text-sm capitalize">
-                {TIER_EMOJI[stats.tier]} {stats.tier} tier
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="text-3xl font-magnetik-bold">
-                {stats.totalReferrals}
-              </p>
-              <p className="text-xs opacity-90">referrals</p>
-            </div>
-          </div>
-        </div>
+      <div className="space-y-6 pt-2">
+        <MonthlyProgressCard
+          monthLabel={getCurrentMonthLabel()}
+          daysRemaining={getDaysRemainingInMonth()}
+          goals={monthlyGoals}
+          progressPercent={progressPercent}
+          onAction={handleProgressAction}
+        />
 
-        <div className="bg-white rounded-xl p-4 space-y-3 shadow-sm">
-          <p className={`${Magnetik_Medium.className} text-primary-colour`}>
-            Your impact scores
-          </p>
-          <ScoreProgressBar
-            label="Awareness"
-            score={stats.scores.awareness}
-            maxScore={300}
-          />
-          <ScoreProgressBar
-            label="Reading"
-            score={stats.scores.reading}
-            maxScore={250}
-          />
-          <ScoreProgressBar
-            label="Writing"
-            score={stats.scores.writing}
-            maxScore={250}
-          />
-          <ScoreProgressBar
-            label="Community"
-            score={stats.scores.community}
-            maxScore={200}
-          />
-          <ScoreProgressBar
-            label="Consistency"
-            score={stats.scores.consistency}
-            maxScore={200}
-          />
-        </div>
+        <ImpactStatsGrid stats={impactStats} />
 
-        <div>
-          <p
-            className={`${Magnetik_Medium.className} text-primary-colour mb-3`}
-          >
-            Quick actions
-          </p>
-          <div className="grid grid-cols-2 gap-3">
-            <QuickActionCard
-              icon="🔗"
-              label="Share Your Link"
-              href="/ambassador/share"
-            />
-            <QuickActionCard
-              icon="📋"
-              label="Monthly Report"
-              href="/ambassador/report"
-            />
-            <QuickActionCard
-              icon="🏆"
-              label="Leaderboard"
-              href="/ambassador/leaderboard"
-            />
-            <QuickActionCard
-              icon="📊"
-              label="Score Breakdown"
-              href="/ambassador/breakdown"
-            />
-          </div>
-        </div>
+        <QuickActionsList />
 
-        {data.currentMonthlyReport && (
-          <div className="bg-white rounded-xl p-4 shadow-sm">
-            <p className={`${Magnetik_Medium.className} text-primary-colour`}>
-              This month&apos;s report
-            </p>
-            <p className="text-sm text-grey-2 mt-1 capitalize">
-              Status: {data.currentMonthlyReport.status}
-            </p>
-          </div>
+        {showMilestone && (
+          <MilestoneCard onDownload={() => setCertificateOpen(true)} />
         )}
       </div>
+
+      <AmbassadorCelebrationModal
+        isOpen={celebrationOpen}
+        onClose={handleCelebrationClose}
+        onViewDetails={handleCelebrationViewDetails}
+      />
+
+      <AmbassadorCertificateModal
+        isOpen={certificateOpen}
+        onClose={() => setCertificateOpen(false)}
+        recipientName={displayName.toUpperCase()}
+        obtainedDate={certificateDate}
+        onDone={handleCertificateDone}
+      />
     </div>
   );
 }
