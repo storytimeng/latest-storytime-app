@@ -66,7 +66,9 @@ export function ShareGrowHeader({
           <h1 className={cn(Magnetik_Bold.className, "text-2xl leading-tight")}>
             Share & Grow
           </h1>
-          <p className={cn(Magnetik_Regular.className, "text-sm text-white/85")}>
+          <p
+            className={cn(Magnetik_Regular.className, "text-sm text-white/85")}
+          >
             Invite storytellers to join
           </p>
         </div>
@@ -191,7 +193,12 @@ export function ReferralImpactCard({ stats }: { stats: ReferralImpactStats }) {
         >
           {stats.totalPeopleReferred}
         </p>
-        <p className={cn(Magnetik_SemiBold.className, "text-sm text-primary-colour")}>
+        <p
+          className={cn(
+            Magnetik_SemiBold.className,
+            "text-sm text-primary-colour",
+          )}
+        >
           Total People Referred
         </p>
         <p className={cn(Magnetik_Regular.className, "text-xs text-grey-2")}>
@@ -210,7 +217,11 @@ export function ReferralImpactCard({ stats }: { stats: ReferralImpactStats }) {
   );
 }
 
-function ReferralStatusBadge({ status }: { status: AmbassadorReferralItem["status"] }) {
+function ReferralStatusBadge({
+  status,
+}: {
+  status: AmbassadorReferralItem["status"];
+}) {
   const isActive = status === "active";
   const isPending = status === "pending";
 
@@ -220,8 +231,11 @@ function ReferralStatusBadge({ status }: { status: AmbassadorReferralItem["statu
         "shrink-0 px-3 py-1 rounded-full text-[10px] capitalize",
         Magnetik_SemiBold.className,
         isActive && "bg-primary-colour text-white",
-        isPending && "bg-accent-shade-2 text-primary-colour border border-grey-4",
-        !isActive && !isPending && "bg-accent-shade-2 text-complimentary-colour border border-complimentary-colour/30",
+        isPending &&
+          "bg-accent-shade-2 text-primary-colour border border-grey-4",
+        !isActive &&
+          !isPending &&
+          "bg-accent-shade-2 text-complimentary-colour border border-complimentary-colour/30",
       )}
     >
       {status}
@@ -255,7 +269,12 @@ function ReferralRow({ referral }: { referral: AmbassadorReferralItem }) {
         )}
       </div>
       <div className="min-w-0 flex-1">
-        <p className={cn(Magnetik_SemiBold.className, "text-sm text-primary-colour truncate")}>
+        <p
+          className={cn(
+            Magnetik_SemiBold.className,
+            "text-sm text-primary-colour truncate",
+          )}
+        >
           {name}
         </p>
         <p className={cn(Magnetik_Regular.className, "text-xs text-grey-2")}>
@@ -282,14 +301,22 @@ export function RecentReferralsSection({
   onFilterChange,
 }: RecentReferralsSectionProps) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [showAll, setShowAll] = useState(false);
   const selectedLabel =
     REFERRAL_FILTER_OPTIONS.find((option) => option.value === filter)?.label ??
     "All";
 
+  const visibleReferrals = showAll ? referrals : referrals.slice(0, 5);
+
   return (
     <div className="px-4 space-y-3">
       <div className="flex items-center justify-between">
-        <h2 className={cn(Magnetik_SemiBold.className, "text-sm text-primary-colour")}>
+        <h2
+          className={cn(
+            Magnetik_SemiBold.className,
+            "text-sm text-primary-colour",
+          )}
+        >
           Recent Referrals
         </h2>
         <div className="relative">
@@ -312,6 +339,7 @@ export function RecentReferralsSection({
                   type="button"
                   onClick={() => {
                     onFilterChange(option.value);
+                    setShowAll(false);
                     setMenuOpen(false);
                   }}
                   className={cn(
@@ -334,15 +362,16 @@ export function RecentReferralsSection({
         </div>
       ) : (
         <div className="space-y-2">
-          {referrals.slice(0, 5).map((referral) => (
+          {visibleReferrals.map((referral) => (
             <ReferralRow key={referral.id} referral={referral} />
           ))}
         </div>
       )}
 
-      {referrals.length > 0 && (
+      {referrals.length > 5 && !showAll && (
         <button
           type="button"
+          onClick={() => setShowAll(true)}
           className={cn(
             Magnetik_Medium.className,
             "text-sm text-complimentary-colour underline underline-offset-2",
@@ -355,18 +384,19 @@ export function RecentReferralsSection({
   );
 }
 
-export function ReferralEmptyState({
-  onShare,
-}: {
-  onShare: () => void;
-}) {
+export function ReferralEmptyState({ onShare }: { onShare: () => void }) {
   return (
     <div className="px-6 py-10 flex flex-col items-center text-center space-y-5">
       <span className="w-28 h-28 rounded-full bg-accent-shade-2 flex items-center justify-center text-5xl text-complimentary-colour/60">
         ◠
       </span>
       <div className="space-y-2">
-        <h2 className={cn(Magnetik_SemiBold.className, "text-lg text-primary-colour")}>
+        <h2
+          className={cn(
+            Magnetik_SemiBold.className,
+            "text-lg text-primary-colour",
+          )}
+        >
           Start Your Referral Journey
         </h2>
         <p
@@ -410,7 +440,12 @@ export function HowReferralsWorkModal({
     >
       <ModalContent>
         <ModalHeader className="flex items-center justify-between px-4 pt-4 pb-2">
-          <p className={cn(Magnetik_SemiBold.className, "text-base text-primary-colour")}>
+          <p
+            className={cn(
+              Magnetik_SemiBold.className,
+              "text-base text-primary-colour",
+            )}
+          >
             How Referrals Work
           </p>
           <button type="button" onClick={onClose} aria-label="Close">
