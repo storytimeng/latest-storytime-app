@@ -72,3 +72,39 @@ export async function fetchStoryAudio(options: {
 
   return unwrapData<StoryAudioManifest>(await response.json());
 }
+
+export async function recordStoryAudioListen(options: {
+  storyId: string;
+  chapterId?: string | null;
+  episodeId?: string | null;
+  voice?: string;
+  durationSeconds: number;
+  completed: boolean;
+}): Promise<void> {
+  const token = getAuthToken();
+  if (!token) return;
+
+  const body: Record<string, unknown> = {
+    durationSeconds: options.durationSeconds,
+    completed: options.completed,
+  };
+  if (options.chapterId) body.chapterId = options.chapterId;
+  if (options.episodeId) body.episodeId = options.episodeId;
+  if (options.voice) body.voice = options.voice;
+
+  try {
+    await fetch(
+      `${getBaseUrl().replace(/\/$/, "")}/stories/${encodeURIComponent(options.storyId)}/audio/listens`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(body),
+      },
+    );
+  } catch {
+    // Analytics should never block playback
+  }
+}

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   fetchStoryAudio,
+  recordStoryAudioListen,
   type StoryAudioManifest,
   type StoryAudioSegment,
 } from "@/src/lib/storyAudio";
@@ -28,6 +29,7 @@ export function useStoryAudio({
   const elapsedOffsetRef = useRef(0);
   const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const progressTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const reportedListenRef = useRef(false);
 
   const [manifest, setManifest] = useState<StoryAudioManifest | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -78,18 +80,49 @@ export function useStoryAudio({
     }
   }, [manifest?.totalDurationSeconds, store]);
 
-  const stopPlayback = useCallback(() => {
-    clearProgressTimer();
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-      audioRef.current = null;
-    }
-    segmentIndexRef.current = 0;
-    elapsedOffsetRef.current = 0;
-    store.stop();
-    store.setElapsedSeconds(0);
-  }, [clearProgressTimer, store]);
+  const reportListen = useCallback(
+    (completed: boolean, durationSeconds: number) => {
+      if (reportedListenRef.current || durationSeconds < 3) return;
+
+      reportedListenRef.current = true;
+      void recordStoryAudioListen({
+        storyId,
+        chapterId,
+        episodeId,
+        voice: manifest?.voice,
+        durationSeconds,
+        completed,
+      });
+    },
+    [chapterId, episodeId, manifest?.voice, storyId],
+  );
+
+  const stopPlayback = useCallback(
+    (options?: { completed?: boolean; report?: boolean }) => {
+      const durationSeconds = Math.max(
+        store.elapsedSeconds,
+        Math.floor(
+          elapsedOffsetRef.current + (audioRef.current?.currentTime ?? 0),
+        ),
+      );
+
+      if (options?.report !== false) {
+        reportListen(Boolean(options?.completed), durationSeconds);
+      }
+
+      clearProgressTimer();
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+        audioRef.current = null;
+      }
+      segmentIndexRef.current = 0;
+      elapsedOffsetRef.current = 0;
+      store.stop();
+      store.setElapsedSeconds(0);
+    },
+    [clearProgressTimer, reportListen, store],
+  );
 
   const playSegment = useCallback(
     async (index: number) => {
@@ -124,7 +157,7 @@ export function useStoryAudio({
         return;
       }
 
-      stopPlayback();
+      stopPlayback({ completed: true });
     },
     [stopPlayback, store.playbackRate, store.volume],
   );
@@ -186,6 +219,7 @@ export function useStoryAudio({
     }
 
     stopPlayback();
+    reportedListenRef.current = false;
     store.play();
     clearProgressTimer();
     progressTimerRef.current = setInterval(updateElapsed, 250);
@@ -277,6 +311,7 @@ export function useStoryAudio({
     stopPlayback();
     segmentsRef.current = [];
     setManifest(null);
+    reportedListenRef.current = false;
     void loadManifest();
 
     return () => {
