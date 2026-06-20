@@ -38,7 +38,7 @@ import { StoryContent } from "./components/StoryContent";
 import { InteractionSection } from "./components/InteractionSection";
 import { NavigationBar } from "./components/NavigationBar";
 import { StoryAudioBar } from "./components/StoryAudioBar";
-import { CommentsSection } from "./components/CommentsSection";
+import { StoryPartFooter } from "./components/StoryPartFooter";
 import type { StoryReadingMode } from "./components/StoryHeader";
 
 // Custom hooks
@@ -189,6 +189,10 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
     activeStory,
     handleChapterChange,
     isLoading: isContentLoading,
+    isPartLoading,
+    nextPart,
+    prevPart,
+    partLabel,
   } = useStoryContent({
     story,
     chapters: effectiveChapters,
@@ -598,13 +602,28 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
         )}
 
         {/* Story Content */}
-        {isContentLoading ? (
+        {isContentLoading && !currentContent ? (
           <div className="px-4 py-8">
             <Skeleton className="w-full rounded-lg h-96" />
+          </div>
+        ) : isPartLoading && !currentContent ? (
+          <div className="px-4 py-8 space-y-4">
+            <div className="h-1 w-full overflow-hidden rounded-full bg-light-grey-2">
+              <div className="h-full w-1/3 animate-pulse rounded-full bg-complimentary-colour" />
+            </div>
+            <Skeleton className="w-full rounded-lg h-64" />
           </div>
         ) : (
           currentContent && (
             <React.Fragment>
+              {isPartLoading ? (
+                <div className="sticky top-28 z-30 px-4">
+                  <div className="h-1 w-full overflow-hidden rounded-full bg-light-grey-2">
+                    <div className="h-full w-1/3 animate-pulse rounded-full bg-complimentary-colour" />
+                  </div>
+                </div>
+              ) : null}
+
               <div ref={storyContentRef}>
                 <StoryContent
                   content={currentContent}
@@ -619,6 +638,23 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
                   listenMode={readingMode === "listen"}
                 />
               </div>
+
+              {hasNavigation ? (
+                <StoryPartFooter
+                  partLabel={partLabel}
+                  currentIndex={currentIndex}
+                  total={navigationList.length}
+                  nextPart={nextPart}
+                  prevPart={prevPart}
+                  onNext={
+                    nextPart ? handleNextWithUrl : undefined
+                  }
+                  onPrevious={
+                    prevPart ? handlePreviousWithUrl : undefined
+                  }
+                  isLoading={isPartLoading}
+                />
+              ) : null}
 
               {/* Interaction Section (only when online) */}
               {isOnline && (
