@@ -67,16 +67,34 @@ const NotificationView = () => {
       case "achievement":
         return "🏆";
       case "milestone":
-        return "🎉";
+        return "🎓";
       case "story_like":
         return "❤️";
       case "story_comment":
         return "💬";
+      case "story_collaboration":
+        return "🤝";
+      case "reminder_read":
+        return "⏰";
+      case "reminder_write":
+        return "✍️";
       case "admin_message":
         return "📢";
+      case "system":
+        return "📢";
       default:
-        return "👋";
+        return "🔔";
     }
+  };
+
+  const stripLeadingEmojis = (text: string) => {
+    const stripped = text
+      .replace(
+        /^(\p{Extended_Pictographic}\uFE0F?(?:\u200D\p{Extended_Pictographic}\uFE0F?)*\s*)+/u,
+        "",
+      )
+      .trim();
+    return stripped.length > 0 ? stripped : text;
   };
 
   const formatTime = (dateString: string) => {
@@ -171,7 +189,7 @@ const NotificationView = () => {
                     <h3
                       className={`text-gray-900 text-base font-semibold ${Magnetik_Medium.className}`}
                     >
-                      {notification.title}
+                      {stripLeadingEmojis(notification.title)}
                     </h3>
                   </div>
 
@@ -256,7 +274,9 @@ const NotificationView = () => {
                 <h2
                   className={`text-lg text-primary-colour font-medium ${Magnetik_Medium.className}`}
                 >
-                  {selectedNotification?.title}
+                  {selectedNotification
+                    ? stripLeadingEmojis(selectedNotification.title)
+                    : null}
                 </h2>
               </div>
             </div>
