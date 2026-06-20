@@ -84,5 +84,18 @@ export function formatTrendDelta(value: number): {
   if (value === 0) {
     return { text: "No change this month", positive: true };
   }
-  return { text: `${value} this month`, positive: false };
+  return { text: `↓ ${value} this month`, positive: false };
+}
+
+export function formatMonthlyAddition(
+  count: number,
+  zeroLabel = "No new this month",
+): {
+  text: string;
+  positive: boolean;
+} {
+  if (count > 0) {
+    return { text: `↑ +${count} this month`, positive: true };
+  }
+  return { text: zeroLabel, positive: true };
 }

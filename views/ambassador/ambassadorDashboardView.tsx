@@ -16,6 +16,7 @@ import { useUserProfile } from "@/src/hooks/useUserProfile";
 import {
   buildMonthlyGoals,
   formatTrendDelta,
+  formatMonthlyAddition,
   getAmbassadorLevelLabel,
   getCurrentMonthLabel,
   getDaysRemainingInMonth,
@@ -155,7 +156,10 @@ export default function AmbassadorDashboardView() {
   const referralsThisMonth = currentMonthlyReport?.newReferrals ?? 0;
   const storiesThisMonth = currentMonthlyReport?.referralStoriesPublished ?? 0;
   const eventsThisMonth = currentMonthlyReport?.eventsHosted ?? 0;
-  const referralTrend = formatTrendDelta(referralsThisMonth);
+  const referralTrend = formatMonthlyAddition(
+    referralsThisMonth,
+    "No new referrals this month",
+  );
   const storiesTrend = formatTrendDelta(storiesThisMonth);
   const eventsTrend = formatTrendDelta(eventsThisMonth);
   const rank = stats.rank ?? null;
