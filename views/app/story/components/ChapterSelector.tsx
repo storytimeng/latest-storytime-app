@@ -6,6 +6,7 @@ interface ChapterSelectorProps {
   selectedChapterId: string | null;
   onChapterChange: (chapterId: string) => void;
   isVisible: boolean;
+  partLabel?: string;
 }
 
 export const ChapterSelector = React.memo(
@@ -14,6 +15,7 @@ export const ChapterSelector = React.memo(
     selectedChapterId,
     onChapterChange,
     isVisible,
+    partLabel = "Chapter",
   }: ChapterSelectorProps) => {
     return (
       <div
@@ -22,7 +24,7 @@ export const ChapterSelector = React.memo(
         }`}
       >
         <Select
-          placeholder="Select Chapter"
+          placeholder={`Select ${partLabel}`}
           variant="flat"
           selectedKeys={selectedChapterId ? [selectedChapterId] : []}
           onSelectionChange={(keys) => {
@@ -37,13 +39,13 @@ export const ChapterSelector = React.memo(
           {navigationList.map((item: any) => (
             <SelectItem key={item.id} id={item.id}>
               {item.title ||
-                `${item.chapterNumber ? 'Chapter' : 'Episode'} ${item.chapterNumber || item.episodeNumber}`}
+                `${item.chapterNumber ? "Chapter" : "Episode"} ${item.chapterNumber || item.episodeNumber}`}
             </SelectItem>
           ))}
         </Select>
       </div>
     );
-  }
+  },
 );
 
 ChapterSelector.displayName = "ChapterSelector";

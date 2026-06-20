@@ -142,59 +142,32 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
   const { progress: storyProgress, updateProgress: updateStoryProgress } =
     useReadingProgress(isOnline ? storyId : undefined);
 
-  // The story object contains episode/chapter metadata (id, number, dates)
-  // but NOT the actual content. We use this for navigation.
+  // Story metadata lists episodes/chapters by id + number only; content is fetched per part.
   const rawStoryEpisodes = (story as any)?.episodes || [];
   const rawStoryChapters = (story as any)?.chapters || [];
 
-  // Filter out empty chapters/episodes (ones with no title AND no content)
-  // Also check that content/body has actual text (not just whitespace or HTML tags)
-  const hasActualContent = (text: string) => {
-    if (!text) return false;
-    // Remove HTML tags and whitespace to check if there's actual text
-    const stripped = text
-      .replace(/<[^>]*>/g, "")
-      .replace(/&nbsp;/g, " ")
-      .trim();
-    return stripped.length > 0;
-  };
-
   const storyEpisodes = Array.isArray(rawStoryEpisodes)
-    ? rawStoryEpisodes.filter(
-        (ep: any) =>
-          ep &&
-          ((ep.title && ep.title.trim()) ||
-            hasActualContent(ep.content || ep.body || "")),
-      )
+    ? rawStoryEpisodes.filter((ep: { id?: string }) => ep?.id)
     : [];
   const storyChapters = Array.isArray(rawStoryChapters)
-    ? rawStoryChapters.filter(
-        (ch: any) =>
-          ch &&
-          ((ch.title && ch.title.trim()) ||
-            hasActualContent(ch.content || ch.body || "")),
-      )
+    ? rawStoryChapters.filter((ch: { id?: string }) => ch?.id)
     : [];
 
-  // Determine structure from story data
+  // Match preview page: episodes take priority over chapters
+  const hasEpisodes = storyEpisodes.length > 0;
   const hasChapters =
-    (story as any)?.chapter === true && storyChapters.length > 0;
-  const hasEpisodes = !hasChapters && storyEpisodes.length > 0;
+    !hasEpisodes &&
+    (story as any)?.chapter === true &&
+    storyChapters.length > 0;
 
-  // Use the metadata from story object for navigation list
   const effectiveEpisodes = hasEpisodes ? storyEpisodes : [];
   const effectiveChapters = hasChapters ? storyChapters : [];
 
-  // Debug: Log chapter/episode detection
-  console.log("Story Structure Debug:", {
-    storyChapterFlag: (story as any)?.chapter,
-    rawChaptersCount: rawStoryChapters.length,
-    filteredChaptersCount: storyChapters.length,
-    hasChapters,
-    rawEpisodesCount: rawStoryEpisodes.length,
-    filteredEpisodesCount: storyEpisodes.length,
-    hasEpisodes,
-  });
+  const structure = hasChapters
+    ? "chapters"
+    : hasEpisodes
+      ? "episodes"
+      : "single";
 
   // Use counts from story data if available, otherwise use hook counts
   const displayLikeCount = (story as any)?.likeCount ?? likeCount ?? 0;
@@ -215,13 +188,12 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
     currentIndex,
     activeStory,
     handleChapterChange,
-    handlePrevious,
-    handleNext,
     isLoading: isContentLoading,
   } = useStoryContent({
     story,
     chapters: effectiveChapters,
     episodes: effectiveEpisodes,
+    structure,
     offlineStory,
     offlineContent,
     isUsingOfflineData,
@@ -229,6 +201,61 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
     syncEpisodeIfNeeded,
     initialContentId: initialContentId || undefined,
   });
+
+  const updateContentUrl = useCallback(
+    (contentId: string) => {
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete("chapterId");
+      params.delete("episodeId");
+      if (structure === "chapters") {
+        params.set("chapterId", contentId);
+      } else if (structure === "episodes") {
+        params.set("episodeId", contentId);
+      }
+      router.replace(`?${params.toString()}`, { scroll: false });
+    },
+    [router, searchParams, structure],
+  );
+
+  const handleChapterChangeWithUrl = useCallback(
+    (contentId: string) => {
+      handleChapterChange(contentId);
+      updateContentUrl(contentId);
+    },
+    [handleChapterChange, updateContentUrl],
+  );
+
+  const handlePreviousWithUrl = useCallback(() => {
+    const idx = navigationList.findIndex(
+      (item: { id: string }) => item.id === selectedChapterId,
+    );
+    if (idx > 0) {
+      const prevId = navigationList[idx - 1].id;
+      handleChapterChange(prevId);
+      updateContentUrl(prevId);
+    }
+  }, [
+    navigationList,
+    selectedChapterId,
+    handleChapterChange,
+    updateContentUrl,
+  ]);
+
+  const handleNextWithUrl = useCallback(() => {
+    const idx = navigationList.findIndex(
+      (item: { id: string }) => item.id === selectedChapterId,
+    );
+    if (idx >= 0 && idx < navigationList.length - 1) {
+      const nextId = navigationList[idx + 1].id;
+      handleChapterChange(nextId);
+      updateContentUrl(nextId);
+    }
+  }, [
+    navigationList,
+    selectedChapterId,
+    handleChapterChange,
+    updateContentUrl,
+  ]);
 
   const audioChapterId =
     hasChapters && selectedChapterId ? selectedChapterId : null;
@@ -254,13 +281,13 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
 
   const handleAudioPreviousChapter = useCallback(() => {
     storyAudio.stop();
-    handlePrevious();
-  }, [handlePrevious, storyAudio.stop]);
+    handlePreviousWithUrl();
+  }, [handlePreviousWithUrl, storyAudio.stop]);
 
   const handleAudioNextChapter = useCallback(() => {
     storyAudio.stop();
-    handleNext();
-  }, [handleNext, storyAudio.stop]);
+    handleNextWithUrl();
+  }, [handleNextWithUrl, storyAudio.stop]);
 
   // Memoize word count to avoid recalculating on every render/interval
   const totalWords = React.useMemo(() => {
@@ -289,13 +316,6 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
     : hasEpisodes
       ? episodeProgress
       : null;
-
-  // Determine structure for comments
-  const structure = hasChapters
-    ? "chapters"
-    : hasEpisodes
-      ? "episodes"
-      : "single";
 
   // Get comment creation function based on content type
   const {
@@ -571,8 +591,9 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
           <ChapterSelector
             navigationList={navigationList}
             selectedChapterId={selectedChapterId}
-            onChapterChange={handleChapterChange}
+            onChapterChange={handleChapterChangeWithUrl}
             isVisible={isNavVisible}
+            partLabel={structure === "episodes" ? "Episode" : "Chapter"}
           />
         )}
 
@@ -670,11 +691,12 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
                 <NavigationBar
                   currentIndex={currentIndex}
                   total={navigationList.length}
-                  onPrevious={handlePrevious}
-                  onNext={handleNext}
+                  onPrevious={handlePreviousWithUrl}
+                  onNext={handleNextWithUrl}
                   isVisible={isNavVisible}
                   navigationList={navigationList}
                   selectedChapterId={selectedChapterId}
+                  partLabel={structure === "episodes" ? "Episode" : "Chapter"}
                 />
               )}
             </React.Fragment>
