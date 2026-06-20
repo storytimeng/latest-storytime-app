@@ -13,6 +13,7 @@ interface UseStoryAudioOptions {
   storyId: string;
   chapterId?: string | null;
   episodeId?: string | null;
+  voice?: string | null;
   enabled?: boolean;
 }
 
@@ -20,6 +21,7 @@ export function useStoryAudio({
   storyId,
   chapterId,
   episodeId,
+  voice,
   enabled = true,
 }: UseStoryAudioOptions) {
   const playbackRate = useTTSStore((state) => state.playbackRate);
@@ -183,6 +185,7 @@ export function useStoryAudio({
         storyId,
         chapterId,
         episodeId,
+        voice: voice ?? undefined,
       });
 
       manifestRef.current = result;
@@ -218,7 +221,7 @@ export function useStoryAudio({
       );
       setIsLoading(false);
     }
-  }, [chapterId, clearPollTimer, episodeId, storyId]);
+  }, [chapterId, clearPollTimer, episodeId, storyId, voice]);
 
   useEffect(() => {
     loadManifestRef.current = loadManifest;
@@ -331,7 +334,7 @@ export function useStoryAudio({
       stopPlaybackRef.current({ report: false });
       clearPollTimer();
     };
-  }, [clearPollTimer, enabled, storyId, chapterId, episodeId]);
+  }, [clearPollTimer, enabled, storyId, chapterId, episodeId, voice]);
 
   useEffect(() => {
     if (audioRef.current) {

@@ -17,6 +17,18 @@ export interface StoryAudioManifest {
   message?: string;
 }
 
+export interface StoryAudioVoice {
+  id: string;
+  name: string;
+  gender: "male" | "female";
+  locale: string;
+}
+
+export interface StoryAudioVoicesResponse {
+  voices: StoryAudioVoice[];
+  defaultVoice: string;
+}
+
 function getBaseUrl(): string {
   return process.env.NEXT_PUBLIC_PROXY === "true"
     ? "/api/proxy"
@@ -67,10 +79,7 @@ async function authorizedFetch(
     cache: "no-store",
   });
 
-  if (
-    response.status === 401 &&
-    options?.retryOnUnauthorized !== false
-  ) {
+  if (response.status === 401 && options?.retryOnUnauthorized !== false) {
     const refreshedToken = await resolveAuthToken(true);
     if (refreshedToken) {
       headers.set("Authorization", `Bearer ${refreshedToken}`);
@@ -111,6 +120,19 @@ export async function fetchStoryAudio(options: {
   }
 
   return unwrapData<StoryAudioManifest>(await response.json());
+}
+
+export async function fetchStoryAudioVoices(): Promise<StoryAudioVoicesResponse> {
+  const response = await authorizedFetch("/stories/audio/voices");
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(
+      errorText || `Failed to load narration voices (${response.status})`,
+    );
+  }
+
+  return unwrapData<StoryAudioVoicesResponse>(await response.json());
 }
 
 export async function recordStoryAudioListen(options: {

@@ -29,6 +29,7 @@ import { useAuthStore } from "@/src/stores/useAuthStore";
 import { useAuthModalStore } from "@/src/stores/useAuthModalStore";
 import { useTTSStore } from "@/src/stores/useTTSStore";
 import { TTSProvider } from "@/components/providers/TTSProvider";
+import { stopBrowserTTS } from "@/src/lib/tts/stopBrowserTTS";
 
 // Component imports
 import { OfflineBanner } from "./components/OfflineBanner";
@@ -47,6 +48,7 @@ import { useScrollVisibility } from "./hooks/useScrollVisibility";
 import { useOfflineContent } from "./hooks/useOfflineContent";
 import { useStoryContent } from "./hooks/useStoryContent";
 import { useStoryAudio } from "@/src/hooks/useStoryAudio";
+import { useStoryAudioVoices } from "@/src/hooks/useStoryAudioVoices";
 
 interface ReadStoryViewProps {
   storyId: string;
@@ -176,6 +178,20 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
   // UI State
   const [showDropdown, setShowDropdown] = useState(false);
   const [readingMode, setReadingMode] = useState<StoryReadingMode>("read");
+  const selectedNarrationVoiceId = useTTSStore(
+    (state) => state.selectedNarrationVoiceId,
+  );
+  const setSelectedNarrationVoiceId = useTTSStore(
+    (state) => state.setSelectedNarrationVoiceId,
+  );
+  const { defaultVoice } = useStoryAudioVoices(isOnline && !isUsingOfflineData);
+  const narrationVoice = selectedNarrationVoiceId ?? defaultVoice;
+
+  useEffect(() => {
+    if (!selectedNarrationVoiceId && defaultVoice) {
+      setSelectedNarrationVoiceId(defaultVoice);
+    }
+  }, [defaultVoice, selectedNarrationVoiceId, setSelectedNarrationVoiceId]);
 
   // Custom hooks for derived state
   const isNavVisible = useScrollVisibility();
@@ -271,12 +287,15 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
     storyId,
     chapterId: audioChapterId,
     episodeId: audioEpisodeId,
+    voice: narrationVoice,
     enabled: readingMode === "listen" && isOnline && !isUsingOfflineData,
   });
 
   const handleReadingModeChange = useCallback(
     (mode: StoryReadingMode) => {
-      if (mode === "read") {
+      if (mode === "listen") {
+        stopBrowserTTS();
+      } else {
         storyAudio.stop();
       }
       setReadingMode(mode);

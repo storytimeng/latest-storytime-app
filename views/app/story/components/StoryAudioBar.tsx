@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { Button } from "@heroui/button";
 import { Slider } from "@heroui/slider";
 import { Popover, PopoverTrigger, PopoverContent } from "@heroui/popover";
@@ -13,6 +13,7 @@ import {
   VolumeX,
   Headphones,
   Loader2,
+  Mic,
 } from "lucide-react";
 import { Magnetik_Medium, Magnetik_Regular } from "@/lib/font";
 import {
@@ -21,6 +22,7 @@ import {
   PLAYBACK_RATES,
 } from "@/src/stores/useTTSStore";
 import { PremiumGate } from "@/components/reusables/PremiumGate";
+import { useStoryAudioVoices } from "@/src/hooks/useStoryAudioVoices";
 
 interface StoryAudioBarProps {
   isVisible: boolean;
@@ -53,9 +55,27 @@ export const StoryAudioBar = React.memo(
     onNextChapter,
   }: StoryAudioBarProps) => {
     const store = useTTSStore();
+    const { voices, isLoading: isLoadingVoices } = useStoryAudioVoices();
     const [showSpeedPopover, setShowSpeedPopover] = useState(false);
+    const [showVoicePopover, setShowVoicePopover] = useState(false);
     const hasChapterNav =
       totalChapters > 1 && onPreviousChapter && onNextChapter;
+
+    const selectedVoice = useMemo(
+      () =>
+        voices.find((voice) => voice.id === store.selectedNarrationVoiceId) ??
+        voices[0] ??
+        null,
+      [store.selectedNarrationVoiceId, voices],
+    );
+
+    const handleVoiceSelect = useCallback(
+      (voiceId: string) => {
+        store.setSelectedNarrationVoiceId(voiceId);
+        setShowVoicePopover(false);
+      },
+      [store],
+    );
 
     const togglePlayPause = useCallback(() => {
       if (store.isPlaying && !store.isPaused) {
@@ -189,41 +209,90 @@ export const StoryAudioBar = React.memo(
           </div>
 
           <div className="flex items-center justify-between">
-            <PremiumGate feature="playbackSpeedControl" hideWhenLocked={false}>
+            <div className="flex items-center gap-1">
+              <PremiumGate
+                feature="playbackSpeedControl"
+                hideWhenLocked={false}
+              >
+                <Popover
+                  isOpen={showSpeedPopover}
+                  onOpenChange={setShowSpeedPopover}
+                  placement="top"
+                >
+                  <PopoverTrigger>
+                    <Button
+                      size="sm"
+                      variant="light"
+                      className={`text-xs text-primary-shade-4 ${Magnetik_Medium.className}`}
+                    >
+                      {store.playbackRate}x
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="p-2 flex-row gap-1">
+                    {PLAYBACK_RATES.map((rate) => (
+                      <Button
+                        key={rate}
+                        size="sm"
+                        variant={
+                          rate === store.playbackRate ? "solid" : "ghost"
+                        }
+                        className={`min-w-0 px-2 h-8 ${rate === store.playbackRate ? "bg-complimentary-colour text-white" : ""}`}
+                        onPress={() => {
+                          store.setPlaybackRate(rate);
+                          setShowSpeedPopover(false);
+                        }}
+                      >
+                        {rate}x
+                      </Button>
+                    ))}
+                  </PopoverContent>
+                </Popover>
+              </PremiumGate>
+
               <Popover
-                isOpen={showSpeedPopover}
-                onOpenChange={setShowSpeedPopover}
+                isOpen={showVoicePopover}
+                onOpenChange={setShowVoicePopover}
                 placement="top"
               >
                 <PopoverTrigger>
                   <Button
                     size="sm"
                     variant="light"
-                    className={`text-xs text-primary-shade-4 ${Magnetik_Medium.className}`}
+                    isDisabled={isLoadingVoices || voices.length === 0}
+                    className={`text-xs text-primary-shade-4 max-w-[5.5rem] truncate ${Magnetik_Medium.className}`}
+                    startContent={<Mic className="w-3.5 h-3.5 shrink-0" />}
                   >
-                    {store.playbackRate}x
+                    {selectedVoice?.name ?? "Voice"}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="p-2 flex-row gap-1">
-                  {PLAYBACK_RATES.map((rate) => (
+                <PopoverContent className="p-2 flex flex-col gap-1 min-w-[10rem]">
+                  {voices.map((voice) => (
                     <Button
-                      key={rate}
+                      key={voice.id}
                       size="sm"
-                      variant={rate === store.playbackRate ? "solid" : "ghost"}
-                      className={`min-w-0 px-2 h-8 ${rate === store.playbackRate ? "bg-complimentary-colour text-white" : ""}`}
-                      onPress={() => {
-                        store.setPlaybackRate(rate);
-                        setShowSpeedPopover(false);
-                      }}
+                      variant={
+                        voice.id === store.selectedNarrationVoiceId
+                          ? "solid"
+                          : "ghost"
+                      }
+                      className={`justify-start h-9 ${
+                        voice.id === store.selectedNarrationVoiceId
+                          ? "bg-complimentary-colour text-white"
+                          : ""
+                      }`}
+                      onPress={() => handleVoiceSelect(voice.id)}
                     >
-                      {rate}x
+                      {voice.name}
+                      <span className="ml-auto text-[10px] opacity-70">
+                        {voice.locale}
+                      </span>
                     </Button>
                   ))}
                 </PopoverContent>
               </Popover>
-            </PremiumGate>
+            </div>
 
-            <div className="flex-1 text-center px-4 truncate">
+            <div className="flex-1 text-center px-2 truncate">
               {hasChapterNav && currentIndex !== undefined ? (
                 <span
                   className={`text-xs text-primary-shade-4 ${Magnetik_Regular.className}`}

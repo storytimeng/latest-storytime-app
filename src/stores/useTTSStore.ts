@@ -22,6 +22,7 @@ export interface TTSState {
   pitch: number;
   volume: number;
   selectedVoiceURI: string | null;
+  selectedNarrationVoiceId: string | null;
 
   // Content state
   totalSentences: number;
@@ -44,6 +45,7 @@ export interface TTSState {
   setPitch: (pitch: number) => void;
   setVolume: (volume: number) => void;
   setSelectedVoiceURI: (voiceURI: string | null) => void;
+  setSelectedNarrationVoiceId: (voiceId: string | null) => void;
   setTotalSentences: (count: number) => void;
   setEstimatedDuration: (seconds: number) => void;
   setElapsedSeconds: (seconds: number) => void;
@@ -60,6 +62,7 @@ const initialState = {
   pitch: 1,
   volume: 1,
   selectedVoiceURI: null,
+  selectedNarrationVoiceId: null,
   totalSentences: 0,
   estimatedDurationSeconds: 0,
   elapsedSeconds: 0,
@@ -97,6 +100,8 @@ export const useTTSStore = create<TTSState>()(
       setPitch: (pitch) => set({ pitch: pitch }),
       setVolume: (volume) => set({ volume: volume }),
       setSelectedVoiceURI: (voiceURI) => set({ selectedVoiceURI: voiceURI }),
+      setSelectedNarrationVoiceId: (voiceId) =>
+        set({ selectedNarrationVoiceId: voiceId }),
       setTotalSentences: (count) => set({ totalSentences: count }),
       setEstimatedDuration: (seconds) =>
         set({ estimatedDurationSeconds: seconds }),
@@ -113,9 +118,10 @@ export const useTTSStore = create<TTSState>()(
         pitch: state.pitch,
         volume: state.volume,
         selectedVoiceURI: state.selectedVoiceURI,
+        selectedNarrationVoiceId: state.selectedNarrationVoiceId,
       }),
-    }
-  )
+    },
+  ),
 );
 
 // Playback rate options
@@ -127,7 +133,7 @@ export const getPlaybackRateLabel = (rate: number) => `${rate}x`;
 // Utility to estimate reading duration
 export const estimateReadingDuration = (
   wordCount: number,
-  playbackRate: number = 1
+  playbackRate: number = 1,
 ): number => {
   const wordsPerMinute = 150 * playbackRate; // Average TTS speaking rate
   return Math.ceil((wordCount / wordsPerMinute) * 60);
