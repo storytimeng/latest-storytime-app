@@ -37,12 +37,15 @@ import { ChapterSelector } from "./components/ChapterSelector";
 import { StoryContent } from "./components/StoryContent";
 import { InteractionSection } from "./components/InteractionSection";
 import { NavigationBar } from "./components/NavigationBar";
+import { StoryAudioBar } from "./components/StoryAudioBar";
 import { CommentsSection } from "./components/CommentsSection";
+import type { StoryReadingMode } from "./components/StoryHeader";
 
 // Custom hooks
 import { useScrollVisibility } from "./hooks/useScrollVisibility";
 import { useOfflineContent } from "./hooks/useOfflineContent";
 import { useStoryContent } from "./hooks/useStoryContent";
+import { useStoryAudio } from "@/src/hooks/useStoryAudio";
 
 interface ReadStoryViewProps {
   storyId: string;
@@ -64,8 +67,10 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
     router.prefetch(`/story/${storyId}`);
 
     // Check both store and cookies to avoid false negatives during hydration
-    const hasToken = isAuthenticated() || (typeof window !== 'undefined' && document.cookie.includes('authToken='));
-    
+    const hasToken =
+      isAuthenticated() ||
+      (typeof window !== "undefined" && document.cookie.includes("authToken="));
+
     if (!hasToken) {
       openAuthModal("login");
       router.push(`/story/${storyId}`);
@@ -84,10 +89,10 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
 
   // Data hooks - only fetch when online
   const { story, isLoading: isStoryLoading } = useStory(
-    isOnline ? storyId : undefined
+    isOnline ? storyId : undefined,
   );
-    const { likeCount, isLiked, toggleLike } = useStoryLikes(
-    isOnline ? storyId : undefined
+  const { likeCount, isLiked, toggleLike } = useStoryLikes(
+    isOnline ? storyId : undefined,
   );
 
   // Mark as read after delay
@@ -104,7 +109,6 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
 
     return () => clearTimeout(timer);
   }, [isOnline, storyId, markAsRead]);
-
 
   // Reading progress tracking
   const contentContainerRef = useRef<HTMLDivElement>(null);
@@ -148,29 +152,33 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
   const hasActualContent = (text: string) => {
     if (!text) return false;
     // Remove HTML tags and whitespace to check if there's actual text
-    const stripped = text.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
+    const stripped = text
+      .replace(/<[^>]*>/g, "")
+      .replace(/&nbsp;/g, " ")
+      .trim();
     return stripped.length > 0;
   };
 
   const storyEpisodes = Array.isArray(rawStoryEpisodes)
-    ? rawStoryEpisodes.filter((ep: any) => 
-        ep && (
-          (ep.title && ep.title.trim()) || 
-          hasActualContent(ep.content || ep.body || '')
-        )
+    ? rawStoryEpisodes.filter(
+        (ep: any) =>
+          ep &&
+          ((ep.title && ep.title.trim()) ||
+            hasActualContent(ep.content || ep.body || "")),
       )
     : [];
   const storyChapters = Array.isArray(rawStoryChapters)
-    ? rawStoryChapters.filter((ch: any) => 
-        ch && (
-          (ch.title && ch.title.trim()) || 
-          hasActualContent(ch.content || ch.body || '')
-        )
+    ? rawStoryChapters.filter(
+        (ch: any) =>
+          ch &&
+          ((ch.title && ch.title.trim()) ||
+            hasActualContent(ch.content || ch.body || "")),
       )
     : [];
 
   // Determine structure from story data
-  const hasChapters = (story as any)?.chapter === true && storyChapters.length > 0;
+  const hasChapters =
+    (story as any)?.chapter === true && storyChapters.length > 0;
   const hasEpisodes = !hasChapters && storyEpisodes.length > 0;
 
   // Use the metadata from story object for navigation list
@@ -178,14 +186,14 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
   const effectiveChapters = hasChapters ? storyChapters : [];
 
   // Debug: Log chapter/episode detection
-  console.log('Story Structure Debug:', {
+  console.log("Story Structure Debug:", {
     storyChapterFlag: (story as any)?.chapter,
     rawChaptersCount: rawStoryChapters.length,
     filteredChaptersCount: storyChapters.length,
     hasChapters,
     rawEpisodesCount: rawStoryEpisodes.length,
     filteredEpisodesCount: storyEpisodes.length,
-    hasEpisodes
+    hasEpisodes,
   });
 
   // Use counts from story data if available, otherwise use hook counts
@@ -193,6 +201,7 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
 
   // UI State
   const [showDropdown, setShowDropdown] = useState(false);
+  const [readingMode, setReadingMode] = useState<StoryReadingMode>("read");
 
   // Custom hooks for derived state
   const isNavVisible = useScrollVisibility();
@@ -221,6 +230,38 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
     initialContentId: initialContentId || undefined,
   });
 
+  const audioChapterId =
+    hasChapters && selectedChapterId ? selectedChapterId : null;
+  const audioEpisodeId =
+    !hasChapters && hasEpisodes && selectedChapterId ? selectedChapterId : null;
+
+  const storyAudio = useStoryAudio({
+    storyId,
+    chapterId: audioChapterId,
+    episodeId: audioEpisodeId,
+    enabled: readingMode === "listen" && isOnline && !isUsingOfflineData,
+  });
+
+  const handleReadingModeChange = useCallback(
+    (mode: StoryReadingMode) => {
+      if (mode === "read") {
+        storyAudio.stop();
+      }
+      setReadingMode(mode);
+    },
+    [storyAudio],
+  );
+
+  const handleAudioPreviousChapter = useCallback(() => {
+    storyAudio.stop();
+    handlePrevious();
+  }, [handlePrevious, storyAudio]);
+
+  const handleAudioNextChapter = useCallback(() => {
+    storyAudio.stop();
+    handleNext();
+  }, [handleNext, storyAudio]);
+
   // Memoize word count to avoid recalculating on every render/interval
   const totalWords = React.useMemo(() => {
     if (!currentContent) return 0;
@@ -231,7 +272,7 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
   const { progress: chapterProgress, updateProgress: updateChapterProgress } =
     useChapterProgress(
       hasChapters && isOnline ? storyId : undefined,
-      hasChapters && selectedChapterId ? selectedChapterId : undefined
+      hasChapters && selectedChapterId ? selectedChapterId : undefined,
     );
 
   const { progress: episodeProgress, updateProgress: updateEpisodeProgress } =
@@ -239,7 +280,7 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
       !hasChapters && hasEpisodes && isOnline ? storyId : undefined,
       !hasChapters && hasEpisodes && selectedChapterId
         ? selectedChapterId
-        : undefined
+        : undefined,
     );
 
   // Current progress data
@@ -271,7 +312,7 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
   } = useChapterComments(
     structure === "chapters" && selectedChapterId
       ? selectedChapterId
-      : undefined
+      : undefined,
   );
 
   const {
@@ -281,11 +322,12 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
   } = useEpisodeComments(
     structure === "episodes" && selectedChapterId
       ? selectedChapterId
-      : undefined
+      : undefined,
   );
 
   // Use comments from current content
-  const comments = structure === "single" ? storyComments : (currentComments || []);
+  const comments =
+    structure === "single" ? storyComments : currentComments || [];
   const displayCommentCount = comments.length;
 
   const handleCreateComment = async (text: string, parentId?: string) => {
@@ -327,7 +369,7 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
       ? (Date.now() - lastVisibilityChangeRef.current) / 1000
       : 0;
     const readingTimeSeconds = Math.floor(
-      accumulatedTimeRef.current + currentSessionTime
+      accumulatedTimeRef.current + currentSessionTime,
     );
 
     // If we can't measure content, return basic stats
@@ -516,6 +558,12 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
           showDropdown={showDropdown}
           onToggleDropdown={() => setShowDropdown(!showDropdown)}
           isOffline={isUsingOfflineData}
+          readingMode={readingMode}
+          onReadingModeChange={
+            isOnline && !isUsingOfflineData
+              ? handleReadingModeChange
+              : undefined
+          }
         />
 
         {/* Chapter Selector */}
@@ -533,77 +581,104 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
           <div className="px-4 py-8">
             <Skeleton className="w-full rounded-lg h-96" />
           </div>
-        ) : currentContent && (
-        <React.Fragment>
-            <div ref={storyContentRef}>
-              <StoryContent
-                content={currentContent}
-                authorName={
-                  activeStory.anonymous
-                    ? "Anonymous"
-                    : activeStory.author?.penName || "Anonymous"
-                }
-                authorAvatar={activeStory.author?.avatar}
-                hasNavigation={hasNavigation}
-                description={activeStory.description}
-              />
-            </div>
-
-            {/* Interaction Section (only when online) */}
-            {isOnline && (
-              <div className="px-4 pb-6">
-                <InteractionSection
-                  likeCount={displayLikeCount}
-                  commentCount={displayCommentCount}
-                  isLiked={isLiked || false}
-                  showComments={true}
-                  onToggleLike={toggleLike}
-                  onToggleComments={() => {}}
+        ) : (
+          currentContent && (
+            <React.Fragment>
+              <div ref={storyContentRef}>
+                <StoryContent
+                  content={currentContent}
+                  authorName={
+                    activeStory.anonymous
+                      ? "Anonymous"
+                      : activeStory.author?.penName || "Anonymous"
+                  }
+                  authorAvatar={activeStory.author?.avatar}
+                  hasNavigation={hasNavigation}
+                  description={activeStory.description}
+                  listenMode={readingMode === "listen"}
                 />
-
-                {/* Comments Section */}
-                <div ref={commentsSectionRef} className="pb-24">
-                  <Suspense
-                    fallback={
-                      <div className="py-4">
-                        <Skeleton className="w-full h-20 rounded-lg" />
-                      </div>
-                    }
-                  >
-                    <CommentsSection
-                      comments={comments || []}
-                      onSubmitComment={handleCreateComment}
-                      onUpdateComment={handleUpdateComment}
-                      onDeleteComment={handleDeleteComment}
-                      isThreaded={true}
-                      currentUser={
-                        user
-                          ? {
-                              id: user.id,
-                              penName: user.penName || user.firstName || "Anonymous",
-                              avatar: user.avatar || user.profilePicture || "",
-                            }
-                          : undefined
-                      }
-                    />
-                  </Suspense>
-                </div>
               </div>
-            )}
 
-            {/* Navigation Bar */}
-            {hasNavigation && navigationList && (
-              <NavigationBar
-                currentIndex={currentIndex}
-                total={navigationList.length}
-                onPrevious={handlePrevious}
-                onNext={handleNext}
-                isVisible={isNavVisible}
-                navigationList={navigationList}
-                selectedChapterId={selectedChapterId}
-              />
-            )}
-          </React.Fragment>
+              {/* Interaction Section (only when online) */}
+              {isOnline && (
+                <div className="px-4 pb-6">
+                  <InteractionSection
+                    likeCount={displayLikeCount}
+                    commentCount={displayCommentCount}
+                    isLiked={isLiked || false}
+                    showComments={true}
+                    onToggleLike={toggleLike}
+                    onToggleComments={() => {}}
+                  />
+
+                  {/* Comments Section */}
+                  <div ref={commentsSectionRef} className="pb-24">
+                    <Suspense
+                      fallback={
+                        <div className="py-4">
+                          <Skeleton className="w-full h-20 rounded-lg" />
+                        </div>
+                      }
+                    >
+                      <CommentsSection
+                        comments={comments || []}
+                        onSubmitComment={handleCreateComment}
+                        onUpdateComment={handleUpdateComment}
+                        onDeleteComment={handleDeleteComment}
+                        isThreaded={true}
+                        currentUser={
+                          user
+                            ? {
+                                id: user.id,
+                                penName:
+                                  user.penName || user.firstName || "Anonymous",
+                                avatar:
+                                  user.avatar || user.profilePicture || "",
+                              }
+                            : undefined
+                        }
+                      />
+                    </Suspense>
+                  </div>
+                </div>
+              )}
+
+              {/* Audio player — human narration */}
+              {readingMode === "listen" && (
+                <StoryAudioBar
+                  isVisible={isNavVisible}
+                  isLoading={storyAudio.isLoading}
+                  error={storyAudio.error}
+                  onPlay={storyAudio.play}
+                  onPause={storyAudio.pause}
+                  onResume={storyAudio.resume}
+                  onStop={storyAudio.stop}
+                  onSeek={storyAudio.seek}
+                  currentIndex={currentIndex}
+                  totalChapters={navigationList?.length ?? 0}
+                  onPreviousChapter={
+                    hasNavigation ? handleAudioPreviousChapter : undefined
+                  }
+                  onNextChapter={
+                    hasNavigation ? handleAudioNextChapter : undefined
+                  }
+                />
+              )}
+
+              {/* Browser TTS navigation — read mode with multi-part stories */}
+              {readingMode === "read" && hasNavigation && navigationList && (
+                <NavigationBar
+                  currentIndex={currentIndex}
+                  total={navigationList.length}
+                  onPrevious={handlePrevious}
+                  onNext={handleNext}
+                  isVisible={isNavVisible}
+                  navigationList={navigationList}
+                  selectedChapterId={selectedChapterId}
+                />
+              )}
+            </React.Fragment>
+          )
         )}
       </div>
     </TTSProvider>

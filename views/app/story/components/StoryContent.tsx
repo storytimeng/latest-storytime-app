@@ -24,6 +24,7 @@ interface StoryContentProps {
   authorAvatar?: string;
   hasNavigation: boolean;
   description?: string;
+  listenMode?: boolean;
   onPlayFromSentence?: (sentenceIndex: number) => void;
 }
 
@@ -41,6 +42,7 @@ export const StoryContent = React.memo(
     authorAvatar,
     hasNavigation,
     description,
+    listenMode = false,
   }: StoryContentProps) => {
     const { registerControls } = useTTSContext();
     const {
@@ -329,8 +331,10 @@ export const StoryContent = React.memo(
       }
     }, [resolvedVoice, selectedVoiceURI, setSelectedVoiceURI]);
 
-    // Register controls
+    // Register browser TTS controls only in read mode
     useEffect(() => {
+      if (listenMode) return;
+
       registerControls({
         play,
         pause,
@@ -341,7 +345,7 @@ export const StoryContent = React.memo(
         },
         seekToSentence,
       });
-    }, [registerControls, play, pause, stop, seekToSentence]);
+    }, [listenMode, registerControls, play, pause, stop, seekToSentence]);
 
     // Handle play from here - using tap/click with context menu
     const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -486,7 +490,7 @@ export const StoryContent = React.memo(
     return (
       <div
         ref={contentRef}
-        className={`px-4 py-6 pb-9 ${hasNavigation ? "pt-44" : "pt-32"}`}
+        className={`px-4 py-6 ${listenMode ? "pb-40" : "pb-9"} ${hasNavigation ? "pt-44" : "pt-32"}`}
       >
         {/* Context Menu Popup */}
         {contextMenu.isOpen && (
