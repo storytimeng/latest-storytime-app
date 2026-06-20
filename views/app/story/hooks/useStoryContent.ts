@@ -173,7 +173,11 @@ export function useStoryContent({
   }, [initialContentId, selectedChapterId, navigationList]);
 
   useEffect(() => {
-    if (isUsingOfflineData || !selectedChapterId || navigationList.length === 0) {
+    if (
+      isUsingOfflineData ||
+      !selectedChapterId ||
+      navigationList.length === 0
+    ) {
       return;
     }
 
@@ -184,7 +188,9 @@ export function useStoryContent({
 
     const start = Math.max(0, currentIdx - 1);
     const end = Math.min(navigationList.length, currentIdx + 3);
-    const partsToPrefetch = navigationList.slice(start, end) as { id: string }[];
+    const partsToPrefetch = navigationList.slice(start, end) as {
+      id: string;
+    }[];
 
     for (const part of partsToPrefetch) {
       if (isEpisodeMode) {
@@ -332,8 +338,7 @@ export function useStoryContent({
     currentIndex >= 0 && currentIndex < navigationList.length - 1
       ? navigationList[currentIndex + 1]
       : null;
-  const prevPart =
-    currentIndex > 0 ? navigationList[currentIndex - 1] : null;
+  const prevPart = currentIndex > 0 ? navigationList[currentIndex - 1] : null;
 
   return {
     selectedChapterId,

@@ -646,12 +646,8 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
                   total={navigationList.length}
                   nextPart={nextPart}
                   prevPart={prevPart}
-                  onNext={
-                    nextPart ? handleNextWithUrl : undefined
-                  }
-                  onPrevious={
-                    prevPart ? handlePreviousWithUrl : undefined
-                  }
+                  onNext={nextPart ? handleNextWithUrl : undefined}
+                  onPrevious={prevPart ? handlePreviousWithUrl : undefined}
                   isLoading={isPartLoading}
                 />
               ) : null}

@@ -81,7 +81,8 @@ export const StoryPartFooter = React.memo(
               ) : (
                 <ChevronRight className="w-4 h-4" />
               )}
-              Continue to {formatPartName(nextPart, partLabel, currentIndex + 1)}
+              Continue to{" "}
+              {formatPartName(nextPart, partLabel, currentIndex + 1)}
             </button>
           ) : (
             <p
