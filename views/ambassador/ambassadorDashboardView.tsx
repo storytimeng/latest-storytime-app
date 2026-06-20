@@ -23,12 +23,8 @@ import {
   getSixMonthCertificateDate,
   isSixMonthMilestone,
 } from "@/src/lib/ambassador-dashboard";
-import {
-  fetchAmbassadorDashboard,
-  fetchAmbassadorLeaderboard,
-  type AmbassadorDashboard,
-} from "@/src/lib/ambassadors";
-import { getDefaultLeaderboardScope } from "@/src/lib/leaderboard";
+import { fetchAmbassadorDashboard } from "@/src/lib/ambassadors";
+import { useRequireAmbassador } from "@/src/hooks/useRequireAmbassador";
 import { showToast } from "@/lib/showNotification";
 
 const CELEBRATION_SEEN_KEY = "storytime-ambassador-6month-celebration-seen";
@@ -36,8 +32,10 @@ const CELEBRATION_SEEN_KEY = "storytime-ambassador-6month-celebration-seen";
 export default function AmbassadorDashboardView() {
   const router = useRouter();
   const { user } = useUserProfile();
-  const [data, setData] = useState<AmbassadorDashboard | null>(null);
-  const [rank, setRank] = useState<number | null>(null);
+  const { isLoading: guardLoading, isAmbassador } = useRequireAmbassador();
+  const [data, setData] = useState<Awaited<
+    ReturnType<typeof fetchAmbassadorDashboard>
+  > | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [certificateOpen, setCertificateOpen] = useState(false);
@@ -52,17 +50,6 @@ export default function AmbassadorDashboardView() {
         if (cancelled) return;
 
         setData(dashboard);
-
-        const leaderboard = await fetchAmbassadorLeaderboard({
-          scope: getDefaultLeaderboardScope(dashboard.ambassador.type),
-          limit: 100,
-        });
-        if (cancelled) return;
-
-        const userRank = leaderboard.leaderboard.find(
-          (entry) => entry.ambassadorId === dashboard.ambassador.id,
-        )?.rank;
-        setRank(userRank ?? null);
       } catch (err) {
         if (!cancelled) {
           setError(
@@ -125,7 +112,7 @@ export default function AmbassadorDashboardView() {
   const handleCertificateDone = () => {
     showToast({
       type: "success",
-      message: "Certificate 1 was saved to your device successfully.",
+      message: "Use your browser print dialog to save the certificate.",
       duration: 3000,
     });
   };
@@ -141,7 +128,7 @@ export default function AmbassadorDashboardView() {
     setCelebrationOpen(false);
   };
 
-  if (loading) {
+  if (guardLoading || loading || !isAmbassador) {
     return (
       <div className="min-h-screen bg-accent-shade-1 flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary-colour" />
@@ -166,39 +153,37 @@ export default function AmbassadorDashboardView() {
 
   const { ambassador, stats, currentMonthlyReport } = data;
   const referralsThisMonth = currentMonthlyReport?.newReferrals ?? 0;
-  const storiesThisMonth =
-    currentMonthlyReport?.referralStoriesPublished ??
-    currentMonthlyReport?.storiesWritten ??
-    0;
+  const storiesThisMonth = currentMonthlyReport?.referralStoriesPublished ?? 0;
   const eventsThisMonth = currentMonthlyReport?.eventsHosted ?? 0;
   const referralTrend = formatTrendDelta(referralsThisMonth);
   const storiesTrend = formatTrendDelta(storiesThisMonth);
   const eventsTrend = formatTrendDelta(eventsThisMonth);
+  const rank = stats.rank ?? null;
 
   const impactStats = [
     {
-      value: referralsThisMonth,
+      value: stats.totalReferrals,
       label: "Total Referrals",
       trend: referralTrend.text,
       positive: referralTrend.positive,
     },
     {
       value: storiesThisMonth,
-      label: "Stories via Referrals",
+      label: "Referral Stories",
       trend: storiesTrend.text,
       positive: storiesTrend.positive,
     },
     {
       value: eventsThisMonth,
-      label: "Events Hosted",
+      label: "Events This Month",
       trend: eventsTrend.text,
       positive: eventsTrend.positive,
     },
     {
       value: stats.totalScore,
       label: "Ambassador Score",
-      trend: rank ? `↑ Rank #${rank}` : "↑ Rank —",
-      positive: true,
+      trend: rank ? `↑ Rank #${rank}` : "Unranked",
+      positive: Boolean(rank),
     },
   ];
 

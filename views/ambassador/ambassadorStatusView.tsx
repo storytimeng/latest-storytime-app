@@ -195,6 +195,18 @@ export default function AmbassadorStatusView() {
   useEffect(() => {
     if (!isLoading && overview?.isAmbassador) {
       router.replace("/ambassador/dashboard");
+      return;
+    }
+    if (!isLoading && !overview?.application) {
+      router.replace("/ambassador");
+      return;
+    }
+    if (!isLoading && overview?.application?.status === "accepted") {
+      router.replace(getAmbassadorEntryPath());
+      return;
+    }
+    if (!isLoading && overview?.application?.status === "declined") {
+      router.replace("/ambassador/declined");
     }
   }, [isLoading, overview, router]);
 
@@ -235,17 +247,6 @@ export default function AmbassadorStatusView() {
   const application = overview?.application;
 
   if (!application) {
-    router.replace("/ambassador");
-    return null;
-  }
-
-  if (application.status === "accepted") {
-    router.replace(getAmbassadorEntryPath());
-    return null;
-  }
-
-  if (application.status === "declined") {
-    router.replace("/ambassador/declined");
     return null;
   }
 

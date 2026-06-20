@@ -11,6 +11,7 @@ import {
   ShareGrowHeader,
 } from "@/components/ambassador/AmbassadorShareComponents";
 import { fetchAmbassadorReferrals } from "@/src/lib/ambassadors";
+import { useRequireAmbassador } from "@/src/hooks/useRequireAmbassador";
 import {
   filterReferrals,
   type AmbassadorReferralItem,
@@ -29,7 +30,15 @@ const EMPTY_STATS: ReferralImpactStats = {
   inactiveCount: 0,
 };
 
+function buildVanityShareUrl(displaySharePath: string): string {
+  if (typeof window === "undefined") {
+    return displaySharePath;
+  }
+  return `${window.location.origin}${displaySharePath}`;
+}
+
 export default function AmbassadorShareView() {
+  const { isLoading: guardLoading, isAmbassador } = useRequireAmbassador();
   const [shareUrl, setShareUrl] = useState("");
   const [referralCode, setReferralCode] = useState("");
   const [displaySharePath, setDisplaySharePath] = useState("");
@@ -37,10 +46,13 @@ export default function AmbassadorShareView() {
   const [stats, setStats] = useState<ReferralImpactStats>(EMPTY_STATS);
   const [filter, setFilter] = useState<ReferralFilter>("all");
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
 
   useEffect(() => {
+    if (guardLoading || !isAmbassador) return;
+
     fetchAmbassadorReferrals()
       .then((data) => {
         setShareUrl(data.shareUrl);
@@ -48,23 +60,30 @@ export default function AmbassadorShareView() {
         setDisplaySharePath(data.displaySharePath);
         setReferrals(data.referrals);
         setStats(data.stats);
+        setError(null);
       })
       .catch(() => {
+        setError("Failed to load referral data");
         showToast({ type: "error", message: "Failed to load referral data" });
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [guardLoading, isAmbassador]);
 
   const filteredReferrals = useMemo(
     () => filterReferrals(referrals, filter),
     [referrals, filter],
   );
 
+  const vanityShareUrl = useMemo(
+    () => (displaySharePath ? buildVanityShareUrl(displaySharePath) : shareUrl),
+    [displaySharePath, shareUrl],
+  );
+
   const hasReferrals = stats.totalPeopleReferred > 0;
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(shareUrl);
+      await navigator.clipboard.writeText(vanityShareUrl);
       setCopied(true);
       showToast({ type: "success", message: "Link copied!" });
       setTimeout(() => setCopied(false), 2000);
@@ -74,13 +93,28 @@ export default function AmbassadorShareView() {
   };
 
   const handleShare = () => {
-    void shareReferralLink(shareUrl, referralCode);
+    void shareReferralLink(vanityShareUrl, referralCode);
   };
 
-  if (loading) {
+  if (guardLoading || loading || !isAmbassador) {
     return (
       <div className="min-h-screen bg-accent-shade-1 flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary-colour" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-accent-shade-1 max-w-md mx-auto px-4 py-8 text-center text-grey-2">
+        <p>{error}</p>
+        <button
+          type="button"
+          className="mt-4 text-primary-colour underline"
+          onClick={() => window.location.reload()}
+        >
+          Try again
+        </button>
       </div>
     );
   }
@@ -92,7 +126,7 @@ export default function AmbassadorShareView() {
       <div className="space-y-5 pt-2">
         <ReferralLinkCard
           displaySharePath={displaySharePath}
-          shareUrl={shareUrl}
+          shareUrl={vanityShareUrl}
           referralCode={referralCode}
           copied={copied}
           onCopy={handleCopy}

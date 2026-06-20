@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@heroui/button";
 import { Magnetik_Medium, Magnetik_SemiBold } from "@/lib/font";
@@ -39,27 +40,27 @@ export default function AmbassadorIntroView() {
   const router = useRouter();
   const { overview, isLoading } = useAmbassadorOverview();
 
+  useEffect(() => {
+    if (isLoading || !overview) return;
+    if (overview.isAmbassador) {
+      router.replace(getAmbassadorEntryPath());
+      return;
+    }
+    if (overview.application?.status === "pending") {
+      router.replace("/ambassador/status");
+      return;
+    }
+    if (overview.application?.status === "declined") {
+      router.replace("/ambassador/declined");
+    }
+  }, [isLoading, overview, router]);
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-accent-shade-1 flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary-colour" />
       </div>
     );
-  }
-
-  if (overview?.isAmbassador) {
-    router.replace(getAmbassadorEntryPath());
-    return null;
-  }
-
-  if (overview?.application?.status === "pending") {
-    router.replace("/ambassador/status");
-    return null;
-  }
-
-  if (overview?.application?.status === "declined") {
-    router.replace("/ambassador/declined");
-    return null;
   }
 
   return (

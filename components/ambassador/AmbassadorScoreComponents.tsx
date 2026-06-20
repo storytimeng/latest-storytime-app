@@ -399,7 +399,7 @@ export function ScoreEmptyState({ nextResetDate }: { nextResetDate: string }) {
           <li>Awareness</li>
           <li>Reading</li>
           <li>Writing</li>
-          <li>Community Feedback</li>
+          <li>Community</li>
           <li>Consistency</li>
         </ul>
       </div>

@@ -20,9 +20,14 @@ import {
   type AmbassadorLeaderboardEntry,
   type LeaderboardScope,
 } from "@/src/lib/leaderboard";
+import { useRequireAmbassador } from "@/src/hooks/useRequireAmbassador";
+import { useUserProfile } from "@/src/hooks/useUserProfile";
+import { Loader2 } from "lucide-react";
 import { showToast } from "@/lib/showNotification";
 
 export default function AmbassadorLeaderboardView() {
+  const { isLoading: guardLoading, isAmbassador } = useRequireAmbassador();
+  const { user } = useUserProfile();
   const [scope, setScope] = useState<LeaderboardScope>("campus");
   const [entries, setEntries] = useState<AmbassadorLeaderboardEntry[]>([]);
   const [nextResetDate, setNextResetDate] = useState("");
@@ -101,6 +106,15 @@ export default function AmbassadorLeaderboardView() {
   };
 
   const showEmptyState = !loading && entries.length === 0;
+  const currentUserId = user?.id;
+
+  if (guardLoading || !isAmbassador) {
+    return (
+      <div className="min-h-screen bg-accent-shade-1 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary-colour" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-accent-shade-1 max-w-md mx-auto pb-10">
@@ -122,6 +136,7 @@ export default function AmbassadorLeaderboardView() {
               <LeaderboardEntryCard
                 key={`${entry.ambassadorId}-${entry.rank}`}
                 entry={entry}
+                isCurrentUser={entry.user?.id === currentUserId}
               />
             ))}
           </div>

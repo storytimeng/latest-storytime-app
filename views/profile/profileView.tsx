@@ -62,7 +62,8 @@ const ProfileView = () => {
   const { badges, certificates } = useUserAchievements();
   const { stats } = useApiUserStats();
   const { genres: apiGenres } = useGenres();
-  const { overview: ambassadorOverview } = useAmbassadorOverview();
+  const { overview: ambassadorOverview, isLoading: ambassadorLoading } =
+    useAmbassadorOverview();
 
   useEffect(() => {
     setAmbassadorEntryPath(getAmbassadorEntryPath());
@@ -70,35 +71,43 @@ const ProfileView = () => {
 
   const ambassadorApplication = ambassadorOverview?.application;
 
-  const ambassadorOption = ambassadorOverview?.isAmbassador
+  const ambassadorOption = ambassadorLoading
     ? {
-        id: "ambassador-dashboard",
-        label: "Ambassador Dashboard",
+        id: "ambassador-loading",
+        label: "Ambassador",
         icon: "🌟",
         type: "page" as const,
-        path: ambassadorEntryPath,
+        path: "/ambassador",
       }
-    : ambassadorApplication?.status === "pending"
+    : ambassadorOverview?.isAmbassador
       ? {
-          id: "ambassador-status",
-          label: "Application Status",
-          icon: "⏳",
+          id: "ambassador-dashboard",
+          label: "Ambassador Dashboard",
+          icon: "🌟",
           type: "page" as const,
-          path: "/ambassador/status",
+          path: ambassadorEntryPath,
         }
-      : ambassadorApplication?.status === "declined"
+      : ambassadorApplication?.status === "pending"
         ? {
-            id: "ambassador-declined",
+            id: "ambassador-status",
             label: "Application Status",
             icon: "⏳",
-            type: "modal" as const,
+            type: "page" as const,
+            path: "/ambassador/status",
           }
-        : {
-            id: "ambassador",
-            label: "Become an Ambassador",
-            icon: "🌟",
-            type: "modal" as const,
-          };
+        : ambassadorApplication?.status === "declined"
+          ? {
+              id: "ambassador-declined",
+              label: "Application Status",
+              icon: "⏳",
+              type: "modal" as const,
+            }
+          : {
+              id: "ambassador",
+              label: "Become an Ambassador",
+              icon: "🌟",
+              type: "modal" as const,
+            };
 
   const profileOptions = [
     {

@@ -165,13 +165,24 @@ function LeaderboardAvatar({
 
 interface LeaderboardEntryCardProps {
   entry: AmbassadorLeaderboardEntry;
+  isCurrentUser?: boolean;
 }
 
-export function LeaderboardEntryCard({ entry }: LeaderboardEntryCardProps) {
+export function LeaderboardEntryCard({
+  entry,
+  isCurrentUser = false,
+}: LeaderboardEntryCardProps) {
   const displayName = getLeaderboardDisplayName(entry.user);
 
   return (
-    <div className="rounded-2xl bg-white border border-grey-5 shadow-sm px-3 py-3 flex items-center gap-3">
+    <div
+      className={cn(
+        "rounded-2xl bg-white border shadow-sm px-3 py-3 flex items-center gap-3",
+        isCurrentUser
+          ? "border-complimentary-colour ring-1 ring-complimentary-colour/30"
+          : "border-grey-5",
+      )}
+    >
       <RankBadge rank={entry.rank} />
       <LeaderboardAvatar name={displayName} avatar={entry.user?.avatar} />
       <div className="min-w-0 flex-1">

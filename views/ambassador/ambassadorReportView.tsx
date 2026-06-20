@@ -28,6 +28,7 @@ import {
   type AmbassadorType,
   type MonthlyReport,
 } from "@/src/lib/ambassadors";
+import { useRequireAmbassador } from "@/src/hooks/useRequireAmbassador";
 import { showToast } from "@/lib/showNotification";
 
 type ViewPhase = "form" | "success";
@@ -143,11 +144,16 @@ function ReportSuccessScreen({
 
 export default function AmbassadorReportView() {
   const router = useRouter();
+  const { isLoading: guardLoading, isAmbassador } = useRequireAmbassador();
   const period = getCurrentReportPeriod();
   const { user } = useUserProfile();
 
   const [phase, setPhase] = useState<ViewPhase>("form");
   const [report, setReport] = useState<MonthlyReport | null>(null);
+  const [dashboardStats, setDashboardStats] = useState<{
+    totalReferrals: number;
+    monthsActive: number;
+  } | null>(null);
   const [ambassadorType, setAmbassadorType] =
     useState<AmbassadorType>("campus");
   const [loading, setLoading] = useState(true);
@@ -180,7 +186,25 @@ export default function AmbassadorReportView() {
 
   useEffect(() => {
     fetchAmbassadorDashboard()
-      .then((dashboard) => setAmbassadorType(dashboard.ambassador.type))
+      .then((dashboard) => {
+        setAmbassadorType(dashboard.ambassador.type);
+        const acceptedAt = dashboard.ambassador.acceptedAt
+          ? new Date(dashboard.ambassador.acceptedAt)
+          : null;
+        const monthsActive = acceptedAt
+          ? Math.max(
+              1,
+              Math.ceil(
+                (Date.now() - acceptedAt.getTime()) /
+                  (1000 * 60 * 60 * 24 * 30),
+              ),
+            )
+          : 1;
+        setDashboardStats({
+          totalReferrals: dashboard.stats.totalReferrals,
+          monthsActive,
+        });
+      })
       .catch(() => undefined);
   }, []);
 
@@ -268,9 +292,9 @@ export default function AmbassadorReportView() {
         setSummary(result.summary);
       } else {
         setSummary({
-          totalReferrals: newReferrals,
-          totalEventsHosted: 1,
-          monthsActive: 1,
+          totalReferrals: dashboardStats?.totalReferrals ?? newReferrals,
+          totalEventsHosted: result.report.eventsHosted,
+          monthsActive: dashboardStats?.monthsActive ?? 1,
           firstName:
             user?.firstName?.trim() || user?.penName?.trim() || "Ambassador",
         });
@@ -285,6 +309,14 @@ export default function AmbassadorReportView() {
       setSubmitting(false);
     }
   };
+
+  if (guardLoading || !isAmbassador) {
+    return (
+      <div className="min-h-screen bg-accent-shade-1 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary-colour" />
+      </div>
+    );
+  }
 
   if (loading) {
     return (

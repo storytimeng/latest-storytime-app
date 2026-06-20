@@ -86,6 +86,7 @@ export interface AmbassadorDashboard {
     totalReferrals: number;
     totalScore: number;
     tier: AmbassadorTier;
+    rank: number | null;
     scores: {
       awareness: number;
       reading: number;

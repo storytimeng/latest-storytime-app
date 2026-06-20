@@ -22,7 +22,7 @@ import {
 
 const NEXT_STEPS = [
   "Set up your Ambassador Dashboard and explore your tools",
-  "Download the Ambassador Guide to learn best practices",
+  "Explore your Ambassador Dashboard and referral tools",
   "Start sharing your unique referral link with your community",
 ] as const;
 
@@ -33,6 +33,9 @@ export default function AmbassadorWelcomeView() {
   useEffect(() => {
     if (!isLoading && hasSeenAmbassadorWelcome() && overview?.isAmbassador) {
       router.replace("/ambassador/dashboard");
+    }
+    if (!isLoading && !overview?.isAmbassador) {
+      router.replace("/profile");
     }
   }, [isLoading, overview, router]);
 
@@ -45,7 +48,6 @@ export default function AmbassadorWelcomeView() {
   }
 
   if (!overview?.isAmbassador) {
-    router.replace("/profile");
     return null;
   }
 
@@ -168,13 +170,13 @@ export default function AmbassadorWelcomeView() {
           </PrimaryFormButton>
           <button
             type="button"
-            onClick={() => router.push("/ambassador")}
+            onClick={() => router.push("/ambassador/dashboard")}
             className={cn(
               Magnetik_Medium.className,
               "w-full text-sm text-primary-colour underline underline-offset-2",
             )}
           >
-            Download Community Guidelines
+            Open Ambassador Hub
           </button>
         </div>
       </div>

@@ -81,5 +81,8 @@ export function formatTrendDelta(value: number): {
   if (value > 0) {
     return { text: `↑ +${value} this month`, positive: true };
   }
-  return { text: `↓ -${Math.abs(value)} this month`, positive: false };
+  if (value === 0) {
+    return { text: "No change this month", positive: true };
+  }
+  return { text: `${value} this month`, positive: false };
 }

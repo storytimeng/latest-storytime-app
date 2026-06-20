@@ -414,6 +414,9 @@ export function AmbassadorCertificateModal({
   onDone,
 }: AmbassadorCertificateModalProps) {
   const handleDone = () => {
+    if (typeof window !== "undefined") {
+      window.print();
+    }
     onDone?.();
     onClose();
   };
@@ -517,7 +520,7 @@ export function AmbassadorCertificateModal({
                 Magnetik_Medium.className,
               )}
             >
-              Done
+              Save / Print
             </button>
           </div>
         </ModalBody>

@@ -13,6 +13,7 @@ import {
 } from "@/lib/font";
 import { PrimaryFormButton } from "@/components/ambassador/application-form-ui";
 import { useAmbassadorOverview } from "@/src/hooks/useAmbassador";
+import { useSupportStore } from "@/src/stores/useSupportStore";
 import { getAmbassadorEntryPath } from "@/src/lib/ambassadors";
 
 const GROWTH_TIPS = [
@@ -24,11 +25,19 @@ const GROWTH_TIPS = [
 
 export default function AmbassadorDeclinedView() {
   const router = useRouter();
+  const openSupportModal = useSupportStore((state) => state.openModal);
   const { overview, isLoading } = useAmbassadorOverview();
 
   useEffect(() => {
     if (!isLoading && overview?.isAmbassador) {
       router.replace(getAmbassadorEntryPath());
+      return;
+    }
+    if (
+      !isLoading &&
+      (!overview?.application || overview.application.status !== "declined")
+    ) {
+      router.replace("/profile");
     }
   }, [isLoading, overview, router]);
 
@@ -43,7 +52,6 @@ export default function AmbassadorDeclinedView() {
   const application = overview?.application;
 
   if (!application || application.status !== "declined") {
-    router.replace("/profile");
     return null;
   }
 
@@ -131,7 +139,7 @@ export default function AmbassadorDeclinedView() {
             <span
               className={cn(Magnetik_SemiBold.className, "text-primary-colour")}
             >
-              30–60 days
+              30 days
             </span>{" "}
             once you&apos;ve:
           </p>
@@ -185,7 +193,7 @@ export default function AmbassadorDeclinedView() {
           </button>
           <button
             type="button"
-            onClick={() => router.push("/ambassador")}
+            onClick={() => openSupportModal()}
             className={cn(
               Magnetik_Medium.className,
               "w-full text-sm text-primary-colour underline underline-offset-2",
