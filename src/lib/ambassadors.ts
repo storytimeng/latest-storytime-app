@@ -313,16 +313,28 @@ export async function fetchAmbassadorReferrals() {
       id: string;
       source: string;
       signedUpAt: string;
+      storiesPublished: number;
+      status: "active" | "pending" | "inactive";
       user: {
         id: string;
         firstName: string;
         lastName: string;
         penName?: string;
         avatar?: string;
+        lastActiveAt?: string;
       } | null;
     }>;
+    stats: {
+      totalPeopleReferred: number;
+      activeThisMonth: number;
+      newCount: number;
+      activeCount: number;
+      pendingCount: number;
+      inactiveCount: number;
+    };
     shareUrl: string;
     referralCode: string;
+    displaySharePath: string;
   }>("/ambassadors/referrals");
 }
 
