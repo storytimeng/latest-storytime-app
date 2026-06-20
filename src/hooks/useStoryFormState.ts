@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import type { StoryFormData, StoryStructure } from "@/types/story";
+import { getStoryBlurbValidationError } from "@/lib/storyBlurb";
 
 interface UseStoryFormStateProps {
   initialData?: Partial<StoryFormData>;
@@ -12,17 +13,24 @@ interface UseStoryFormStateReturn {
   currentStep: "form" | "structure" | "writing" | "additional";
   storyStructure: StoryStructure;
   setFormData: React.Dispatch<React.SetStateAction<StoryFormData>>;
-  setFormErrors: React.Dispatch<React.SetStateAction<Partial<Record<keyof StoryFormData, string>>>>;
-  setCurrentStep: React.Dispatch<React.SetStateAction<"form" | "structure" | "writing" | "additional">>;
+  setFormErrors: React.Dispatch<
+    React.SetStateAction<Partial<Record<keyof StoryFormData, string>>>
+  >;
+  setCurrentStep: React.Dispatch<
+    React.SetStateAction<"form" | "structure" | "writing" | "additional">
+  >;
   setStoryStructure: React.Dispatch<React.SetStateAction<StoryStructure>>;
-  handleFieldChange: (field: keyof StoryFormData, value: string | number | boolean | string[]) => void;
+  handleFieldChange: (
+    field: keyof StoryFormData,
+    value: string | number | boolean | string[],
+  ) => void;
   handleGenreToggle: (genre: string) => void;
   validateForm: () => boolean;
   handleStructureNext: (structure: StoryStructure) => void;
 }
 
 const getInitialFormData = (
-  initialData?: Partial<StoryFormData>
+  initialData?: Partial<StoryFormData>,
 ): StoryFormData => ({
   title: "",
   collaborate: "",
@@ -52,7 +60,7 @@ export function useStoryFormState({
 }: UseStoryFormStateProps): UseStoryFormStateReturn {
   // Form state
   const [formData, setFormData] = useState<StoryFormData>(() =>
-    getInitialFormData(initialData)
+    getInitialFormData(initialData),
   );
   const [formErrors, setFormErrors] = useState<
     Partial<Record<keyof StoryFormData, string>>
@@ -72,7 +80,9 @@ export function useStoryFormState({
     if (mode === "edit" && initialData) {
       return {
         hasChapters: initialData.chapter === true,
-        hasEpisodes: Array.isArray(initialData.episodes) && initialData.episodes.length > 0,
+        hasEpisodes:
+          Array.isArray(initialData.episodes) &&
+          initialData.episodes.length > 0,
       };
     }
     // For create mode, default to no structure (user will select in structure step)
@@ -89,8 +99,9 @@ export function useStoryFormState({
       setFormData(getInitialFormData(initialData));
       // Update story structure based on actual data
       const hasChapters = initialData.chapter === true;
-      const hasEpisodes = Array.isArray(initialData.episodes) && initialData.episodes.length > 0;
-      
+      const hasEpisodes =
+        Array.isArray(initialData.episodes) && initialData.episodes.length > 0;
+
       setStoryStructure({
         hasChapters,
         hasEpisodes,
@@ -104,7 +115,7 @@ export function useStoryFormState({
   const handleFieldChange = useCallback(
     (
       field: keyof StoryFormData,
-      value: string | number | boolean | string[]
+      value: string | number | boolean | string[],
     ) => {
       setFormData((prev) => ({ ...prev, [field]: value }));
       // Clear error when user starts typing
@@ -112,7 +123,7 @@ export function useStoryFormState({
         setFormErrors((prev) => ({ ...prev, [field]: undefined }));
       }
     },
-    [formErrors]
+    [formErrors],
   );
 
   // Handle genre selection
@@ -135,18 +146,14 @@ export function useStoryFormState({
     if (!formData.title.trim()) {
       errors.title = "Story title is required";
     } else if (!titleRegex.test(formData.title)) {
-      errors.title = "Title contains invalid characters. Only letters, numbers, spaces, and basic punctuation are allowed.";
+      errors.title =
+        "Title contains invalid characters. Only letters, numbers, spaces, and basic punctuation are allowed.";
     }
 
-    // Description: 50-100 words, at least 50 chars
-    const desc = formData.description.trim();
-    const descWords = desc.split(/\s+/).filter(Boolean);
-    if (!desc) {
-      errors.description = "Story description is required";
-    } else if (descWords.length < 50 || descWords.length > 100) {
-      errors.description = "Description must be 50-100 words.";
-    } else if (desc.length < 50) {
-      errors.description = "Description must be at least 50 characters.";
+    // Description: 50-100 words
+    const blurbError = getStoryBlurbValidationError(formData.description);
+    if (blurbError) {
+      errors.description = blurbError;
     }
 
     // Content validation: required when no chapters/episodes
@@ -194,7 +201,7 @@ export function useStoryFormState({
       }));
       setCurrentStep("writing");
     },
-    [formData]
+    [formData],
   );
 
   return {

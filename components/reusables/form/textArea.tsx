@@ -24,6 +24,7 @@ interface TextFieldProps {
   showWordCounter?: boolean;
   minWords?: number;
   maxWords?: number;
+  helperText?: string;
   className?: string;
   isRichText?: boolean;
 }
@@ -44,6 +45,7 @@ const TextAreaField: React.FC<TextFieldProps> = ({
   showWordCounter = false,
   minWords,
   maxWords,
+  helperText,
   className,
   isRichText = false,
 }) => {
@@ -57,42 +59,36 @@ const TextAreaField: React.FC<TextFieldProps> = ({
     ? countableText.split(/\s+/).filter(Boolean).length
     : 0;
 
-  // Determine counter color based on word count
   const getCounterColor = () => {
     if (!minWords || !maxWords) return "text-gray-500";
 
-    if (wordCount < minWords) {
-      // Below minimum - show red if close, yellow if very far
-      const progress = wordCount / minWords;
-      if (progress < 0.5) return "text-gray-500";
-      if (progress < 0.8) return "text-yellow-500";
+    if (isInvalid && wordCount < minWords) {
       return "text-red-500";
     }
 
     if (wordCount > maxWords) {
-      return "text-red-500"; // Over maximum - red
+      return isInvalid ? "text-red-500" : "text-amber-600";
     }
 
-    // Within range
-    const remaining = maxWords - wordCount;
-    if (remaining <= 5) return "text-yellow-500"; // Close to max - yellow
-    return "text-green-500"; // Good range - green
+    if (wordCount >= minWords && wordCount <= maxWords) {
+      return "text-green-600";
+    }
+
+    return "text-gray-500";
   };
 
   const getCounterText = () => {
     if (!minWords || !maxWords) return `${wordCount} words`;
 
     if (wordCount < minWords) {
-      const needed = minWords - wordCount;
-      return `${wordCount}/${minWords} words (${needed} more needed)`;
+      return `${wordCount} words · ${minWords}–${maxWords} required`;
     }
 
     if (wordCount > maxWords) {
-      const excess = wordCount - maxWords;
-      return `${wordCount}/${maxWords} words (${excess} over limit)`;
+      return `${wordCount} words · over ${maxWords}-word limit`;
     }
 
-    return `${wordCount}/${maxWords} words`;
+    return `${wordCount} words · within limit`;
   };
 
   // Determine if we should use Rich Text Editor
@@ -103,6 +99,9 @@ const TextAreaField: React.FC<TextFieldProps> = ({
         <Label htmlFor={htmlFor} className={cn("mb-2 text-sm text-black")}>
           {label} {required && <sup className="text-danger">*</sup>}
         </Label>
+        {helperText && (
+          <p className="-mt-1 mb-2 text-xs text-gray-500">{helperText}</p>
+        )}
         <RichTextEditor
           value={value || ""}
           onChange={handleChange}
@@ -113,10 +112,11 @@ const TextAreaField: React.FC<TextFieldProps> = ({
         {/* Word counter for RTE can be estimated from stripped HTML if needed, 
             but for now we'll rely on the same logic if passed */}
         {showWordCounter && (
-          <div className={`text-xs font-medium ${getCounterColor()}`}>
+          <div
+            className={`text-xs font-medium ${getCounterColor()}`}
+            aria-live="polite"
+          >
             {getCounterText()}
-            {/* Note: Word count on HTML values can be inaccurate without stripping tags. 
-                Ideally RichTextEditor should expose a plain text word count or we strip tags here. */}
           </div>
         )}
         {isInvalid && (
@@ -131,6 +131,9 @@ const TextAreaField: React.FC<TextFieldProps> = ({
       <Label htmlFor={htmlFor} className={cn("mb-2 text-sm text-black")}>
         {label} {required && <sup className="text-danger">*</sup>}
       </Label>
+      {helperText && (
+        <p className="-mt-1 mb-2 text-xs text-gray-500">{helperText}</p>
+      )}
       <Textarea
         id={id}
         placeholder={placeholder}
@@ -168,7 +171,10 @@ const TextAreaField: React.FC<TextFieldProps> = ({
         }}
       />
       {showWordCounter && (
-        <div className={`text-xs font-medium ${getCounterColor()}`}>
+        <div
+          className={`text-xs font-medium ${getCounterColor()}`}
+          aria-live="polite"
+        >
           {getCounterText()}
         </div>
       )}
