@@ -164,22 +164,27 @@ export default function AmbassadorDashboardView() {
 
   const { ambassador, stats, currentMonthlyReport } = data;
   const referralsThisMonth = currentMonthlyReport?.newReferrals ?? 0;
+  const storiesThisMonth =
+    currentMonthlyReport?.referralStoriesPublished ??
+    currentMonthlyReport?.storiesWritten ??
+    0;
   const eventsThisMonth = currentMonthlyReport?.eventsHosted ?? 0;
   const referralTrend = formatTrendDelta(referralsThisMonth);
+  const storiesTrend = formatTrendDelta(storiesThisMonth);
   const eventsTrend = formatTrendDelta(eventsThisMonth);
 
   const impactStats = [
     {
-      value: stats.totalReferrals,
+      value: referralsThisMonth,
       label: "Total Referrals",
       trend: referralTrend.text,
       positive: referralTrend.positive,
     },
     {
-      value: 0,
+      value: storiesThisMonth,
       label: "Stories via Referrals",
-      trend: formatTrendDelta(0).text,
-      positive: false,
+      trend: storiesTrend.text,
+      positive: storiesTrend.positive,
     },
     {
       value: eventsThisMonth,
