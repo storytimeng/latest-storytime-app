@@ -23,8 +23,16 @@ const PremiumBanner: React.FC<PremiumBannerProps> = ({
 }) => {
   const { isPremium, isLoading } = usePremiumFeatures();
 
-  if (isPremium || isLoading) {
+  if (isPremium) {
     return null;
+  }
+
+  if (isLoading) {
+    return (
+      <div className={`block mb-4 ${className}`} aria-hidden>
+        <div className="h-[72px] rounded-lg bg-[#FFEBD0]/60 animate-pulse" />
+      </div>
+    );
   }
 
   return (

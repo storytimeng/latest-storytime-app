@@ -311,7 +311,7 @@ const ProfileView = () => {
         </div>
 
         {/* Content Section - Background visible behind bleeding card */}
-        <div className="min-h-screen bg-accent-shade-1">
+        <div className="min-h-screen bg-accent-shade-1 pb-10">
           <div className="px-4 pt-20">
             {/* Added top padding to accommodate bleeding card */}
             {/* Genre Section */}
@@ -349,7 +349,7 @@ const ProfileView = () => {
             </div>
 
             {/* Profile Options */}
-            <div className="space-y-[1px] mb-[34px] bg-primary-shade-1">
+            <div className="space-y-[1px] mb-6 bg-primary-shade-1">
               {profileOptions.map((option) => (
                 <div
                   key={option.id}
@@ -366,8 +366,13 @@ const ProfileView = () => {
               ))}
             </div>
 
-            {/* Premium Banner */}
-            <PremiumBanner emoji="🎯" className="" />
+            {/* Premium upsell — hidden automatically for active subscribers */}
+            <PremiumBanner
+              emoji="✨"
+              title="Go Premium"
+              subtitle="Subscribe to unlock advanced voices, playback controls, and more"
+              className="mb-8"
+            />
           </div>
         </div>
       </div>
