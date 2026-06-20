@@ -22,7 +22,9 @@ export function useStoryAudio({
   episodeId,
   enabled = true,
 }: UseStoryAudioOptions) {
-  const store = useTTSStore();
+  const playbackRate = useTTSStore((state) => state.playbackRate);
+  const volume = useTTSStore((state) => state.volume);
+
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const segmentsRef = useRef<StoryAudioSegment[]>([]);
   const segmentIndexRef = useRef(0);
@@ -30,6 +32,7 @@ export function useStoryAudio({
   const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const progressTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const reportedListenRef = useRef(false);
+  const manifestRef = useRef<StoryAudioManifest | null>(null);
 
   const [manifest, setManifest] = useState<StoryAudioManifest | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -50,35 +53,30 @@ export function useStoryAudio({
   }, []);
 
   const updateElapsed = useCallback(() => {
+    const tts = useTTSStore.getState();
     const audio = audioRef.current;
     const segments = segmentsRef.current;
     const currentSegment = segments[segmentIndexRef.current];
     const base = elapsedOffsetRef.current;
     const current = audio?.currentTime ?? 0;
     const elapsed = base + current;
-    store.setElapsedSeconds(Math.floor(elapsed));
+    const totalDurationSeconds = manifestRef.current?.totalDurationSeconds;
 
-    if (manifest?.totalDurationSeconds) {
-      const progress = Math.min(
-        100,
-        (elapsed / manifest.totalDurationSeconds) * 100,
-      );
-      void progress;
-    }
+    tts.setElapsedSeconds(Math.floor(elapsed));
 
-    if (currentSegment) {
+    if (currentSegment && totalDurationSeconds) {
       const sentenceEstimate = Math.floor(
-        (elapsed / Math.max(manifest?.totalDurationSeconds || 1, 1)) *
-          Math.max(store.totalSentences, 1),
+        (elapsed / Math.max(totalDurationSeconds, 1)) *
+          Math.max(tts.totalSentences, 1),
       );
-      store.setCurrentSentenceIndex(
+      tts.setCurrentSentenceIndex(
         Math.min(
           Math.max(sentenceEstimate, 0),
-          Math.max(store.totalSentences - 1, 0),
+          Math.max(tts.totalSentences - 1, 0),
         ),
       );
     }
-  }, [manifest?.totalDurationSeconds, store]);
+  }, []);
 
   const reportListen = useCallback(
     (completed: boolean, durationSeconds: number) => {
@@ -89,18 +87,19 @@ export function useStoryAudio({
         storyId,
         chapterId,
         episodeId,
-        voice: manifest?.voice,
+        voice: manifestRef.current?.voice,
         durationSeconds,
         completed,
       });
     },
-    [chapterId, episodeId, manifest?.voice, storyId],
+    [chapterId, episodeId, storyId],
   );
 
   const stopPlayback = useCallback(
     (options?: { completed?: boolean; report?: boolean }) => {
+      const tts = useTTSStore.getState();
       const durationSeconds = Math.max(
-        store.elapsedSeconds,
+        tts.elapsedSeconds,
         Math.floor(
           elapsedOffsetRef.current + (audioRef.current?.currentTime ?? 0),
         ),
@@ -118,14 +117,19 @@ export function useStoryAudio({
       }
       segmentIndexRef.current = 0;
       elapsedOffsetRef.current = 0;
-      store.stop();
-      store.setElapsedSeconds(0);
+      tts.stop();
+      tts.setElapsedSeconds(0);
     },
-    [clearProgressTimer, reportListen, store],
+    [clearProgressTimer, reportListen],
+  );
+
+  const playSegmentRef = useRef<(index: number) => Promise<void>>(
+    async () => {},
   );
 
   const playSegment = useCallback(
     async (index: number) => {
+      const tts = useTTSStore.getState();
       const segments = segmentsRef.current;
       const segment = segments[index];
       if (!segment) {
@@ -135,8 +139,8 @@ export function useStoryAudio({
 
       segmentIndexRef.current = index;
       const audio = new Audio(segment.url);
-      audio.playbackRate = store.playbackRate;
-      audio.volume = store.volume;
+      audio.playbackRate = tts.playbackRate;
+      audio.volume = tts.volume;
       audioRef.current = audio;
 
       await new Promise<void>((resolve, reject) => {
@@ -153,17 +157,23 @@ export function useStoryAudio({
       elapsedOffsetRef.current += segment.durationSeconds;
 
       if (index < segments.length - 1) {
-        await playSegment(index + 1);
+        await playSegmentRef.current(index + 1);
         return;
       }
 
       stopPlayback({ completed: true });
     },
-    [stopPlayback, store.playbackRate, store.volume],
+    [stopPlayback],
   );
 
+  useEffect(() => {
+    playSegmentRef.current = playSegment;
+  }, [playSegment]);
+
+  const loadManifestRef = useRef<() => Promise<void>>(async () => {});
+
   const loadManifest = useCallback(async () => {
-    if (!enabled || !storyId) return;
+    if (!storyId) return;
 
     setIsLoading(true);
     setError(null);
@@ -175,12 +185,13 @@ export function useStoryAudio({
         episodeId,
       });
 
+      manifestRef.current = result;
       setManifest(result);
 
       if (result.status === "pending") {
         clearPollTimer();
         pollTimerRef.current = setTimeout(() => {
-          void loadManifest();
+          void loadManifestRef.current();
         }, 2500);
         return;
       }
@@ -198,7 +209,7 @@ export function useStoryAudio({
       segmentsRef.current = [...result.segments].sort(
         (a, b) => a.order - b.order,
       );
-      store.setEstimatedDuration(result.totalDurationSeconds);
+      useTTSStore.getState().setEstimatedDuration(result.totalDurationSeconds);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Unable to load narration audio.",
@@ -206,7 +217,11 @@ export function useStoryAudio({
     } finally {
       setIsLoading(false);
     }
-  }, [chapterId, clearPollTimer, enabled, episodeId, storyId, store]);
+  }, [chapterId, clearPollTimer, episodeId, storyId]);
+
+  useEffect(() => {
+    loadManifestRef.current = loadManifest;
+  }, [loadManifest]);
 
   const play = useCallback(async () => {
     if (!segmentsRef.current.length) {
@@ -218,9 +233,9 @@ export function useStoryAudio({
       return;
     }
 
-    stopPlayback();
+    stopPlayback({ report: false });
     reportedListenRef.current = false;
-    store.play();
+    useTTSStore.getState().play();
     clearProgressTimer();
     progressTimerRef.current = setInterval(updateElapsed, 250);
 
@@ -234,15 +249,14 @@ export function useStoryAudio({
     loadManifest,
     playSegment,
     stopPlayback,
-    store,
     updateElapsed,
   ]);
 
   const pause = useCallback(() => {
     audioRef.current?.pause();
-    store.pause();
+    useTTSStore.getState().pause();
     clearProgressTimer();
-  }, [clearProgressTimer, store]);
+  }, [clearProgressTimer]);
 
   const resume = useCallback(async () => {
     if (!audioRef.current && segmentsRef.current.length > 0) {
@@ -251,39 +265,38 @@ export function useStoryAudio({
     }
 
     await audioRef.current?.play();
-    store.play();
+    useTTSStore.getState().play();
     clearProgressTimer();
     progressTimerRef.current = setInterval(updateElapsed, 250);
-  }, [clearProgressTimer, playSegment, store, updateElapsed]);
+  }, [clearProgressTimer, playSegment, updateElapsed]);
 
   const seek = useCallback(
     async (seconds: number) => {
+      const tts = useTTSStore.getState();
       const segments = segmentsRef.current;
-      if (!segments.length || !manifest?.totalDurationSeconds) return;
+      const totalDurationSeconds = manifestRef.current?.totalDurationSeconds;
+      if (!segments.length || !totalDurationSeconds) return;
 
-      const target = Math.max(
-        0,
-        Math.min(seconds, manifest.totalDurationSeconds),
-      );
+      const target = Math.max(0, Math.min(seconds, totalDurationSeconds));
       let accumulated = 0;
 
       for (let index = 0; index < segments.length; index += 1) {
         const next = accumulated + segments[index].durationSeconds;
         if (target <= next) {
-          stopPlayback();
+          stopPlayback({ report: false });
           segmentIndexRef.current = index;
           elapsedOffsetRef.current = accumulated;
-          store.play();
+          tts.play();
           clearProgressTimer();
           progressTimerRef.current = setInterval(updateElapsed, 250);
 
           const audio = new Audio(segments[index].url);
-          audio.playbackRate = store.playbackRate;
-          audio.volume = store.volume;
+          audio.playbackRate = tts.playbackRate;
+          audio.volume = tts.volume;
           audio.currentTime = Math.max(0, target - accumulated);
           audioRef.current = audio;
           audio.onended = () => {
-            void playSegment(index + 1);
+            void playSegmentRef.current(index + 1);
           };
           await audio.play();
           return;
@@ -291,49 +304,40 @@ export function useStoryAudio({
         accumulated = next;
       }
     },
-    [
-      clearProgressTimer,
-      manifest?.totalDurationSeconds,
-      playSegment,
-      stopPlayback,
-      store,
-      updateElapsed,
-    ],
+    [clearProgressTimer, playSegment, stopPlayback, updateElapsed],
   );
+
+  const stopPlaybackRef = useRef(stopPlayback);
+  useEffect(() => {
+    stopPlaybackRef.current = stopPlayback;
+  }, [stopPlayback]);
 
   useEffect(() => {
     if (!enabled) {
-      stopPlayback();
-      clearPollTimer();
-      return;
+      return () => {
+        stopPlaybackRef.current({ report: false });
+        clearPollTimer();
+      };
     }
 
-    stopPlayback();
     segmentsRef.current = [];
+    manifestRef.current = null;
     setManifest(null);
     reportedListenRef.current = false;
-    void loadManifest();
+    void loadManifestRef.current();
 
     return () => {
-      stopPlayback();
+      stopPlaybackRef.current({ report: false });
       clearPollTimer();
     };
-  }, [
-    chapterId,
-    clearPollTimer,
-    enabled,
-    episodeId,
-    loadManifest,
-    stopPlayback,
-    storyId,
-  ]);
+  }, [clearPollTimer, enabled, storyId, chapterId, episodeId]);
 
   useEffect(() => {
     if (audioRef.current) {
-      audioRef.current.playbackRate = store.playbackRate;
-      audioRef.current.volume = store.volume;
+      audioRef.current.playbackRate = playbackRate;
+      audioRef.current.volume = volume;
     }
-  }, [store.playbackRate, store.volume]);
+  }, [playbackRate, volume]);
 
   return {
     manifest,

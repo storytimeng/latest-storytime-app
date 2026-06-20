@@ -249,18 +249,18 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
       }
       setReadingMode(mode);
     },
-    [storyAudio],
+    [storyAudio.stop],
   );
 
   const handleAudioPreviousChapter = useCallback(() => {
     storyAudio.stop();
     handlePrevious();
-  }, [handlePrevious, storyAudio]);
+  }, [handlePrevious, storyAudio.stop]);
 
   const handleAudioNextChapter = useCallback(() => {
     storyAudio.stop();
     handleNext();
-  }, [handleNext, storyAudio]);
+  }, [handleNext, storyAudio.stop]);
 
   // Memoize word count to avoid recalculating on every render/interval
   const totalWords = React.useMemo(() => {
