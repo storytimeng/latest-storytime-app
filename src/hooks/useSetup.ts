@@ -21,6 +21,7 @@ import type {
   SetupFormData,
 } from "@/components/setup/types";
 import { showToast } from "@/lib/showNotification";
+import { prepareAuthSession } from "@/src/lib/authSession";
 
 /**
  * Format TimeValue to API-compatible string (e.g., "06:45 AM")
@@ -37,7 +38,7 @@ function formatReminder(writeDaily: boolean, writeDays: string[]): string {
   if (writeDaily) {
     return "daily";
   }
-  
+
   // Check if it's Mon-Fri
   if (
     writeDays.length === 5 &&
@@ -49,7 +50,7 @@ function formatReminder(writeDaily: boolean, writeDays: string[]): string {
   ) {
     return "mon-fri";
   }
-  
+
   // Custom days - return comma-separated lowercase
   return writeDays.map((d) => d.toLowerCase()).join(",");
 }
@@ -77,6 +78,19 @@ export function useSetup() {
     }
   }, []);
 
+  // Require a valid session (from email verification or login) before onboarding
+  useEffect(() => {
+    void prepareAuthSession().then((token) => {
+      if (!token) {
+        showToast({
+          type: "error",
+          message: "Please verify your email before completing setup.",
+          duration: 4000,
+        });
+        router.replace("/auth/otp");
+      }
+    });
+  }, [router]);
 
   // Sync with hash on mount and on hash change
   useEffect(() => {
@@ -106,7 +120,9 @@ export function useSetup() {
   const [penName, setPenName] = useState("");
   const [penStatus, setPenStatus] = useState<PenNameStatus>("idle");
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [activeUploadTrigger, setActiveUploadTrigger] = useState<(() => Promise<string | null>) | null>(null);
+  const [activeUploadTrigger, setActiveUploadTrigger] = useState<
+    (() => Promise<string | null>) | null
+  >(null);
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
   const [readTime, setReadTime] = useState<TimeValue>({
     hour: 6,
@@ -135,27 +151,28 @@ export function useSetup() {
       minutes: Array.from({ length: 60 }, (_, i) => i),
       periods: ["AM", "PM"] as const,
     }),
-    []
+    [],
   );
 
   /**
    * Check pen name availability
    * Uses SWR mutation for proper loading/error states
    */
-  const { trigger: triggerCheckPenName, isMutating: isCheckingPenName } = useSWRMutation(
-    "check-pen-name",
-    async (_key: string, { arg }: { arg: string }) => {
-      const response = await usersControllerCheckPenNameAvailability({
-        query: { penName: arg },
-      });
+  const { trigger: triggerCheckPenName, isMutating: isCheckingPenName } =
+    useSWRMutation(
+      "check-pen-name",
+      async (_key: string, { arg }: { arg: string }) => {
+        const response = await usersControllerCheckPenNameAvailability({
+          query: { penName: arg },
+        });
 
-      if (response.error) {
-        throw response.error;
-      }
+        if (response.error) {
+          throw response.error;
+        }
 
-      return response.data;
-    }
-  );
+        return response.data;
+      },
+    );
 
   const checkPenName = useCallback(async () => {
     const name = penName.trim();
@@ -165,7 +182,7 @@ export function useSetup() {
 
     try {
       const data = await triggerCheckPenName(name);
-      
+
       // Handle potential nested data structure from API
       // The API might return { data: { available: true } } instead of just { available: true }
       const result = (data as any).data || data;
@@ -202,45 +219,51 @@ export function useSetup() {
    * Submit profile setup
    * Uses SWR mutation for proper loading/error states
    */
-  const submitSetupMutation = useSWRMutation(
-    "submit-setup",
-    async () => {
-      // If we have a preview URL that's a blob, it shouldn't be sent to the backend
-      let finalProfilePicture = imagePreview?.startsWith("blob:") ? undefined : imagePreview;
-
-      // Check if we have a pending upload trigger
-      if (activeUploadTrigger) {
-          try {
-              const uploadedUrl = await activeUploadTrigger();
-              if (uploadedUrl) {
-                  finalProfilePicture = uploadedUrl;
-              }
-          } catch (error) {
-              console.error("Failed to upload profile picture during setup:", error);
-              // If upload fails and we don't have a previous remote URL, we should probably not send the blob
-          }
-      }
-
-      const reminder = formatReminder(writeDaily, writeDays);
-
-      const response = await usersControllerSetupProfile({
-        body: {
-          penName: penName.trim(),
-          profilePicture: finalProfilePicture || undefined,
-          genres: selectedGenres,
-          timeToRead: formatTime(readTime),
-          timeToWrite: formatTime(writeTime),
-          reminder: reminder,
-        },
-      });
-
-      if (response.error) {
-        throw response.error;
-      }
-
-      return response.data;
+  const submitSetupMutation = useSWRMutation("submit-setup", async () => {
+    const token = await prepareAuthSession();
+    if (!token) {
+      throw new Error(
+        "Authentication required. Please verify your email first.",
+      );
     }
-  );
+
+    // If we have a preview URL that's a blob, it shouldn't be sent to the backend
+    let finalProfilePicture = imagePreview?.startsWith("blob:")
+      ? undefined
+      : imagePreview;
+
+    // Check if we have a pending upload trigger
+    if (activeUploadTrigger) {
+      try {
+        const uploadedUrl = await activeUploadTrigger();
+        if (uploadedUrl) {
+          finalProfilePicture = uploadedUrl;
+        }
+      } catch (error) {
+        console.error("Failed to upload profile picture during setup:", error);
+        // If upload fails and we don't have a previous remote URL, we should probably not send the blob
+      }
+    }
+
+    const reminder = formatReminder(writeDaily, writeDays);
+
+    const response = await usersControllerSetupProfile({
+      body: {
+        penName: penName.trim(),
+        profilePicture: finalProfilePicture || undefined,
+        genres: selectedGenres,
+        timeToRead: formatTime(readTime),
+        timeToWrite: formatTime(writeTime),
+        reminder: reminder,
+      },
+    });
+
+    if (response.error) {
+      throw response.error;
+    }
+
+    return response.data;
+  });
 
   /**
    * Validation logic for each step
@@ -308,11 +331,22 @@ export function useSetup() {
         setIsTransitioning(false);
       } catch (error) {
         console.error("Error submitting setup:", error);
+        const message =
+          error instanceof Error &&
+          error.message.includes("Authentication required")
+            ? error.message
+            : "Failed to setup profile. Please try again.";
         showToast({
           type: "error",
-          message: "Failed to setup profile. Please try again.",
+          message,
           duration: 3000,
         });
+        if (
+          error instanceof Error &&
+          error.message.includes("Authentication required")
+        ) {
+          router.replace("/auth/otp");
+        }
         setIsTransitioning(false);
       }
       return;
@@ -320,7 +354,15 @@ export function useSetup() {
 
     // Normal step progression
     await nextStepFunc();
-  }, [step, penName, penStatus, checkPenName, submitSetupMutation, updateHash]);
+  }, [
+    step,
+    penName,
+    penStatus,
+    checkPenName,
+    submitSetupMutation,
+    updateHash,
+    router,
+  ]);
 
   /**
    * Navigate to previous step
@@ -366,7 +408,7 @@ export function useSetup() {
       updateHash(stepId);
       setIsTransitioning(false);
     },
-    [step, updateHash, canContinue]
+    [step, updateHash, canContinue],
   );
 
   /**
@@ -387,7 +429,7 @@ export function useSetup() {
         goBack();
       }
     },
-    [canContinue, goNext, goBack, step]
+    [canContinue, goNext, goBack, step],
   );
 
   /**
@@ -395,7 +437,7 @@ export function useSetup() {
    */
   const toggleGenre = useCallback((genre: string) => {
     setSelectedGenres((prev) =>
-      prev.includes(genre) ? prev.filter((g) => g !== genre) : [...prev, genre]
+      prev.includes(genre) ? prev.filter((g) => g !== genre) : [...prev, genre],
     );
   }, []);
 
@@ -404,7 +446,7 @@ export function useSetup() {
    */
   const toggleDay = useCallback((day: string) => {
     setWriteDays((prev) =>
-      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
+      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day],
     );
   }, []);
 
@@ -454,7 +496,7 @@ export function useSetup() {
 
     // Utilities
     timeOptions,
-    
+
     // Loading states
     isCheckingPenName: isCheckingPenName,
     isSubmitting: submitSetupMutation.isMutating,

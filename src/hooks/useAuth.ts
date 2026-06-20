@@ -36,6 +36,27 @@ import type {
   ResetPasswordDto,
 } from "../client/types.gen";
 
+/** Unwrap access token from login/verify responses (handles TransformInterceptor nesting). */
+function extractAccessToken(responseData: unknown): string | undefined {
+  if (!responseData || typeof responseData !== "object") {
+    return undefined;
+  }
+
+  const data = responseData as Record<string, unknown>;
+  const nested =
+    data.data && typeof data.data === "object"
+      ? (data.data as Record<string, unknown>)
+      : undefined;
+
+  const token =
+    data.access_token ??
+    data.accessToken ??
+    nested?.access_token ??
+    nested?.accessToken;
+
+  return typeof token === "string" ? token : undefined;
+}
+
 /**
  * Generic auth mutation helper
  * Handles common patterns: error handling, type safety, and response unwrapping
@@ -97,11 +118,15 @@ export function useLogin() {
       const response = await authControllerLogin({ body });
 
       // Handle token persistence
-      const responseData = response.data as any;
-      const accessToken =
-        responseData?.accessToken || responseData?.data?.accessToken;
+      const responseData = response.data as Record<string, unknown> | undefined;
+      const nested =
+        responseData?.data && typeof responseData.data === "object"
+          ? (responseData.data as Record<string, unknown>)
+          : undefined;
+      const accessToken = extractAccessToken(responseData);
       const refreshToken =
-        responseData?.refreshToken || responseData?.data?.refreshToken;
+        (responseData?.refreshToken as string | undefined) ??
+        (nested?.refreshToken as string | undefined);
 
       if (accessToken) {
         setRememberMePreference(Boolean(remember));
@@ -147,8 +172,11 @@ export function useVerifyEmail() {
       });
 
       // Auto-authenticate after email verification
-      if (response.data?.access_token) {
-        setAuthToken(response.data.access_token);
+      const accessToken = extractAccessToken(response.data);
+      if (accessToken) {
+        setAuthToken(accessToken);
+      } else {
+        console.warn("No access token in verify email response");
       }
 
       return response;
