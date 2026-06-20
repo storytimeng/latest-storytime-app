@@ -70,6 +70,7 @@ const COMMITMENTS = [
 ] as const;
 
 const MOTIVATION_MIN = 250;
+const MOTIVATION_MAX = 1000;
 const OTHER_PROFILE_TYPE = "Other (specify)";
 const OTHER_PROMOTION = "Other (specify)";
 
@@ -369,7 +370,9 @@ export default function AmbassadorApplicationView() {
         break;
       case 2:
         if (motivation.trim().length < MOTIVATION_MIN) {
-          nextErrors.motivation = `Please write at least ${MOTIVATION_MIN} characters about your motivation.`;
+          nextErrors.motivation = `Please write at least ${MOTIVATION_MIN} characters (about 3–5 clear sentences).`;
+        } else if (motivation.trim().length > MOTIVATION_MAX) {
+          nextErrors.motivation = `Please keep your motivation within ${MOTIVATION_MAX} characters.`;
         }
         if (promotionMethods.length === 0) {
           nextErrors.promotionMethods =
@@ -666,11 +669,12 @@ export default function AmbassadorApplicationView() {
                 id="field-motivation"
                 value={motivation}
                 onChange={(value) => {
-                  setMotivation(value);
+                  setMotivation(value.slice(0, MOTIVATION_MAX));
                   clearError("motivation");
                 }}
                 placeholder="Write 3–5 clear sentences about your motivation"
                 rows={5}
+                maxLength={MOTIVATION_MAX}
                 focused={focusedField === "motivation"}
                 onFocus={() => setFocusedField("motivation")}
                 onBlur={() => setFocusedField(null)}
@@ -678,20 +682,30 @@ export default function AmbassadorApplicationView() {
                 invalid={!!errors.motivation}
                 errorMessage={errors.motivation}
               />
-              <div className="flex items-center justify-between gap-2">
+              <div className="flex items-start justify-between gap-2">
                 <HelperText>
-                  Write 3–5 clear sentences about your motivation
+                  Write 3–5 clear sentences about why you want to be a Storytime
+                  Ambassador. Minimum {MOTIVATION_MIN} characters, maximum{" "}
+                  {MOTIVATION_MAX} characters.
                 </HelperText>
                 <p
                   className={cn(
                     Magnetik_Regular.className,
-                    "text-xs shrink-0",
-                    motivation.length >= MOTIVATION_MIN
-                      ? "text-grey-3"
-                      : "text-complimentary-colour",
+                    "text-xs shrink-0 text-right",
+                    motivation.length >= MOTIVATION_MAX
+                      ? "text-red"
+                      : motivation.length >= MOTIVATION_MIN
+                        ? "text-grey-3"
+                        : "text-complimentary-colour",
                   )}
+                  aria-live="polite"
                 >
-                  {motivation.length}/{MOTIVATION_MIN} characters minimum
+                  {motivation.length}/{MOTIVATION_MAX}
+                  {motivation.length < MOTIVATION_MIN
+                    ? ` (${MOTIVATION_MIN - motivation.length} more needed)`
+                    : motivation.length >= MOTIVATION_MAX
+                      ? " (maximum reached)"
+                      : ""}
                 </p>
               </div>
             </div>

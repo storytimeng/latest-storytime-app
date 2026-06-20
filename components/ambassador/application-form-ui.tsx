@@ -294,6 +294,7 @@ export function FormTextArea({
   disabled = false,
   invalid = false,
   errorMessage,
+  maxLength,
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -306,6 +307,7 @@ export function FormTextArea({
   disabled?: boolean;
   invalid?: boolean;
   errorMessage?: string;
+  maxLength?: number;
 }) {
   return (
     <div>
@@ -317,6 +319,7 @@ export function FormTextArea({
         onBlur={onBlur}
         placeholder={placeholder}
         rows={rows}
+        maxLength={maxLength}
         disabled={disabled}
         aria-invalid={invalid}
         aria-describedby={errorMessage ? `${id}-error` : undefined}
