@@ -196,6 +196,8 @@ export function useStoryAudio({
         return;
       }
 
+      setIsLoading(false);
+
       if (result.status === "unavailable") {
         setError(result.message || "Human narration is unavailable.");
         return;
@@ -214,7 +216,6 @@ export function useStoryAudio({
       setError(
         err instanceof Error ? err.message : "Unable to load narration audio.",
       );
-    } finally {
       setIsLoading(false);
     }
   }, [chapterId, clearPollTimer, episodeId, storyId]);
