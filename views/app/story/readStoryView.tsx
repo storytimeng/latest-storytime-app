@@ -39,6 +39,7 @@ import { InteractionSection } from "./components/InteractionSection";
 import { NavigationBar } from "./components/NavigationBar";
 import { StoryAudioBar } from "./components/StoryAudioBar";
 import { StoryPartFooter } from "./components/StoryPartFooter";
+import { CommentsSection } from "./components/CommentsSection";
 import type { StoryReadingMode } from "./components/StoryHeader";
 
 // Custom hooks
