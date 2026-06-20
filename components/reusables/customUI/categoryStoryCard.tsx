@@ -6,6 +6,7 @@ import { Magnetik_Bold, Magnetik_Medium, Magnetik_Regular } from "@/lib/font";
 import { cn } from "@/lib/utils";
 import MarqueeText from "./marqueeText";
 import { StoryCoverImage } from "./StoryCoverImage";
+import { StoryStatusIcon } from "./StoryStatusIcon";
 
 interface Story {
   id: number;
@@ -46,17 +47,17 @@ const CategoryStoryCard = ({ story, className }: CategoryStoryCardProps) => {
 
       {/* Story Content */}
       <div className="p-3">
-        <div className="mb-1 flex items-center">
-          <div className="flex-1">
+        <div className="mb-1 flex items-center min-w-0">
+          <div className="flex-1 min-w-0">
             <MarqueeText
               text={story.title}
               className={`text-sm font-bold text-grey-1 ${Magnetik_Bold.className}`}
               speed={35}
             />
           </div>
-          <span className="ml-1 text-primary-colour text-xs flex-shrink-0">
-            {story.status === "Ongoing" ? "(Ongoing)" : ""}
-          </span>
+          {story.status ? (
+            <StoryStatusIcon status={story.status} className="ml-1 shrink-0" />
+          ) : null}
         </div>
 
         {/* Stats */}

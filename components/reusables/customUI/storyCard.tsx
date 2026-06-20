@@ -9,6 +9,7 @@ import { Magnetik_Regular } from "@/lib/font";
 import { cn } from "@/lib/utils";
 import { StoryResponseDto, AuthorDto } from "@/src/client/types.gen";
 import { StoryCoverImage } from "./StoryCoverImage";
+import { StoryStatusIcon } from "./StoryStatusIcon";
 
 // Extend AuthorDto to include fields that may be in the API response
 interface ExtendedAuthor extends AuthorDto {
@@ -136,23 +137,18 @@ const StoryCard = ({
       {/* Card Content */}
       <div className="space-y-2">
         {/* Title + Status */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 min-w-0">
           <h3
             className={cn(
-              "truncate text-sm font-semibold text-[#361B17] flex-1",
+              "truncate text-sm font-semibold text-[#361B17] flex-1 min-w-0",
             )}
           >
             {story.title}
           </h3>
-          <span
-            className={cn(
-              "text-xs px-2 py-0.5 rounded-full",
-              getStatusColor(story.storyStatus || story.status),
-              Magnetik_Regular.className,
-            )}
-          >
-            ({story.storyStatus || story.status || "Unknown"})
-          </span>
+          <StoryStatusIcon
+            status={story.storyStatus || story.status}
+            className="shrink-0"
+          />
         </div>
 
         {isPenMode ? (
@@ -247,22 +243,6 @@ function getInitials(name: string) {
     .map((n) => n[0])
     .join("")
     .toUpperCase();
-}
-
-function getStatusColor(status: string | undefined) {
-  if (!status) return "text-gray-500";
-  switch (status.toLowerCase()) {
-    case "complete":
-    case "completed":
-      return "text-green-600";
-    case "ongoing":
-      return "text-orange-600";
-    case "draft":
-    case "drafts":
-      return "text-red-500";
-    default:
-      return "text-black";
-  }
 }
 
 export default StoryCard;

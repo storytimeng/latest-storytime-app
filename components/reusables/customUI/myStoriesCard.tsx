@@ -7,6 +7,7 @@ import Link from "next/link";
 import { Magnetik_Medium, Magnetik_Regular } from "@/lib/font";
 import { cn } from "@/lib/utils";
 import { StoryCoverImage } from "./StoryCoverImage";
+import { StoryStatusIcon } from "./StoryStatusIcon";
 
 interface MyStory {
   id: string;
@@ -47,16 +48,16 @@ const MyStoriesCard = ({
     }
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusForIcon = (status: string) => {
     switch (status) {
       case "Ongoing":
-        return "text-complimentary-colour bg-complimentary-colour/10";
+        return "ongoing";
       case "Completed":
-        return "text-success-colour bg-success-colour/10";
+        return "completed";
       case "Draft":
-        return "text-primary-shade-4 bg-primary-shade-2/10";
+        return "draft";
       default:
-        return "text-primary-shade-4 bg-primary-shade-2/10";
+        return status;
     }
   };
 
@@ -98,19 +99,16 @@ const MyStoriesCard = ({
 
         {/* Story Info */}
         <div className="space-y-2">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 min-w-0">
             <h3
-              className={`text-primary-colour text-sm font-medium truncate flex-1 ${Magnetik_Medium.className}`}
+              className={`text-primary-colour text-sm font-medium truncate flex-1 min-w-0 ${Magnetik_Medium.className}`}
             >
               {story.title}
             </h3>
-            <span
-              className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${getStatusColor(
-                story.status,
-              )} ${Magnetik_Regular.className}`}
-            >
-              ({story.status})
-            </span>
+            <StoryStatusIcon
+              status={getStatusForIcon(story.status)}
+              className="shrink-0"
+            />
           </div>
 
           <div className="flex items-center gap-2">
