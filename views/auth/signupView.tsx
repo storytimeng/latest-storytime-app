@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { FormField, PasswordField } from "@/components/reusables/form";
 import { Button } from "@/components/ui/button";
 import { z } from "zod";
@@ -64,6 +64,22 @@ export default function SignupView({
 }: SignupViewProps) {
   const openSupportModal = useSupportStore((state) => state.openModal);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const refFromUrl = searchParams.get("ref")?.trim() || "";
+  const [referralCode, setReferralCode] = useState(refFromUrl);
+
+  useEffect(() => {
+    if (refFromUrl) {
+      sessionStorage.setItem("storytime_referral_code", refFromUrl);
+      setReferralCode(refFromUrl);
+      return;
+    }
+
+    const storedRef = sessionStorage.getItem("storytime_referral_code")?.trim();
+    if (storedRef) {
+      setReferralCode(storedRef);
+    }
+  }, [refFromUrl]);
   const { show: showLoading, hide: hideLoading } = useLoadingStore();
   // firstErrorRef removed (not used)
   const [formData, setFormData] = useState<SignupFormData>({
@@ -152,7 +168,7 @@ export default function SignupView({
 
   const handleInputChange = (
     field: keyof SignupFormData,
-    value: string | boolean
+    value: string | boolean,
   ) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
 
@@ -198,7 +214,7 @@ export default function SignupView({
         // Auto scroll to first error
         setTimeout(() => {
           const firstErrorElement = document.querySelector(
-            '[data-error="true"]'
+            '[data-error="true"]',
           ) as HTMLElement;
           if (firstErrorElement) {
             firstErrorElement.scrollIntoView({
@@ -225,9 +241,12 @@ export default function SignupView({
         dateOfBirth: `${formData.birthYear}-${formData.birthMonth}-${formData.birthDay}`,
         password: formData.password,
         agreement: formData.agreeToTerms,
+        ...(referralCode.trim() ? { referralCode: referralCode.trim() } : {}),
       };
 
       await registerTrigger(body);
+
+      sessionStorage.removeItem("storytime_referral_code");
 
       showToast({
         type: "success",
@@ -238,7 +257,7 @@ export default function SignupView({
         onSuccess();
       } else {
         router.push(
-          `/auth/otp?email=${encodeURIComponent(formData.email)}&type=signup`
+          `/auth/otp?email=${encodeURIComponent(formData.email)}&type=signup`,
         );
       }
     } catch (err: any) {
@@ -370,7 +389,7 @@ export default function SignupView({
                 selectedKeys={formData.birthDay ? [formData.birthDay] : []}
                 onSelectionChange={(keys: unknown) => {
                   const selectedKey = Array.from(
-                    keys as Set<string>
+                    keys as Set<string>,
                   )[0] as string;
                   handleInputChange("birthDay", selectedKey || "");
                 }}
@@ -393,7 +412,7 @@ export default function SignupView({
                 selectedKeys={formData.birthMonth ? [formData.birthMonth] : []}
                 onSelectionChange={(keys: unknown) => {
                   const selectedKey = Array.from(
-                    keys as Set<string>
+                    keys as Set<string>,
                   )[0] as string;
                   handleInputChange("birthMonth", selectedKey || "");
                 }}
@@ -414,7 +433,7 @@ export default function SignupView({
                 selectedKeys={formData.birthYear ? [formData.birthYear] : []}
                 onSelectionChange={(keys: unknown) => {
                   const selectedKey = Array.from(
-                    keys as Set<string>
+                    keys as Set<string>,
                   )[0] as string;
                   handleInputChange("birthYear", selectedKey || "");
                 }}

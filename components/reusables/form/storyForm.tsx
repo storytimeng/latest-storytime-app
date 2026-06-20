@@ -28,6 +28,11 @@ import { cn } from "@/lib/utils";
 import { showToast } from "@/lib/showNotification";
 import { ErrorModal } from "@/components/reusables/modals/ErrorModal";
 import { UPLOAD_PATHS } from "@/src/config/uploadPaths";
+import {
+  STORY_BLURB_HELPER_TEXT,
+  STORY_BLURB_MAX_WORDS,
+  STORY_BLURB_MIN_WORDS,
+} from "@/lib/storyBlurb";
 import { useImageUpload } from "@/src/hooks/useImageUpload";
 import { useGenres } from "@/src/hooks/useGenres";
 import { useStoryFormState } from "@/src/hooks/useStoryFormState";
@@ -902,18 +907,17 @@ const StoryForm: React.FC<StoryFormProps> = ({
         label="Story Blurb"
         htmlFor="description"
         id="description"
-        placeholder="Describe your story..."
+        placeholder="Summarize your story in 50–100 words…"
         value={formData.description}
         onChange={(value) => handleFieldChange("description", value)}
         isInvalid={!!formErrors.description}
         errorMessage={formErrors.description || ""}
         required
-        minLen={50}
-        maxLen={1000}
         rows={4}
         showWordCounter={true}
-        minWords={50}
-        maxWords={100}
+        minWords={STORY_BLURB_MIN_WORDS}
+        maxWords={STORY_BLURB_MAX_WORDS}
+        helperText={STORY_BLURB_HELPER_TEXT}
         className="max-h-[400px]"
       />
 

@@ -1,5 +1,5 @@
 import React from "react";
-import useSWR from "swr";
+import useSWR, { preload } from "swr";
 import {
   storiesControllerFindOne,
   storiesControllerGetStoryLikeCount,
@@ -314,6 +314,20 @@ export function useStoryEpisodes(storyId: string | undefined) {
   };
 }
 
+export async function fetchChapterById(chapterId: string) {
+  const response = await storiesControllerGetChapterById({
+    path: { chapterId },
+  });
+  return unwrap(response);
+}
+
+export async function fetchEpisodeById(episodeId: string) {
+  const response = await storiesControllerGetEpisodeById({
+    path: { episodeId },
+  });
+  return unwrap(response);
+}
+
 // Hook to fetch a single chapter by ID
 export function useChapter(chapterId: string | undefined) {
   const { data, error, isLoading, mutate } = useSWR(
@@ -324,6 +338,10 @@ export function useChapter(chapterId: string | undefined) {
         path: { chapterId },
       });
       return unwrap(response);
+    },
+    {
+      keepPreviousData: true,
+      revalidateOnFocus: false,
     },
   );
 
@@ -346,6 +364,10 @@ export function useEpisode(episodeId: string | undefined) {
         path: { episodeId },
       });
       return unwrap(response);
+    },
+    {
+      keepPreviousData: true,
+      revalidateOnFocus: false,
     },
   );
 

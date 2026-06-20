@@ -15,6 +15,7 @@ import { useUserProfile } from "@/src/hooks/useUserProfile";
 import { usersControllerGetProfile } from "@/src/client/sdk.gen";
 import { useUserStore } from "@/src/stores/useUserStore";
 import { showToast } from "@/lib/showNotification";
+import { getStoryBlurbValidationError } from "@/lib/storyBlurb";
 import {
   saveChaptersCache,
   saveEpisodesCache,
@@ -423,40 +424,11 @@ export function useStoryViewLogic({
         const hasChapters = formData.chapter === true;
         const hasEpisodes = formData.episodes === true;
 
-        const wordsCount = formData.description
-          .trim()
-          .split(/\s+/)
-          .filter(Boolean).length;
-        const descChars = formData.description.trim().length;
-
-        if (!formData.description.trim()) {
+        const blurbError = getStoryBlurbValidationError(formData.description);
+        if (blurbError) {
           showToast({
             type: "error",
-            message: "Description is required.",
-          });
-          return;
-        }
-
-        if (wordsCount < 50) {
-          showToast({
-            type: "error",
-            message: `Description needs at least 50 words. You have ${wordsCount} word${wordsCount !== 1 ? "s" : ""}.`,
-          });
-          return;
-        }
-
-        if (wordsCount > 100) {
-          showToast({
-            type: "error",
-            message: `Description cannot exceed 100 words. You have ${wordsCount} words.`,
-          });
-          return;
-        }
-
-        if (descChars < 50) {
-          showToast({
-            type: "error",
-            message: `Description needs at least 50 characters. You have ${descChars} character${descChars !== 1 ? "s" : ""}.`,
+            message: blurbError,
           });
           return;
         }

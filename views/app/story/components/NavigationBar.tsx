@@ -17,7 +17,6 @@ import {
   SkipForward,
 } from "lucide-react";
 import { Magnetik_Medium, Magnetik_Regular } from "@/lib/font";
-import { useRouter, useSearchParams } from "next/navigation";
 import {
   useTTSStore,
   formatDuration,
@@ -26,6 +25,7 @@ import {
 import { useTTSContext } from "@/components/providers/TTSProvider";
 import { TTSSettingsModal } from "./TTSSettingsModal";
 import { PremiumGate } from "@/components/reusables/PremiumGate";
+import { usePremiumFeatures } from "@/src/hooks/usePremiumFeatures";
 
 interface NavigationBarProps {
   currentIndex: number;
@@ -35,6 +35,8 @@ interface NavigationBarProps {
   isVisible: boolean;
   navigationList: any[];
   selectedChapterId: string | null;
+  partLabel?: string;
+  onTtsLocked?: () => void;
 }
 
 export const NavigationBar = React.memo(
@@ -45,63 +47,42 @@ export const NavigationBar = React.memo(
     onNext,
     isVisible,
     navigationList,
+    partLabel = "Chapter",
+    onTtsLocked,
   }: NavigationBarProps) => {
-    const router = useRouter();
-    const searchParams = useSearchParams();
-
     // TTS State & Controls
     const store = useTTSStore();
     const { play, pause, stop, seekToSentence, availableVoices } =
       useTTSContext();
+    const { checkFeature } = usePremiumFeatures();
+    const ttsEnabled = checkFeature("ttsEnabled");
 
     // Local UI State
     const [showSettings, setShowSettings] = useState(false);
     const [showSpeedPopover, setShowSpeedPopover] = useState(false);
 
-    // Chapter Navigation
-    const updateUrl = useCallback(
-      (direction: number) => {
-        const newIndex = currentIndex + direction;
-        if (newIndex < 0 || newIndex >= total) return;
-
-        const item = navigationList[newIndex];
-        if (!item) return;
-
-        const params = new URLSearchParams(searchParams.toString());
-        params.delete("chapterId");
-        params.delete("episodeId");
-
-        if ("chapterNumber" in item) {
-          params.set("chapterId", item.id);
-        } else if ("episodeNumber" in item) {
-          params.set("episodeId", item.id);
-        }
-
-        router.replace(`?${params.toString()}`, { scroll: false });
-      },
-      [currentIndex, total, navigationList, searchParams, router]
-    );
-
     const handlePreviousChapter = useCallback(() => {
       stop();
       onPrevious();
-      updateUrl(-1);
-    }, [stop, onPrevious, updateUrl]);
+    }, [stop, onPrevious]);
 
     const handleNextChapter = useCallback(() => {
       stop();
       onNext();
-      updateUrl(1);
-    }, [stop, onNext, updateUrl]);
+    }, [stop, onNext]);
 
     // TTS Controls
     const togglePlayPause = useCallback(() => {
+      if (!ttsEnabled) {
+        onTtsLocked?.();
+        return;
+      }
       if (store.isPlaying && !store.isPaused) {
         pause();
       } else {
         play();
       }
-    }, [store.isPlaying, store.isPaused, play, pause]);
+    }, [ttsEnabled, onTtsLocked, store.isPlaying, store.isPaused, play, pause]);
 
     const handleVolumeToggle = useCallback(() => {
       const newVolume = store.volume === 0 ? 1 : 0;
@@ -117,7 +98,7 @@ export const NavigationBar = React.memo(
     const handleSkipForward = useCallback(() => {
       const newIndex = Math.min(
         store.totalSentences - 1,
-        store.currentSentenceIndex + 1
+        store.currentSentenceIndex + 1,
       );
       seekToSentence(newIndex);
     }, [store.currentSentenceIndex, store.totalSentences, seekToSentence]);
@@ -133,19 +114,19 @@ export const NavigationBar = React.memo(
           const targetIndex = Math.floor(percent * store.totalSentences);
           const safeIndex = Math.min(
             Math.max(0, targetIndex),
-            store.totalSentences - 1
+            store.totalSentences - 1,
           );
 
           seekToSentence(safeIndex);
         }
       },
-      [store.estimatedDurationSeconds, store.totalSentences, seekToSentence]
+      [store.estimatedDurationSeconds, store.totalSentences, seekToSentence],
     );
 
     // Selected Voice Object
     const selectedVoice =
       availableVoices.find(
-        (v: SpeechSynthesisVoice) => v.voiceURI === store.selectedVoiceURI
+        (v: SpeechSynthesisVoice) => v.voiceURI === store.selectedVoiceURI,
       ) || null;
 
     return (
@@ -299,7 +280,7 @@ export const NavigationBar = React.memo(
                 <span
                   className={`text-xs text-primary-shade-4 ${Magnetik_Regular.className}`}
                 >
-                  Chapter {currentIndex + 1} / {total}
+                  {partLabel} {currentIndex + 1} / {total}
                 </span>
               </div>
 
@@ -342,7 +323,7 @@ export const NavigationBar = React.memo(
         />
       </>
     );
-  }
+  },
 );
 
 NavigationBar.displayName = "NavigationBar";

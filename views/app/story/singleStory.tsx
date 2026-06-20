@@ -22,6 +22,7 @@ import {
 import Image from "next/image";
 import { Magnetik_Regular, Magnetik_Bold } from "@/lib";
 import { cn } from "@/lib";
+import { genreCategoryPath } from "@/lib/genre";
 import { getStoryCoverSrc } from "@/lib/storyCover";
 import { StoryCoverImage } from "@/components/reusables/customUI";
 import {
@@ -50,6 +51,14 @@ import { ImagePreviewModal } from "@/components/reusables/modals/ImagePreviewMod
 import { motion, AnimatePresence, useScroll } from "framer-motion";
 import { CommentsSection } from "@/views/app/story/components/CommentsSection";
 import { shareStory } from "@/lib/share";
+import { usePremiumFeatures } from "@/src/hooks/usePremiumFeatures";
+import { usePremiumUpsell } from "@/src/hooks/usePremiumUpsell";
+import { PremiumUpsellModal } from "@/components/reusables/PremiumUpsellModal";
+import PremiumBanner from "@/components/reusables/customUI/PremiumBanner";
+import {
+  canReadExclusiveStory,
+  isExclusiveStory,
+} from "@/src/lib/premiumUpsell";
 
 interface SingleStoryProps {
   storyId?: string;
@@ -84,6 +93,9 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const { openModal: openAuthModal } = useAuthModalStore();
   const router = useRouter();
+  const { checkFeature } = usePremiumFeatures();
+  const { requireFeature, upsellReason, closeUpsell, isUpsellOpen } =
+    usePremiumUpsell();
   const [activeTab, setActiveTab] = useState<Tab>("episodes");
   const [reviewText, setReviewText] = useState("");
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
@@ -112,7 +124,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
     // Prefetch genre routes if available
     if (story?.genres) {
       story.genres.forEach((genre: any) => {
-        router.prefetch(`/category?genre=${encodeURIComponent(genre)}`);
+        router.prefetch(genreCategoryPath(String(genre)));
       });
     }
   }, [router, story?.genres]);
@@ -224,6 +236,10 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
   const handleSingleDownload = async (item: any, index: number) => {
     if (!isAuthenticated()) {
       openAuthModal("login");
+      return;
+    }
+
+    if (!requireFeature("offlineDownload")) {
       return;
     }
 
@@ -448,6 +464,10 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
       return;
     }
 
+    if (!requireFeature("offlineDownload")) {
+      return;
+    }
+
     if (!contentList || contentList.length === 0) return;
 
     let startIndex = 0;
@@ -497,6 +517,10 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
   const handleBulkDownload = async () => {
     if (!isAuthenticated()) {
       openAuthModal("login");
+      return;
+    }
+
+    if (!requireFeature("offlineDownload")) {
       return;
     }
 
@@ -651,6 +675,61 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
     return lastReadItem; // Current item
   }, [storyProgress, contentList, structure, aggregatedData]);
 
+  const isExclusive = Boolean((story as any)?.onlyOnStorytime);
+  const isExclusiveLocked =
+    isExclusive && !isAuthor && !checkFeature("exclusiveStories");
+
+  const buildReadUrl = React.useCallback(
+    (contentId?: string) => {
+      const targetId =
+        contentId ??
+        continueTarget?.id ??
+        (hasContent ? contentList[0]?.id : undefined);
+
+      if (targetId) {
+        return `/story/${storyId}/read?${structure === "chapters" ? "chapterId" : "episodeId"}=${targetId}`;
+      }
+      return `/story/${storyId}/read`;
+    },
+    [continueTarget?.id, contentList, hasContent, storyId, structure],
+  );
+
+  const handleStartReading = React.useCallback(
+    (contentId?: string) => {
+      if (!isAuthenticated()) {
+        openAuthModal("login");
+        return;
+      }
+
+      if (
+        isExclusive &&
+        !canReadExclusiveStory(
+          { onlyOnStorytime: true, authorId: storyAuthorId },
+          {
+            isPremium: checkFeature("exclusiveStories"),
+            userId: currentUser?.id,
+          },
+        )
+      ) {
+        requireFeature("exclusiveStory");
+        return;
+      }
+
+      router.push(buildReadUrl(contentId));
+    },
+    [
+      buildReadUrl,
+      checkFeature,
+      currentUser?.id,
+      isAuthenticated,
+      isExclusive,
+      openAuthModal,
+      requireFeature,
+      router,
+      storyAuthorId,
+    ],
+  );
+
   // Set default tab if single story
   useEffect(() => {
     if (isSingleStory && activeTab === "episodes") {
@@ -661,6 +740,15 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
   // Handle download
   const handleDownload = async () => {
     if (!story || !storyId) return;
+
+    if (!isAuthenticated()) {
+      openAuthModal("login");
+      return;
+    }
+
+    if (!requireFeature("offlineDownload")) {
+      return;
+    }
 
     setIsDownloading(true);
 
@@ -818,7 +906,6 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
   const author = story.author as ExtendedAuthorDto;
   const displayImage = getStoryCoverSrc(story.imageUrl);
   const status = (story as any).storyStatus || "Ongoing";
-  const isExclusive = (story as any).onlyOnStorytime || false;
   const viewCount = (story as any).viewCount || 0;
   const popularityScore = (story as any).popularityScore || 0;
 
@@ -985,7 +1072,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
         <div className="flex flex-wrap items-center gap-2 mb-3">
           {isExclusive && (
             <span className="inline-flex items-center bg-complimentary-colour text-white text-[10px] font-bold px-2.5 py-1 rounded uppercase tracking-wider shadow-sm">
-              #1 in {story.genres?.[0] || "Storytime"}
+              Only on Storytime
             </span>
           )}
           <span
@@ -1013,36 +1100,34 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
 
         {/* CTA Button */}
         <button
-          onClick={() => {
-            if (!isAuthenticated()) {
-              openAuthModal("login");
-              return;
-            }
-            const url = continueTarget
-              ? `/story/${storyId}/read?${structure === "chapters" ? "chapterId" : "episodeId"}=${continueTarget.id}`
-              : `/story/${storyId}/read${
-                  hasContent
-                    ? `?${structure === "chapters" ? "chapterId" : "episodeId"}=${contentList[0].id}`
-                    : ""
-                }`;
-            router.push(url);
-          }}
+          onClick={() => handleStartReading()}
           className="w-full bg-primary hover:bg-primary/90 text-white py-4 rounded-full font-bold text-base flex items-center justify-center gap-2.5 transition-all shadow-lg shadow-primary/25 active:scale-[0.98] my-4"
         >
           <Play size={20} className="fill-current" />
           <span>
-            {continueTarget && storyProgress
-              ? `Play ${structure === "chapters" ? "Chap" : "Ep"}-${
-                  continueTarget.number ||
-                  (structure === "chapters"
-                    ? continueTarget.chapterNumber
-                    : continueTarget.episodeNumber)
-                }`
-              : isSingleStory
-                ? "Read Story"
-                : `Play ${structure === "chapters" ? "Chap" : "Ep-"}1`}
+            {isExclusiveLocked
+              ? "Unlock with Premium"
+              : continueTarget && storyProgress
+                ? `Play ${structure === "chapters" ? "Chap" : "Ep"}-${
+                    continueTarget.number ||
+                    (structure === "chapters"
+                      ? continueTarget.chapterNumber
+                      : continueTarget.episodeNumber)
+                  }`
+                : isSingleStory
+                  ? "Read Story"
+                  : `Play ${structure === "chapters" ? "Chap" : "Ep-"}1`}
           </span>
         </button>
+
+        {isExclusiveLocked && (
+          <PremiumBanner
+            title="Unlock exclusive stories"
+            subtitle="Premium members read Only on Storytime fiction"
+            emoji="👑"
+            className="mt-0 mb-4"
+          />
+        )}
 
         {/* Stats Row */}
         <div className="flex items-center gap-2 flex-wrap text-xs text-primary/70 mb-4">
@@ -1304,9 +1389,11 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
                       {isSelected && <Check size={14} />}
                     </div>
                   ) : (
-                    <Link
-                      href={`/story/${storyId}/read?${structure === "chapters" ? "chapterId" : "episodeId"}=${item.id}`}
+                    <button
+                      type="button"
+                      onClick={() => handleStartReading(item.id)}
                       className="absolute inset-0 z-10"
+                      aria-label={`Read ${item.title || "part"}`}
                     />
                   )}
 
@@ -1658,16 +1745,13 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
             transition={{ type: "spring", stiffness: 300, damping: 30 }}
             className="fixed z-50 overflow-hidden bottom-6 right-6"
           >
-            <Link
-              href={
-                continueTarget
-                  ? `/story/${storyId}/read?${structure === "chapters" ? "chapterId" : "episodeId"}=${continueTarget.id}`
-                  : `/story/${storyId}/read${hasContent ? `?${structure === "chapters" ? "chapterId" : "episodeId"}=${contentList[0].id}` : ""}`
-              }
+            <button
+              type="button"
+              onClick={() => handleStartReading()}
               className="flex items-center justify-center text-white rounded-full shadow-lg w-14 h-14 bg-primary hover:bg-primary/90 shadow-primary/30"
             >
               <Play size={24} className="ml-1 fill-current" />
-            </Link>
+            </button>
           </motion.div>
         )}
       </AnimatePresence>
@@ -1717,6 +1801,12 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <PremiumUpsellModal
+        isOpen={isUpsellOpen}
+        onClose={closeUpsell}
+        reason={upsellReason}
+      />
     </div>
   );
 };

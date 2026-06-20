@@ -17,7 +17,11 @@ import {
   authControllerResetPassword,
   authControllerLogout,
 } from "../client/sdk.gen";
-import { setAuthToken, useAuthStore } from "../stores/useAuthStore";
+import {
+  setAuthToken,
+  setRememberMePreference,
+  useAuthStore,
+} from "../stores/useAuthStore";
 import { useUserStore } from "../stores/useUserStore";
 import { useAuthModalStore } from "../stores/useAuthModalStore";
 import type {
@@ -31,6 +35,27 @@ import type {
   ForgotPasswordDto,
   ResetPasswordDto,
 } from "../client/types.gen";
+
+/** Unwrap access token from login/verify responses (handles TransformInterceptor nesting). */
+function extractAccessToken(responseData: unknown): string | undefined {
+  if (!responseData || typeof responseData !== "object") {
+    return undefined;
+  }
+
+  const data = responseData as Record<string, unknown>;
+  const nested =
+    data.data && typeof data.data === "object"
+      ? (data.data as Record<string, unknown>)
+      : undefined;
+
+  const token =
+    data.access_token ??
+    data.accessToken ??
+    nested?.access_token ??
+    nested?.accessToken;
+
+  return typeof token === "string" ? token : undefined;
+}
 
 /**
  * Generic auth mutation helper
@@ -93,32 +118,19 @@ export function useLogin() {
       const response = await authControllerLogin({ body });
 
       // Handle token persistence
-      console.log("Login response:", response);
-      const responseData = response.data as any;
-      const accessToken =
-        responseData?.accessToken || responseData?.data?.accessToken;
+      const responseData = response.data as Record<string, unknown> | undefined;
+      const nested =
+        responseData?.data && typeof responseData.data === "object"
+          ? (responseData.data as Record<string, unknown>)
+          : undefined;
+      const accessToken = extractAccessToken(responseData);
       const refreshToken =
-        responseData?.refreshToken || responseData?.data?.refreshToken;
+        (responseData?.refreshToken as string | undefined) ??
+        (nested?.refreshToken as string | undefined);
 
       if (accessToken) {
-        console.log("Setting auth token:", accessToken);
+        setRememberMePreference(Boolean(remember));
         setAuthToken(accessToken, refreshToken);
-
-        if (remember) {
-          console.log("Setting persistent cookie");
-          Cookies.set("authToken", accessToken, {
-            expires: 30,
-            secure: process.env.NODE_ENV === "production",
-            sameSite: "strict",
-          });
-          if (refreshToken) {
-            Cookies.set("refreshToken", refreshToken, {
-              expires: 30,
-              secure: process.env.NODE_ENV === "production",
-              sameSite: "strict",
-            });
-          }
-        }
       } else {
         console.warn("No access token in login response");
       }
@@ -160,8 +172,11 @@ export function useVerifyEmail() {
       });
 
       // Auto-authenticate after email verification
-      if (response.data?.access_token) {
-        setAuthToken(response.data.access_token);
+      const accessToken = extractAccessToken(response.data);
+      if (accessToken) {
+        setAuthToken(accessToken);
+      } else {
+        console.warn("No access token in verify email response");
       }
 
       return response;

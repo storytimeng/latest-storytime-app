@@ -1,8 +1,16 @@
 import React from "react";
 import Link from "next/link";
-import { ArrowLeft, MoreVertical } from "lucide-react";
+import {
+  ArrowLeft,
+  MoreVertical,
+  BookOpen,
+  Headphones,
+  Lock,
+} from "lucide-react";
 import { Button } from "@heroui/button";
-import { Magnetik_Bold } from "@/lib/font";
+import { Magnetik_Bold, Magnetik_Medium } from "@/lib/font";
+
+export type StoryReadingMode = "read" | "listen";
 
 interface StoryHeaderProps {
   storyId: string;
@@ -12,6 +20,10 @@ interface StoryHeaderProps {
   showDropdown: boolean;
   onToggleDropdown: () => void;
   isOffline?: boolean;
+  readingMode?: StoryReadingMode;
+  onReadingModeChange?: (mode: StoryReadingMode) => void;
+  listenLocked?: boolean;
+  onListenLocked?: () => void;
 }
 
 export const StoryHeader = React.memo(
@@ -23,6 +35,10 @@ export const StoryHeader = React.memo(
     showDropdown,
     onToggleDropdown,
     isOffline = false,
+    readingMode = "read",
+    onReadingModeChange,
+    listenLocked = false,
+    onListenLocked,
   }: StoryHeaderProps) => {
     return (
       <>
@@ -51,6 +67,48 @@ export const StoryHeader = React.memo(
             >
               {currentTitle || storyTitle}
             </h1>
+
+            {onReadingModeChange ? (
+              <div className="flex items-center gap-1 mr-1 rounded-full bg-universal-white/80 p-1 border border-light-grey-2">
+                <button
+                  type="button"
+                  onClick={() => onReadingModeChange("read")}
+                  className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs transition-colors ${Magnetik_Medium.className} ${
+                    readingMode === "read"
+                      ? "bg-primary-colour text-white"
+                      : "text-primary-shade-4"
+                  }`}
+                >
+                  <BookOpen className="w-3.5 h-3.5" />
+                  Read
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (listenLocked) {
+                      onListenLocked?.();
+                      return;
+                    }
+                    onReadingModeChange("listen");
+                  }}
+                  className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs transition-colors ${Magnetik_Medium.className} ${
+                    readingMode === "listen"
+                      ? "bg-complimentary-colour text-white"
+                      : listenLocked
+                        ? "text-primary-shade-4/60"
+                        : "text-primary-shade-4"
+                  }`}
+                >
+                  {listenLocked ? (
+                    <Lock className="w-3 h-3" />
+                  ) : (
+                    <Headphones className="w-3.5 h-3.5" />
+                  )}
+                  Listen
+                </button>
+              </div>
+            ) : null}
+
             <Button
               isIconOnly
               variant="ghost"
@@ -76,7 +134,7 @@ export const StoryHeader = React.memo(
         </div>
       </>
     );
-  }
+  },
 );
 
 StoryHeader.displayName = "StoryHeader";

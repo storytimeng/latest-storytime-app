@@ -22,6 +22,8 @@ import {
   EditProfileModal,
   EditGenresModal,
   LeaderboardModal,
+  BecomeAmbassadorModal,
+  AmbassadorDeclinedModal,
   DefaultModal,
 } from "@/components/reusables/customUI";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -31,8 +33,11 @@ import { useUserAchievements } from "@/src/hooks/useUserAchievements";
 import { useApiUserStats } from "@/src/hooks/useApiUserStats";
 import { useOnlineStatus } from "@/src/hooks/useOnlineStatus";
 import { useGenres } from "@/src/hooks/useGenres";
+import { useAmbassadorOverview } from "@/src/hooks/useAmbassador";
+import { getAmbassadorEntryPath } from "@/src/lib/ambassadors";
 import { Tooltip } from "@heroui/tooltip";
 import { cn } from "@/lib";
+import { genreCategoryPath } from "@/lib/genre";
 
 const ProfileView = () => {
   const router = useRouter();
@@ -42,6 +47,9 @@ const ProfileView = () => {
 
   // Keep track of the last active modal to preserve content during exit animation
   const [lastActiveModal, setLastActiveModal] = useState<string | null>(null);
+  const [ambassadorEntryPath, setAmbassadorEntryPath] = useState(
+    "/ambassador/welcome",
+  );
 
   useEffect(() => {
     if (activeModal) {
@@ -54,6 +62,52 @@ const ProfileView = () => {
   const { badges, certificates } = useUserAchievements();
   const { stats } = useApiUserStats();
   const { genres: apiGenres } = useGenres();
+  const { overview: ambassadorOverview, isLoading: ambassadorLoading } =
+    useAmbassadorOverview();
+
+  useEffect(() => {
+    setAmbassadorEntryPath(getAmbassadorEntryPath());
+  }, [ambassadorOverview?.isAmbassador]);
+
+  const ambassadorApplication = ambassadorOverview?.application;
+
+  const ambassadorOption = ambassadorLoading
+    ? {
+        id: "ambassador-loading",
+        label: "Ambassador",
+        icon: "🌟",
+        type: "page" as const,
+        path: "/ambassador",
+      }
+    : ambassadorOverview?.isAmbassador
+      ? {
+          id: "ambassador-dashboard",
+          label: "Ambassador Dashboard",
+          icon: "🌟",
+          type: "page" as const,
+          path: ambassadorEntryPath,
+        }
+      : ambassadorApplication?.status === "pending"
+        ? {
+            id: "ambassador-status",
+            label: "Application Status",
+            icon: "⏳",
+            type: "page" as const,
+            path: "/ambassador/status",
+          }
+        : ambassadorApplication?.status === "declined"
+          ? {
+              id: "ambassador-declined",
+              label: "Application Status",
+              icon: "⏳",
+              type: "modal" as const,
+            }
+          : {
+              id: "ambassador",
+              label: "Become an Ambassador",
+              icon: "🌟",
+              type: "modal" as const,
+            };
 
   const profileOptions = [
     {
@@ -82,11 +136,12 @@ const ProfileView = () => {
       label: "My Downloads",
       icon: "⬇️",
       type: "page",
-      path: "/downloads",
+      path: "/library?tab=downloads",
     },
     { id: "reading", label: "Reading time", icon: "⏰", type: "modal" },
     { id: "writing", label: "Writing time", icon: "✍️", type: "modal" },
     { id: "leaderboard", label: "Leaderboard", icon: "🏅", type: "modal" },
+    ambassadorOption,
     {
       id: "history",
       label: "Reading History",
@@ -98,30 +153,30 @@ const ProfileView = () => {
 
   // Use user's favorite genres from profile, fallback to API genres, then defaults
   const userGenres = user?.favoriteGenres || user?.genres || [];
-  const genres = userGenres.length > 0 ? userGenres : (apiGenres || []);
+  const genres = userGenres.length > 0 ? userGenres : apiGenres || [];
 
   useEffect(() => {
     if (activeModal) {
       setLastActiveModal(activeModal);
     }
-    
+
     // Prefetch common routes
     router.prefetch("/home");
     router.prefetch("/pen");
     router.prefetch("/library");
-    router.prefetch("/downloads");
-    
+    router.prefetch("/library?tab=downloads");
+
     // Prefetch user's favorite genres
     if (userGenres.length > 0) {
-      userGenres.forEach(genre => {
-        router.prefetch(`/category?genre=${encodeURIComponent(genre)}`);
+      userGenres.forEach((genre) => {
+        router.prefetch(genreCategoryPath(genre));
       });
     }
   }, [activeModal, router, userGenres]);
 
   // Handle genre click - navigate to category page
   const handleGenreClick = (genre: string) => {
-    router.push(`/category?genre=${encodeURIComponent(genre)}`);
+    router.push(genreCategoryPath(genre));
   };
 
   const handleOptionClick = (option: (typeof profileOptions)[0]) => {
@@ -170,6 +225,10 @@ const ProfileView = () => {
         return <EditGenresModal />;
       case "leaderboard":
         return <LeaderboardModal />;
+      case "ambassador":
+        return <BecomeAmbassadorModal />;
+      case "ambassador-declined":
+        return <AmbassadorDeclinedModal />;
       default:
         const option = profileOptions.find((opt) => opt.id === modalToRender);
         if (!option) return null;
@@ -197,10 +256,10 @@ const ProfileView = () => {
           />
 
           {/* Profile Section */}
-          <ProfileCard 
-            showSettings={true} 
-            useLiveData={true} 
-            hideEditButton={!isOnline} 
+          <ProfileCard
+            showSettings={true}
+            useLiveData={true}
+            hideEditButton={!isOnline}
           />
 
           {/* Badge/Certificate Card - Bleeding into next section */}
@@ -252,7 +311,7 @@ const ProfileView = () => {
         </div>
 
         {/* Content Section - Background visible behind bleeding card */}
-        <div className="min-h-screen bg-accent-shade-1">
+        <div className="min-h-screen bg-accent-shade-1 pb-10">
           <div className="px-4 pt-20">
             {/* Added top padding to accommodate bleeding card */}
             {/* Genre Section */}
@@ -265,9 +324,13 @@ const ProfileView = () => {
                 </h3>
                 <button
                   onClick={() =>
-                    isOnline && router.push("?modal=edit-genres", { scroll: false })
+                    isOnline &&
+                    router.push("?modal=edit-genres", { scroll: false })
                   }
-                  className={cn("text-primary-colour p-1", !isOnline && "opacity-50 cursor-not-allowed")}
+                  className={cn(
+                    "text-primary-colour p-1",
+                    !isOnline && "opacity-50 cursor-not-allowed",
+                  )}
                   disabled={!isOnline}
                 >
                   <span className="text-xl">✎</span>
@@ -286,7 +349,7 @@ const ProfileView = () => {
             </div>
 
             {/* Profile Options */}
-            <div className="space-y-[1px] mb-[34px] bg-primary-shade-1">
+            <div className="space-y-[1px] mb-6 bg-primary-shade-1">
               {profileOptions.map((option) => (
                 <div
                   key={option.id}
@@ -303,8 +366,13 @@ const ProfileView = () => {
               ))}
             </div>
 
-            {/* Premium Banner */}
-            <PremiumBanner emoji="🎯" className="" />
+            {/* Premium upsell — hidden automatically for active subscribers */}
+            <PremiumBanner
+              emoji="✨"
+              title="Go Premium"
+              subtitle="Subscribe to unlock advanced voices, playback controls, and more"
+              className="mb-8"
+            />
           </div>
         </div>
       </div>

@@ -30,6 +30,7 @@ export const ROUTES = {
   newStory: "/new-story",
   myStories: "/my-stories",
   premium: "/premium",
+  ambassador: "/ambassador",
   test: "/test",
 };
 
@@ -46,6 +47,8 @@ export const NAVIGATION_CONFIG = {
     ROUTES.editStory,
     ROUTES.newStory,
     ROUTES.myStories,
+    ROUTES.premium,
+    ROUTES.ambassador,
   ],
   guestOnlyRoutes: [
     ROUTES.auth,

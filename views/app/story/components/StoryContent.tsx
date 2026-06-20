@@ -17,6 +17,7 @@ import { normalizeStoryHtml } from "@/lib/storyContentFormat";
 import { useTTSContext } from "@/components/providers/TTSProvider";
 import { useTTS } from "@/src/hooks/useTTS";
 import { useSmartVoice } from "@/src/hooks/useVoiceUtils";
+import { usePremiumFeatures } from "@/src/hooks/usePremiumFeatures";
 
 interface StoryContentProps {
   content: string;
@@ -24,6 +25,7 @@ interface StoryContentProps {
   authorAvatar?: string;
   hasNavigation: boolean;
   description?: string;
+  listenMode?: boolean;
   onPlayFromSentence?: (sentenceIndex: number) => void;
 }
 
@@ -41,7 +43,10 @@ export const StoryContent = React.memo(
     authorAvatar,
     hasNavigation,
     description,
+    listenMode = false,
   }: StoryContentProps) => {
+    const { checkFeature } = usePremiumFeatures();
+    const readTtsEnabled = checkFeature("ttsEnabled");
     const { registerControls } = useTTSContext();
     const {
       playbackRate,
@@ -319,7 +324,7 @@ export const StoryContent = React.memo(
       seekToSentence,
       sentences: stringSentences,
       availableVoices: voices,
-    } = useTTS(ttsInput);
+    } = useTTS(ttsInput, { enabled: !listenMode && readTtsEnabled });
 
     // Sync voice with store (from original code)
     const resolvedVoice = useSmartVoice(voices, selectedVoiceURI);
@@ -329,8 +334,10 @@ export const StoryContent = React.memo(
       }
     }, [resolvedVoice, selectedVoiceURI, setSelectedVoiceURI]);
 
-    // Register controls
+    // Register browser TTS controls only in read mode
     useEffect(() => {
+      if (listenMode) return;
+
       registerControls({
         play,
         pause,
@@ -341,7 +348,7 @@ export const StoryContent = React.memo(
         },
         seekToSentence,
       });
-    }, [registerControls, play, pause, stop, seekToSentence]);
+    }, [listenMode, registerControls, play, pause, stop, seekToSentence]);
 
     // Handle play from here - using tap/click with context menu
     const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -349,6 +356,7 @@ export const StoryContent = React.memo(
 
     const showContextMenu = useCallback(
       (x: number, y: number, index: number) => {
+        if (listenMode) return;
         setContextMenu({
           isOpen: true,
           x: x,
@@ -356,12 +364,13 @@ export const StoryContent = React.memo(
           sentenceIndex: index,
         });
       },
-      [],
+      [listenMode],
     );
 
     // Handle long press for mobile
     const handleTouchStart = useCallback(
       (e: React.TouchEvent, index: number) => {
+        if (listenMode) return;
         const touch = e.touches[0];
         touchStartPos.current = { x: touch.clientX, y: touch.clientY };
 
@@ -369,7 +378,7 @@ export const StoryContent = React.memo(
           showContextMenu(touch.clientX, touch.clientY - 50, index);
         }, 500); // 500ms long press
       },
-      [showContextMenu],
+      [listenMode, showContextMenu],
     );
 
     const handleTouchEnd = useCallback(() => {
@@ -396,6 +405,7 @@ export const StoryContent = React.memo(
     // Handle single click to play (Seeking)
     const handleSegmentClick = useCallback(
       (e: React.MouseEvent, index: number) => {
+        if (listenMode) return;
         e.preventDefault();
         e.stopPropagation();
 
@@ -406,12 +416,13 @@ export const StoryContent = React.memo(
           play();
         }
       },
-      [seekToSentence, play, storeIsPlaying],
+      [listenMode, seekToSentence, play, storeIsPlaying],
     );
 
     // Handle double click for context menu (Desktop alternatives)
     const handleSegmentDoubleClick = useCallback(
       (e: React.MouseEvent, index: number) => {
+        if (listenMode) return;
         e.preventDefault();
         e.stopPropagation();
 
@@ -421,7 +432,7 @@ export const StoryContent = React.memo(
         const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
         showContextMenu(e.clientX, rect.top, index);
       },
-      [showContextMenu],
+      [listenMode, showContextMenu],
     );
 
     const handlePlayFromHere = useCallback(
@@ -486,10 +497,10 @@ export const StoryContent = React.memo(
     return (
       <div
         ref={contentRef}
-        className={`px-4 py-6 pb-9 ${hasNavigation ? "pt-44" : "pt-32"}`}
+        className={`px-4 py-6 ${listenMode ? "pb-40" : "pb-9"} ${hasNavigation ? "pt-44" : "pt-32"}`}
       >
         {/* Context Menu Popup */}
-        {contextMenu.isOpen && (
+        {contextMenu.isOpen && !listenMode && (
           <div
             className="fixed z-[100] bg-white rounded-xl shadow-xl border border-light-grey-2 overflow-hidden animate-in fade-in zoom-in-95 duration-150"
             style={{
@@ -534,22 +545,29 @@ export const StoryContent = React.memo(
                           <span
                             key={sent.index}
                             data-sentence-index={sent.index}
-                            onClick={(e) => handleSegmentClick(e, sent.index)}
-                            onDoubleClick={(e) =>
-                              handleSegmentDoubleClick(e, sent.index)
+                            {...(!listenMode
+                              ? {
+                                  onClick: (e: React.MouseEvent) =>
+                                    handleSegmentClick(e, sent.index),
+                                  onDoubleClick: (e: React.MouseEvent) =>
+                                    handleSegmentDoubleClick(e, sent.index),
+                                  onTouchStart: (e: React.TouchEvent) =>
+                                    handleTouchStart(e, sent.index),
+                                  onTouchEnd: handleTouchEnd,
+                                  onTouchMove: handleTouchMove,
+                                }
+                              : {})}
+                            className={`transition-all duration-200 rounded px-1 -mx-1 ${
+                              listenMode ? "" : "cursor-pointer"
                             }
-                            onTouchStart={(e) =>
-                              handleTouchStart(e, sent.index)
-                            }
-                            onTouchEnd={handleTouchEnd}
-                            onTouchMove={handleTouchMove}
-                            className={`transition-all duration-200 rounded px-1 -mx-1 cursor-pointer
                                 ${
                                   isActive
                                     ? "bg-complimentary-colour/20 text-black shadow-sm font-medium"
                                     : isPausedAt
                                       ? "bg-primary-colour/15 text-black"
-                                      : "hover:bg-accent-colour/20"
+                                      : listenMode
+                                        ? ""
+                                        : "hover:bg-accent-colour/20"
                                 }`}
                           >
                             <span

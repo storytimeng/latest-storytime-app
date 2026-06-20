@@ -6,6 +6,18 @@ const BACKEND_URL =
 
 const DEBUG_PROXY = process.env.NEXT_PUBLIC_DEBUG_PROXY === "true";
 
+/** Narration generation can take minutes; polling uses short requests. */
+const DEFAULT_PROXY_TIMEOUT_MS = 30_000;
+const AUDIO_PROXY_TIMEOUT_MS = 60_000;
+
+function getProxyTimeoutMs(apiPath: string, method: string): number {
+  if (method === "GET" && /\/stories\/[^/]+\/audio$/.test(apiPath)) {
+    return AUDIO_PROXY_TIMEOUT_MS;
+  }
+
+  return DEFAULT_PROXY_TIMEOUT_MS;
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ path: string[] }> },
@@ -108,7 +120,7 @@ async function proxyRequest(
       method,
       headers,
       body,
-      signal: AbortSignal.timeout(30000),
+      signal: AbortSignal.timeout(getProxyTimeoutMs(apiPath, method)),
     });
 
     // Get response body as text (fetch automatically decompresses)

@@ -3,6 +3,7 @@ import { useAuthStore } from "@/src/stores/useAuthStore";
 import { ensureValidToken } from "@/src/lib/tokenManager";
 
 const AUTH_TOKEN_KEY = "authToken";
+const REFRESH_TOKEN_KEY = "refreshToken";
 
 /** Routes that must not trigger the global login modal (e.g. Paystack return). */
 export const AUTH_EXEMPT_PATH_PREFIXES = ["/auth", "/premium/callback"];
@@ -19,7 +20,11 @@ export function getStoredAuthToken(): string | undefined {
 }
 
 export function hasAuthSession(): boolean {
-  return Boolean(getStoredAuthToken());
+  return Boolean(
+    getStoredAuthToken() ||
+      useAuthStore.getState().refreshToken ||
+      Cookies.get(REFRESH_TOKEN_KEY),
+  );
 }
 
 /** Sync Zustand auth state from cookies after external redirects (Paystack, etc.). */

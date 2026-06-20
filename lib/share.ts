@@ -67,6 +67,58 @@ export async function shareStory(
 }
 
 /**
+ * Share a referral link
+ */
+export async function shareReferralLink(
+  shareUrl: string,
+  referralCode: string,
+): Promise<boolean> {
+  return shareContent({
+    title: "Join Storytime",
+    text: `Join me on Storytime — discover amazing stories! Use my referral code: ${referralCode}`,
+    url: shareUrl,
+  });
+}
+
+/**
+ * Open WhatsApp share for referral link
+ */
+export function shareReferralViaWhatsApp(
+  shareUrl: string,
+  referralCode: string,
+) {
+  const text = encodeURIComponent(
+    `Join me on Storytime! Use my referral link: ${shareUrl} (Code: ${referralCode})`,
+  );
+  window.open(`https://wa.me/?text=${text}`, "_blank", "noopener,noreferrer");
+}
+
+/**
+ * Open X/Twitter share for referral link
+ */
+export function shareReferralViaTwitter(shareUrl: string) {
+  const text = encodeURIComponent(
+    "Join me on Storytime — discover amazing stories!",
+  );
+  window.open(
+    `https://twitter.com/intent/tweet?text=${text}&url=${encodeURIComponent(shareUrl)}`,
+    "_blank",
+    "noopener,noreferrer",
+  );
+}
+
+/**
+ * Open Facebook share for referral link
+ */
+export function shareReferralViaFacebook(shareUrl: string) {
+  window.open(
+    `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`,
+    "_blank",
+    "noopener,noreferrer",
+  );
+}
+
+/**
  * Share a specific chapter/episode
  */
 export async function shareChapter(

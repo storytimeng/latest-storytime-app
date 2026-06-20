@@ -17,6 +17,15 @@ export interface AuthState {
 const AUTH_TOKEN_KEY = "authToken";
 const REFRESH_TOKEN_KEY = "refreshToken";
 const TOKEN_EXPIRY_KEY = "tokenExpiry";
+const REMEMBER_ME_KEY = "rememberMe";
+const PERSISTENT_LOGIN_DAYS = 30;
+
+function baseCookieOptions() {
+  return {
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax" as const,
+  };
+}
 
 /**
  * Decode JWT to get expiry time
@@ -34,13 +43,42 @@ function decodeTokenExpiry(token: string): number | null {
   }
 }
 
-function cookieOptions(token?: string) {
-  const expiry = token ? decodeTokenExpiry(token) : null;
-  return {
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax" as const,
-    ...(expiry ? { expires: new Date(expiry) } : { expires: 7 }),
-  };
+export function getRememberMePreference(): boolean {
+  if (typeof window === "undefined") return false;
+  return Cookies.get(REMEMBER_ME_KEY) === "true";
+}
+
+export function setRememberMePreference(remember: boolean): void {
+  if (typeof window === "undefined") return;
+
+  const base = baseCookieOptions();
+  if (remember) {
+    Cookies.set(REMEMBER_ME_KEY, "true", {
+      ...base,
+      expires: PERSISTENT_LOGIN_DAYS,
+    });
+    return;
+  }
+
+  Cookies.remove(REMEMBER_ME_KEY);
+}
+
+function getStorageCookieOptions(token?: string): Cookies.CookieAttributes {
+  const base = baseCookieOptions();
+
+  if (!getRememberMePreference()) {
+    // Session cookie — cleared when the browser closes
+    return base;
+  }
+
+  if (token) {
+    const jwtExpiry = decodeTokenExpiry(token);
+    if (jwtExpiry) {
+      return { ...base, expires: new Date(jwtExpiry) };
+    }
+  }
+
+  return { ...base, expires: PERSISTENT_LOGIN_DAYS };
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -51,28 +89,30 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   resetEmail: undefined,
   resetOtp: undefined,
   setToken: (token, refreshToken) => {
-    console.log("useAuthStore.setToken called with:", {
-      hasToken: !!token,
-      hasRefreshToken: !!refreshToken,
-    });
     if (token) {
-      Cookies.set(AUTH_TOKEN_KEY, token, cookieOptions(token));
+      Cookies.set(AUTH_TOKEN_KEY, token, getStorageCookieOptions(token));
 
       const expiry = decodeTokenExpiry(token);
       if (expiry) {
-        Cookies.set(TOKEN_EXPIRY_KEY, expiry.toString(), cookieOptions(token));
-        console.log("Token expiry set:", new Date(expiry).toISOString());
+        Cookies.set(
+          TOKEN_EXPIRY_KEY,
+          expiry.toString(),
+          getStorageCookieOptions(token),
+        );
       }
     } else {
       Cookies.remove(AUTH_TOKEN_KEY);
       Cookies.remove(TOKEN_EXPIRY_KEY);
     }
+
     if (refreshToken) {
-      Cookies.set(REFRESH_TOKEN_KEY, refreshToken, cookieOptions(refreshToken));
-    } else {
-      // Don't remove if not provided - keep existing refresh token
-      // This handles cases where API only returns accessToken
+      Cookies.set(
+        REFRESH_TOKEN_KEY,
+        refreshToken,
+        getStorageCookieOptions(refreshToken),
+      );
     }
+
     set(() => ({ token, refreshToken: refreshToken || get().refreshToken }));
   },
   setReset: (email?: string, otp?: string) => {
@@ -82,18 +122,25 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     Cookies.remove(AUTH_TOKEN_KEY);
     Cookies.remove(REFRESH_TOKEN_KEY);
     Cookies.remove(TOKEN_EXPIRY_KEY);
+    Cookies.remove(REMEMBER_ME_KEY);
     set(() => ({ token: undefined, refreshToken: undefined }));
   },
   clearReset: () => set(() => ({ resetEmail: undefined, resetOtp: undefined })),
   isAuthenticated: () =>
     Boolean(
       get().token ||
-        (typeof window !== "undefined" && Cookies.get(AUTH_TOKEN_KEY)),
+        get().refreshToken ||
+        (typeof window !== "undefined" &&
+          (Cookies.get(AUTH_TOKEN_KEY) || Cookies.get(REFRESH_TOKEN_KEY))),
     ),
 }));
 
 export const getAuthToken = () => {
   return useAuthStore.getState().token || Cookies.get(AUTH_TOKEN_KEY);
+};
+
+export const getRefreshToken = () => {
+  return useAuthStore.getState().refreshToken || Cookies.get(REFRESH_TOKEN_KEY);
 };
 
 export const setAuthToken = (token?: string, refreshToken?: string) => {

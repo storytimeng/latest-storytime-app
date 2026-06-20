@@ -5,6 +5,7 @@ import { Button } from "@heroui/button";
 import { Magnetik_Medium, Magnetik_Regular } from "@/lib/font";
 import { cn } from "@/lib/utils";
 import { StoryCoverImage } from "./StoryCoverImage";
+import { StoryStatusIcon } from "./StoryStatusIcon";
 
 interface Story {
   id: string;
@@ -54,16 +55,16 @@ const PenStoryCard: React.FC<PenStoryCardProps> = ({
     }
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusForIcon = (status: string) => {
     switch (status) {
       case "Ongoing":
-        return "text-orange-600 bg-orange-100";
+        return "ongoing";
       case "Completed":
-        return "text-green-600 bg-green-100";
+        return "completed";
       case "Draft":
-        return "text-gray-600 bg-gray-100";
+        return "draft";
       default:
-        return "text-gray-600 bg-gray-100";
+        return status;
     }
   };
 
@@ -105,19 +106,16 @@ const PenStoryCard: React.FC<PenStoryCardProps> = ({
 
         {/* Story Info */}
         <div className="space-y-2">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1.5 min-w-0">
             <h3
-              className={`text-primary-colour text-sm font-medium ${Magnetik_Medium.className} truncate flex-1 pr-2`}
+              className={`text-primary-colour text-sm font-medium ${Magnetik_Medium.className} truncate flex-1 min-w-0`}
             >
               {story.title}
             </h3>
-            <span
-              className={`text-xs px-2 py-1 rounded-full whitespace-nowrap ${getStatusColor(
-                story.status,
-              )} ${Magnetik_Regular.className}`}
-            >
-              ({story.status})
-            </span>
+            <StoryStatusIcon
+              status={getStatusForIcon(story.status)}
+              className="shrink-0"
+            />
           </div>
 
           <div className="flex items-center justify-between">

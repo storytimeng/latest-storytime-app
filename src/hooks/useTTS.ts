@@ -90,7 +90,16 @@ export interface UseTTSReturn {
 
 type StopReason = "manual" | "auto" | "seek" | "settings-change";
 
-export const useTTS = (content: string | TTSSegment[]): UseTTSReturn => {
+export interface UseTTSOptions {
+  /** When false, parsing still runs but Web Speech API is never invoked. */
+  enabled?: boolean;
+}
+
+export const useTTS = (
+  content: string | TTSSegment[],
+  options: UseTTSOptions = {},
+): UseTTSReturn => {
+  const enabled = options.enabled ?? true;
   const store = useTTSStore();
   const [availableVoices, setAvailableVoices] = useState<
     SpeechSynthesisVoice[]
@@ -124,7 +133,7 @@ export const useTTS = (content: string | TTSSegment[]): UseTTSReturn => {
   const wordCount = useMemo(() => countWords(fullText), [fullText]);
   const estimatedDuration = useMemo(
     () => estimateReadingDuration(wordCount, store.playbackRate),
-    [wordCount, store.playbackRate]
+    [wordCount, store.playbackRate],
   );
 
   // Update store with sentence count and duration - using getState to avoid dependency issues
@@ -133,17 +142,20 @@ export const useTTS = (content: string | TTSSegment[]): UseTTSReturn => {
     if (currentStore.totalSentences !== sentences.length) {
       useTTSStore.getState().setTotalSentences(sentences.length);
     }
-    if (currentStore.estimatedDurationSeconds !== estimatedDuration) {
+    if (
+      enabled &&
+      currentStore.estimatedDurationSeconds !== estimatedDuration
+    ) {
       useTTSStore.getState().setEstimatedDuration(estimatedDuration);
     }
-  }, [sentences.length, estimatedDuration]);
+  }, [enabled, sentences.length, estimatedDuration]);
 
   // Smart voice selection logic
   const findBestVoice = useCallback((voices: SpeechSynthesisVoice[]) => {
     if (!voices.length) return null;
 
     const libby = voices.find(
-      (v) => v.name.includes("Libby") && v.name.includes("Microsoft")
+      (v) => v.name.includes("Libby") && v.name.includes("Microsoft"),
     );
     if (libby) return libby;
 
@@ -152,7 +164,7 @@ export const useTTS = (content: string | TTSSegment[]): UseTTSReturn => {
         v.name.includes("Microsoft") &&
         v.name.includes("Online") &&
         v.name.includes("Natural") &&
-        v.lang.startsWith("en")
+        v.lang.startsWith("en"),
     );
     if (msNatural) return msNatural;
 
@@ -162,7 +174,7 @@ export const useTTS = (content: string | TTSSegment[]): UseTTSReturn => {
     const britishOnline = voices.find(
       (v) =>
         v.lang === "en-GB" &&
-        (v.name.includes("Online") || v.localService === false)
+        (v.name.includes("Online") || v.localService === false),
     );
     if (britishOnline) return britishOnline;
 
@@ -184,7 +196,7 @@ export const useTTS = (content: string | TTSSegment[]): UseTTSReturn => {
 
         const currentUri = useTTSStore.getState().selectedVoiceURI;
         const currentVoiceExists = voices.some(
-          (v) => v.voiceURI === currentUri
+          (v) => v.voiceURI === currentUri,
         );
 
         if (!currentUri || !currentVoiceExists) {
@@ -223,7 +235,7 @@ export const useTTS = (content: string | TTSSegment[]): UseTTSReturn => {
         const increment = (updateInterval / 1000) * currentState.playbackRate;
         const newElapsed = Math.min(
           currentState.elapsedSeconds + increment,
-          currentState.estimatedDurationSeconds
+          currentState.estimatedDurationSeconds,
         );
         store.setElapsedSeconds(newElapsed);
       }
@@ -236,6 +248,16 @@ export const useTTS = (content: string | TTSSegment[]): UseTTSReturn => {
       elapsedTimerRef.current = null;
     }
   }, []);
+
+  useEffect(() => {
+    if (enabled) return;
+
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+    }
+    stopElapsedTimer();
+    setIsSpeaking(false);
+  }, [enabled, stopElapsedTimer]);
 
   // Directives State
   const directiveStateRef = useRef({
@@ -251,6 +273,8 @@ export const useTTS = (content: string | TTSSegment[]): UseTTSReturn => {
 
   const speakSentence = useCallback(
     (sentenceIndex: number) => {
+      if (!enabled) return;
+
       if (
         !isSupported ||
         sentenceIndex >= sentences.length ||
@@ -273,84 +297,93 @@ export const useTTS = (content: string | TTSSegment[]): UseTTSReturn => {
 
       // Parse Directives
       let textToSpeak = sentence.text;
-      
+
       // Regex to find all directives [[key=value]]
       const directiveRegex = /\[\[(.*?)=(.*?)\]\]/g;
       let match;
-      
-      // Reset temporary one-shot directives like delay? 
+
+      // Reset temporary one-shot directives like delay?
       // User docs: "The effect of a directive applies to the content that follows it."
       // "This means a directive in one chunk can affect subsequent chunks if not overridden."
       // So rate/pitch/volume persist. skip persists.
       // Delay? "Introduces a pause before the subsequent content is processed."
-      // Usually delay is one-time for that spot. But if it's "before content", does it mean every sentence? 
+      // Usually delay is one-time for that spot. But if it's "before content", does it mean every sentence?
       // "This will have a [[delay=500]] half-second pause." -> Pause then text.
       // If I have [[delay=500]] Sentence 1. Sentence 2.
       // Should Sentence 2 also delay? Probably not. Delay is usually an event.
       // I will treat delay as one-shot for the current sentence (if found).
-      
+
       let localDelay = 0;
 
       // Reset one-shot directives from previous state if any? No, only delay is one-shot.
-      
+
       // We process directives found in THIS sentence.
       // Note: If a directive is "at the end" of previous sentence, it might have been attached to that previous sentence text.
       // My splitter attaches everything to the sentence.
-      
+
       while ((match = directiveRegex.exec(sentence.text)) !== null) {
-          const key = match[1].trim();
-          const value = match[2].trim();
-          
-          if (key === "rate") {
-              if (value === "default") directiveStateRef.current.rate = null;
-              else {
-                  const num = parseFloat(value);
-                  if (!isNaN(num)) directiveStateRef.current.rate = num;
-              }
-          } else if (key === "pitch") {
-              if (value === "default") directiveStateRef.current.pitch = null;
-              else {
-                  const num = parseFloat(value);
-                  if (!isNaN(num)) directiveStateRef.current.pitch = num;
-              }
-          } else if (key === "volume") {
-             if (value === "default") directiveStateRef.current.volume = null;
-             else {
-                 const num = parseFloat(value);
-                 if (!isNaN(num)) directiveStateRef.current.volume = num;
-             }
-          } else if (key === "delay") {
-              const num = parseInt(value);
-              if (!isNaN(num)) localDelay = num;
-          } else if (key === "skip") {
-              if (value === "true") directiveStateRef.current.skip = true;
-              else if (value === "false") directiveStateRef.current.skip = false;
+        const key = match[1].trim();
+        const value = match[2].trim();
+
+        if (key === "rate") {
+          if (value === "default") directiveStateRef.current.rate = null;
+          else {
+            const num = parseFloat(value);
+            if (!isNaN(num)) directiveStateRef.current.rate = num;
           }
+        } else if (key === "pitch") {
+          if (value === "default") directiveStateRef.current.pitch = null;
+          else {
+            const num = parseFloat(value);
+            if (!isNaN(num)) directiveStateRef.current.pitch = num;
+          }
+        } else if (key === "volume") {
+          if (value === "default") directiveStateRef.current.volume = null;
+          else {
+            const num = parseFloat(value);
+            if (!isNaN(num)) directiveStateRef.current.volume = num;
+          }
+        } else if (key === "delay") {
+          const num = parseInt(value);
+          if (!isNaN(num)) localDelay = num;
+        } else if (key === "skip") {
+          if (value === "true") directiveStateRef.current.skip = true;
+          else if (value === "false") directiveStateRef.current.skip = false;
+        }
       }
-      
+
       // Remove directives from spoken text
       textToSpeak = textToSpeak.replace(/\[\[.*?\]\]/g, "").trim();
 
       // Check for SKIP
       if (directiveStateRef.current.skip) {
-          // Move to next immediately
-           const nextIdx = sentenceIndex + 1;
-           // We use setTimeout to avoid recursion limit
-           setTimeout(() => {
-               speakSentenceRef.current(nextIdx);
-           }, 10);
-           return;
+        // Move to next immediately
+        const nextIdx = sentenceIndex + 1;
+        // We use setTimeout to avoid recursion limit
+        setTimeout(() => {
+          speakSentenceRef.current(nextIdx);
+        }, 10);
+        return;
       }
 
       // Get fresh state for settings
       const currentState = useTTSStore.getState();
 
       const utterance = new SpeechSynthesisUtterance(textToSpeak);
-      
+
       // Apply directives or fall back to store
-      utterance.rate = directiveStateRef.current.rate !== null ? directiveStateRef.current.rate : currentState.playbackRate;
-      utterance.pitch = directiveStateRef.current.pitch !== null ? directiveStateRef.current.pitch : currentState.pitch;
-      utterance.volume = directiveStateRef.current.volume !== null ? directiveStateRef.current.volume : currentState.volume;
+      utterance.rate =
+        directiveStateRef.current.rate !== null
+          ? directiveStateRef.current.rate
+          : currentState.playbackRate;
+      utterance.pitch =
+        directiveStateRef.current.pitch !== null
+          ? directiveStateRef.current.pitch
+          : currentState.pitch;
+      utterance.volume =
+        directiveStateRef.current.volume !== null
+          ? directiveStateRef.current.volume
+          : currentState.volume;
 
       if (selectedVoice) {
         utterance.voice = selectedVoice;
@@ -414,28 +447,32 @@ export const useTTS = (content: string | TTSSegment[]): UseTTSReturn => {
 
       // Apply Delay if needed
       if (localDelay > 0) {
-          setTimeout(() => {
-              if (stopReasonRef.current === "auto" || stopReasonRef.current === "seek") {
-                  window.speechSynthesis.speak(utterance);
-              }
-          }, localDelay);
-      } else {
-          // Small delay to ensure cancel() completed
-          setTimeout(() => {
+        setTimeout(() => {
+          if (
+            stopReasonRef.current === "auto" ||
+            stopReasonRef.current === "seek"
+          ) {
             window.speechSynthesis.speak(utterance);
-          }, 50);
+          }
+        }, localDelay);
+      } else {
+        // Small delay to ensure cancel() completed
+        setTimeout(() => {
+          window.speechSynthesis.speak(utterance);
+        }, 50);
       }
     },
     [
+      enabled,
       isSupported,
       sentences,
       selectedVoice,
       store,
       startElapsedTimer,
       stopElapsedTimer,
-    ]
+    ],
   );
-  
+
   // Pause/Resume needs to handle delay?
   // If paused during delay, it just sits there. Cancel handles it.
 
@@ -446,17 +483,17 @@ export const useTTS = (content: string | TTSSegment[]): UseTTSReturn => {
 
   // Public API
   const play = useCallback(() => {
-    if (!isSupported) return;
+    if (!enabled || !isSupported) return;
 
     const currentState = useTTSStore.getState();
     store.setPlaying(true);
     store.setPaused(false);
 
     speakSentence(currentState.currentSentenceIndex);
-  }, [isSupported, store, speakSentence]);
+  }, [enabled, isSupported, store, speakSentence]);
 
   const pause = useCallback(() => {
-    if (!isSupported) return;
+    if (!enabled || !isSupported) return;
 
     stopReasonRef.current = "manual";
     window.speechSynthesis.cancel();
@@ -464,25 +501,26 @@ export const useTTS = (content: string | TTSSegment[]): UseTTSReturn => {
     store.setPlaying(false);
     stopElapsedTimer();
     setIsSpeaking(false);
-  }, [isSupported, store, stopElapsedTimer]);
+  }, [enabled, isSupported, store, stopElapsedTimer]);
 
   const resume = useCallback(() => {
     play();
   }, [play]);
 
   const stop = useCallback(() => {
-    if (!isSupported) return;
+    if (!enabled || !isSupported) return;
 
     stopReasonRef.current = "manual";
     window.speechSynthesis.cancel();
     store.stop();
     stopElapsedTimer();
     setIsSpeaking(false);
-  }, [isSupported, store, stopElapsedTimer]);
+  }, [enabled, isSupported, store, stopElapsedTimer]);
 
   const seekToSentence = useCallback(
     (index: number) => {
-      if (!isSupported || index < 0 || index >= sentences.length) return;
+      if (!enabled || !isSupported || index < 0 || index >= sentences.length)
+        return;
 
       const currentState = useTTSStore.getState();
 
@@ -504,7 +542,7 @@ export const useTTS = (content: string | TTSSegment[]): UseTTSReturn => {
         window.speechSynthesis.cancel();
       }
     },
-    [isSupported, sentences.length]
+    [enabled, isSupported, sentences.length],
   );
 
   const setSelectedVoice = useCallback((voice: SpeechSynthesisVoice) => {
@@ -554,7 +592,7 @@ export const useTTS = (content: string | TTSSegment[]): UseTTSReturn => {
   const progress = useMemo(() => {
     if (sentences.length <= 1) return 0;
     return Math.round(
-      (store.currentSentenceIndex / (sentences.length - 1)) * 100
+      (store.currentSentenceIndex / (sentences.length - 1)) * 100,
     );
   }, [store.currentSentenceIndex, sentences.length]);
 
