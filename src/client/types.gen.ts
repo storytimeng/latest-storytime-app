@@ -2389,6 +2389,10 @@ export type SearchStoriesData = {
          * Items per page (default: 10, max: 100)
          */
         limit?: number;
+        /**
+         * Filter by one or more genres
+         */
+        genres?: Array<string>;
     };
     url: '/stories/search';
 };

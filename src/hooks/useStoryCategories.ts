@@ -370,6 +370,7 @@ export function useSearchStories(options: UseSearchStoriesOptions) {
   const { query, page: initialPage = 1, limit = 20, genre } = options;
   const trimmedQuery = query.trim();
   const shouldFetch = trimmedQuery.length > 0;
+  const genres = genre ? [genre] : undefined;
 
   const [currentPage, setCurrentPage] = React.useState(initialPage);
   const [allStories, setAllStories] = React.useState<any[]>([]);
@@ -383,11 +384,11 @@ export function useSearchStories(options: UseSearchStoriesOptions) {
 
   const { data, error, isLoading, mutate } = useSWR(
     shouldFetch
-      ? `/stories/search?query=${encodeURIComponent(trimmedQuery)}&page=${currentPage}&limit=${limit}&genre=${genre ?? ""}`
+      ? `/stories/search?query=${encodeURIComponent(trimmedQuery)}&page=${currentPage}&limit=${limit}&genres=${genres?.join(",") ?? ""}`
       : null,
     async () => {
       const response = await searchStories({
-        query: { query: trimmedQuery, page: currentPage, limit },
+        query: { query: trimmedQuery, page: currentPage, limit, genres },
       });
 
       const responseData = (response?.data as any)?.data || response?.data;
@@ -402,22 +403,14 @@ export function useSearchStories(options: UseSearchStoriesOptions) {
   React.useEffect(() => {
     if (!data?.stories) return;
 
-    const filteredStories = genre
-      ? data.stories.filter((story: { genres?: string[] }) =>
-          story.genres?.some(
-            (item) => item.toLowerCase() === genre.toLowerCase(),
-          ),
-        )
-      : data.stories;
-
     setAllStories((prev) => {
       if (currentPage === 1) {
-        return filteredStories;
+        return data.stories;
       }
       const existingIds = new Set(
         prev.map((story: { id: string }) => story.id),
       );
-      const newStories = filteredStories.filter(
+      const newStories = data.stories.filter(
         (story: { id: string }) => !existingIds.has(story.id),
       );
       return [...prev, ...newStories];
@@ -425,7 +418,7 @@ export function useSearchStories(options: UseSearchStoriesOptions) {
 
     const totalPages = data.totalPages || 0;
     setHasMore(currentPage < totalPages);
-  }, [data?.stories, currentPage, genre]);
+  }, [data?.stories, currentPage]);
 
   const loadMore = React.useCallback(() => {
     if (!isLoading && hasMore) {
