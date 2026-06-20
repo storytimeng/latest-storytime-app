@@ -5,58 +5,89 @@ import { SearchField } from "@/components/reusables/form";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Search } from "lucide-react";
 import Link from "next/link";
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 import { useGenres } from "@/src/hooks/useGenres";
 import { useDebounce } from "@/src/hooks/useDebounce";
 import { useSearchStories } from "@/src/hooks/useStoryCategories";
+import { useStories } from "@/src/hooks/useStories";
 import { getStoryCoverSrc } from "@/lib/storyCover";
 
 const SearchView = () => {
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState("All");
-  const [hasSearched, setHasSearched] = useState(false);
 
-  // Debounce search query
   const debouncedSearch = useDebounce(search, 300);
+  const selectedGenre = activeFilter !== "All" ? activeFilter : undefined;
+  const hasQuery = debouncedSearch.trim().length > 0;
 
-  // Fetch genres
   const { genres: apiGenres, isLoading: genresLoading } = useGenres();
   const genres = ["All", ...(apiGenres || [])];
 
-  // Fetch stories with search and filter using dedicated search endpoint
-  const { stories, isLoading } = useSearchStories({
-    query: debouncedSearch || "",
-    // @ts-ignore
-    genre: activeFilter !== "All" ? activeFilter : undefined,
-    limit: 50,
+  const {
+    stories: browseStories,
+    isLoading: browseLoading,
+    isLoadingMore: browseLoadingMore,
+    hasMore: browseHasMore,
+    loadMore: browseLoadMore,
+    total: browseTotal,
+  } = useStories({
+    limit: 20,
+    genre: selectedGenre,
   });
+
+  const {
+    stories: searchStoriesList,
+    isLoading: searchLoading,
+    isLoadingMore: searchLoadingMore,
+    hasMore: searchHasMore,
+    loadMore: searchLoadMore,
+    total: searchTotal,
+  } = useSearchStories({
+    query: debouncedSearch,
+    genre: selectedGenre,
+    limit: 20,
+  });
+
+  const stories = hasQuery ? searchStoriesList : browseStories;
+  const isLoading = hasQuery ? searchLoading : browseLoading;
+  const isLoadingMore = hasQuery ? searchLoadingMore : browseLoadingMore;
+  const hasMore = hasQuery ? searchHasMore : browseHasMore;
+  const loadMore = hasQuery ? searchLoadMore : browseLoadMore;
+  const total = hasQuery ? searchTotal : browseTotal;
 
   const handleFilterClick = (genre: string) => {
     setActiveFilter(genre);
   };
 
-  const handleStoryClick = (storyId: string) => {
-    // Navigation is handled by Link in SearchResult component
-  };
-
   const handleSearch = (value: string) => {
     setSearch(value);
-    if (value.trim()) {
-      setHasSearched(true);
-    }
   };
 
   const clearSearch = () => {
     setSearch("");
-    setHasSearched(false);
   };
+
+  const handleScroll = useCallback(
+    (event: React.UIEvent<HTMLDivElement>) => {
+      const target = event.currentTarget;
+      const nearBottom =
+        target.scrollHeight - target.scrollTop <= target.clientHeight + 120;
+
+      if (nearBottom && hasMore && !isLoading && !isLoadingMore) {
+        loadMore();
+      }
+    },
+    [hasMore, isLoading, isLoadingMore, loadMore],
+  );
+
+  const resultsLabel = isLoading
+    ? "Loading stories..."
+    : `${total || stories.length} result${(total || stories.length) !== 1 ? "s" : ""}`;
 
   return (
     <div className="h-screen flex flex-col bg-accent-shade-1">
-      {/* Fixed Header Section */}
       <div className="flex-shrink-0 bg-accent-shade-1 pt-4 pb-2 px-4">
         <div className="space-y-4">
-          {/* Search Bar and Back Button */}
           <div className="flex items-center gap-4">
             <Link
               href="/home"
@@ -71,12 +102,10 @@ const SearchView = () => {
                 id="search"
                 placeholder="Search stories"
                 onChange={handleSearch}
-                onEnter={() => {
-                  if (search.trim()) setHasSearched(true);
-                }}
+                onEnter={() => undefined}
                 reqValue="*"
-                required={true}
-                minLen={1}
+                required={false}
+                minLen={0}
                 maxLen={100}
                 value={search}
                 disabled={false}
@@ -98,12 +127,8 @@ const SearchView = () => {
                 }
               />
             </div>
-            {!hasSearched && !search.trim() && (
-              <p className="text-complimentary-colour shrink-0">Search</p>
-            )}
           </div>
 
-          {/* Genre Filters */}
           <div className="w-full">
             {genresLoading ? (
               <div className="flex gap-3">
@@ -135,25 +160,18 @@ const SearchView = () => {
         </div>
 
         <div className="pt-2">
-          {/* Search Status */}
-          {search && (
-            <div className="text-left py-2">
-              <p className="text-complimentary-colour text-[14px]">
-                {isLoading
-                  ? "Searching..."
-                  : `${stories.length} result${stories.length !== 1 ? "s" : ""}`}
-              </p>
-            </div>
-          )}
+          <div className="text-left py-2">
+            <p className="text-complimentary-colour text-[14px]">
+              {resultsLabel}
+              {selectedGenre ? ` in ${selectedGenre}` : ""}
+            </p>
+          </div>
         </div>
       </div>
 
-      {/* Scrollable Content Section */}
-      <div className="flex-1 overflow-y-auto px-4 pb-4">
-        {/* Search Results Section */}
+      <div className="flex-1 overflow-y-auto px-4 pb-4" onScroll={handleScroll}>
         <div className="space-y-4">
-          {/* Loading State */}
-          {isLoading && search && (
+          {isLoading && (
             <div className="space-y-3">
               {[...Array(5)].map((_, i) => (
                 <div
@@ -164,48 +182,60 @@ const SearchView = () => {
             </div>
           )}
 
-          {/* Search Results */}
-          {!isLoading && search && stories.length > 0 && (
+          {!isLoading && stories.length > 0 && (
             <div className="space-y-3">
-              {stories.map((story: any) => (
-                <SearchResult
-                  key={story.id}
-                  title={story.title}
-                  genre={story.genres?.[0] || "Unknown"}
-                  author={
-                    (story.author as any)?.penName ||
-                    story.author?.name ||
-                    "Anonymous"
-                  }
-                  image={getStoryCoverSrc(story.imageUrl)}
-                  hasWarning={(story as any).storyStatus === "ongoing"}
-                  onClick={() => handleStoryClick(story.id)}
+              {stories.map(
+                (story: {
+                  id: string;
+                  title: string;
+                  genres?: string[];
+                  imageUrl?: string;
+                  storyStatus?: string;
+                  author?: { penName?: string; name?: string };
+                }) => (
+                  <Link
+                    key={story.id}
+                    href={`/story/${story.id}`}
+                    className="block"
+                  >
+                    <SearchResult
+                      title={story.title}
+                      genre={story.genres?.[0] || "Unknown"}
+                      author={
+                        story.author?.penName ||
+                        story.author?.name ||
+                        "Anonymous"
+                      }
+                      image={getStoryCoverSrc(story.imageUrl)}
+                      hasWarning={story.storyStatus === "ongoing"}
+                    />
+                  </Link>
+                ),
+              )}
+            </div>
+          )}
+
+          {!isLoading && stories.length === 0 && (
+            <div className="text-center py-12">
+              <p className="text-primary-shade-2 text-[14px]">
+                {hasQuery
+                  ? "No stories found matching your search criteria."
+                  : "No stories found for this genre."}
+              </p>
+              <p className="text-primary-shade-2 text-[14px] mt-2">
+                Try another genre or search by title, author, or keyword.
+              </p>
+            </div>
+          )}
+
+          {isLoadingMore && (
+            <div className="space-y-3 pt-2">
+              {[...Array(2)].map((_, i) => (
+                <div
+                  key={i}
+                  className="h-24 bg-accent-colour animate-pulse rounded-lg"
                 />
               ))}
-            </div>
-          )}
-
-          {/* No Results Message */}
-          {!isLoading && search && stories.length === 0 && (
-            <div className="text-center py-12">
-              <p className="text-primary-shade-2 text-[14px]">
-                No stories found matching your search criteria.
-              </p>
-              <p className="text-primary-shade-2 text-[14px] mt-2">
-                Try adjusting your search terms or genre filter.
-              </p>
-            </div>
-          )}
-
-          {/* Initial State */}
-          {!search && (
-            <div className="text-center py-12">
-              <p className="text-primary-shade-2 text-[14px]">
-                Start typing to search for stories
-              </p>
-              <p className="text-primary-shade-2 text-[14px] mt-2">
-                Use the genre filters above to narrow down your search
-              </p>
             </div>
           )}
         </div>

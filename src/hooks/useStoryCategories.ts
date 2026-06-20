@@ -17,6 +17,7 @@ interface UseStoryCategoryOptions {
 
 interface UseSearchStoriesOptions extends UseStoryCategoryOptions {
   query: string;
+  genre?: string;
 }
 
 // Hook for popular stories with infinite scroll support
@@ -41,7 +42,7 @@ export function usePopularStories(options: UseStoryCategoryOptions = {}) {
     {
       keepPreviousData: true, // Prevent flash when loading next page
       revalidateOnFocus: false,
-    }
+    },
   );
 
   // Update accumulated stories when new data arrives
@@ -55,7 +56,7 @@ export function usePopularStories(options: UseStoryCategoryOptions = {}) {
         // Avoid duplicates
         const existingIds = new Set(prev.map((s: any) => s.id));
         const newStories = data.stories.filter(
-          (s: any) => !existingIds.has(s.id)
+          (s: any) => !existingIds.has(s.id),
         );
         return [...prev, ...newStories];
       });
@@ -85,7 +86,7 @@ export function usePopularStories(options: UseStoryCategoryOptions = {}) {
       allStories.length,
       allStories[0]?.id,
       allStories[allStories.length - 1]?.id,
-    ]
+    ],
   );
 
   // Track initial loading separately from loading more
@@ -129,7 +130,7 @@ export function useRecentlyAddedStories(options: UseStoryCategoryOptions = {}) {
     {
       keepPreviousData: true,
       revalidateOnFocus: false,
-    }
+    },
   );
 
   React.useEffect(() => {
@@ -140,7 +141,7 @@ export function useRecentlyAddedStories(options: UseStoryCategoryOptions = {}) {
         }
         const existingIds = new Set(prev.map((s: any) => s.id));
         const newStories = data.stories.filter(
-          (s: any) => !existingIds.has(s.id)
+          (s: any) => !existingIds.has(s.id),
         );
         return [...prev, ...newStories];
       });
@@ -169,7 +170,7 @@ export function useRecentlyAddedStories(options: UseStoryCategoryOptions = {}) {
       allStories.length,
       allStories[0]?.id,
       allStories[allStories.length - 1]?.id,
-    ]
+    ],
   );
 
   // Track initial loading separately from loading more
@@ -213,7 +214,7 @@ export function useTrendingStories(options: UseStoryCategoryOptions = {}) {
     {
       keepPreviousData: true,
       revalidateOnFocus: false,
-    }
+    },
   );
 
   React.useEffect(() => {
@@ -224,7 +225,7 @@ export function useTrendingStories(options: UseStoryCategoryOptions = {}) {
         }
         const existingIds = new Set(prev.map((s: any) => s.id));
         const newStories = data.stories.filter(
-          (s: any) => !existingIds.has(s.id)
+          (s: any) => !existingIds.has(s.id),
         );
         return [...prev, ...newStories];
       });
@@ -253,7 +254,7 @@ export function useTrendingStories(options: UseStoryCategoryOptions = {}) {
       allStories.length,
       allStories[0]?.id,
       allStories[allStories.length - 1]?.id,
-    ]
+    ],
   );
 
   // Track initial loading separately from loading more
@@ -277,7 +278,7 @@ export function useTrendingStories(options: UseStoryCategoryOptions = {}) {
 
 // Hook for only on storytime stories with infinite scroll support
 export function useOnlyOnStorytimeStories(
-  options: UseStoryCategoryOptions = {}
+  options: UseStoryCategoryOptions = {},
 ) {
   const { limit = 20 } = options;
   const [currentPage, setCurrentPage] = React.useState(1);
@@ -294,7 +295,7 @@ export function useOnlyOnStorytimeStories(
       const responseData = (response?.data as any)?.data || response?.data;
       console.log(
         "✅ useOnlyOnStorytimeStories: Processed data:",
-        responseData
+        responseData,
       );
 
       return responseData;
@@ -302,7 +303,7 @@ export function useOnlyOnStorytimeStories(
     {
       keepPreviousData: true,
       revalidateOnFocus: false,
-    }
+    },
   );
 
   React.useEffect(() => {
@@ -313,7 +314,7 @@ export function useOnlyOnStorytimeStories(
         }
         const existingIds = new Set(prev.map((s: any) => s.id));
         const newStories = data.stories.filter(
-          (s: any) => !existingIds.has(s.id)
+          (s: any) => !existingIds.has(s.id),
         );
         return [...prev, ...newStories];
       });
@@ -342,7 +343,7 @@ export function useOnlyOnStorytimeStories(
       allStories.length,
       allStories[0]?.id,
       allStories[allStories.length - 1]?.id,
-    ]
+    ],
   );
 
   // Track initial loading separately from loading more
@@ -366,36 +367,87 @@ export function useOnlyOnStorytimeStories(
 
 // Hook for searching stories
 export function useSearchStories(options: UseSearchStoriesOptions) {
-  const { query, page = 1, limit = 20, genres } = options;
+  const { query, page: initialPage = 1, limit = 20, genre } = options;
+  const trimmedQuery = query.trim();
+  const shouldFetch = trimmedQuery.length > 0;
 
-  const shouldFetch = query && query.trim().length > 0;
+  const [currentPage, setCurrentPage] = React.useState(initialPage);
+  const [allStories, setAllStories] = React.useState<any[]>([]);
+  const [hasMore, setHasMore] = React.useState(true);
+
+  React.useEffect(() => {
+    setCurrentPage(1);
+    setAllStories([]);
+    setHasMore(true);
+  }, [trimmedQuery, genre, limit]);
 
   const { data, error, isLoading, mutate } = useSWR(
     shouldFetch
-      ? `/stories/search?query=${query}&page=${page}&limit=${limit}${genres?.join(",") || ""}`
+      ? `/stories/search?query=${encodeURIComponent(trimmedQuery)}&page=${currentPage}&limit=${limit}&genre=${genre ?? ""}`
       : null,
     async () => {
-      if (!shouldFetch) return null;
-
       const response = await searchStories({
-        query: { query, page, limit },
+        query: { query: trimmedQuery, page: currentPage, limit },
       });
 
       const responseData = (response?.data as any)?.data || response?.data;
-      console.log("✅ useSearchStories: Processed data:", responseData);
-
       return responseData;
-    }
+    },
+    {
+      keepPreviousData: true,
+      revalidateOnFocus: false,
+    },
   );
 
+  React.useEffect(() => {
+    if (!data?.stories) return;
+
+    const filteredStories = genre
+      ? data.stories.filter((story: { genres?: string[] }) =>
+          story.genres?.some(
+            (item) => item.toLowerCase() === genre.toLowerCase(),
+          ),
+        )
+      : data.stories;
+
+    setAllStories((prev) => {
+      if (currentPage === 1) {
+        return filteredStories;
+      }
+      const existingIds = new Set(
+        prev.map((story: { id: string }) => story.id),
+      );
+      const newStories = filteredStories.filter(
+        (story: { id: string }) => !existingIds.has(story.id),
+      );
+      return [...prev, ...newStories];
+    });
+
+    const totalPages = data.totalPages || 0;
+    setHasMore(currentPage < totalPages);
+  }, [data?.stories, currentPage, genre]);
+
+  const loadMore = React.useCallback(() => {
+    if (!isLoading && hasMore) {
+      setCurrentPage((prev) => prev + 1);
+    }
+  }, [isLoading, hasMore]);
+
+  const memoizedStories = React.useMemo(() => allStories, [allStories]);
+
+  const isInitialLoading = shouldFetch && isLoading && allStories.length === 0;
+
   return {
-    stories: (data as StoriesListResponseDto)?.stories || [],
+    stories: memoizedStories,
     total: (data as StoriesListResponseDto)?.total || 0,
-    page: (data as StoriesListResponseDto)?.page || 1,
+    page: currentPage,
     limit: (data as StoriesListResponseDto)?.limit || limit,
     totalPages: (data as StoriesListResponseDto)?.totalPages || 0,
-    isLoading,
+    isLoading: isInitialLoading,
+    isLoadingMore: isLoading && currentPage > 1,
+    hasMore,
     error,
     mutate,
+    loadMore,
   };
 }

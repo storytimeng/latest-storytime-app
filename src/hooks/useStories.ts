@@ -18,9 +18,15 @@ export function useStories(options: UseStoriesOptions = {}) {
 
   // Build query params for genres array
   const genres = genre ? [genre] : undefined;
-  
+
   // Create cache key from params but exclude page to handle it internally
   const cacheKey = `stories-${JSON.stringify({ limit, search, genres, status, page: currentPage })}`;
+
+  React.useEffect(() => {
+    setCurrentPage(1);
+    setAllStories([]);
+    setHasMore(true);
+  }, [genre, limit, status, search]);
 
   const { data, error, isLoading, mutate } = useSWR(
     cacheKey,
@@ -50,7 +56,7 @@ export function useStories(options: UseStoriesOptions = {}) {
       revalidateOnFocus: false,
       shouldRetryOnError: false,
       keepPreviousData: true,
-    }
+    },
   );
 
   // Update accumulated stories when new data arrives
@@ -63,7 +69,7 @@ export function useStories(options: UseStoriesOptions = {}) {
         // Avoid duplicates
         const existingIds = new Set(prev.map((s: any) => s.id));
         const newStories = data.stories.filter(
-          (s: any) => !existingIds.has(s.id)
+          (s: any) => !existingIds.has(s.id),
         );
         return [...prev, ...newStories];
       });
