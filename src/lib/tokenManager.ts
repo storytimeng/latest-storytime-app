@@ -9,20 +9,8 @@ const TOKEN_EXPIRY_KEY = "tokenExpiry";
 // Refresh token 5 minutes before it expires
 const REFRESH_BUFFER_MS = 5 * 60 * 1000;
 
-/**
- * Decode JWT to get expiry time
- */
-function decodeTokenExpiry(token: string): number | null {
-  try {
-    const parts = token.split(".");
-    if (parts.length !== 3) return null;
-
-    const payload = JSON.parse(atob(parts[1]));
-    return payload.exp ? payload.exp * 1000 : null; // Convert to milliseconds
-  } catch (e) {
-    console.error("Failed to decode token:", e);
-    return null;
-  }
+function getStoredRefreshToken(): string | undefined {
+  return useAuthStore.getState().refreshToken || Cookies.get(REFRESH_TOKEN_KEY);
 }
 
 /**
@@ -58,8 +46,7 @@ export async function refreshTokens(): Promise<{
   refreshToken?: string;
 } | null> {
   try {
-    const currentRefreshToken =
-      useAuthStore.getState().refreshToken || Cookies.get(REFRESH_TOKEN_KEY);
+    const currentRefreshToken = getStoredRefreshToken();
 
     if (!currentRefreshToken) {
       console.error("No refresh token available");
@@ -97,19 +84,8 @@ export async function refreshTokens(): Promise<{
       return null;
     }
 
-    // Use the store's setToken method which handles both cookie and state
+    // setToken persists cookies using the current "keep me logged in" preference
     useAuthStore.getState().setToken(token, refreshToken);
-
-    // Store token expiry time
-    const expiry = decodeTokenExpiry(token);
-    if (expiry) {
-      Cookies.set(TOKEN_EXPIRY_KEY, expiry.toString(), {
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
-        expires: new Date(expiry),
-      });
-      console.log("✅ Token expiry set:", new Date(expiry).toISOString());
-    }
 
     console.log("✅ Tokens refreshed successfully");
     return { token, refreshToken };
@@ -128,13 +104,20 @@ export async function ensureValidToken(): Promise<string | null> {
     useAuthStore.getState().token || Cookies.get(AUTH_TOKEN_KEY);
 
   if (!currentToken) {
+    if (getStoredRefreshToken()) {
+      console.log(
+        "[ensureValidToken] Access token missing, refreshing from stored session...",
+      );
+      const result = await refreshTokens();
+      return result?.token ?? null;
+    }
+
     console.log("[ensureValidToken] No token found");
     return null;
   }
 
   // Check if token needs refresh
   if (!shouldRefreshToken()) {
-    console.log("[ensureValidToken] Token is still valid");
     return currentToken;
   }
 

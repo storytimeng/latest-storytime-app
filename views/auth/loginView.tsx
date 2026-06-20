@@ -10,6 +10,7 @@ import { showToast } from "@/lib/showNotification";
 import { useLogin } from "@/src/hooks/useAuth";
 import { useLoadingStore } from "@/src/stores/useLoadingStore";
 import { useSupportStore } from "@/src/stores/useSupportStore";
+import { getRememberMePreference } from "@/src/stores/useAuthStore";
 
 interface LoginFormData {
   email: string;
@@ -19,8 +20,7 @@ interface LoginFormData {
 
 // Create zod schema for login validation
 const loginSchema = z.object({
-  email: z
-    .email("Please enter a valid email address"),
+  email: z.email("Please enter a valid email address"),
   password: z.string().min(1, "Password is required"),
   rememberMe: z.boolean().optional(),
 });
@@ -43,11 +43,15 @@ export default function LoginView({ onSuccess, onSwitchView }: LoginViewProps) {
 
   useEffect(() => {
     router.prefetch("/home");
+    setFormData((prev) => ({
+      ...prev,
+      rememberMe: getRememberMePreference(),
+    }));
   }, [router]);
 
   const handleInputChange = (
     field: keyof LoginFormData,
-    value: string | boolean
+    value: string | boolean,
   ) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     // Clear error when user starts typing
@@ -84,7 +88,7 @@ export default function LoginView({ onSuccess, onSwitchView }: LoginViewProps) {
         // Auto scroll to first error
         setTimeout(() => {
           const firstErrorElement = document.querySelector(
-            '[data-error="true"]'
+            '[data-error="true"]',
           ) as HTMLElement;
           if (firstErrorElement) {
             firstErrorElement.scrollIntoView({
