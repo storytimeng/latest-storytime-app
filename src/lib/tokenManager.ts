@@ -17,14 +17,31 @@ function getStoredRefreshToken(): string | undefined {
  * Check if token is expired or will expire soon
  */
 export function isTokenExpired(): boolean {
+  const token =
+    useAuthStore.getState().token || Cookies.get(AUTH_TOKEN_KEY);
   const expiryStr = Cookies.get(TOKEN_EXPIRY_KEY);
-  if (!expiryStr) return true;
 
-  const expiry = parseInt(expiryStr, 10);
-  const now = Date.now();
+  if (expiryStr) {
+    const expiry = parseInt(expiryStr, 10);
+    const now = Date.now();
+    return now >= expiry - REFRESH_BUFFER_MS;
+  }
 
-  // Consider expired if within buffer time
-  return now >= expiry - REFRESH_BUFFER_MS;
+  if (token) {
+    try {
+      const parts = token.split(".");
+      if (parts.length === 3) {
+        const payload = JSON.parse(atob(parts[1])) as { exp?: number };
+        if (payload.exp) {
+          return Date.now() >= payload.exp * 1000 - REFRESH_BUFFER_MS;
+        }
+      }
+    } catch {
+      return true;
+    }
+  }
+
+  return true;
 }
 
 /**

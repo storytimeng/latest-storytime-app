@@ -1,4 +1,5 @@
 import { getAuthToken } from "@/src/stores/useAuthStore";
+import { ensureValidToken, refreshTokens } from "@/src/lib/tokenManager";
 
 export type StoryAudioStatus = "pending" | "ready" | "failed" | "unavailable";
 
@@ -39,6 +40,51 @@ function unwrapData<T>(payload: unknown): T {
   return record as T;
 }
 
+async function resolveAuthToken(forceRefresh = false): Promise<string | null> {
+  if (forceRefresh) {
+    const refreshed = await refreshTokens();
+    return refreshed?.token ?? null;
+  }
+
+  return ensureValidToken();
+}
+
+async function authorizedFetch(
+  path: string,
+  init: RequestInit = {},
+  options?: { retryOnUnauthorized?: boolean },
+): Promise<Response> {
+  const token = await resolveAuthToken();
+  const headers = new Headers(init.headers);
+
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+
+  const response = await fetch(`${getBaseUrl().replace(/\/$/, "")}${path}`, {
+    ...init,
+    headers,
+    cache: "no-store",
+  });
+
+  if (
+    response.status === 401 &&
+    options?.retryOnUnauthorized !== false
+  ) {
+    const refreshedToken = await resolveAuthToken(true);
+    if (refreshedToken) {
+      headers.set("Authorization", `Bearer ${refreshedToken}`);
+      return fetch(`${getBaseUrl().replace(/\/$/, "")}${path}`, {
+        ...init,
+        headers,
+        cache: "no-store",
+      });
+    }
+  }
+
+  return response;
+}
+
 export async function fetchStoryAudio(options: {
   storyId: string;
   chapterId?: string | null;
@@ -55,13 +101,7 @@ export async function fetchStoryAudio(options: {
     query ? `?${query}` : ""
   }`;
 
-  const token = getAuthToken();
-  const response = await fetch(`${getBaseUrl().replace(/\/$/, "")}${path}`, {
-    headers: {
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    cache: "no-store",
-  });
+  const response = await authorizedFetch(path);
 
   if (!response.ok) {
     const errorText = await response.text();
@@ -81,7 +121,7 @@ export async function recordStoryAudioListen(options: {
   durationSeconds: number;
   completed: boolean;
 }): Promise<void> {
-  const token = getAuthToken();
+  const token = await resolveAuthToken();
   if (!token) return;
 
   const body: Record<string, unknown> = {
@@ -93,13 +133,12 @@ export async function recordStoryAudioListen(options: {
   if (options.voice) body.voice = options.voice;
 
   try {
-    await fetch(
-      `${getBaseUrl().replace(/\/$/, "")}/stories/${encodeURIComponent(options.storyId)}/audio/listens`,
+    await authorizedFetch(
+      `/stories/${encodeURIComponent(options.storyId)}/audio/listens`,
       {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(body),
       },
