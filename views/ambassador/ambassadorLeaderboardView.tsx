@@ -1,123 +1,141 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Tabs, Tab } from "@heroui/tabs";
-import { Avatar } from "@heroui/avatar";
-import { Skeleton } from "@heroui/skeleton";
-import { Magnetik_Medium } from "@/lib/font";
-import { AmbassadorHeader } from "@/components/ambassador/AmbassadorHeader";
+import { useCallback, useEffect, useState } from "react";
 import {
+  LeaderboardEmptyState,
+  LeaderboardEntryCard,
+  LeaderboardFilterCard,
+  LeaderboardHeader,
+  LeaderboardResetCard,
+  LeaderboardSkeletonList,
+  ViewMoreRankingsButton,
+} from "@/components/ambassador/AmbassadorLeaderboardComponents";
+import {
+  fetchAmbassadorDashboard,
   fetchAmbassadorLeaderboard,
-  type AmbassadorType,
 } from "@/src/lib/ambassadors";
-
-const TIER_EMOJI: Record<string, string> = {
-  bronze: "🥉",
-  silver: "🥈",
-  gold: "🥇",
-  platinum: "💎",
-};
+import {
+  getDefaultLeaderboardScope,
+  LEADERBOARD_PAGE_SIZE,
+  type AmbassadorLeaderboardEntry,
+  type LeaderboardScope,
+} from "@/src/lib/leaderboard";
+import { showToast } from "@/lib/showNotification";
 
 export default function AmbassadorLeaderboardView() {
-  const [tab, setTab] = useState<AmbassadorType>("campus");
+  const [scope, setScope] = useState<LeaderboardScope>("campus");
+  const [entries, setEntries] = useState<AmbassadorLeaderboardEntry[]>([]);
+  const [nextResetDate, setNextResetDate] = useState("");
+  const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [entries, setEntries] = useState<
-    Array<{
-      rank: number;
-      totalScore: number;
-      tier: string;
-      user: {
-        firstName: string;
-        lastName: string;
-        penName?: string;
-        avatar?: string;
-      } | null;
-    }>
-  >([]);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [scopeReady, setScopeReady] = useState(false);
 
   useEffect(() => {
-    setLoading(true);
-    fetchAmbassadorLeaderboard(tab)
-      .then((data) => setEntries(data.leaderboard))
-      .catch(() => setEntries([]))
-      .finally(() => setLoading(false));
-  }, [tab]);
+    let cancelled = false;
+
+    fetchAmbassadorDashboard()
+      .then((dashboard) => {
+        if (cancelled) return;
+        setScope(getDefaultLeaderboardScope(dashboard.ambassador.type));
+        setScopeReady(true);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setScopeReady(true);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const loadLeaderboard = useCallback(
+    async (nextScope: LeaderboardScope, offset = 0, append = false) => {
+      if (offset === 0) {
+        setLoading(true);
+      } else {
+        setLoadingMore(true);
+      }
+
+      try {
+        const data = await fetchAmbassadorLeaderboard({
+          scope: nextScope,
+          limit: LEADERBOARD_PAGE_SIZE,
+          offset,
+        });
+
+        setEntries((current) =>
+          append ? [...current, ...data.leaderboard] : data.leaderboard,
+        );
+        setNextResetDate(data.nextResetDate);
+        setHasMore(data.hasMore);
+      } catch {
+        if (!append) {
+          setEntries([]);
+          setHasMore(false);
+        }
+        showToast({ type: "error", message: "Failed to load leaderboard" });
+      } finally {
+        setLoading(false);
+        setLoadingMore(false);
+      }
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (!scopeReady) return;
+    void loadLeaderboard(scope, 0, false);
+  }, [scope, scopeReady, loadLeaderboard]);
+
+  const handleScopeChange = (nextScope: LeaderboardScope) => {
+    if (nextScope === scope) return;
+    setScope(nextScope);
+  };
+
+  const handleLoadMore = () => {
+    if (!hasMore || loadingMore) return;
+    void loadLeaderboard(scope, entries.length, true);
+  };
+
+  const showEmptyState = !loading && entries.length === 0;
 
   return (
-    <div className="min-h-screen bg-accent-shade-1 max-w-md mx-auto pb-24">
-      <AmbassadorHeader
-        title="Ambassador Leaderboard"
-        backHref="/ambassador/dashboard"
-      />
+    <div className="min-h-screen bg-accent-shade-1 max-w-md mx-auto pb-10">
+      <LeaderboardHeader />
 
-      <div className="px-4 py-4">
-        <Tabs
-          selectedKey={tab}
-          onSelectionChange={(key) => setTab(key as AmbassadorType)}
-          variant="underlined"
-          classNames={{
-            tabList: "w-full",
-            tab: "text-primary-colour",
-            cursor: "bg-primary-colour",
-          }}
-        >
-          <Tab key="campus" title="Campus" />
-          <Tab key="community" title="Community" />
-        </Tabs>
-      </div>
+      <div className="space-y-4">
+        <LeaderboardFilterCard
+          scope={scope}
+          onScopeChange={handleScopeChange}
+        />
 
-      <div className="px-4 space-y-2">
         {loading ? (
-          Array(5)
-            .fill(0)
-            .map((_, i) => (
-              <div
-                key={i}
-                className="flex items-center gap-3 p-3 bg-white rounded-xl"
-              >
-                <Skeleton className="w-8 h-8 rounded-full" />
-                <Skeleton className="h-4 flex-1 rounded" />
-              </div>
-            ))
-        ) : entries.length === 0 ? (
-          <p className="text-center text-grey-2 py-8 text-sm">
-            No ambassadors on the leaderboard yet.
-          </p>
+          <LeaderboardSkeletonList />
+        ) : showEmptyState ? (
+          <LeaderboardEmptyState />
         ) : (
-          entries.map((entry) => (
-            <div
-              key={entry.rank}
-              className="flex items-center gap-3 p-3 bg-white rounded-xl shadow-sm"
-            >
-              <span
-                className={`${Magnetik_Medium.className} w-8 text-center text-primary-colour`}
-              >
-                {entry.rank <= 3
-                  ? ["🥇", "🥈", "🥉"][entry.rank - 1]
-                  : entry.rank}
-              </span>
-              <Avatar
-                src={entry.user?.avatar}
-                name={
-                  entry.user?.penName ||
-                  `${entry.user?.firstName || ""} ${entry.user?.lastName || ""}`
-                }
-                size="sm"
+          <div className="mx-4 space-y-2">
+            {entries.map((entry) => (
+              <LeaderboardEntryCard
+                key={`${entry.ambassadorId}-${entry.rank}`}
+                entry={entry}
               />
-              <div className="flex-1">
-                <p className="text-sm text-primary-colour">
-                  {entry.user?.penName ||
-                    `${entry.user?.firstName} ${entry.user?.lastName}`}
-                </p>
-                <p className="text-xs text-grey-3 capitalize">
-                  {TIER_EMOJI[entry.tier]} {entry.tier}
-                </p>
-              </div>
-              <span className="text-sm font-magnetik-medium text-primary-colour">
-                {entry.totalScore}
-              </span>
-            </div>
-          ))
+            ))}
+          </div>
+        )}
+
+        {!loading && !showEmptyState && hasMore && (
+          <ViewMoreRankingsButton
+            loading={loadingMore}
+            onClick={handleLoadMore}
+          />
+        )}
+
+        {nextResetDate && (
+          <LeaderboardResetCard nextResetDate={nextResetDate} />
         )}
       </div>
     </div>

@@ -2,6 +2,10 @@ import Cookies from "js-cookie";
 import { getAuthToken } from "@/src/stores/useAuthStore";
 import { prepareAuthSession } from "@/src/lib/authSession";
 import { refreshTokens } from "@/src/lib/tokenManager";
+import type {
+  AmbassadorLeaderboardResponse,
+  LeaderboardScope,
+} from "@/src/lib/leaderboard";
 
 export type AmbassadorType = "campus" | "community";
 export type ApplicationStatus = "pending" | "accepted" | "declined";
@@ -338,25 +342,20 @@ export async function fetchAmbassadorReferrals() {
   }>("/ambassadors/referrals");
 }
 
-export async function fetchAmbassadorLeaderboard(type?: AmbassadorType) {
-  const query = type ? `?type=${type}` : "";
-  return ambassadorFetch<{
-    leaderboard: Array<{
-      rank: number;
-      ambassadorId: string;
-      type: AmbassadorType;
-      totalScore: number;
-      tier: AmbassadorTier;
-      referralCode: string;
-      user: {
-        id: string;
-        firstName: string;
-        lastName: string;
-        penName?: string;
-        avatar?: string;
-      } | null;
-    }>;
-  }>(`/ambassadors/leaderboard${query}`);
+export async function fetchAmbassadorLeaderboard(options?: {
+  scope?: LeaderboardScope;
+  limit?: number;
+  offset?: number;
+}) {
+  const params = new URLSearchParams();
+  if (options?.scope) params.set("scope", options.scope);
+  if (options?.limit != null) params.set("limit", String(options.limit));
+  if (options?.offset != null) params.set("offset", String(options.offset));
+
+  const query = params.size > 0 ? `?${params.toString()}` : "";
+  return ambassadorFetch<AmbassadorLeaderboardResponse>(
+    `/ambassadors/leaderboard${query}`,
+  );
 }
 
 export async function fetchAmbassadorBreakdown() {

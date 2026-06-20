@@ -28,6 +28,7 @@ import {
   fetchAmbassadorLeaderboard,
   type AmbassadorDashboard,
 } from "@/src/lib/ambassadors";
+import { getDefaultLeaderboardScope } from "@/src/lib/leaderboard";
 import { showToast } from "@/lib/showNotification";
 
 const CELEBRATION_SEEN_KEY = "storytime-ambassador-6month-celebration-seen";
@@ -52,9 +53,10 @@ export default function AmbassadorDashboardView() {
 
         setData(dashboard);
 
-        const leaderboard = await fetchAmbassadorLeaderboard(
-          dashboard.ambassador.type,
-        );
+        const leaderboard = await fetchAmbassadorLeaderboard({
+          scope: getDefaultLeaderboardScope(dashboard.ambassador.type),
+          limit: 100,
+        });
         if (cancelled) return;
 
         const userRank = leaderboard.leaderboard.find(
