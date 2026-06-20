@@ -191,6 +191,9 @@ const SearchView = () => {
                   genres?: string[];
                   imageUrl?: string;
                   storyStatus?: string;
+                  likeCount?: number;
+                  commentCount?: number;
+                  viewCount?: number;
                   author?: { penName?: string; name?: string };
                 }) => (
                   <Link
@@ -207,7 +210,10 @@ const SearchView = () => {
                         "Anonymous"
                       }
                       image={getStoryCoverSrc(story.imageUrl)}
-                      hasWarning={story.storyStatus === "ongoing"}
+                      storyStatus={story.storyStatus}
+                      likeCount={story.likeCount ?? 0}
+                      commentCount={story.commentCount ?? 0}
+                      viewCount={story.viewCount ?? 0}
                     />
                   </Link>
                 ),
