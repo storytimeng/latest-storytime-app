@@ -67,7 +67,8 @@ const ProfileView = () => {
         type: "page" as const,
         path: "/ambassador/dashboard",
       }
-    : ambassadorOverview?.application?.status === "pending"
+    : ambassadorOverview?.hasApplication &&
+        ambassadorOverview.application?.status !== "accepted"
       ? {
           id: "ambassador-status",
           label: "Application Status",

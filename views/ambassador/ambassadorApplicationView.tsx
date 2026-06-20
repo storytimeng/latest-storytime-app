@@ -31,6 +31,7 @@ import {
   type CreateApplicationPayload,
 } from "@/src/lib/ambassadors";
 import { showToast } from "@/lib/showNotification";
+import { mutate } from "swr";
 
 const PROFILE_TYPES = [
   "Secondary school student",
@@ -191,17 +192,17 @@ function ApplicationSuccessScreen() {
         Your application has been submitted successfully. Our team will
         carefully review your responses and get back to you soon.
       </p>
-      <PrimaryFormButton onClick={() => router.push("/")}>
-        Return to Home
+      <PrimaryFormButton onClick={() => router.push("/ambassador/status")}>
+        View My Application Status
       </PrimaryFormButton>
       <Link
-        href="/ambassador/status"
+        href="/profile"
         className={cn(
           Magnetik_Medium.className,
           "mt-4 text-sm text-primary-colour underline-offset-2 hover:underline",
         )}
       >
-        View My Application Status
+        Back to Profile
       </Link>
     </div>
   );
@@ -388,6 +389,7 @@ export default function AmbassadorApplicationView() {
       }
 
       await submitAmbassadorApplication(buildPayload());
+      await mutate("ambassador-overview");
       setPhase("success");
     } catch (err) {
       const message = parseSubmitError(err);

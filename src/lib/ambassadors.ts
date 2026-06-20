@@ -14,6 +14,7 @@ export type MonthlyReportStatus =
 
 export interface AmbassadorApplication {
   id: string;
+  applicationReference: string;
   userId: string;
   type: AmbassadorType;
   status: ApplicationStatus;
@@ -219,6 +220,50 @@ export async function fetchMyAmbassadorApplication() {
   return ambassadorFetch<{ application: AmbassadorApplication }>(
     "/ambassadors/applications/me",
   );
+}
+
+export async function withdrawAmbassadorApplication() {
+  return ambassadorFetch<{ success: boolean }>("/ambassadors/applications/me", {
+    method: "DELETE",
+  });
+}
+
+export function formatAmbassadorTypeLabel(type: AmbassadorType): string {
+  return type === "campus" ? "Campus Ambassador" : "Community Ambassador";
+}
+
+export function formatApplicationDate(value: string): string {
+  return new Date(value).toLocaleString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+export function formatApplicationDateShort(value: string): string {
+  return new Date(value).toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+export function getDecisionCountdown(reviewDeadline: string): {
+  days: number;
+  hours: number;
+} {
+  const msRemaining = Math.max(
+    0,
+    new Date(reviewDeadline).getTime() - Date.now(),
+  );
+  const days = Math.floor(msRemaining / (1000 * 60 * 60 * 24));
+  const hours = Math.floor(
+    (msRemaining % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60),
+  );
+
+  return { days, hours };
 }
 
 export async function fetchAmbassadorDashboard() {
