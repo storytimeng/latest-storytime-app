@@ -1,99 +1,286 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Button } from "@heroui/button";
-import { Input, Textarea } from "@heroui/input";
-import { Loader2, CheckCircle2, Clock, FileText } from "lucide-react";
-import { Magnetik_Medium, Magnetik_SemiBold } from "@/lib/font";
-import { AmbassadorHeader } from "@/components/ambassador/AmbassadorHeader";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { ArrowLeft, Check, FileText, Loader2 } from "lucide-react";
+import { cn } from "@/lib";
 import {
-  fetchMonthlyReport,
-  submitMonthlyReport,
+  Magnetik_Bold,
+  Magnetik_Medium,
+  Magnetik_Regular,
+  Magnetik_SemiBold,
+} from "@/lib/font";
+import { PrimaryFormButton } from "@/components/ambassador/application-form-ui";
+import {
+  CharacterCounter,
+  FormNumberStepper,
+  FormTextArea,
+  MonthlyReportFieldGroup,
+  MonthlyReportIntroCard,
+} from "@/components/ambassador/monthly-report-form-ui";
+import { useUserProfile } from "@/src/hooks/useUserProfile";
+import {
   fetchAmbassadorDashboard,
-  type MonthlyReport,
+  fetchMonthlyReport,
+  MONTHLY_REPORT_ACTIVITIES_MIN_LENGTH,
+  submitMonthlyReport,
   type AmbassadorType,
+  type MonthlyReport,
 } from "@/src/lib/ambassadors";
 import { showToast } from "@/lib/showNotification";
 
-function getPreviousMonth(): { year: number; month: number; label: string } {
+type ViewPhase = "form" | "success";
+
+interface FormErrors {
+  newReferrals?: string;
+  referralStoriesPublished?: string;
+  activitiesDescription?: string;
+  form?: string;
+}
+
+interface SubmissionSummary {
+  totalReferrals: number;
+  totalEventsHosted: number;
+  monthsActive: number;
+  firstName: string;
+}
+
+function getCurrentReportPeriod(): {
+  year: number;
+  month: number;
+  label: string;
+} {
   const now = new Date();
-  const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
   return {
-    year: prev.getFullYear(),
-    month: prev.getMonth() + 1,
-    label: prev.toLocaleString("en", { month: "long", year: "numeric" }),
+    year: now.getFullYear(),
+    month: now.getMonth() + 1,
+    label: now.toLocaleString("en-US", { month: "long", year: "numeric" }),
   };
 }
 
+function getActivitiesPlaceholder(type: AmbassadorType): string {
+  return type === "campus"
+    ? "Describe reading circles, workshops, or campus events..."
+    : "Describe reading circles, workshops, or community events...";
+}
+
+function hydrateFormFromReport(report: MonthlyReport) {
+  return {
+    newReferrals: report.newReferrals,
+    referralStoriesPublished:
+      report.referralStoriesPublished ?? report.storiesWritten ?? 0,
+    activitiesDescription:
+      report.activitiesDescription ?? report.highlights ?? "",
+    programFeedback: report.programFeedback ?? "",
+  };
+}
+
+function ReportSuccessScreen({
+  summary,
+  ambassadorType,
+}: {
+  summary: SubmissionSummary;
+  ambassadorType: AmbassadorType;
+}) {
+  const router = useRouter();
+  const scopeLabel = ambassadorType === "campus" ? "campus" : "community";
+
+  return (
+    <div className="min-h-screen bg-accent-shade-1 max-w-md mx-auto px-6 flex flex-col items-center justify-center text-center pb-12">
+      <div className="w-24 h-24 rounded-full bg-[#34A853] flex items-center justify-center mb-6">
+        <Check className="w-12 h-12 text-white" strokeWidth={3} />
+      </div>
+      <h1
+        className={cn(
+          Magnetik_Bold.className,
+          "text-2xl text-primary-colour mb-3",
+        )}
+      >
+        Report Submitted!!
+      </h1>
+      <p
+        className={cn(
+          Magnetik_Regular.className,
+          "text-sm text-grey-2 leading-relaxed mb-8 max-w-xs",
+        )}
+      >
+        Thank you for sharing your impact on your {scopeLabel}. Your
+        contributions help us improve the program and celebrate your
+        achievements.
+      </p>
+
+      <div className="rounded-2xl bg-white border border-grey-5 shadow-sm p-5 mb-8 max-w-sm">
+        <p
+          className={cn(
+            Magnetik_Regular.className,
+            "text-sm text-primary-colour leading-relaxed",
+          )}
+        >
+          You&apos;ve referred {summary.totalReferrals} user
+          {summary.totalReferrals === 1 ? "" : "s"} and hosted{" "}
+          {summary.totalEventsHosted} for the whole {summary.monthsActive} month
+          {summary.monthsActive === 1 ? "" : "s"}. Amazing work,{" "}
+          {summary.firstName}! 🎉
+        </p>
+      </div>
+
+      <PrimaryFormButton onClick={() => router.push("/ambassador/dashboard")}>
+        Back to Dashboard
+      </PrimaryFormButton>
+      <Link
+        href="/profile"
+        className={cn(
+          Magnetik_Medium.className,
+          "mt-4 text-sm text-primary-colour underline underline-offset-2",
+        )}
+      >
+        Back to Profile
+      </Link>
+    </div>
+  );
+}
+
 export default function AmbassadorReportView() {
-  const period = getPreviousMonth();
+  const router = useRouter();
+  const period = getCurrentReportPeriod();
+  const { user } = useUserProfile();
+
+  const [phase, setPhase] = useState<ViewPhase>("form");
   const [report, setReport] = useState<MonthlyReport | null>(null);
   const [ambassadorType, setAmbassadorType] =
     useState<AmbassadorType>("campus");
   const [loading, setLoading] = useState(true);
+  const [savingDraft, setSavingDraft] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [errors, setErrors] = useState<FormErrors>({});
+  const [summary, setSummary] = useState<SubmissionSummary | null>(null);
+  const [focusedField, setFocusedField] = useState<string | null>(null);
 
-  const [storiesRead, setStoriesRead] = useState("0");
-  const [storiesWritten, setStoriesWritten] = useState("0");
-  const [newReferrals, setNewReferrals] = useState("0");
-  const [eventsHosted, setEventsHosted] = useState("0");
-  const [studentsReached, setStudentsReached] = useState("0");
-  const [readingSessions, setReadingSessions] = useState("0");
-  const [socialPosts, setSocialPosts] = useState("0");
-  const [communityEvents, setCommunityEvents] = useState("0");
-  const [onlineReach, setOnlineReach] = useState("0");
-  const [highlights, setHighlights] = useState("");
+  const [newReferrals, setNewReferrals] = useState(0);
+  const [referralStoriesPublished, setReferralStoriesPublished] = useState(0);
+  const [activitiesDescription, setActivitiesDescription] = useState("");
+  const [programFeedback, setProgramFeedback] = useState("");
 
   useEffect(() => {
-    Promise.all([
-      fetchMonthlyReport(period.year, period.month),
-      fetchAmbassadorDashboard(),
-    ])
-      .then(([reportData, dashboard]) => {
-        setReport(reportData.report);
-        setAmbassadorType(dashboard.ambassador.type);
-        const r = reportData.report;
-        setStoriesRead(String(r.storiesRead));
-        setStoriesWritten(String(r.storiesWritten));
-        setNewReferrals(String(r.newReferrals));
-        setEventsHosted(String(r.eventsHosted));
-        setStudentsReached(String(r.studentsReached));
-        setReadingSessions(String(r.readingSessionsOrganized));
-        setSocialPosts(String(r.socialPostsCount));
-        setCommunityEvents(String(r.communityEvents));
-        setOnlineReach(String(r.onlineReach));
-        setHighlights(r.highlights || "");
+    fetchMonthlyReport(period.year, period.month)
+      .then((data) => {
+        setReport(data.report);
+        const form = hydrateFormFromReport(data.report);
+        setNewReferrals(form.newReferrals);
+        setReferralStoriesPublished(form.referralStoriesPublished);
+        setActivitiesDescription(form.activitiesDescription);
+        setProgramFeedback(form.programFeedback);
       })
       .catch(() => {
-        showToast({ type: "error", message: "Failed to load report" });
+        showToast({ type: "error", message: "Failed to load monthly report" });
       })
       .finally(() => setLoading(false));
   }, [period.year, period.month]);
 
-  const handleSubmit = async () => {
-    setSubmitting(true);
+  useEffect(() => {
+    fetchAmbassadorDashboard()
+      .then((dashboard) => setAmbassadorType(dashboard.ambassador.type))
+      .catch(() => undefined);
+  }, []);
+
+  const status = report?.status ?? "inactive";
+  const isInactive = status === "inactive";
+  const isLocked =
+    status === "submitted" || status === "processing" || status === "completed";
+  const isProcessing = status === "submitted" || status === "processing";
+
+  const canEdit = !isInactive && !isLocked;
+  const isBusy = savingDraft || submitting;
+
+  const activitiesLength = activitiesDescription.trim().length;
+
+  const isSubmitReady = useMemo(() => {
+    return (
+      activitiesLength >= MONTHLY_REPORT_ACTIVITIES_MIN_LENGTH &&
+      newReferrals >= 0 &&
+      referralStoriesPublished >= 0
+    );
+  }, [activitiesLength, newReferrals, referralStoriesPublished]);
+
+  const clearError = (field: keyof FormErrors) => {
+    setErrors((prev) => {
+      if (!prev[field]) return prev;
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  };
+
+  const validateSubmit = (): boolean => {
+    const nextErrors: FormErrors = {};
+
+    if (activitiesLength < MONTHLY_REPORT_ACTIVITIES_MIN_LENGTH) {
+      nextErrors.activitiesDescription = `Please write at least ${MONTHLY_REPORT_ACTIVITIES_MIN_LENGTH} characters about your activities.`;
+    }
+
+    setErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
+  };
+
+  const handleSaveDraft = async () => {
+    setSavingDraft(true);
+    setErrors({});
     try {
       const result = await submitMonthlyReport({
         year: period.year,
         month: period.month,
-        storiesRead: parseInt(storiesRead, 10) || 0,
-        storiesWritten: parseInt(storiesWritten, 10) || 0,
-        newReferrals: parseInt(newReferrals, 10) || 0,
-        eventsHosted: parseInt(eventsHosted, 10) || 0,
-        studentsReached: parseInt(studentsReached, 10) || 0,
-        readingSessionsOrganized: parseInt(readingSessions, 10) || 0,
-        socialPostsCount: parseInt(socialPosts, 10) || 0,
-        communityEvents: parseInt(communityEvents, 10) || 0,
-        onlineReach: parseInt(onlineReach, 10) || 0,
-        highlights: highlights.trim() || undefined,
+        asDraft: true,
+        newReferrals,
+        referralStoriesPublished,
+        activitiesDescription: activitiesDescription.trim() || undefined,
+        programFeedback: programFeedback.trim() || undefined,
       });
       setReport(result.report);
-      showToast({ type: "success", message: "Report submitted!" });
+      showToast({ type: "success", message: "Draft saved" });
     } catch (err) {
-      showToast({
-        type: "error",
-        message: err instanceof Error ? err.message : "Submission failed",
+      const message =
+        err instanceof Error ? err.message : "Failed to save draft";
+      setErrors({ form: message });
+      showToast({ type: "error", message });
+    } finally {
+      setSavingDraft(false);
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!validateSubmit()) return;
+
+    setSubmitting(true);
+    setErrors({});
+    try {
+      const result = await submitMonthlyReport({
+        year: period.year,
+        month: period.month,
+        asDraft: false,
+        newReferrals,
+        referralStoriesPublished,
+        activitiesDescription: activitiesDescription.trim(),
+        programFeedback: programFeedback.trim() || undefined,
       });
+      setReport(result.report);
+      if (result.summary) {
+        setSummary(result.summary);
+      } else {
+        setSummary({
+          totalReferrals: newReferrals,
+          totalEventsHosted: 1,
+          monthsActive: 1,
+          firstName:
+            user?.firstName?.trim() || user?.penName?.trim() || "Ambassador",
+        });
+      }
+      setPhase("success");
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to submit report";
+      setErrors({ form: message });
+      showToast({ type: "error", message });
     } finally {
       setSubmitting(false);
     }
@@ -107,40 +294,44 @@ export default function AmbassadorReportView() {
     );
   }
 
-  const status = report?.status || "inactive";
-  const isInactive = status === "inactive";
-  const isSubmitted = status === "submitted" || status === "processing";
-  const isCompleted = status === "completed";
+  if (phase === "success" && summary) {
+    return (
+      <ReportSuccessScreen summary={summary} ambassadorType={ambassadorType} />
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-accent-shade-1 max-w-md mx-auto pb-24">
-      <AmbassadorHeader
-        title="Monthly Report"
-        backHref="/ambassador/dashboard"
-      />
-
-      <div className="px-4 py-6 space-y-6">
-        <div className="text-center">
-          <p className={`${Magnetik_SemiBold.className} text-primary-colour`}>
+    <div className="min-h-screen bg-accent-shade-1 max-w-md mx-auto pb-28">
+      <div className="bg-primary-colour text-white px-4 pt-5 pb-4">
+        <div className="max-w-md mx-auto flex items-center justify-between">
+          <button
+            type="button"
+            onClick={() => router.push("/ambassador/dashboard")}
+            className="text-white"
+            aria-label="Go back"
+          >
+            <ArrowLeft className="w-6 h-6" />
+          </button>
+          <h1 className={cn(Magnetik_Medium.className, "text-lg")}>
+            Monthly Report
+          </h1>
+          <p
+            className={cn(Magnetik_Regular.className, "text-xs text-white/80")}
+          >
             {period.label}
           </p>
-          <p className="text-sm text-grey-2 mt-1 capitalize">
-            Status: {status}
-          </p>
         </div>
+      </div>
 
+      <div className="px-4 py-5 space-y-4">
         {isInactive && (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 flex gap-3">
-            <Clock className="w-5 h-5 text-yellow-600 shrink-0" />
-            <p className="text-sm text-yellow-800">
-              Reports for {period.label} open after the month ends. Check back
-              soon!
-            </p>
+          <div className="rounded-2xl bg-white border border-grey-5 p-4 text-sm text-grey-2">
+            Monthly reports for {period.label} are not available yet.
           </div>
         )}
 
-        {isSubmitted && (
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex gap-3">
+        {isProcessing && (
+          <div className="rounded-2xl bg-white border border-blue-200 p-4 flex gap-3">
             <FileText className="w-5 h-5 text-blue-600 shrink-0" />
             <p className="text-sm text-blue-800">
               Your report is{" "}
@@ -150,116 +341,134 @@ export default function AmbassadorReportView() {
           </div>
         )}
 
-        {isCompleted && (
-          <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex gap-3">
-            <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0" />
-            <p className="text-sm text-green-800">
-              Report processed! Your scores have been updated.
-            </p>
+        {status === "completed" && (
+          <div className="rounded-2xl border border-[#34A853]/30 bg-[#34A853]/5 p-4 text-sm text-primary-colour">
+            Report processed! Your scores have been updated.
+          </div>
+        )}
+
+        {errors.form && (
+          <div className="rounded-2xl border border-red/30 bg-red/5 p-3 text-sm text-red">
+            {errors.form}
           </div>
         )}
 
         {!isInactive && (
-          <div className="space-y-4">
-            <p className={`${Magnetik_Medium.className} text-primary-colour`}>
-              Activity metrics
-            </p>
-            <Input
-              label="Stories read"
-              type="number"
-              value={storiesRead}
-              onValueChange={setStoriesRead}
-              isDisabled={isSubmitted || isCompleted}
-            />
-            <Input
-              label="Stories written"
-              type="number"
-              value={storiesWritten}
-              onValueChange={setStoriesWritten}
-              isDisabled={isSubmitted || isCompleted}
-            />
-            <Input
-              label="New referrals"
-              type="number"
-              value={newReferrals}
-              onValueChange={setNewReferrals}
-              isDisabled={isSubmitted || isCompleted}
-            />
+          <>
+            <MonthlyReportIntroCard />
 
-            {ambassadorType === "campus" ? (
-              <>
-                <Input
-                  label="Events hosted"
-                  type="number"
-                  value={eventsHosted}
-                  onValueChange={setEventsHosted}
-                  isDisabled={isSubmitted || isCompleted}
-                />
-                <Input
-                  label="Students reached"
-                  type="number"
-                  value={studentsReached}
-                  onValueChange={setStudentsReached}
-                  isDisabled={isSubmitted || isCompleted}
-                />
-                <Input
-                  label="Reading sessions organized"
-                  type="number"
-                  value={readingSessions}
-                  onValueChange={setReadingSessions}
-                  isDisabled={isSubmitted || isCompleted}
-                />
-              </>
-            ) : (
-              <>
-                <Input
-                  label="Social posts"
-                  type="number"
-                  value={socialPosts}
-                  onValueChange={setSocialPosts}
-                  isDisabled={isSubmitted || isCompleted}
-                />
-                <Input
-                  label="Community events"
-                  type="number"
-                  value={communityEvents}
-                  onValueChange={setCommunityEvents}
-                  isDisabled={isSubmitted || isCompleted}
-                />
-                <Input
-                  label="Online reach"
-                  type="number"
-                  value={onlineReach}
-                  onValueChange={setOnlineReach}
-                  isDisabled={isSubmitted || isCompleted}
-                />
-              </>
-            )}
-
-            <Textarea
-              label="Highlights (optional)"
-              minRows={3}
-              value={highlights}
-              onValueChange={setHighlights}
-              isDisabled={isSubmitted || isCompleted}
-            />
-
-            {!isSubmitted && !isCompleted && (
-              <Button
-                className="w-full bg-primary-colour text-white"
-                onPress={handleSubmit}
-                isDisabled={submitting}
+            <div className="rounded-2xl bg-white border border-grey-5 shadow-sm p-4 space-y-5">
+              <MonthlyReportFieldGroup
+                label="New users introduced"
+                required
+                helper="Approximate number is fine"
               >
-                {submitting ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  "Submit Report"
-                )}
-              </Button>
-            )}
-          </div>
+                <FormNumberStepper
+                  id="field-newReferrals"
+                  value={newReferrals}
+                  onChange={(value) => {
+                    setNewReferrals(value);
+                    clearError("newReferrals");
+                  }}
+                  disabled={!canEdit || isBusy}
+                  invalid={!!errors.newReferrals}
+                  errorMessage={errors.newReferrals}
+                />
+              </MonthlyReportFieldGroup>
+
+              <MonthlyReportFieldGroup
+                label="Stories published by your referrals"
+                required
+                helper="Stories created by users you referred"
+              >
+                <FormNumberStepper
+                  id="field-referralStories"
+                  value={referralStoriesPublished}
+                  onChange={(value) => {
+                    setReferralStoriesPublished(value);
+                    clearError("referralStoriesPublished");
+                  }}
+                  disabled={!canEdit || isBusy}
+                  invalid={!!errors.referralStoriesPublished}
+                  errorMessage={errors.referralStoriesPublished}
+                />
+              </MonthlyReportFieldGroup>
+
+              <MonthlyReportFieldGroup
+                label="Activities and events hosted"
+                required
+              >
+                <FormTextArea
+                  id="field-activitiesDescription"
+                  value={activitiesDescription}
+                  onChange={(value) => {
+                    setActivitiesDescription(value);
+                    clearError("activitiesDescription");
+                  }}
+                  placeholder={getActivitiesPlaceholder(ambassadorType)}
+                  rows={5}
+                  focused={focusedField === "activitiesDescription"}
+                  onFocus={() => setFocusedField("activitiesDescription")}
+                  onBlur={() => setFocusedField(null)}
+                  disabled={!canEdit || isBusy}
+                  invalid={!!errors.activitiesDescription}
+                  errorMessage={errors.activitiesDescription}
+                />
+                <CharacterCounter
+                  current={activitiesLength}
+                  minimum={MONTHLY_REPORT_ACTIVITIES_MIN_LENGTH}
+                />
+              </MonthlyReportFieldGroup>
+
+              <MonthlyReportFieldGroup
+                label="Feedback or suggestions for the program"
+                helper="Optional, but highly valued!"
+              >
+                <FormTextArea
+                  id="field-programFeedback"
+                  value={programFeedback}
+                  onChange={setProgramFeedback}
+                  placeholder="Share what's working well and ideas for improvement"
+                  rows={4}
+                  focused={focusedField === "programFeedback"}
+                  onFocus={() => setFocusedField("programFeedback")}
+                  onBlur={() => setFocusedField(null)}
+                  disabled={!canEdit || isBusy}
+                />
+              </MonthlyReportFieldGroup>
+            </div>
+          </>
         )}
       </div>
+
+      {canEdit && !isInactive && (
+        <div className="fixed bottom-0 left-0 right-0 bg-accent-shade-1 border-t border-grey-5 px-4 py-4 max-w-md mx-auto">
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={handleSaveDraft}
+              disabled={isBusy}
+              className={cn(
+                "flex-1 h-12 rounded-full border border-primary-colour text-primary-colour bg-white text-sm",
+                Magnetik_Medium.className,
+              )}
+            >
+              {savingDraft ? "Saving..." : "Save As Draft"}
+            </button>
+            <button
+              type="button"
+              onClick={handleSubmit}
+              disabled={isBusy || !isSubmitReady}
+              className={cn(
+                "flex-1 h-12 rounded-full bg-primary-colour text-white text-sm disabled:opacity-50",
+                Magnetik_SemiBold.className,
+              )}
+            >
+              {submitting ? "Submitting..." : "Submit Report"}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

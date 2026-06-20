@@ -8,6 +8,7 @@ export type ApplicationStatus = "pending" | "accepted" | "declined";
 export type AmbassadorTier = "bronze" | "silver" | "gold" | "platinum";
 export type MonthlyReportStatus =
   | "inactive"
+  | "draft"
   | "submitted"
   | "processing"
   | "completed";
@@ -108,6 +109,9 @@ export interface MonthlyReport {
   communityEvents: number;
   onlineReach: number;
   highlights?: string;
+  referralStoriesPublished: number;
+  activitiesDescription?: string;
+  programFeedback?: string;
   submittedAt?: string;
   processedAt?: string;
 }
@@ -367,22 +371,27 @@ export async function fetchMonthlyReport(year: number, month: number) {
   );
 }
 
+export const MONTHLY_REPORT_ACTIVITIES_MIN_LENGTH = 250;
+
 export async function submitMonthlyReport(payload: {
   year: number;
   month: number;
-  storiesRead: number;
-  storiesWritten: number;
+  asDraft?: boolean;
   newReferrals: number;
-  eventsHosted?: number;
-  studentsReached?: number;
-  readingSessionsOrganized?: number;
-  socialPostsCount?: number;
-  communityEvents?: number;
-  onlineReach?: number;
-  highlights?: string;
+  referralStoriesPublished: number;
+  activitiesDescription?: string;
+  programFeedback?: string;
 }) {
-  return ambassadorFetch<{ report: MonthlyReport }>(
-    "/ambassadors/reports/monthly",
-    { method: "POST", body: JSON.stringify(payload) },
-  );
+  return ambassadorFetch<{
+    report: MonthlyReport;
+    summary: {
+      totalReferrals: number;
+      totalEventsHosted: number;
+      monthsActive: number;
+      firstName: string;
+    } | null;
+  }>("/ambassadors/reports/monthly", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
 }
