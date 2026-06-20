@@ -243,12 +243,13 @@ export default function AmbassadorStatusView() {
     return null;
   }
 
-  const isPending = application.status === "pending";
-  const isDeclined = application.status === "declined";
-  const journeySteps = buildJourneySteps(application, application.status);
-  const countdown = isPending
-    ? getDecisionCountdown(application.reviewDeadline)
-    : null;
+  if (application.status === "declined") {
+    router.replace("/ambassador/declined");
+    return null;
+  }
+
+  const journeySteps = buildJourneySteps(application, "pending");
+  const countdown = getDecisionCountdown(application.reviewDeadline);
 
   return (
     <div className="min-h-screen bg-accent-shade-1 max-w-md mx-auto pb-10">
@@ -259,21 +260,11 @@ export default function AmbassadorStatusView() {
       />
 
       <div className="px-4 py-5 space-y-5">
-        <div
-          className={cn(
-            "rounded-2xl border p-4 space-y-3",
-            isPending && "border-complimentary-colour/40 bg-accent-shade-2",
-            isDeclined && "border-red/30 bg-red/5",
-          )}
-        >
+        <div className="rounded-2xl border border-complimentary-colour/40 bg-accent-shade-2 p-4 space-y-3">
           <div className="flex items-start gap-3">
-            {isPending ? (
-              <span className="w-8 h-8 rounded-lg bg-complimentary-colour flex items-center justify-center shrink-0">
-                <Check className="w-5 h-5 text-white" strokeWidth={3} />
-              </span>
-            ) : (
-              <XCircle className="w-8 h-8 text-red shrink-0" />
-            )}
+            <span className="w-8 h-8 rounded-lg bg-complimentary-colour flex items-center justify-center shrink-0">
+              <Check className="w-5 h-5 text-white" strokeWidth={3} />
+            </span>
             <div>
               <h2
                 className={cn(
@@ -281,9 +272,7 @@ export default function AmbassadorStatusView() {
                   "text-base text-primary-colour",
                 )}
               >
-                {isPending
-                  ? "Application Under Review"
-                  : "Application Declined"}
+                Application Under Review
               </h2>
               <p
                 className={cn(
@@ -291,9 +280,8 @@ export default function AmbassadorStatusView() {
                   "text-sm text-grey-2 mt-1 leading-relaxed",
                 )}
               >
-                {isPending
-                  ? "Thank you for applying to become a Storytime Ambassador! Our team is carefully reviewing your application."
-                  : "Unfortunately your application was not approved at this time. You may apply again when ready."}
+                Thank you for applying to become a Storytime Ambassador! Our
+                team is carefully reviewing your application.
               </p>
             </div>
           </div>
@@ -305,52 +293,42 @@ export default function AmbassadorStatusView() {
           </div>
         </div>
 
-        {isPending && (
-          <div className="text-center space-y-3">
-            <p
-              className={cn(
-                Magnetik_Medium.className,
-                "text-xs tracking-widest text-grey-3 uppercase",
-              )}
-            >
-              Decision Expected
-            </p>
-            <div className="flex gap-3 justify-center">
-              <div className="min-w-[110px] rounded-2xl bg-complimentary-colour px-4 py-3 text-white">
-                <p
-                  className={cn(
-                    Magnetik_Bold.className,
-                    "text-2xl leading-none",
-                  )}
-                >
-                  {countdown?.days ?? 0}
-                </p>
-                <p className={cn(Magnetik_Regular.className, "text-sm mt-1")}>
-                  Days
-                </p>
-              </div>
-              <div className="min-w-[110px] rounded-2xl bg-complimentary-colour px-4 py-3 text-white">
-                <p
-                  className={cn(
-                    Magnetik_Bold.className,
-                    "text-2xl leading-none",
-                  )}
-                >
-                  {countdown?.hours ?? 0}
-                </p>
-                <p className={cn(Magnetik_Regular.className, "text-sm mt-1")}>
-                  Hours
-                </p>
-              </div>
+        <div className="text-center space-y-3">
+          <p
+            className={cn(
+              Magnetik_Medium.className,
+              "text-xs tracking-widest text-grey-3 uppercase",
+            )}
+          >
+            Decision Expected
+          </p>
+          <div className="flex gap-3 justify-center">
+            <div className="min-w-[110px] rounded-2xl bg-complimentary-colour px-4 py-3 text-white">
+              <p
+                className={cn(Magnetik_Bold.className, "text-2xl leading-none")}
+              >
+                {countdown.days}
+              </p>
+              <p className={cn(Magnetik_Regular.className, "text-sm mt-1")}>
+                Days
+              </p>
             </div>
-            <p
-              className={cn(Magnetik_Regular.className, "text-xs text-grey-2")}
-            >
-              You&apos;ll receive an email notification when we&apos;ve made a
-              decision
-            </p>
+            <div className="min-w-[110px] rounded-2xl bg-complimentary-colour px-4 py-3 text-white">
+              <p
+                className={cn(Magnetik_Bold.className, "text-2xl leading-none")}
+              >
+                {countdown.hours}
+              </p>
+              <p className={cn(Magnetik_Regular.className, "text-sm mt-1")}>
+                Hours
+              </p>
+            </div>
           </div>
-        )}
+          <p className={cn(Magnetik_Regular.className, "text-xs text-grey-2")}>
+            You&apos;ll receive an email notification when we&apos;ve made a
+            decision
+          </p>
+        </div>
 
         <div className="space-y-4">
           <h3
@@ -405,51 +383,49 @@ export default function AmbassadorStatusView() {
           </div>
         </div>
 
-        {isPending && (
-          <div className="space-y-3">
-            <h3
-              className={cn(
-                Magnetik_SemiBold.className,
-                "text-sm text-primary-colour",
-              )}
-            >
-              What to Do While You Wait
-            </h3>
-            {WAITING_TIPS.map((tip) => {
-              const Icon = tip.icon;
-              return (
-                <button
-                  key={tip.title}
-                  type="button"
-                  onClick={() => router.push(tip.href)}
-                  className="w-full text-left rounded-2xl border border-grey-4 bg-white p-4 flex items-start gap-3"
-                >
-                  <span className="w-10 h-10 rounded-xl bg-accent-shade-2 flex items-center justify-center shrink-0">
-                    <Icon className="w-5 h-5 text-complimentary-colour" />
-                  </span>
-                  <div>
-                    <p
-                      className={cn(
-                        Magnetik_SemiBold.className,
-                        "text-sm text-primary-colour",
-                      )}
-                    >
-                      {tip.title}
-                    </p>
-                    <p
-                      className={cn(
-                        Magnetik_Regular.className,
-                        "text-xs text-grey-2 mt-1",
-                      )}
-                    >
-                      {tip.description}
-                    </p>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        )}
+        <div className="space-y-3">
+          <h3
+            className={cn(
+              Magnetik_SemiBold.className,
+              "text-sm text-primary-colour",
+            )}
+          >
+            What to Do While You Wait
+          </h3>
+          {WAITING_TIPS.map((tip) => {
+            const Icon = tip.icon;
+            return (
+              <button
+                key={tip.title}
+                type="button"
+                onClick={() => router.push(tip.href)}
+                className="w-full text-left rounded-2xl border border-grey-4 bg-white p-4 flex items-start gap-3"
+              >
+                <span className="w-10 h-10 rounded-xl bg-accent-shade-2 flex items-center justify-center shrink-0">
+                  <Icon className="w-5 h-5 text-complimentary-colour" />
+                </span>
+                <div>
+                  <p
+                    className={cn(
+                      Magnetik_SemiBold.className,
+                      "text-sm text-primary-colour",
+                    )}
+                  >
+                    {tip.title}
+                  </p>
+                  <p
+                    className={cn(
+                      Magnetik_Regular.className,
+                      "text-xs text-grey-2 mt-1",
+                    )}
+                  >
+                    {tip.description}
+                  </p>
+                </div>
+              </button>
+            );
+          })}
+        </div>
 
         <div className="rounded-2xl border border-grey-4 bg-white p-4 space-y-3">
           <h3
@@ -490,41 +466,22 @@ export default function AmbassadorStatusView() {
           </div>
         </div>
 
-        {isDeclined && application.declineReason && (
-          <div className="rounded-2xl border border-red/30 bg-red/5 p-4">
-            <p className={cn(Magnetik_Medium.className, "text-sm text-red")}>
-              Decline reason
-            </p>
-            <p className="text-sm text-grey-2 mt-1">
-              {application.declineReason}
-            </p>
-          </div>
-        )}
-
         <div className="space-y-3 pt-1">
           <PrimaryFormButton onClick={() => router.push("/home")}>
             Home
           </PrimaryFormButton>
 
-          {isPending && (
-            <button
-              type="button"
-              onClick={handleWithdraw}
-              disabled={withdrawing}
-              className={cn(
-                "w-full h-12 rounded-full border border-red text-red text-sm disabled:opacity-60",
-                Magnetik_SemiBold.className,
-              )}
-            >
-              {withdrawing ? "Withdrawing..." : "Withdraw Application"}
-            </button>
-          )}
-
-          {isDeclined && (
-            <PrimaryFormButton onClick={() => router.push("/ambassador/apply")}>
-              Apply Again
-            </PrimaryFormButton>
-          )}
+          <button
+            type="button"
+            onClick={handleWithdraw}
+            disabled={withdrawing}
+            className={cn(
+              "w-full h-12 rounded-full border border-red text-red text-sm disabled:opacity-60",
+              Magnetik_SemiBold.className,
+            )}
+          >
+            {withdrawing ? "Withdrawing..." : "Withdraw Application"}
+          </button>
 
           <button
             type="button"

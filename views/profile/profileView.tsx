@@ -23,6 +23,7 @@ import {
   EditGenresModal,
   LeaderboardModal,
   BecomeAmbassadorModal,
+  AmbassadorDeclinedModal,
   DefaultModal,
 } from "@/components/reusables/customUI";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -59,6 +60,8 @@ const ProfileView = () => {
   const { genres: apiGenres } = useGenres();
   const { overview: ambassadorOverview } = useAmbassadorOverview();
 
+  const ambassadorApplication = ambassadorOverview?.application;
+
   const ambassadorOption = ambassadorOverview?.isAmbassador
     ? {
         id: "ambassador-dashboard",
@@ -67,8 +70,7 @@ const ProfileView = () => {
         type: "page" as const,
         path: "/ambassador/dashboard",
       }
-    : ambassadorOverview?.hasApplication &&
-        ambassadorOverview.application?.status !== "accepted"
+    : ambassadorApplication?.status === "pending"
       ? {
           id: "ambassador-status",
           label: "Application Status",
@@ -76,12 +78,19 @@ const ProfileView = () => {
           type: "page" as const,
           path: "/ambassador/status",
         }
-      : {
-          id: "ambassador",
-          label: "Become an Ambassador",
-          icon: "🌟",
-          type: "modal" as const,
-        };
+      : ambassadorApplication?.status === "declined"
+        ? {
+            id: "ambassador-declined",
+            label: "Application Status",
+            icon: "⏳",
+            type: "modal" as const,
+          }
+        : {
+            id: "ambassador",
+            label: "Become an Ambassador",
+            icon: "🌟",
+            type: "modal" as const,
+          };
 
   const profileOptions = [
     {
@@ -201,6 +210,8 @@ const ProfileView = () => {
         return <LeaderboardModal />;
       case "ambassador":
         return <BecomeAmbassadorModal />;
+      case "ambassador-declined":
+        return <AmbassadorDeclinedModal />;
       default:
         const option = profileOptions.find((opt) => opt.id === modalToRender);
         if (!option) return null;

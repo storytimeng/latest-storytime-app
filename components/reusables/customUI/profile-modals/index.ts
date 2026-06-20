@@ -11,3 +11,4 @@ export { EditProfileModal } from "./EditProfileModal";
 export { EditGenresModal } from "./EditGenresModal";
 export { LeaderboardModal } from "./LeaderboardModal";
 export { BecomeAmbassadorModal } from "./BecomeAmbassadorModal";
+export { AmbassadorDeclinedModal } from "./AmbassadorDeclinedModal";

@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Check } from "lucide-react";
+import { ArrowLeft, Check, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib";
 import {
@@ -25,6 +25,7 @@ import {
   YesNoCards,
 } from "@/components/ambassador/application-form-ui";
 import { useUserProfile } from "@/src/hooks/useUserProfile";
+import { useAmbassadorOverview } from "@/src/hooks/useAmbassador";
 import {
   submitAmbassadorApplication,
   type AmbassadorType,
@@ -167,6 +168,77 @@ function toggleSelection<T extends string>(list: T[], value: T): T[] {
     : [...list, value];
 }
 
+function ApplicationReapplyBlockedScreen({
+  reapplyDaysRemaining,
+}: {
+  reapplyDaysRemaining: number;
+}) {
+  const router = useRouter();
+  const daysLabel = `${reapplyDaysRemaining} day${reapplyDaysRemaining === 1 ? "" : "s"}`;
+
+  return (
+    <div className="min-h-screen bg-accent-shade-1 max-w-md mx-auto flex flex-col px-4 pb-10">
+      <button
+        type="button"
+        onClick={() => router.push("/profile")}
+        className="pt-4 text-primary-colour"
+        aria-label="Back to profile"
+      >
+        <ArrowLeft className="w-6 h-6" />
+      </button>
+
+      <div className="flex-1 flex flex-col items-center justify-center text-center px-2">
+        <h1
+          className={cn(
+            Magnetik_Bold.className,
+            "text-3xl text-red leading-tight",
+          )}
+        >
+          Declined!!
+        </h1>
+        <p className={cn(Magnetik_Regular.className, "text-sm text-red mt-2")}>
+          Reapply in {daysLabel}
+        </p>
+        <p
+          className={cn(
+            Magnetik_Regular.className,
+            "text-sm text-grey-2 leading-relaxed mt-6 max-w-xs",
+          )}
+        >
+          Your previous application wasn&apos;t approved. Keep building your
+          presence on Storytime — you can submit a new application once the
+          waiting period ends.
+        </p>
+      </div>
+
+      <div className="space-y-3">
+        <PrimaryFormButton onClick={() => router.push("/ambassador/declined")}>
+          View Details
+        </PrimaryFormButton>
+        <button
+          type="button"
+          onClick={() => router.push("/pen")}
+          className={cn(
+            "w-full h-12 rounded-full bg-complimentary-colour text-white text-sm",
+            Magnetik_SemiBold.className,
+          )}
+        >
+          Keep Writing
+        </button>
+        <Link
+          href="/profile"
+          className={cn(
+            Magnetik_Medium.className,
+            "block text-center text-sm text-primary-colour underline underline-offset-2",
+          )}
+        >
+          Back to Profile
+        </Link>
+      </div>
+    </div>
+  );
+}
+
 function ApplicationSuccessScreen() {
   const router = useRouter();
 
@@ -211,6 +283,7 @@ function ApplicationSuccessScreen() {
 export default function AmbassadorApplicationView() {
   const router = useRouter();
   const { user } = useUserProfile();
+  const { overview, isLoading: overviewLoading } = useAmbassadorOverview();
   const [phase, setPhase] = useState<ViewPhase>(1);
   const [submitting, setSubmitting] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
@@ -235,6 +308,21 @@ export default function AmbassadorApplicationView() {
   const [commitments, setCommitments] = useState<boolean[]>(
     COMMITMENTS.map(() => false),
   );
+
+  const application = overview?.application;
+
+  useEffect(() => {
+    if (overviewLoading || !overview) return;
+
+    if (overview.isAmbassador) {
+      router.replace("/ambassador/dashboard");
+      return;
+    }
+
+    if (application?.status === "pending") {
+      router.replace("/ambassador/status");
+    }
+  }, [overviewLoading, overview, application?.status, router]);
 
   const step = phase === "success" ? 4 : phase;
 
@@ -403,6 +491,30 @@ export default function AmbassadorApplicationView() {
 
   if (phase === "success") {
     return <ApplicationSuccessScreen />;
+  }
+
+  if (overviewLoading) {
+    return (
+      <div className="min-h-screen bg-accent-shade-1 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary-colour" />
+      </div>
+    );
+  }
+
+  if (overview?.isAmbassador || application?.status === "pending") {
+    return (
+      <div className="min-h-screen bg-accent-shade-1 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary-colour" />
+      </div>
+    );
+  }
+
+  if (application?.status === "declined" && !application.canReapply) {
+    return (
+      <ApplicationReapplyBlockedScreen
+        reapplyDaysRemaining={application.reapplyDaysRemaining}
+      />
+    );
   }
 
   return (

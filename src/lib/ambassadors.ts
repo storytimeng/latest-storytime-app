@@ -47,6 +47,8 @@ export interface AmbassadorApplication {
   declineReason?: string;
   reviewDeadline: string;
   reviewedAt?: string;
+  canReapply: boolean;
+  reapplyDaysRemaining: number;
   daysRemaining: number;
   hoursRemaining: number;
   createdAt: string;
@@ -248,6 +250,19 @@ export function formatApplicationDateShort(value: string): string {
     day: "numeric",
     year: "numeric",
   });
+}
+
+export const REAPPLY_COOLDOWN_DAYS = 30;
+
+export function getReapplyDaysRemaining(reviewedAt?: string | null): number {
+  if (!reviewedAt) return 0;
+
+  const eligibleAt = new Date(reviewedAt);
+  eligibleAt.setDate(eligibleAt.getDate() + REAPPLY_COOLDOWN_DAYS);
+  const msRemaining = eligibleAt.getTime() - Date.now();
+
+  if (msRemaining <= 0) return 0;
+  return Math.ceil(msRemaining / (1000 * 60 * 60 * 24));
 }
 
 export function getDecisionCountdown(reviewDeadline: string): {
