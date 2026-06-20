@@ -6,6 +6,7 @@ import type {
   AmbassadorLeaderboardResponse,
   LeaderboardScope,
 } from "@/src/lib/leaderboard";
+import type { AmbassadorScoreBreakdown } from "@/src/lib/score-breakdown";
 
 export type AmbassadorType = "campus" | "community";
 export type ApplicationStatus = "pending" | "accepted" | "declined";
@@ -359,21 +360,7 @@ export async function fetchAmbassadorLeaderboard(options?: {
 }
 
 export async function fetchAmbassadorBreakdown() {
-  return ambassadorFetch<{
-    totalScore: number;
-    tier: AmbassadorTier;
-    nextTier: AmbassadorTier | null;
-    pointsToNextTier: number;
-    referralCount: number;
-    categories: Array<{
-      key: string;
-      label: string;
-      score: number;
-      maxScore: number;
-      tip: string;
-    }>;
-    tiers: Array<{ tier: string; minScore: number; isCurrent: boolean }>;
-  }>("/ambassadors/breakdown");
+  return ambassadorFetch<AmbassadorScoreBreakdown>("/ambassadors/breakdown");
 }
 
 export async function fetchMonthlyReport(year: number, month: number) {
