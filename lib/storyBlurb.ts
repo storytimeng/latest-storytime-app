@@ -29,9 +29,5 @@ export function getStoryBlurbValidationError(
     return `Your blurb has ${wordCount} words. Shorten it by ${excess} word${excess === 1 ? "" : "s"} (maximum is ${STORY_BLURB_MAX_WORDS}).`;
   }
 
-  if (trimmed.length < 50) {
-    return "Your blurb is too short. Add a bit more detail so readers know what your story is about.";
-  }
-
   return undefined;
 }

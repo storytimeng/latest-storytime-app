@@ -62,12 +62,12 @@ const TextAreaField: React.FC<TextFieldProps> = ({
   const getCounterColor = () => {
     if (!minWords || !maxWords) return "text-gray-500";
 
-    if (isInvalid && wordCount < minWords) {
+    if (isInvalid) {
       return "text-red-500";
     }
 
     if (wordCount > maxWords) {
-      return isInvalid ? "text-red-500" : "text-amber-600";
+      return "text-amber-600";
     }
 
     if (wordCount >= minWords && wordCount <= maxWords) {
