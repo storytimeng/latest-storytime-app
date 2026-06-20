@@ -5,6 +5,30 @@ const API_BASE =
   process.env.NEXT_PUBLIC_BACKEND_URL ||
   "http://localhost:3001";
 
+type ResolveReferralPayload = {
+  referralCode?: string | null;
+  shareUrl?: string | null;
+};
+
+function unwrapResolvePayload(payload: unknown): ResolveReferralPayload | null {
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+
+  const record = payload as Record<string, unknown>;
+  const nested =
+    "data" in record && record.data && typeof record.data === "object"
+      ? (record.data as ResolveReferralPayload)
+      : (record as ResolveReferralPayload);
+
+  const referralCode = nested.referralCode?.trim();
+  if (!referralCode) {
+    return null;
+  }
+
+  return { referralCode, shareUrl: nested.shareUrl ?? null };
+}
+
 async function resolveReferralSlug(slug: string) {
   const response = await fetch(
     `${API_BASE.replace(/\/$/, "")}/ambassadors/referrals/resolve/${encodeURIComponent(slug)}`,
@@ -15,11 +39,7 @@ async function resolveReferralSlug(slug: string) {
     return null;
   }
 
-  const data = (await response.json()) as {
-    shareUrl?: string | null;
-  };
-
-  return data.shareUrl ?? null;
+  return unwrapResolvePayload(await response.json());
 }
 
 export default async function ReferralRedirectPage({
@@ -28,10 +48,10 @@ export default async function ReferralRedirectPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const shareUrl = await resolveReferralSlug(slug);
+  const resolved = await resolveReferralSlug(slug);
 
-  if (shareUrl) {
-    redirect(shareUrl);
+  if (resolved?.referralCode) {
+    redirect(`/auth/signup?ref=${encodeURIComponent(resolved.referralCode)}`);
   }
 
   redirect("/auth/signup");

@@ -65,7 +65,21 @@ export default function SignupView({
   const openSupportModal = useSupportStore((state) => state.openModal);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const referralCode = searchParams.get("ref")?.trim() || undefined;
+  const refFromUrl = searchParams.get("ref")?.trim() || "";
+  const [referralCode, setReferralCode] = useState(refFromUrl);
+
+  useEffect(() => {
+    if (refFromUrl) {
+      sessionStorage.setItem("storytime_referral_code", refFromUrl);
+      setReferralCode(refFromUrl);
+      return;
+    }
+
+    const storedRef = sessionStorage.getItem("storytime_referral_code")?.trim();
+    if (storedRef) {
+      setReferralCode(storedRef);
+    }
+  }, [refFromUrl]);
   const { show: showLoading, hide: hideLoading } = useLoadingStore();
   // firstErrorRef removed (not used)
   const [formData, setFormData] = useState<SignupFormData>({
@@ -227,10 +241,12 @@ export default function SignupView({
         dateOfBirth: `${formData.birthYear}-${formData.birthMonth}-${formData.birthDay}`,
         password: formData.password,
         agreement: formData.agreeToTerms,
-        ...(referralCode ? { referralCode } : {}),
+        ...(referralCode.trim() ? { referralCode: referralCode.trim() } : {}),
       };
 
       await registerTrigger(body);
+
+      sessionStorage.removeItem("storytime_referral_code");
 
       showToast({
         type: "success",
