@@ -25,6 +25,7 @@ import {
 import { useTTSContext } from "@/components/providers/TTSProvider";
 import { TTSSettingsModal } from "./TTSSettingsModal";
 import { PremiumGate } from "@/components/reusables/PremiumGate";
+import { usePremiumFeatures } from "@/src/hooks/usePremiumFeatures";
 
 interface NavigationBarProps {
   currentIndex: number;
@@ -35,6 +36,7 @@ interface NavigationBarProps {
   navigationList: any[];
   selectedChapterId: string | null;
   partLabel?: string;
+  onTtsLocked?: () => void;
 }
 
 export const NavigationBar = React.memo(
@@ -46,11 +48,14 @@ export const NavigationBar = React.memo(
     isVisible,
     navigationList,
     partLabel = "Chapter",
+    onTtsLocked,
   }: NavigationBarProps) => {
     // TTS State & Controls
     const store = useTTSStore();
     const { play, pause, stop, seekToSentence, availableVoices } =
       useTTSContext();
+    const { checkFeature } = usePremiumFeatures();
+    const ttsEnabled = checkFeature("ttsEnabled");
 
     // Local UI State
     const [showSettings, setShowSettings] = useState(false);
@@ -68,12 +73,16 @@ export const NavigationBar = React.memo(
 
     // TTS Controls
     const togglePlayPause = useCallback(() => {
+      if (!ttsEnabled) {
+        onTtsLocked?.();
+        return;
+      }
       if (store.isPlaying && !store.isPaused) {
         pause();
       } else {
         play();
       }
-    }, [store.isPlaying, store.isPaused, play, pause]);
+    }, [ttsEnabled, onTtsLocked, store.isPlaying, store.isPaused, play, pause]);
 
     const handleVolumeToggle = useCallback(() => {
       const newVolume = store.volume === 0 ? 1 : 0;

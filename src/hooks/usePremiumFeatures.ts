@@ -14,6 +14,9 @@ export interface PremiumFeatures {
   pitchControl: boolean;
   volumeControl: boolean;
   playFromHere: boolean;
+  exclusiveStories: boolean;
+  audioNarration: boolean;
+  offlineDownload: boolean;
 }
 
 export interface UsePremiumFeaturesReturn {
@@ -52,12 +55,15 @@ export const usePremiumFeatures = (): UsePremiumFeaturesReturn => {
   }, [isPremium, setIsPremium]);
 
   const features: PremiumFeatures = {
-    ttsEnabled: true,
+    ttsEnabled: isPremium,
     advancedVoices: isPremium,
     playbackSpeedControl: isPremium,
     pitchControl: isPremium,
     volumeControl: true,
     playFromHere: isPremium,
+    exclusiveStories: isPremium,
+    audioNarration: isPremium,
+    offlineDownload: isPremium,
   };
 
   const checkFeature = useCallback(

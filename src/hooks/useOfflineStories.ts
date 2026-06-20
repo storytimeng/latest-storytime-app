@@ -10,12 +10,14 @@ import {
 } from "@/lib/offline/db";
 import { showToast } from "@/lib/showNotification";
 import { useUserStore } from "@/src/stores/useUserStore";
+import { usePremiumFeatures } from "@/src/hooks/usePremiumFeatures";
 
 /**
  * Hook for managing offline stories
  */
 export function useOfflineStories() {
   const { user } = useUserStore();
+  const { checkFeature } = usePremiumFeatures();
   const userId = user?.id;
 
   const [offlineStories, setOfflineStories] = useState<OfflineStory[]>([]);
@@ -120,6 +122,14 @@ export function useOfflineStories() {
         showToast({
           type: "error",
           message: "You must be logged in to download stories",
+        });
+        return false;
+      }
+
+      if (!checkFeature("offlineDownload")) {
+        showToast({
+          type: "info",
+          message: "Offline downloads are a Premium feature",
         });
         return false;
       }
@@ -237,7 +247,7 @@ export function useOfflineStories() {
         return false;
       }
     },
-    [loadOfflineStories, userId],
+    [loadOfflineStories, userId, checkFeature],
   );
 
   // Download additional chapters/episodes
@@ -253,6 +263,14 @@ export function useOfflineStories() {
       }>,
     ) => {
       if (!userId) return false;
+
+      if (!checkFeature("offlineDownload")) {
+        showToast({
+          type: "info",
+          message: "Offline downloads are a Premium feature",
+        });
+        return false;
+      }
 
       try {
         const downloadedAt = Date.now();
@@ -307,7 +325,7 @@ export function useOfflineStories() {
         return false;
       }
     },
-    [userId],
+    [userId, checkFeature],
   );
 
   // Delete a downloaded story

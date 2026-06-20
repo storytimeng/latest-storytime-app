@@ -17,6 +17,7 @@ import { normalizeStoryHtml } from "@/lib/storyContentFormat";
 import { useTTSContext } from "@/components/providers/TTSProvider";
 import { useTTS } from "@/src/hooks/useTTS";
 import { useSmartVoice } from "@/src/hooks/useVoiceUtils";
+import { usePremiumFeatures } from "@/src/hooks/usePremiumFeatures";
 
 interface StoryContentProps {
   content: string;
@@ -44,6 +45,8 @@ export const StoryContent = React.memo(
     description,
     listenMode = false,
   }: StoryContentProps) => {
+    const { checkFeature } = usePremiumFeatures();
+    const readTtsEnabled = checkFeature("ttsEnabled");
     const { registerControls } = useTTSContext();
     const {
       playbackRate,
@@ -321,7 +324,7 @@ export const StoryContent = React.memo(
       seekToSentence,
       sentences: stringSentences,
       availableVoices: voices,
-    } = useTTS(ttsInput, { enabled: !listenMode });
+    } = useTTS(ttsInput, { enabled: !listenMode && readTtsEnabled });
 
     // Sync voice with store (from original code)
     const resolvedVoice = useSmartVoice(voices, selectedVoiceURI);

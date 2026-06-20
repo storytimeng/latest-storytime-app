@@ -49,6 +49,11 @@ import { useOfflineContent } from "./hooks/useOfflineContent";
 import { useStoryContent } from "./hooks/useStoryContent";
 import { useStoryAudio } from "@/src/hooks/useStoryAudio";
 import { useStoryAudioVoices } from "@/src/hooks/useStoryAudioVoices";
+import { usePremiumFeatures } from "@/src/hooks/usePremiumFeatures";
+import { usePremiumUpsell } from "@/src/hooks/usePremiumUpsell";
+import { PremiumUpsellModal } from "@/components/reusables/PremiumUpsellModal";
+import { PremiumLockedReadView } from "./components/PremiumLockedReadView";
+import { canReadExclusiveStory } from "@/src/lib/premiumUpsell";
 
 interface ReadStoryViewProps {
   storyId: string;
@@ -82,6 +87,9 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
 
   // Get current user
   const { user } = useUserStore();
+  const { isPremium, checkFeature } = usePremiumFeatures();
+  const { requireFeature, upsellReason, closeUpsell, isUpsellOpen } =
+    usePremiumUpsell();
 
   // Check online/offline status
   const isOnline = useOnlineStatus();
@@ -288,19 +296,26 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
     chapterId: audioChapterId,
     episodeId: audioEpisodeId,
     voice: narrationVoice,
-    enabled: readingMode === "listen" && isOnline && !isUsingOfflineData,
+    enabled:
+      readingMode === "listen" &&
+      isOnline &&
+      !isUsingOfflineData &&
+      checkFeature("audioNarration"),
   });
 
   const handleReadingModeChange = useCallback(
     (mode: StoryReadingMode) => {
       if (mode === "listen") {
+        if (!requireFeature("audioNarration")) {
+          return;
+        }
         stopBrowserTTS();
       } else {
         storyAudio.stop();
       }
       setReadingMode(mode);
     },
-    [storyAudio.stop],
+    [requireFeature, storyAudio.stop],
   );
 
   const handleAudioPreviousChapter = useCallback(() => {
@@ -584,6 +599,43 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
     );
   }
 
+  const storyAuthorId =
+    (activeStory as { authorId?: string }).authorId || activeStory.author?.id;
+  const isStoryAuthor = Boolean(
+    user?.id === storyAuthorId || user?.authorId === storyAuthorId,
+  );
+  const isExclusiveLocked =
+    !isUsingOfflineData &&
+    !isStoryAuthor &&
+    !canReadExclusiveStory(
+      {
+        onlyOnStorytime: (activeStory as { onlyOnStorytime?: boolean })
+          .onlyOnStorytime,
+        requiresPremium: (activeStory as { requiresPremium?: boolean })
+          .requiresPremium,
+        authorId: storyAuthorId,
+      },
+      { isPremium, userId: user?.id },
+    );
+
+  if (isExclusiveLocked) {
+    return (
+      <>
+        <PremiumLockedReadView
+          storyId={storyId}
+          storyTitle={activeStory.title}
+        />
+        <PremiumUpsellModal
+          isOpen={isUpsellOpen}
+          onClose={closeUpsell}
+          reason={upsellReason}
+        />
+      </>
+    );
+  }
+
+  const canUseAudio = checkFeature("audioNarration");
+
   return (
     <TTSProvider>
       <div
@@ -608,6 +660,8 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
               ? handleReadingModeChange
               : undefined
           }
+          listenLocked={!canUseAudio}
+          onListenLocked={() => requireFeature("audioNarration")}
         />
 
         {/* Chapter Selector */}
@@ -749,12 +803,18 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
                   navigationList={navigationList}
                   selectedChapterId={selectedChapterId}
                   partLabel={structure === "episodes" ? "Episode" : "Chapter"}
+                  onTtsLocked={() => requireFeature("audioNarration")}
                 />
               )}
             </React.Fragment>
           )
         )}
       </div>
+      <PremiumUpsellModal
+        isOpen={isUpsellOpen}
+        onClose={closeUpsell}
+        reason={upsellReason}
+      />
     </TTSProvider>
   );
 };
