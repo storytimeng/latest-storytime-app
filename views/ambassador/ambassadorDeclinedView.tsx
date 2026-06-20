@@ -13,6 +13,7 @@ import {
 } from "@/lib/font";
 import { PrimaryFormButton } from "@/components/ambassador/application-form-ui";
 import { useAmbassadorOverview } from "@/src/hooks/useAmbassador";
+import { getAmbassadorEntryPath } from "@/src/lib/ambassadors";
 
 const GROWTH_TIPS = [
   "Published more stories consistently",
@@ -27,7 +28,7 @@ export default function AmbassadorDeclinedView() {
 
   useEffect(() => {
     if (!isLoading && overview?.isAmbassador) {
-      router.replace("/ambassador/dashboard");
+      router.replace(getAmbassadorEntryPath());
     }
   }, [isLoading, overview, router]);
 

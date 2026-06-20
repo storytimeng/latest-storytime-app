@@ -28,6 +28,7 @@ import { useUserProfile } from "@/src/hooks/useUserProfile";
 import { useAmbassadorOverview } from "@/src/hooks/useAmbassador";
 import {
   submitAmbassadorApplication,
+  getAmbassadorEntryPath,
   type AmbassadorType,
   type CreateApplicationPayload,
 } from "@/src/lib/ambassadors";
@@ -315,7 +316,7 @@ export default function AmbassadorApplicationView() {
     if (overviewLoading || !overview) return;
 
     if (overview.isAmbassador) {
-      router.replace("/ambassador/dashboard");
+      router.replace(getAmbassadorEntryPath());
       return;
     }
 

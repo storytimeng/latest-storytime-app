@@ -234,6 +234,24 @@ export function formatAmbassadorTypeLabel(type: AmbassadorType): string {
   return type === "campus" ? "Campus Ambassador" : "Community Ambassador";
 }
 
+export const AMBASSADOR_WELCOME_SEEN_KEY = "storytime-ambassador-welcome-seen";
+
+export function hasSeenAmbassadorWelcome(): boolean {
+  if (typeof window === "undefined") return false;
+  return localStorage.getItem(AMBASSADOR_WELCOME_SEEN_KEY) === "true";
+}
+
+export function markAmbassadorWelcomeSeen(): void {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(AMBASSADOR_WELCOME_SEEN_KEY, "true");
+}
+
+export function getAmbassadorEntryPath(): string {
+  return hasSeenAmbassadorWelcome()
+    ? "/ambassador/dashboard"
+    : "/ambassador/welcome";
+}
+
 export function formatApplicationDate(value: string): string {
   return new Date(value).toLocaleString("en-US", {
     month: "long",

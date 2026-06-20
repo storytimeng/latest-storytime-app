@@ -29,6 +29,7 @@ import {
   formatApplicationDateShort,
   getDecisionCountdown,
   withdrawAmbassadorApplication,
+  getAmbassadorEntryPath,
   type AmbassadorApplication,
   type ApplicationStatus,
 } from "@/src/lib/ambassadors";
@@ -239,7 +240,7 @@ export default function AmbassadorStatusView() {
   }
 
   if (application.status === "accepted") {
-    router.replace("/ambassador/dashboard");
+    router.replace(getAmbassadorEntryPath());
     return null;
   }
 

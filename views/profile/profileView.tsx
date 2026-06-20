@@ -34,6 +34,7 @@ import { useApiUserStats } from "@/src/hooks/useApiUserStats";
 import { useOnlineStatus } from "@/src/hooks/useOnlineStatus";
 import { useGenres } from "@/src/hooks/useGenres";
 import { useAmbassadorOverview } from "@/src/hooks/useAmbassador";
+import { getAmbassadorEntryPath } from "@/src/lib/ambassadors";
 import { Tooltip } from "@heroui/tooltip";
 import { cn } from "@/lib";
 import { genreCategoryPath } from "@/lib/genre";
@@ -46,6 +47,9 @@ const ProfileView = () => {
 
   // Keep track of the last active modal to preserve content during exit animation
   const [lastActiveModal, setLastActiveModal] = useState<string | null>(null);
+  const [ambassadorEntryPath, setAmbassadorEntryPath] = useState(
+    "/ambassador/welcome",
+  );
 
   useEffect(() => {
     if (activeModal) {
@@ -60,6 +64,10 @@ const ProfileView = () => {
   const { genres: apiGenres } = useGenres();
   const { overview: ambassadorOverview } = useAmbassadorOverview();
 
+  useEffect(() => {
+    setAmbassadorEntryPath(getAmbassadorEntryPath());
+  }, [ambassadorOverview?.isAmbassador]);
+
   const ambassadorApplication = ambassadorOverview?.application;
 
   const ambassadorOption = ambassadorOverview?.isAmbassador
@@ -68,7 +76,7 @@ const ProfileView = () => {
         label: "Ambassador Dashboard",
         icon: "🌟",
         type: "page" as const,
-        path: "/ambassador/dashboard",
+        path: ambassadorEntryPath,
       }
     : ambassadorApplication?.status === "pending"
       ? {

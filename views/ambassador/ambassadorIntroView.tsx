@@ -5,6 +5,7 @@ import { Button } from "@heroui/button";
 import { Magnetik_Medium, Magnetik_SemiBold } from "@/lib/font";
 import { AmbassadorHeader } from "@/components/ambassador/AmbassadorHeader";
 import { useAmbassadorOverview } from "@/src/hooks/useAmbassador";
+import { getAmbassadorEntryPath } from "@/src/lib/ambassadors";
 import { Loader2 } from "lucide-react";
 
 const features = [
@@ -47,7 +48,7 @@ export default function AmbassadorIntroView() {
   }
 
   if (overview?.isAmbassador) {
-    router.replace("/ambassador/dashboard");
+    router.replace(getAmbassadorEntryPath());
     return null;
   }
 
@@ -57,7 +58,7 @@ export default function AmbassadorIntroView() {
   }
 
   if (overview?.application?.status === "declined") {
-    router.replace("/ambassador/status");
+    router.replace("/ambassador/declined");
     return null;
   }
 
