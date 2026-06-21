@@ -1,3 +1,5 @@
+import type { StoryShell } from "@/lib/storyRoutes";
+
 // Temporary extension for AuthorDto until updated from Swagger
 export interface AuthorDto {
   id: string;
@@ -103,6 +105,7 @@ export interface StoryFormProps {
 export interface StoryViewProps {
   mode: "create" | "edit";
   storyId?: string;
+  shell?: StoryShell;
 }
 
 // Modal Props Types

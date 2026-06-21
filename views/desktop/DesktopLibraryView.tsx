@@ -31,10 +31,7 @@ const FILTER_OPTIONS: { id: LibraryFilter; label: string }[] = [
 ];
 
 function storyHrefForDesktop(storyId: string, progress?: number) {
-  if (progress && progress > 0 && progress < 100) {
-    return `/story/${storyId}/read`;
-  }
-  return `/story/${storyId}`;
+  return routes.storyResume(storyId, progress);
 }
 
 function DesktopLibraryContent() {

@@ -7,23 +7,35 @@ import { ArrowLeft, Crown, Lock } from "lucide-react";
 import { Button } from "@heroui/button";
 import { Magnetik_Bold, Magnetik_Medium, Magnetik_Regular } from "@/lib/font";
 import { PREMIUM_UPSELL_CONTENT } from "@/src/lib/premiumUpsell";
+import { cn } from "@/lib/utils";
+import type { StoryShell } from "@/lib/storyRoutes";
+import { getStoryRoutes } from "@/lib/storyRoutes";
 
 interface PremiumLockedReadViewProps {
   storyId: string;
   storyTitle: string;
+  shell?: StoryShell;
 }
 
 export const PremiumLockedReadView: React.FC<PremiumLockedReadViewProps> = ({
   storyId,
   storyTitle,
+  shell = "mobile",
 }) => {
   const router = useRouter();
+  const routes = getStoryRoutes(shell);
+  const isDesktop = shell === "desktop";
   const content = PREMIUM_UPSELL_CONTENT.exclusiveStory;
 
   return (
-    <div className="min-h-screen bg-accent-shade-1 max-w-[28rem] mx-auto px-4 py-6">
+    <div
+      className={cn(
+        "min-h-screen bg-accent-shade-1 px-4 py-6",
+        isDesktop ? "mx-auto max-w-2xl" : "mx-auto max-w-[28rem]",
+      )}
+    >
       <Link
-        href={`/story/${storyId}`}
+        href={routes.story(storyId)}
         className="inline-flex items-center gap-2 text-primary-colour mb-8"
       >
         <ArrowLeft className="w-5 h-5" />
@@ -77,7 +89,7 @@ export const PremiumLockedReadView: React.FC<PremiumLockedReadViewProps> = ({
 
         <Button
           className="w-full max-w-sm bg-complimentary-colour text-white font-semibold mb-3"
-          onPress={() => router.push("/premium")}
+          onPress={() => router.push(routes.premium)}
         >
           Unlock with Premium
         </Button>
@@ -85,7 +97,7 @@ export const PremiumLockedReadView: React.FC<PremiumLockedReadViewProps> = ({
         <Button
           variant="light"
           className="text-primary-shade-4"
-          onPress={() => router.push(`/story/${storyId}`)}
+          onPress={() => router.push(routes.story(storyId))}
         >
           Preview story details
         </Button>

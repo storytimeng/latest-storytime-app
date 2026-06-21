@@ -6,6 +6,7 @@ import React, {
   useEffect,
   useRef,
   useCallback,
+  useMemo,
 } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Skeleton } from "@heroui/skeleton";
@@ -54,12 +55,20 @@ import { usePremiumUpsell } from "@/src/hooks/usePremiumUpsell";
 import { PremiumUpsellModal } from "@/components/reusables/PremiumUpsellModal";
 import { PremiumLockedReadView } from "./components/PremiumLockedReadView";
 import { canReadExclusiveStory } from "@/src/lib/premiumUpsell";
+import { getStoryRoutes, type StoryShell } from "@/lib/storyRoutes";
+import { cn } from "@/lib/utils";
 
 interface ReadStoryViewProps {
   storyId: string;
+  shell?: StoryShell;
 }
 
-export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
+export const ReadStoryView = ({
+  storyId,
+  shell = "mobile",
+}: ReadStoryViewProps) => {
+  const routes = useMemo(() => getStoryRoutes(shell), [shell]);
+  const isDesktop = shell === "desktop";
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialChapterId = searchParams.get("chapterId");
@@ -71,8 +80,7 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
   useEffect(() => {
-    // Prefetch parent story route
-    router.prefetch(`/story/${storyId}`);
+    router.prefetch(routes.story(storyId));
 
     // Check both store and cookies to avoid false negatives during hydration
     const hasToken =
@@ -81,9 +89,9 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
 
     if (!hasToken) {
       openAuthModal("login");
-      router.push(`/story/${storyId}`);
+      router.push(routes.story(storyId));
     }
-  }, [isAuthenticated, openAuthModal, router, storyId]);
+  }, [isAuthenticated, openAuthModal, router, storyId, routes]);
 
   // Get current user
   const { user } = useUserStore();
@@ -624,6 +632,7 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
         <PremiumLockedReadView
           storyId={storyId}
           storyTitle={activeStory.title}
+          shell={shell}
         />
         <PremiumUpsellModal
           isOpen={isUpsellOpen}
@@ -636,179 +645,216 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
 
   const canUseAudio = checkFeature("audioNarration");
 
+  const readingBody =
+    isContentLoading && !currentContent ? (
+      <div className="px-4 py-8">
+        <Skeleton className="h-96 w-full rounded-lg" />
+      </div>
+    ) : isPartLoading && !currentContent ? (
+      <div className="space-y-4 px-4 py-8">
+        <div className="h-1 w-full overflow-hidden rounded-full bg-light-grey-2">
+          <div className="h-full w-1/3 animate-pulse rounded-full bg-complimentary-colour" />
+        </div>
+        <Skeleton className="h-64 w-full rounded-lg" />
+      </div>
+    ) : (
+      currentContent && (
+        <React.Fragment>
+          {isPartLoading ? (
+            <div
+              className={cn(
+                "sticky z-30 px-4",
+                isDesktop ? "top-16" : "top-28",
+              )}
+            >
+              <div className="h-1 w-full overflow-hidden rounded-full bg-light-grey-2">
+                <div className="h-full w-1/3 animate-pulse rounded-full bg-complimentary-colour" />
+              </div>
+            </div>
+          ) : null}
+
+          <div ref={storyContentRef}>
+            <StoryContent
+              content={currentContent}
+              authorName={
+                activeStory.anonymous
+                  ? "Anonymous"
+                  : activeStory.author?.penName || "Anonymous"
+              }
+              authorAvatar={activeStory.author?.avatar}
+              hasNavigation={hasNavigation}
+              description={activeStory.description}
+              listenMode={readingMode === "listen"}
+            />
+          </div>
+
+          {hasNavigation ? (
+            <StoryPartFooter
+              partLabel={partLabel}
+              currentIndex={currentIndex}
+              total={navigationList.length}
+              nextPart={nextPart}
+              prevPart={prevPart}
+              onNext={nextPart ? handleNextWithUrl : undefined}
+              onPrevious={prevPart ? handlePreviousWithUrl : undefined}
+              isLoading={isPartLoading}
+            />
+          ) : null}
+
+          {isOnline && (
+            <div className="px-4 pb-6">
+              <InteractionSection
+                likeCount={displayLikeCount}
+                commentCount={displayCommentCount}
+                isLiked={isLiked || false}
+                showComments={true}
+                onToggleLike={toggleLike}
+                onToggleComments={() => {}}
+              />
+
+              <div ref={commentsSectionRef} className="pb-24">
+                <Suspense
+                  fallback={
+                    <div className="py-4">
+                      <Skeleton className="h-20 w-full rounded-lg" />
+                    </div>
+                  }
+                >
+                  <CommentsSection
+                    comments={comments || []}
+                    onSubmitComment={handleCreateComment}
+                    onUpdateComment={handleUpdateComment}
+                    onDeleteComment={handleDeleteComment}
+                    isThreaded={true}
+                    currentUser={
+                      user
+                        ? {
+                            id: user.id,
+                            penName:
+                              user.penName || user.firstName || "Anonymous",
+                            avatar: user.avatar || user.profilePicture || "",
+                          }
+                        : undefined
+                    }
+                  />
+                </Suspense>
+              </div>
+            </div>
+          )}
+
+          {readingMode === "listen" && (
+            <StoryAudioBar
+              isVisible={isNavVisible}
+              isLoading={storyAudio.isLoading}
+              error={storyAudio.error}
+              onPlay={storyAudio.play}
+              onPause={storyAudio.pause}
+              onResume={storyAudio.resume}
+              onStop={storyAudio.stop}
+              onSeek={storyAudio.seek}
+              currentIndex={currentIndex}
+              totalChapters={navigationList?.length ?? 0}
+              onPreviousChapter={
+                hasNavigation ? handleAudioPreviousChapter : undefined
+              }
+              onNextChapter={hasNavigation ? handleAudioNextChapter : undefined}
+            />
+          )}
+
+          {readingMode === "read" && hasNavigation && navigationList && (
+            <NavigationBar
+              currentIndex={currentIndex}
+              total={navigationList.length}
+              onPrevious={handlePreviousWithUrl}
+              onNext={handleNextWithUrl}
+              isVisible={isNavVisible}
+              navigationList={navigationList}
+              selectedChapterId={selectedChapterId}
+              partLabel={structure === "episodes" ? "Episode" : "Chapter"}
+              onTtsLocked={() => requireFeature("audioNarration")}
+            />
+          )}
+        </React.Fragment>
+      )
+    );
+
   return (
     <TTSProvider>
       <div
         ref={contentContainerRef}
-        className="min-h-screen bg-accent-shade-1 relative overflow-hidden max-w-[28rem] mx-auto"
+        className={cn(
+          "relative bg-accent-shade-1",
+          isDesktop
+            ? "flex min-h-[calc(100dvh-3.5rem)]"
+            : "mx-auto min-h-screen max-w-[28rem] overflow-hidden",
+        )}
       >
-        {/* Offline Mode Banner */}
-        {isUsingOfflineData && <OfflineBanner />}
-
-        {/* Story Header */}
-        <StoryHeader
-          storyId={storyId}
-          currentTitle={currentTitle}
-          storyTitle={activeStory.title}
-          isVisible={isNavVisible}
-          showDropdown={showDropdown}
-          onToggleDropdown={() => setShowDropdown(!showDropdown)}
-          isOffline={isUsingOfflineData}
-          readingMode={readingMode}
-          onReadingModeChange={
-            isOnline && !isUsingOfflineData
-              ? handleReadingModeChange
-              : undefined
-          }
-          listenLocked={!canUseAudio}
-          onListenLocked={() => requireFeature("audioNarration")}
-        />
-
-        {/* Chapter Selector */}
-        {hasNavigation && navigationList && (
-          <ChapterSelector
-            navigationList={navigationList}
-            selectedChapterId={selectedChapterId}
-            onChapterChange={handleChapterChangeWithUrl}
-            isVisible={isNavVisible}
-            partLabel={structure === "episodes" ? "Episode" : "Chapter"}
-          />
-        )}
-
-        {/* Story Content */}
-        {isContentLoading && !currentContent ? (
-          <div className="px-4 py-8">
-            <Skeleton className="w-full rounded-lg h-96" />
-          </div>
-        ) : isPartLoading && !currentContent ? (
-          <div className="px-4 py-8 space-y-4">
-            <div className="h-1 w-full overflow-hidden rounded-full bg-light-grey-2">
-              <div className="h-full w-1/3 animate-pulse rounded-full bg-complimentary-colour" />
+        {isDesktop && hasNavigation && navigationList && (
+          <aside className="hidden w-72 shrink-0 flex-col border-r border-black/10 bg-white lg:flex">
+            <div className="border-b border-black/10 p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[#361B17]/45">
+                {structure === "episodes" ? "Episodes" : "Chapters"}
+              </p>
+              <p className="mt-1 truncate text-sm font-semibold text-primary-colour">
+                {activeStory.title}
+              </p>
             </div>
-            <Skeleton className="w-full rounded-lg h-64" />
-          </div>
-        ) : (
-          currentContent && (
-            <React.Fragment>
-              {isPartLoading ? (
-                <div className="sticky top-28 z-30 px-4">
-                  <div className="h-1 w-full overflow-hidden rounded-full bg-light-grey-2">
-                    <div className="h-full w-1/3 animate-pulse rounded-full bg-complimentary-colour" />
-                  </div>
-                </div>
-              ) : null}
-
-              <div ref={storyContentRef}>
-                <StoryContent
-                  content={currentContent}
-                  authorName={
-                    activeStory.anonymous
-                      ? "Anonymous"
-                      : activeStory.author?.penName || "Anonymous"
-                  }
-                  authorAvatar={activeStory.author?.avatar}
-                  hasNavigation={hasNavigation}
-                  description={activeStory.description}
-                  listenMode={readingMode === "listen"}
-                />
-              </div>
-
-              {hasNavigation ? (
-                <StoryPartFooter
-                  partLabel={partLabel}
-                  currentIndex={currentIndex}
-                  total={navigationList.length}
-                  nextPart={nextPart}
-                  prevPart={prevPart}
-                  onNext={nextPart ? handleNextWithUrl : undefined}
-                  onPrevious={prevPart ? handlePreviousWithUrl : undefined}
-                  isLoading={isPartLoading}
-                />
-              ) : null}
-
-              {/* Interaction Section (only when online) */}
-              {isOnline && (
-                <div className="px-4 pb-6">
-                  <InteractionSection
-                    likeCount={displayLikeCount}
-                    commentCount={displayCommentCount}
-                    isLiked={isLiked || false}
-                    showComments={true}
-                    onToggleLike={toggleLike}
-                    onToggleComments={() => {}}
-                  />
-
-                  {/* Comments Section */}
-                  <div ref={commentsSectionRef} className="pb-24">
-                    <Suspense
-                      fallback={
-                        <div className="py-4">
-                          <Skeleton className="w-full h-20 rounded-lg" />
-                        </div>
-                      }
-                    >
-                      <CommentsSection
-                        comments={comments || []}
-                        onSubmitComment={handleCreateComment}
-                        onUpdateComment={handleUpdateComment}
-                        onDeleteComment={handleDeleteComment}
-                        isThreaded={true}
-                        currentUser={
-                          user
-                            ? {
-                                id: user.id,
-                                penName:
-                                  user.penName || user.firstName || "Anonymous",
-                                avatar:
-                                  user.avatar || user.profilePicture || "",
-                              }
-                            : undefined
-                        }
-                      />
-                    </Suspense>
-                  </div>
-                </div>
-              )}
-
-              {/* Audio player — human narration */}
-              {readingMode === "listen" && (
-                <StoryAudioBar
-                  isVisible={isNavVisible}
-                  isLoading={storyAudio.isLoading}
-                  error={storyAudio.error}
-                  onPlay={storyAudio.play}
-                  onPause={storyAudio.pause}
-                  onResume={storyAudio.resume}
-                  onStop={storyAudio.stop}
-                  onSeek={storyAudio.seek}
-                  currentIndex={currentIndex}
-                  totalChapters={navigationList?.length ?? 0}
-                  onPreviousChapter={
-                    hasNavigation ? handleAudioPreviousChapter : undefined
-                  }
-                  onNextChapter={
-                    hasNavigation ? handleAudioNextChapter : undefined
-                  }
-                />
-              )}
-
-              {/* Browser TTS navigation — read mode with multi-part stories */}
-              {readingMode === "read" && hasNavigation && navigationList && (
-                <NavigationBar
-                  currentIndex={currentIndex}
-                  total={navigationList.length}
-                  onPrevious={handlePreviousWithUrl}
-                  onNext={handleNextWithUrl}
-                  isVisible={isNavVisible}
-                  navigationList={navigationList}
-                  selectedChapterId={selectedChapterId}
-                  partLabel={structure === "episodes" ? "Episode" : "Chapter"}
-                  onTtsLocked={() => requireFeature("audioNarration")}
-                />
-              )}
-            </React.Fragment>
-          )
+            <ChapterSelector
+              navigationList={navigationList}
+              selectedChapterId={selectedChapterId}
+              onChapterChange={handleChapterChangeWithUrl}
+              isVisible={true}
+              partLabel={structure === "episodes" ? "Episode" : "Chapter"}
+              variant="list"
+            />
+          </aside>
         )}
+
+        <div
+          className={cn(
+            "flex min-w-0 flex-1 flex-col",
+            isDesktop && "overflow-y-auto",
+          )}
+        >
+          {isUsingOfflineData && <OfflineBanner />}
+
+          <StoryHeader
+            storyId={storyId}
+            currentTitle={currentTitle}
+            storyTitle={activeStory.title}
+            isVisible={isNavVisible}
+            showDropdown={showDropdown}
+            onToggleDropdown={() => setShowDropdown(!showDropdown)}
+            isOffline={isUsingOfflineData}
+            readingMode={readingMode}
+            onReadingModeChange={
+              isOnline && !isUsingOfflineData
+                ? handleReadingModeChange
+                : undefined
+            }
+            listenLocked={!canUseAudio}
+            onListenLocked={() => requireFeature("audioNarration")}
+            backHref={routes.story(storyId)}
+            shell={shell}
+          />
+
+          {hasNavigation && navigationList && (
+            <div className={isDesktop ? "lg:hidden" : undefined}>
+              <ChapterSelector
+                navigationList={navigationList}
+                selectedChapterId={selectedChapterId}
+                onChapterChange={handleChapterChangeWithUrl}
+                isVisible={isNavVisible}
+                partLabel={structure === "episodes" ? "Episode" : "Chapter"}
+                variant="dropdown"
+              />
+            </div>
+          )}
+
+          <div className={cn(isDesktop && "mx-auto w-full max-w-3xl")}>
+            {readingBody}
+          </div>
+        </div>
       </div>
       <PremiumUpsellModal
         isOpen={isUpsellOpen}

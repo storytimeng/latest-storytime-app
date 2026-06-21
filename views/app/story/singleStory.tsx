@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   ArrowLeft,
   Share2,
@@ -59,9 +59,11 @@ import {
   canReadExclusiveStory,
   isExclusiveStory,
 } from "@/src/lib/premiumUpsell";
+import { getStoryRoutes, type StoryShell } from "@/lib/storyRoutes";
 
 interface SingleStoryProps {
   storyId?: string;
+  shell?: StoryShell;
 }
 
 type Tab = "episodes" | "details" | "reviews";
@@ -77,7 +79,9 @@ const formatReadingTime = (seconds: number): string => {
   return `${minutes}m`;
 };
 
-const SingleStory = ({ storyId }: SingleStoryProps) => {
+const SingleStory = ({ storyId, shell = "mobile" }: SingleStoryProps) => {
+  const routes = useMemo(() => getStoryRoutes(shell), [shell]);
+  const isDesktop = shell === "desktop";
   const { story, isLoading } = useStory(storyId);
   const { likeCount, isLiked, toggleLike } = useStoryLikes(storyId);
   const {
@@ -118,8 +122,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
   const [showFab, setShowFab] = useState(false);
 
   useEffect(() => {
-    // Prefetch home route
-    router.prefetch("/home");
+    router.prefetch(routes.home);
 
     // Prefetch genre routes if available
     if (story?.genres) {
@@ -127,7 +130,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
         router.prefetch(genreCategoryPath(String(genre)));
       });
     }
-  }, [router, story?.genres]);
+  }, [router, story?.genres, routes.home]);
 
   useEffect(() => {
     return scrollY.on("change", (latest) => {
@@ -687,11 +690,15 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
         (hasContent ? contentList[0]?.id : undefined);
 
       if (targetId) {
-        return `/story/${storyId}/read?${structure === "chapters" ? "chapterId" : "episodeId"}=${targetId}`;
+        return routes.readStory(storyId || "", {
+          ...(structure === "chapters"
+            ? { chapterId: targetId }
+            : { episodeId: targetId }),
+        });
       }
-      return `/story/${storyId}/read`;
+      return routes.readStory(storyId || "");
     },
-    [continueTarget?.id, contentList, hasContent, storyId, structure],
+    [continueTarget?.id, contentList, hasContent, storyId, structure, routes],
   );
 
   const handleStartReading = React.useCallback(
@@ -940,7 +947,12 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
   const collaborators = (story as any).collaborate as string[] | null;
 
   return (
-    <div className="relative min-h-screen pb-20 bg-accent-shade-1">
+    <div
+      className={cn(
+        "relative min-h-screen bg-accent-shade-1",
+        isDesktop ? "pb-8" : "pb-20",
+      )}
+    >
       <CollaboratorsModal
         isOpen={isCollaboratorsOpen}
         onOpenChange={onCollaboratorsOpenChange}
@@ -957,7 +969,14 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
       />
 
       {/* Full-Width Hero Image */}
-      <div className="relative w-full h-[55vh] min-h-[320px] max-h-[420px] overflow-hidden">
+      <div
+        className={cn(
+          "relative w-full overflow-hidden",
+          isDesktop
+            ? "h-[42vh] min-h-[280px] max-h-[480px] rounded-b-2xl"
+            : "h-[55vh] min-h-[320px] max-h-[420px]",
+        )}
+      >
         {/* Hero Background Image */}
         <StoryCoverImage
           src={story.imageUrl}
@@ -973,7 +992,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
         <div className="absolute top-0 left-0 right-0 z-20 px-4 pt-6">
           <div className="flex items-center justify-between">
             <Link
-              href="/home"
+              href={routes.home}
               className="p-2 transition-colors rounded-full bg-black/30 backdrop-blur-md hover:bg-black/40"
             >
               <ArrowLeft size={24} className="text-white" />
@@ -1067,7 +1086,12 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
       </div>
 
       {/* Content Section - Below Hero */}
-      <div className="relative px-4 -mt-16 z-10">
+      <div
+        className={cn(
+          "relative z-10 -mt-16 px-4",
+          isDesktop && "mx-auto max-w-5xl lg:px-8",
+        )}
+      >
         {/* Badges Row */}
         <div className="flex flex-wrap items-center gap-2 mb-3">
           {isExclusive && (
@@ -1604,7 +1628,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
             {isAuthor && (
               <div className="pt-6 border-t border-primary/10">
                 <Link
-                  href={`/edit-story/${storyId}`}
+                  href={routes.editStory(String(storyId))}
                   className="flex items-center justify-center w-full gap-2 py-4 font-medium transition-colors border rounded-xl border-primary/20 text-primary hover:bg-primary/5"
                 >
                   <Edit size={18} />

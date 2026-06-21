@@ -9,13 +9,19 @@ import LoadingState from "@/components/reusables/customUI/LoadingState";
 import StoryViewErrorBoundary from "@/components/reusables/StoryViewErrorBoundary";
 import { useStoryViewLogic } from "@/src/hooks/useStoryViewLogic";
 import type { StoryViewProps } from "@/types/story";
+import { cn } from "@/lib/utils";
 
 const StoryForm = lazy(() => import("@/components/reusables/form/storyForm"));
 
-const StoryView: React.FC<StoryViewProps> = ({ mode, storyId }) => {
+const StoryView: React.FC<StoryViewProps> = ({
+  mode,
+  storyId,
+  shell = "mobile",
+}) => {
   const router = useRouter();
   const { openModal: openAuthModal } = useAuthModalStore();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const isDesktop = shell === "desktop";
 
   useEffect(() => {
     router.prefetch("/");
@@ -51,15 +57,22 @@ const StoryView: React.FC<StoryViewProps> = ({ mode, storyId }) => {
     handleGenreToggle,
     validateForm,
     handleStructureNext,
-  } = useStoryViewLogic({ mode, storyId });
+  } = useStoryViewLogic({ mode, storyId, shell });
+
+  const shellClassName = cn(
+    "min-h-screen bg-accent-shade-1",
+    isDesktop
+      ? "mx-auto w-full max-w-4xl px-4 lg:px-8"
+      : "mx-auto max-w-[28rem]",
+  );
 
   if (mode === "edit" && isFetchingStory) {
     return (
-      <div className="min-h-screen bg-accent-shade-1 max-w-[28rem] mx-auto">
+      <div className={shellClassName}>
         <PageHeader
           title={pageTitle}
           backLink={backLink}
-          className="px-4 pt-5 pb-4"
+          className="px-0 pt-5 pb-4"
           onBackPress={handleBack}
         />
         <LoadingState message="Loading story..." />
@@ -69,18 +82,16 @@ const StoryView: React.FC<StoryViewProps> = ({ mode, storyId }) => {
 
   return (
     <StoryViewErrorBoundary>
-      <div className="min-h-screen bg-accent-shade-1 max-w-[28rem] mx-auto">
-        {/* Page Header */}
+      <div className={shellClassName}>
         <PageHeader
           title={pageTitle}
           backLink={backLink}
-          className="px-4 pt-5 pb-4"
+          className="px-0 pt-5 pb-4"
           titleClassName="text-xl text-primary-colour font-bold"
           onBackPress={handleBack}
         />
 
-        {/* Story Form with Suspense for lazy loading */}
-        <div className="px-4">
+        <div className={cn(isDesktop ? "" : "px-4")}>
           <Suspense fallback={<LoadingState message="Loading form..." />}>
             <StoryForm
               mode={mode}

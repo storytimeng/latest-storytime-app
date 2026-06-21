@@ -18,11 +18,14 @@ import { useOnlineStatus } from "@/src/hooks/useOnlineStatus";
 import { useUserProfile } from "@/src/hooks/useUserProfile";
 import { useHomeFeed, useHomeFeedInit } from "@/src/hooks/useHomeFeed";
 import { DESKTOP_ROUTES } from "@/config/desktopRoutes";
+import { getStoryRoutes } from "@/lib/storyRoutes";
+
+const routes = getStoryRoutes("desktop");
 
 const DESKTOP_GRID = "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5";
 
 function storyHref(id: string) {
-  return `/story/${id}`;
+  return routes.story(id);
 }
 
 export function DesktopHomeView() {

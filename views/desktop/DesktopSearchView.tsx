@@ -14,8 +14,12 @@ import { useSearchStories } from "@/src/hooks/useStoryCategories";
 import { useStories } from "@/src/hooks/useStories";
 import { getStoryCoverSrc } from "@/lib/storyCover";
 
+import { getStoryRoutes } from "@/lib/storyRoutes";
+
+const routes = getStoryRoutes("desktop");
+
 function storyHref(id: string) {
-  return `/story/${id}`;
+  return routes.story(id);
 }
 
 export function DesktopSearchView() {

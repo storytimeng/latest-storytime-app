@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
   useCreateStory,
@@ -30,10 +30,12 @@ import type { StoryFormData, Chapter, Part } from "@/types/story";
 import type { CreateStoryDto, UpdateStoryDto } from "@/src/client/types.gen";
 import { useStoryFormState } from "@/src/hooks/useStoryFormState";
 import type { StoryStructure } from "@/types/story";
+import { getStoryRoutes, type StoryShell } from "@/lib/storyRoutes";
 
 interface UseStoryViewLogicProps {
   mode: "create" | "edit";
   storyId?: string;
+  shell?: StoryShell;
 }
 
 interface UseStoryViewLogicReturn {
@@ -85,8 +87,10 @@ interface UseStoryViewLogicReturn {
 export function useStoryViewLogic({
   mode,
   storyId,
+  shell = "mobile",
 }: UseStoryViewLogicProps): UseStoryViewLogicReturn {
   const router = useRouter();
+  const routes = useMemo(() => getStoryRoutes(shell), [shell]);
   const { user: swrUser } = useUserProfile();
   const { user: storeUser } = useUserStore();
   const [initialData, setInitialData] = useState<
@@ -138,12 +142,12 @@ export function useStoryViewLogic({
 
   // Prefetch common navigation routes
   useEffect(() => {
-    router.prefetch("/my-stories");
-    router.prefetch("/pen");
+    router.prefetch(routes.myStories);
+    router.prefetch(routes.write);
     if (storyId) {
-      router.prefetch(`/story/${storyId}`);
+      router.prefetch(routes.story(storyId));
     }
-  }, [router, storyId]);
+  }, [router, storyId, routes]);
 
   // Initialize cache on mount
   useEffect(() => {
@@ -192,7 +196,7 @@ export function useStoryViewLogic({
           type: "error",
           message: "You are not authorized to edit this story.",
         });
-        router.push(`/story/${storyId}`);
+        router.push(routes.story(storyId));
       }
     }
   }, [mode, story, isFetchingStory, storeUser, swrUser, storyId, router]);
@@ -308,9 +312,9 @@ export function useStoryViewLogic({
     } else {
       // Default router back
       if (mode === "edit") {
-        router.push("/my-stories");
+        router.push(routes.myStories);
       } else {
-        router.push("/pen");
+        router.push(routes.write);
       }
     }
   }, [currentStep, mode, router, setCurrentStep]);
@@ -379,9 +383,9 @@ export function useStoryViewLogic({
             });
 
             if (formData.storyStatus === "Draft") {
-              router.push("/my-stories?tab=drafts");
+              router.push(routes.myStoriesDrafts);
             } else {
-              router.push(`/story/${createdStoryId}`);
+              router.push(routes.story(createdStoryId));
             }
           } else {
             const errorMsg =
@@ -753,7 +757,7 @@ export function useStoryViewLogic({
               type: "success",
               message,
             });
-            router.push(`/story/${storyId}`);
+            router.push(routes.story(storyId));
           } else if (storyUpdateSuccess && !contentUpdateSuccess) {
             showToast({
               type: "warning",
@@ -876,7 +880,7 @@ export function useStoryViewLogic({
                     ? "Story and chapters published successfully!"
                     : "Story and episodes published successfully!",
                 });
-                router.push(`/story/${newStoryId}`);
+                router.push(routes.story(newStoryId));
               } else {
                 const errorMsg = hasChapters
                   ? result?.error || "Failed to publish chapters"
@@ -885,9 +889,9 @@ export function useStoryViewLogic({
               }
             } else {
               if (formData.storyStatus === "Draft") {
-                router.push("/my-stories?tab=drafts");
+                router.push(routes.myStoriesDrafts);
               } else {
-                router.push(`/story/${newStoryId}`);
+                router.push(routes.story(newStoryId));
               }
             }
           } else {
@@ -927,15 +931,15 @@ export function useStoryViewLogic({
   // Handle cancel action
   const handleCancel = useCallback(() => {
     if (mode === "edit") {
-      router.push("/my-stories");
+      router.push(routes.myStories);
     } else {
-      router.push("/pen");
+      router.push(routes.write);
     }
-  }, [mode, router]);
+  }, [mode, router, routes]);
 
   // Determine page title and back link
   const pageTitle = mode === "edit" ? "Edit Story" : "New Story";
-  const backLink = mode === "edit" ? "/my-stories" : "/pen";
+  const backLink = mode === "edit" ? routes.myStories : routes.write;
 
   return {
     initialData,
