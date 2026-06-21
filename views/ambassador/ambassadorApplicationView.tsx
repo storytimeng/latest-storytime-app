@@ -28,10 +28,10 @@ import { useUserProfile } from "@/src/hooks/useUserProfile";
 import { useAmbassadorOverview } from "@/src/hooks/useAmbassador";
 import {
   submitAmbassadorApplication,
-  getAmbassadorEntryPath,
   type AmbassadorType,
   type CreateApplicationPayload,
 } from "@/src/lib/ambassadors";
+import { useAmbassadorRoutes } from "@/components/ambassador/AmbassadorRoutesProvider";
 import { showToast } from "@/lib/showNotification";
 import { mutate } from "swr";
 
@@ -176,13 +176,14 @@ function ApplicationReapplyBlockedScreen({
   reapplyDaysRemaining: number;
 }) {
   const router = useRouter();
+  const routes = useAmbassadorRoutes();
   const daysLabel = `${reapplyDaysRemaining} day${reapplyDaysRemaining === 1 ? "" : "s"}`;
 
   return (
     <div className="min-h-screen bg-accent-shade-1 max-w-md mx-auto flex flex-col px-4 pb-10">
       <button
         type="button"
-        onClick={() => router.push("/profile")}
+        onClick={() => router.push(routes.profile)}
         className="pt-4 text-primary-colour"
         aria-label="Back to profile"
       >
@@ -214,7 +215,7 @@ function ApplicationReapplyBlockedScreen({
       </div>
 
       <div className="space-y-3">
-        <PrimaryFormButton onClick={() => router.push("/ambassador/declined")}>
+        <PrimaryFormButton onClick={() => router.push(routes.declined)}>
           View Details
         </PrimaryFormButton>
         <button
@@ -228,7 +229,7 @@ function ApplicationReapplyBlockedScreen({
           Keep Writing
         </button>
         <Link
-          href="/profile"
+          href={routes.profile}
           className={cn(
             Magnetik_Medium.className,
             "block text-center text-sm text-primary-colour underline underline-offset-2",
@@ -243,6 +244,7 @@ function ApplicationReapplyBlockedScreen({
 
 function ApplicationSuccessScreen() {
   const router = useRouter();
+  const routes = useAmbassadorRoutes();
 
   return (
     <div className="min-h-screen bg-accent-shade-1 max-w-md mx-auto px-6 flex flex-col items-center justify-center text-center pb-12">
@@ -266,11 +268,11 @@ function ApplicationSuccessScreen() {
         Your application has been submitted successfully. Our team will
         carefully review your responses and get back to you soon.
       </p>
-      <PrimaryFormButton onClick={() => router.push("/ambassador/status")}>
+      <PrimaryFormButton onClick={() => router.push(routes.status)}>
         View My Application Status
       </PrimaryFormButton>
       <Link
-        href="/profile"
+        href={routes.profile}
         className={cn(
           Magnetik_Medium.className,
           "mt-4 text-sm text-primary-colour underline-offset-2 hover:underline",
@@ -284,6 +286,7 @@ function ApplicationSuccessScreen() {
 
 export default function AmbassadorApplicationView() {
   const router = useRouter();
+  const routes = useAmbassadorRoutes();
   const { user } = useUserProfile();
   const { overview, isLoading: overviewLoading } = useAmbassadorOverview();
   const [phase, setPhase] = useState<ViewPhase>(1);
@@ -317,14 +320,14 @@ export default function AmbassadorApplicationView() {
     if (overviewLoading || !overview) return;
 
     if (overview.isAmbassador) {
-      router.replace(getAmbassadorEntryPath());
+      router.replace(routes.entryPath);
       return;
     }
 
     if (application?.status === "pending") {
-      router.replace("/ambassador/status");
+      router.replace(routes.status);
     }
-  }, [overviewLoading, overview, application?.status, router]);
+  }, [overviewLoading, overview, application?.status, router, routes]);
 
   const step = phase === "success" ? 4 : phase;
 
@@ -340,7 +343,7 @@ export default function AmbassadorApplicationView() {
   const handleBack = () => {
     if (submitting) return;
     if (phase === 1) {
-      router.push("/ambassador");
+      router.push(routes.hub);
       return;
     }
     if (phase !== "success") {

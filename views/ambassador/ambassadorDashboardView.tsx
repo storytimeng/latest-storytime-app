@@ -26,12 +26,19 @@ import {
 } from "@/src/lib/ambassador-dashboard";
 import { fetchAmbassadorDashboard } from "@/src/lib/ambassadors";
 import { useRequireAmbassador } from "@/src/hooks/useRequireAmbassador";
+import { useAmbassadorRoutes } from "@/components/ambassador/AmbassadorRoutesProvider";
 import { showToast } from "@/lib/showNotification";
+import { cn } from "@/lib/utils";
 
 const CELEBRATION_SEEN_KEY = "storytime-ambassador-6month-celebration-seen";
 
-export default function AmbassadorDashboardView() {
+export default function AmbassadorDashboardView({
+  variant = "mobile",
+}: {
+  variant?: "mobile" | "desktop";
+}) {
   const router = useRouter();
+  const routes = useAmbassadorRoutes();
   const { user } = useUserProfile();
   const { isLoading: guardLoading, isAmbassador } = useRequireAmbassador();
   const [data, setData] = useState<Awaited<
@@ -107,7 +114,7 @@ export default function AmbassadorDashboardView() {
 
   const handleProgressAction = () => {
     if (progressPercent >= 100) return;
-    router.push("/ambassador/report");
+    router.push(routes.report);
   };
 
   const handleCertificateDone = () => {
@@ -144,7 +151,7 @@ export default function AmbassadorDashboardView() {
         <button
           type="button"
           className="mt-4 text-primary-colour underline"
-          onClick={() => router.push("/profile")}
+          onClick={() => router.push(routes.profile)}
         >
           Go back
         </button>
@@ -192,14 +199,26 @@ export default function AmbassadorDashboardView() {
   ];
 
   return (
-    <div className="min-h-screen bg-accent-shade-1 max-w-md mx-auto pb-10">
+    <div
+      className={cn(
+        "min-h-screen bg-accent-shade-1 pb-10",
+        variant === "mobile" ? "max-w-md mx-auto" : "w-full",
+      )}
+    >
       <AmbassadorHubHeader
         displayName={displayName}
         avatarUrl={avatarUrl}
         levelLabel={getAmbassadorLevelLabel(ambassador.type)}
+        backHref={routes.profile}
       />
 
-      <div className="space-y-6 pt-2">
+      <div
+        className={cn(
+          "space-y-6 pt-2",
+          variant === "desktop" &&
+            "lg:grid lg:grid-cols-2 lg:gap-6 lg:space-y-0",
+        )}
+      >
         <MonthlyProgressCard
           monthLabel={getCurrentMonthLabel()}
           daysRemaining={getDaysRemainingInMonth()}
@@ -210,10 +229,14 @@ export default function AmbassadorDashboardView() {
 
         <ImpactStatsGrid stats={impactStats} />
 
-        <QuickActionsList />
+        <div className={cn(variant === "desktop" && "lg:col-span-2")}>
+          <QuickActionsList />
+        </div>
 
         {showMilestone && (
-          <MilestoneCard onDownload={() => setCertificateOpen(true)} />
+          <div className={cn(variant === "desktop" && "lg:col-span-2")}>
+            <MilestoneCard onDownload={() => setCertificateOpen(true)} />
+          </div>
         )}
       </div>
 

@@ -14,7 +14,7 @@ import {
 import { PrimaryFormButton } from "@/components/ambassador/application-form-ui";
 import { useAmbassadorOverview } from "@/src/hooks/useAmbassador";
 import { useSupportStore } from "@/src/stores/useSupportStore";
-import { getAmbassadorEntryPath } from "@/src/lib/ambassadors";
+import { useAmbassadorRoutes } from "@/components/ambassador/AmbassadorRoutesProvider";
 
 const GROWTH_TIPS = [
   "Published more stories consistently",
@@ -25,21 +25,22 @@ const GROWTH_TIPS = [
 
 export default function AmbassadorDeclinedView() {
   const router = useRouter();
+  const routes = useAmbassadorRoutes();
   const openSupportModal = useSupportStore((state) => state.openModal);
   const { overview, isLoading } = useAmbassadorOverview();
 
   useEffect(() => {
     if (!isLoading && overview?.isAmbassador) {
-      router.replace(getAmbassadorEntryPath());
+      router.replace(routes.entryPath);
       return;
     }
     if (
       !isLoading &&
       (!overview?.application || overview.application.status !== "declined")
     ) {
-      router.replace("/profile");
+      router.replace(routes.profile);
     }
-  }, [isLoading, overview, router]);
+  }, [isLoading, overview, router, routes]);
 
   if (isLoading) {
     return (
@@ -59,7 +60,7 @@ export default function AmbassadorDeclinedView() {
     <div className="min-h-screen bg-accent-shade-1 max-w-md mx-auto pb-10">
       <div className="bg-primary-colour text-white px-4 pt-5 pb-8">
         <div className="max-w-md mx-auto">
-          <Link href="/profile" className="inline-flex text-white mb-6">
+          <Link href={routes.profile} className="inline-flex text-white mb-6">
             <ArrowLeft className="w-6 h-6" />
           </Link>
           <div className="flex flex-col items-center text-center space-y-4">
@@ -202,7 +203,7 @@ export default function AmbassadorDeclinedView() {
             View Community Guidelines
           </button>
           {application.canReapply && (
-            <PrimaryFormButton onClick={() => router.push("/ambassador/apply")}>
+            <PrimaryFormButton onClick={() => router.push(routes.apply)}>
               Apply Again
             </PrimaryFormButton>
           )}

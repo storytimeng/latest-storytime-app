@@ -22,6 +22,7 @@ import {
   Magnetik_SemiBold,
 } from "@/lib/font";
 import type { MonthlyGoal } from "@/src/lib/ambassador-dashboard";
+import { useAmbassadorRoutes } from "@/components/ambassador/AmbassadorRoutesProvider";
 
 interface AmbassadorHubHeaderProps {
   displayName: string;
@@ -280,25 +281,21 @@ export function ImpactStatsGrid({ stats }: { stats: ImpactStat[] }) {
 
 const QUICK_ACTIONS = [
   {
-    href: "/ambassador/share",
     icon: Link2,
     title: "Share Your Link",
     subtitle: "Invite new storytellers",
   },
   {
-    href: "/ambassador/report",
     icon: FileText,
     title: "Monthly Report",
     subtitle: "Submit your monthly impact",
   },
   {
-    href: "/ambassador/leaderboard",
     icon: Trophy,
     title: "Leaderboard",
     subtitle: "See top ambassadors",
   },
   {
-    href: "/ambassador/breakdown",
     icon: Star,
     title: "View Score Breakdown",
     subtitle: "Understand your points",
@@ -306,6 +303,34 @@ const QUICK_ACTIONS = [
 ] as const;
 
 export function QuickActionsList() {
+  const routes = useAmbassadorRoutes();
+  const actions = [
+    {
+      href: routes.share,
+      icon: Link2,
+      title: "Share Your Link",
+      subtitle: "Invite new storytellers",
+    },
+    {
+      href: routes.report,
+      icon: FileText,
+      title: "Monthly Report",
+      subtitle: "Submit your monthly impact",
+    },
+    {
+      href: routes.leaderboard,
+      icon: Trophy,
+      title: "Leaderboard",
+      subtitle: "See top ambassadors",
+    },
+    {
+      href: routes.breakdown,
+      icon: Star,
+      title: "View Score Breakdown",
+      subtitle: "Understand your points",
+    },
+  ] as const;
+
   return (
     <div className="px-4 space-y-3">
       <h2
@@ -317,8 +342,9 @@ export function QuickActionsList() {
         Quick Actions
       </h2>
       <div className="space-y-2">
-        {QUICK_ACTIONS.map((action) => {
+        {actions.map((action, index) => {
           const Icon = action.icon;
+          const template = QUICK_ACTIONS[index];
           return (
             <Link
               key={action.href}
@@ -335,7 +361,7 @@ export function QuickActionsList() {
                     "text-sm text-primary-colour",
                   )}
                 >
-                  {action.title}
+                  {template.title}
                 </p>
                 <p
                   className={cn(

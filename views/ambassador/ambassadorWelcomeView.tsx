@@ -19,6 +19,7 @@ import {
   markAmbassadorWelcomeSeen,
   type AmbassadorType,
 } from "@/src/lib/ambassadors";
+import { useAmbassadorRoutes } from "@/components/ambassador/AmbassadorRoutesProvider";
 
 const NEXT_STEPS = [
   "Set up your Ambassador Dashboard and explore your tools",
@@ -28,16 +29,17 @@ const NEXT_STEPS = [
 
 export default function AmbassadorWelcomeView() {
   const router = useRouter();
+  const routes = useAmbassadorRoutes();
   const { overview, isLoading } = useAmbassadorOverview();
 
   useEffect(() => {
     if (!isLoading && hasSeenAmbassadorWelcome() && overview?.isAmbassador) {
-      router.replace("/ambassador/dashboard");
+      router.replace(routes.dashboard);
     }
     if (!isLoading && !overview?.isAmbassador) {
-      router.replace("/profile");
+      router.replace(routes.profile);
     }
-  }, [isLoading, overview, router]);
+  }, [isLoading, overview, router, routes]);
 
   if (isLoading) {
     return (
@@ -57,14 +59,14 @@ export default function AmbassadorWelcomeView() {
 
   const handleViewDashboard = () => {
     markAmbassadorWelcomeSeen();
-    router.push("/ambassador/dashboard");
+    router.push(routes.dashboard);
   };
 
   return (
     <div className="min-h-screen bg-accent-shade-1 max-w-md mx-auto pb-10">
       <div className="bg-primary-colour text-white px-4 pt-5 pb-8">
         <div className="max-w-md mx-auto">
-          <Link href="/profile" className="inline-flex text-white mb-6">
+          <Link href={routes.profile} className="inline-flex text-white mb-6">
             <ArrowLeft className="w-6 h-6" />
           </Link>
           <div className="flex flex-col items-center text-center space-y-4">

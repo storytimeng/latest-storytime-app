@@ -12,6 +12,7 @@ import {
 } from "@/components/ambassador/AmbassadorShareComponents";
 import { fetchAmbassadorReferrals } from "@/src/lib/ambassadors";
 import { useRequireAmbassador } from "@/src/hooks/useRequireAmbassador";
+import { useAmbassadorRoutes } from "@/components/ambassador/AmbassadorRoutesProvider";
 import {
   filterReferrals,
   type AmbassadorReferralItem,
@@ -38,6 +39,7 @@ function buildVanityShareUrl(displaySharePath: string): string {
 }
 
 export default function AmbassadorShareView() {
+  const routes = useAmbassadorRoutes();
   const { isLoading: guardLoading, isAmbassador } = useRequireAmbassador();
   const [shareUrl, setShareUrl] = useState("");
   const [referralCode, setReferralCode] = useState("");
@@ -121,7 +123,10 @@ export default function AmbassadorShareView() {
 
   return (
     <div className="min-h-screen bg-accent-shade-1 max-w-md mx-auto pb-10">
-      <ShareGrowHeader onInfoClick={() => setInfoOpen(true)} />
+      <ShareGrowHeader
+        onInfoClick={() => setInfoOpen(true)}
+        backHref={routes.dashboard}
+      />
 
       <div className="space-y-5 pt-2">
         <ReferralLinkCard

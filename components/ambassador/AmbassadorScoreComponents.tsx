@@ -30,6 +30,7 @@ import {
   type AmbassadorScoreBreakdown,
   type ScoreCategory,
 } from "@/src/lib/score-breakdown";
+import { useAmbassadorRoutes } from "@/components/ambassador/AmbassadorRoutesProvider";
 
 interface ScoreHeaderProps {
   backHref?: string;
@@ -378,6 +379,7 @@ export function ScoreResetCard({ nextResetDate }: { nextResetDate: string }) {
 
 export function ScoreEmptyState({ nextResetDate }: { nextResetDate: string }) {
   const router = useRouter();
+  const routes = useAmbassadorRoutes();
 
   return (
     <div className="px-4 space-y-5">
@@ -424,7 +426,7 @@ export function ScoreEmptyState({ nextResetDate }: { nextResetDate: string }) {
         </div>
         <button
           type="button"
-          onClick={() => router.push("/ambassador/report")}
+          onClick={() => router.push(routes.report)}
           className={cn(
             Magnetik_Medium.className,
             "w-full rounded-full border border-complimentary-colour text-complimentary-colour py-3 text-sm",

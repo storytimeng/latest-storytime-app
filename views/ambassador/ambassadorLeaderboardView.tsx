@@ -21,11 +21,18 @@ import {
   type LeaderboardScope,
 } from "@/src/lib/leaderboard";
 import { useRequireAmbassador } from "@/src/hooks/useRequireAmbassador";
+import { useAmbassadorRoutes } from "@/components/ambassador/AmbassadorRoutesProvider";
 import { useUserProfile } from "@/src/hooks/useUserProfile";
 import { Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { showToast } from "@/lib/showNotification";
 
-export default function AmbassadorLeaderboardView() {
+export default function AmbassadorLeaderboardView({
+  variant = "mobile",
+}: {
+  variant?: "mobile" | "desktop";
+}) {
+  const routes = useAmbassadorRoutes();
   const { isLoading: guardLoading, isAmbassador } = useRequireAmbassador();
   const { user } = useUserProfile();
   const [scope, setScope] = useState<LeaderboardScope>("campus");
@@ -117,8 +124,13 @@ export default function AmbassadorLeaderboardView() {
   }
 
   return (
-    <div className="min-h-screen bg-accent-shade-1 max-w-md mx-auto pb-10">
-      <LeaderboardHeader />
+    <div
+      className={cn(
+        "min-h-screen bg-accent-shade-1 pb-10",
+        variant === "mobile" ? "max-w-md mx-auto" : "w-full",
+      )}
+    >
+      <LeaderboardHeader backHref={routes.dashboard} />
 
       <div className="space-y-4">
         <LeaderboardFilterCard
@@ -131,7 +143,14 @@ export default function AmbassadorLeaderboardView() {
         ) : showEmptyState ? (
           <LeaderboardEmptyState />
         ) : (
-          <div className="mx-4 space-y-2">
+          <div
+            className={cn(
+              "space-y-2",
+              variant === "desktop"
+                ? "grid gap-3 sm:grid-cols-2 xl:grid-cols-3"
+                : "mx-4",
+            )}
+          >
             {entries.map((entry) => (
               <LeaderboardEntryCard
                 key={`${entry.ambassadorId}-${entry.rank}`}

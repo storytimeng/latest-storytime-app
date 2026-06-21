@@ -7,12 +7,14 @@ import { ArrowLeft, X } from "lucide-react";
 import { Magnetik_Bold, Magnetik_Medium, Magnetik_Regular } from "@/lib/font";
 import { cn } from "@/lib";
 import { useAmbassadorOverview } from "@/src/hooks/useAmbassador";
+import { useAmbassadorRoutes } from "@/components/ambassador/AmbassadorRoutesProvider";
 
 export const AmbassadorDeclinedModal = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { onClose } = useModalContext();
   const { overview } = useAmbassadorOverview();
+  const routes = useAmbassadorRoutes();
 
   const application = overview?.application;
   const reapplyDays = application?.reapplyDaysRemaining ?? 0;
@@ -27,7 +29,7 @@ export const AmbassadorDeclinedModal = () => {
 
   const handleViewDetails = () => {
     closeModal();
-    router.push("/ambassador/declined");
+    router.push(routes.declined);
   };
 
   return (

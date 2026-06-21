@@ -19,6 +19,7 @@ import {
   type AmbassadorLeaderboardEntry,
   type LeaderboardScope,
 } from "@/src/lib/leaderboard";
+import { useAmbassadorRoutes } from "@/components/ambassador/AmbassadorRoutesProvider";
 
 interface LeaderboardHeaderProps {
   backHref?: string;
@@ -230,6 +231,7 @@ export function LeaderboardSkeletonList() {
 
 export function LeaderboardEmptyState() {
   const router = useRouter();
+  const routes = useAmbassadorRoutes();
 
   return (
     <div className="mx-4 rounded-2xl bg-white border border-grey-5 shadow-sm px-6 py-10 text-center space-y-4">
@@ -254,7 +256,7 @@ export function LeaderboardEmptyState() {
       </div>
       <button
         type="button"
-        onClick={() => router.push("/ambassador/report")}
+        onClick={() => router.push(routes.report)}
         className={cn(
           Magnetik_Medium.className,
           "w-full rounded-full border border-complimentary-colour text-complimentary-colour py-3 text-sm",

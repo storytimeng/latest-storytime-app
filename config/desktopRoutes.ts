@@ -90,6 +90,12 @@ export const DESKTOP_ROUTES = {
   ambassadorApply: `${DESKTOP_BASE}/ambassador/apply`,
   ambassadorDashboard: `${DESKTOP_BASE}/ambassador/dashboard`,
   ambassadorLeaderboard: `${DESKTOP_BASE}/ambassador/leaderboard`,
+  ambassadorReport: `${DESKTOP_BASE}/ambassador/report`,
+  ambassadorShare: `${DESKTOP_BASE}/ambassador/share`,
+  ambassadorBreakdown: `${DESKTOP_BASE}/ambassador/breakdown`,
+  ambassadorStatus: `${DESKTOP_BASE}/ambassador/status`,
+  ambassadorDeclined: `${DESKTOP_BASE}/ambassador/declined`,
+  ambassadorWelcome: `${DESKTOP_BASE}/ambassador/welcome`,
 } as const;
 
 /**
@@ -235,25 +241,63 @@ export const DESKTOP_ROUTE_MAP: DesktopRouteEntry[] = [
     mobile: "/ambassador",
     desktop: DESKTOP_ROUTES.ambassador,
     label: "Ambassador hub",
-    status: "planned",
+    status: "live",
+    sharedHooks: ["useAmbassadorOverview", "useRequireAmbassador"],
+    notes: "Program intro + shell-aware routing via AmbassadorRoutesProvider",
   },
   {
     mobile: "/ambassador/apply",
     desktop: DESKTOP_ROUTES.ambassadorApply,
     label: "Ambassador apply",
-    status: "planned",
+    status: "live",
   },
   {
     mobile: "/ambassador/dashboard",
     desktop: DESKTOP_ROUTES.ambassadorDashboard,
     label: "Ambassador dashboard",
-    status: "planned",
+    status: "live",
   },
   {
     mobile: "/ambassador/leaderboard",
     desktop: DESKTOP_ROUTES.ambassadorLeaderboard,
     label: "Ambassador leaderboard",
-    status: "planned",
+    status: "live",
+  },
+  {
+    mobile: "/ambassador/report",
+    desktop: DESKTOP_ROUTES.ambassadorReport,
+    label: "Ambassador monthly report",
+    status: "live",
+  },
+  {
+    mobile: "/ambassador/share",
+    desktop: DESKTOP_ROUTES.ambassadorShare,
+    label: "Ambassador share link",
+    status: "live",
+  },
+  {
+    mobile: "/ambassador/breakdown",
+    desktop: DESKTOP_ROUTES.ambassadorBreakdown,
+    label: "Ambassador score breakdown",
+    status: "live",
+  },
+  {
+    mobile: "/ambassador/status",
+    desktop: DESKTOP_ROUTES.ambassadorStatus,
+    label: "Ambassador application status",
+    status: "live",
+  },
+  {
+    mobile: "/ambassador/declined",
+    desktop: DESKTOP_ROUTES.ambassadorDeclined,
+    label: "Ambassador declined",
+    status: "live",
+  },
+  {
+    mobile: "/ambassador/welcome",
+    desktop: DESKTOP_ROUTES.ambassadorWelcome,
+    label: "Ambassador welcome",
+    status: "live",
   },
   // —— Shared (mobile URL only for now) ——
   {

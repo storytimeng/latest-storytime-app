@@ -29,10 +29,10 @@ import {
   formatApplicationDateShort,
   getDecisionCountdown,
   withdrawAmbassadorApplication,
-  getAmbassadorEntryPath,
   type AmbassadorApplication,
   type ApplicationStatus,
 } from "@/src/lib/ambassadors";
+import { useAmbassadorRoutes } from "@/components/ambassador/AmbassadorRoutesProvider";
 import { showToast } from "@/lib/showNotification";
 import { useSupportStore } from "@/src/stores/useSupportStore";
 import { mutate } from "swr";
@@ -188,27 +188,28 @@ function downloadApplicationCopy(application: AmbassadorApplication) {
 
 export default function AmbassadorStatusView() {
   const router = useRouter();
+  const routes = useAmbassadorRoutes();
   const openSupportModal = useSupportStore((state) => state.openModal);
   const { overview, isLoading } = useAmbassadorOverview();
   const [withdrawing, setWithdrawing] = useState(false);
 
   useEffect(() => {
     if (!isLoading && overview?.isAmbassador) {
-      router.replace("/ambassador/dashboard");
+      router.replace(routes.dashboard);
       return;
     }
     if (!isLoading && !overview?.application) {
-      router.replace("/ambassador");
+      router.replace(routes.hub);
       return;
     }
     if (!isLoading && overview?.application?.status === "accepted") {
-      router.replace(getAmbassadorEntryPath());
+      router.replace(routes.entryPath);
       return;
     }
     if (!isLoading && overview?.application?.status === "declined") {
-      router.replace("/ambassador/declined");
+      router.replace(routes.declined);
     }
-  }, [isLoading, overview, router]);
+  }, [isLoading, overview, router, routes]);
 
   const handleWithdraw = async () => {
     const confirmed = window.confirm(
@@ -224,7 +225,7 @@ export default function AmbassadorStatusView() {
         type: "success",
         message: "Your application has been withdrawn.",
       });
-      router.push("/profile");
+      router.push(routes.profile);
     } catch (err) {
       showToast({
         type: "error",
@@ -258,7 +259,7 @@ export default function AmbassadorStatusView() {
       <AmbassadorHeader
         title="Application Status"
         subtitle="Track your ambassador application progress"
-        backHref="/profile"
+        backHref={routes.profile}
       />
 
       <div className="px-4 py-5 space-y-5">
@@ -400,7 +401,22 @@ export default function AmbassadorStatusView() {
               <button
                 key={tip.title}
                 type="button"
-                onClick={() => router.push(tip.href)}
+                onClick={() => {
+                  let href = tip.href;
+                  if (href === "/ambassador") href = routes.hub;
+                  else if (
+                    routes.profile.startsWith("/app") &&
+                    href === "/home"
+                  ) {
+                    href = "/app/home";
+                  } else if (
+                    routes.profile.startsWith("/app") &&
+                    href === "/pen"
+                  ) {
+                    href = "/app/write";
+                  }
+                  router.push(href);
+                }}
                 className="w-full text-left rounded-2xl border border-grey-4 bg-white p-4 flex items-start gap-3"
               >
                 <span className="w-10 h-10 rounded-xl bg-accent-shade-2 flex items-center justify-center shrink-0">

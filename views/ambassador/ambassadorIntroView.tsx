@@ -6,7 +6,7 @@ import { Button } from "@heroui/button";
 import { Magnetik_Medium, Magnetik_SemiBold } from "@/lib/font";
 import { AmbassadorHeader } from "@/components/ambassador/AmbassadorHeader";
 import { useAmbassadorOverview } from "@/src/hooks/useAmbassador";
-import { getAmbassadorEntryPath } from "@/src/lib/ambassadors";
+import { useAmbassadorRoutes } from "@/components/ambassador/AmbassadorRoutesProvider";
 import { Loader2 } from "lucide-react";
 
 const features = [
@@ -38,22 +38,23 @@ const features = [
 
 export default function AmbassadorIntroView() {
   const router = useRouter();
+  const routes = useAmbassadorRoutes();
   const { overview, isLoading } = useAmbassadorOverview();
 
   useEffect(() => {
     if (isLoading || !overview) return;
     if (overview.isAmbassador) {
-      router.replace(getAmbassadorEntryPath());
+      router.replace(routes.entryPath);
       return;
     }
     if (overview.application?.status === "pending") {
-      router.replace("/ambassador/status");
+      router.replace(routes.status);
       return;
     }
     if (overview.application?.status === "declined") {
-      router.replace("/ambassador/declined");
+      router.replace(routes.declined);
     }
-  }, [isLoading, overview, router]);
+  }, [isLoading, overview, router, routes]);
 
   if (isLoading) {
     return (
@@ -103,7 +104,7 @@ export default function AmbassadorIntroView() {
         <Button
           className="w-full bg-primary-colour text-white font-magnetik-medium"
           size="lg"
-          onPress={() => router.push("/ambassador/apply")}
+          onPress={() => router.push(routes.apply)}
         >
           Start Application
         </Button>

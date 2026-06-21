@@ -14,10 +14,12 @@ import {
 import { fetchAmbassadorBreakdown } from "@/src/lib/ambassadors";
 import type { AmbassadorScoreBreakdown } from "@/src/lib/score-breakdown";
 import { useRequireAmbassador } from "@/src/hooks/useRequireAmbassador";
+import { useAmbassadorRoutes } from "@/components/ambassador/AmbassadorRoutesProvider";
 import { Loader2 } from "lucide-react";
 import { showToast } from "@/lib/showNotification";
 
 export default function AmbassadorBreakdownView() {
+  const routes = useAmbassadorRoutes();
   const { isLoading: guardLoading, isAmbassador } = useRequireAmbassador();
   const [data, setData] = useState<AmbassadorScoreBreakdown | null>(null);
   const [loading, setLoading] = useState(true);
@@ -44,7 +46,7 @@ export default function AmbassadorBreakdownView() {
 
   return (
     <div className="min-h-screen bg-accent-shade-1 max-w-md mx-auto pb-10">
-      <ScoreHeader />
+      <ScoreHeader backHref={routes.dashboard} />
 
       {loading ? (
         <ScoreSkeleton />

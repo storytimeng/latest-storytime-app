@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { Magnetik_Medium, Magnetik_Regular } from "@/lib/font";
 import { cn } from "@/lib";
+import { useAmbassadorRoutes } from "@/components/ambassador/AmbassadorRoutesProvider";
 
 interface AmbassadorHeaderProps {
   title: string;
@@ -15,16 +16,19 @@ interface AmbassadorHeaderProps {
 export function AmbassadorHeader({
   title,
   subtitle,
-  backHref = "/profile",
+  backHref,
   className,
 }: AmbassadorHeaderProps) {
+  const routes = useAmbassadorRoutes();
+  const resolvedBackHref = backHref ?? routes.profile;
+
   return (
     <div
       className={cn("px-4 pt-5 pb-4 bg-primary-colour text-white", className)}
     >
       <div className="max-w-md mx-auto">
         <div className="flex items-center gap-3">
-          <Link href={backHref} className="text-white shrink-0">
+          <Link href={resolvedBackHref} className="text-white shrink-0">
             <ArrowLeft className="w-6 h-6" />
           </Link>
           <div className="min-w-0">

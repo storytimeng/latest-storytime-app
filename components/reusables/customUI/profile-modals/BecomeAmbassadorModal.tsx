@@ -12,6 +12,7 @@ import {
   Magnetik_SemiBold,
 } from "@/lib/font";
 import { cn } from "@/lib";
+import { useAmbassadorRoutes } from "@/components/ambassador/AmbassadorRoutesProvider";
 
 const BENEFITS = [
   "Official Ambassador Certificate",
@@ -27,6 +28,7 @@ export const BecomeAmbassadorModal = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { onClose } = useModalContext();
+  const routes = useAmbassadorRoutes();
   const [step, setStep] = useState<AmbassadorModalStep>("intro");
 
   const closeModal = () => {
@@ -47,7 +49,7 @@ export const BecomeAmbassadorModal = () => {
 
   const handleApply = () => {
     closeModal();
-    router.push("/ambassador/apply");
+    router.push(routes.apply);
   };
 
   const title =
@@ -112,7 +114,7 @@ export const BecomeAmbassadorModal = () => {
                 type="button"
                 onClick={() => {
                   closeModal();
-                  router.push("/ambassador");
+                  router.push(routes.hub);
                 }}
                 className={cn(
                   "w-full text-center text-sm text-primary-colour underline underline-offset-2",

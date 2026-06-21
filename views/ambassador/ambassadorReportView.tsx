@@ -29,6 +29,7 @@ import {
   type MonthlyReport,
 } from "@/src/lib/ambassadors";
 import { useRequireAmbassador } from "@/src/hooks/useRequireAmbassador";
+import { useAmbassadorRoutes } from "@/components/ambassador/AmbassadorRoutesProvider";
 import { showToast } from "@/lib/showNotification";
 
 type ViewPhase = "form" | "success";
@@ -85,6 +86,7 @@ function ReportSuccessScreen({
   ambassadorType: AmbassadorType;
 }) {
   const router = useRouter();
+  const routes = useAmbassadorRoutes();
   const scopeLabel = ambassadorType === "campus" ? "campus" : "community";
 
   return (
@@ -126,11 +128,11 @@ function ReportSuccessScreen({
         </p>
       </div>
 
-      <PrimaryFormButton onClick={() => router.push("/ambassador/dashboard")}>
+      <PrimaryFormButton onClick={() => router.push(routes.dashboard)}>
         Back to Dashboard
       </PrimaryFormButton>
       <Link
-        href="/profile"
+        href={routes.profile}
         className={cn(
           Magnetik_Medium.className,
           "mt-4 text-sm text-primary-colour underline underline-offset-2",
@@ -144,6 +146,7 @@ function ReportSuccessScreen({
 
 export default function AmbassadorReportView() {
   const router = useRouter();
+  const routes = useAmbassadorRoutes();
   const { isLoading: guardLoading, isAmbassador } = useRequireAmbassador();
   const period = getCurrentReportPeriod();
   const { user } = useUserProfile();
@@ -338,7 +341,7 @@ export default function AmbassadorReportView() {
         <div className="max-w-md mx-auto flex items-center justify-between">
           <button
             type="button"
-            onClick={() => router.push("/ambassador/dashboard")}
+            onClick={() => router.push(routes.dashboard)}
             className="text-white"
             aria-label="Go back"
           >

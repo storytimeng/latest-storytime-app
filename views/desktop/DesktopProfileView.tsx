@@ -28,7 +28,7 @@ import { useUserAchievements } from "@/src/hooks/useUserAchievements";
 import { useOnlineStatus } from "@/src/hooks/useOnlineStatus";
 import { useGenres } from "@/src/hooks/useGenres";
 import { useAmbassadorOverview } from "@/src/hooks/useAmbassador";
-import { getAmbassadorEntryPath } from "@/src/lib/ambassadors";
+import { getAmbassadorRoutes } from "@/lib/ambassadorRoutes";
 
 type ProfileOption = {
   id: string;
@@ -47,12 +47,13 @@ function openProfileModal(
 
 export function DesktopProfileView() {
   const router = useRouter();
+  const ambassadorRoutes = getAmbassadorRoutes("desktop");
   const searchParams = useSearchParams();
   const isOnline = useOnlineStatus();
   const activeModal = searchParams.get("modal");
   const [lastActiveModal, setLastActiveModal] = useState<string | null>(null);
   const [ambassadorEntryPath, setAmbassadorEntryPath] = useState(
-    DESKTOP_ROUTES.ambassador,
+    ambassadorRoutes.hub,
   );
 
   const { user } = useUserProfile();
@@ -70,10 +71,10 @@ export function DesktopProfileView() {
   useEffect(() => {
     setAmbassadorEntryPath(
       ambassadorOverview?.isAmbassador
-        ? getAmbassadorEntryPath()
-        : DESKTOP_ROUTES.ambassador,
+        ? ambassadorRoutes.entryPath
+        : ambassadorRoutes.hub,
     );
-  }, [ambassadorOverview?.isAmbassador]);
+  }, [ambassadorOverview?.isAmbassador, ambassadorRoutes]);
 
   const ambassadorApplication = ambassadorOverview?.application;
 
@@ -83,7 +84,7 @@ export function DesktopProfileView() {
         label: "Ambassador",
         icon: "🌟",
         type: "page",
-        path: DESKTOP_ROUTES.ambassador,
+        path: ambassadorRoutes.hub,
       }
     : ambassadorOverview?.isAmbassador
       ? {
@@ -99,7 +100,7 @@ export function DesktopProfileView() {
             label: "Application Status",
             icon: "⏳",
             type: "page",
-            path: "/ambassador/status",
+            path: ambassadorRoutes.status,
           }
         : ambassadorApplication?.status === "declined"
           ? {
