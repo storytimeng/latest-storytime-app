@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   Award,
@@ -13,7 +14,8 @@ import {
   User,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Magnetik_Medium, Magnetik_Bold } from "@/lib/font";
+import { Magnetik_Medium } from "@/lib/font";
+import { APP_CONFIG } from "@/config/app";
 import {
   DESKTOP_BASE,
   DESKTOP_NAV_ITEMS,
@@ -70,18 +72,15 @@ export function DesktopSidebar() {
   return (
     <aside className="hidden md:flex md:w-64 md:shrink-0 md:flex-col md:border-r md:border-black/10 md:bg-white">
       <div className="flex h-14 items-center border-b border-black/10 px-5">
-        <Link href={`${DESKTOP_BASE}/home`} className="flex items-center gap-2">
-          <span
-            className={cn(
-              "text-lg text-primary-colour",
-              Magnetik_Bold.className,
-            )}
-          >
-            Storytime
-          </span>
-          <span className="rounded-md bg-primary-colour/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary-colour">
-            Desktop
-          </span>
+        <Link href={`${DESKTOP_BASE}/home`} className="flex items-center">
+          <Image
+            src={APP_CONFIG.logo.src}
+            alt={APP_CONFIG.logo.alt}
+            width={APP_CONFIG.logo.width}
+            height={APP_CONFIG.logo.height}
+            className="object-contain"
+            priority
+          />
         </Link>
       </div>
 
