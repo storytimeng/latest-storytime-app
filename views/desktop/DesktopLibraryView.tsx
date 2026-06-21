@@ -23,6 +23,9 @@ import {
   type LibraryTab,
 } from "@/src/hooks/useLibraryContent";
 import { DESKTOP_ROUTES } from "@/config/desktopRoutes";
+import { getStoryRoutes } from "@/lib/storyRoutes";
+
+const routes = getStoryRoutes("desktop");
 
 const FILTER_OPTIONS: { id: LibraryFilter; label: string }[] = [
   { id: "all", label: "All stories" },
