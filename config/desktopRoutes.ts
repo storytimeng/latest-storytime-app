@@ -7,6 +7,10 @@
 
 export const DESKTOP_BASE = "/app";
 
+export const STORYTIME_SHELL_HEADER = "x-storytime-shell";
+
+export type StorytimeShell = "desktop" | "mobile";
+
 export type DesktopRouteStatus = "live" | "planned" | "shared";
 
 export type DesktopRouteEntry = {
@@ -264,6 +268,10 @@ export const DESKTOP_ROUTE_MAP: DesktopRouteEntry[] = [
 export function isDesktopAppPath(pathname: string | null | undefined): boolean {
   if (!pathname) return false;
   return pathname === DESKTOP_BASE || pathname.startsWith(`${DESKTOP_BASE}/`);
+}
+
+export function storytimeShellFromPathname(pathname: string): StorytimeShell {
+  return isDesktopAppPath(pathname) ? "desktop" : "mobile";
 }
 
 export function mobilePathToDesktop(mobilePath: string): string | undefined {

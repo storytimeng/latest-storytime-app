@@ -3,7 +3,7 @@ import { Metadata, Viewport } from "next";
 import { Link } from "@heroui/link";
 import clsx from "clsx";
 import { APP_CONFIG } from "@/config/app";
-import { MaxWidthWrapper } from "@/lib/maxWidthWrapper";
+import { AppRootShell } from "@/lib/appRootShell";
 import { Providers } from "./providers";
 import { PWAProvider } from "@/components/PWAProvider";
 import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
@@ -154,7 +154,7 @@ export default function RootLayout({
         <Providers themeProps={{ attribute: "class", defaultTheme: "light" }}>
           <PWAProvider>
             <GenresPreloader />
-            <MaxWidthWrapper>{children}</MaxWidthWrapper>
+            <AppRootShell>{children}</AppRootShell>
             <LoadingOverlay />
             <PWAInstallPrompt />
             <SupportModals />

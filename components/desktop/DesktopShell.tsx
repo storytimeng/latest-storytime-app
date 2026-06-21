@@ -17,9 +17,12 @@ export function DesktopShell({ children, title }: DesktopShellProps) {
       <div className="flex min-h-screen min-w-0 flex-1 flex-col">
         <DesktopHeader title={title} />
         <DesktopMobileNav />
-        <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
+        <main
+          id="main-content"
+          className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8"
+        >
           {children}
-        </div>
+        </main>
       </div>
     </div>
   );
