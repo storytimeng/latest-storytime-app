@@ -76,14 +76,18 @@ function applyLibraryFilter(
   filter: LibraryFilter,
 ): LibraryStoryItem[] {
   switch (filter) {
+    case "all":
+      return stories;
     case "in-progress":
       return stories.filter(
         (s) => !s.isDeleted && (s.progress ?? 0) > 0 && (s.progress ?? 0) < 100,
       );
     case "completed":
       return stories.filter((s) => !s.isDeleted && (s.progress ?? 0) >= 100);
-    default:
-      return stories;
+    default: {
+      const unhandledFilter: never = filter;
+      return unhandledFilter;
+    }
   }
 }
 

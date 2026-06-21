@@ -13,15 +13,13 @@ export function MaxWidthWrapper({
   children: ReactNode;
 }) {
   const pathname = usePathname();
-
-  if (isDesktopAppPath(pathname)) {
-    return <>{children}</>;
-  }
+  const isDesktop = isDesktopAppPath(pathname);
 
   return (
     <main
       className={cn(
-        "w-full min-h-screen max-w-md mx-auto bg-[#FFFAF1]",
+        "w-full min-h-screen bg-[#FFFAF1]",
+        !isDesktop && "max-w-md mx-auto",
         className,
       )}
     >
