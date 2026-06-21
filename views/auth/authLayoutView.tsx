@@ -19,11 +19,11 @@ export default function AuthLayoutView({
     <div
       className={cn(
         "relative left-1/2 min-h-screen w-screen max-w-none -translate-x-1/2",
-        "flex flex-col bg-[#FFFAF1] lg:flex-row",
+        "flex flex-col bg-[#FFFAF1] lg:h-screen lg:overflow-hidden lg:flex-row",
         className,
       )}
     >
-      <div className="hidden lg:flex lg:w-[min(480px,45%)] lg:shrink-0 lg:flex-col lg:justify-between lg:bg-primary-colour lg:p-10 lg:text-white">
+      <div className="hidden lg:flex lg:w-1/2 lg:flex-col lg:justify-between lg:bg-primary-colour lg:p-10 lg:text-white">
         <Image
           src={APP_CONFIG.images.banner}
           alt={APP_CONFIG.logo.alt}
@@ -52,7 +52,7 @@ export default function AuthLayoutView({
         </div>
       </div>
 
-      <div className="flex flex-1 flex-col lg:items-center lg:justify-center lg:p-8">
+      <div className="flex flex-1 flex-col lg:w-1/2 lg:items-center lg:justify-center lg:overflow-y-auto lg:p-8">
         <div className="mt-8 flex items-center justify-center px-5 lg:hidden">
           <Image
             src={APP_CONFIG.images.banner}
