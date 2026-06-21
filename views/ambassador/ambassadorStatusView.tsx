@@ -404,7 +404,7 @@ export default function AmbassadorStatusView() {
                 key={tip.title}
                 type="button"
                 onClick={() => {
-                  let href = tip.href;
+                  let href: string = tip.href;
                   if (href === "/ambassador") href = routes.hub;
                   else if (href === "/home") href = storyRoutes.home;
                   else if (href === "/pen") href = storyRoutes.write;

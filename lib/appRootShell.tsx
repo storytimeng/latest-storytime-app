@@ -5,6 +5,7 @@ import {
   STORYTIME_SHELL_HEADER,
   type StorytimeShell,
 } from "@/config/desktopRoutes";
+import { AmbassadorRoutesProvider } from "@/components/ambassador/AmbassadorRoutesProvider";
 
 type AppRootShellProps = {
   className?: string;
@@ -26,22 +27,23 @@ export async function AppRootShell({ className, children }: AppRootShellProps) {
   const headersList = await headers();
   const shell = shellFromHeaders(headersList.get(STORYTIME_SHELL_HEADER));
 
-  if (shell === "desktop") {
-    return (
+  const content =
+    shell === "desktop" ? (
       <div className={cn("w-full min-h-screen bg-[#FFFAF1]", className)}>
         {children}
       </div>
+    ) : (
+      <main
+        className={cn(
+          "w-full min-h-screen max-w-md mx-auto bg-[#FFFAF1]",
+          className,
+        )}
+      >
+        {children}
+      </main>
     );
-  }
 
   return (
-    <main
-      className={cn(
-        "w-full min-h-screen max-w-md mx-auto bg-[#FFFAF1]",
-        className,
-      )}
-    >
-      {children}
-    </main>
+    <AmbassadorRoutesProvider shell={shell}>{content}</AmbassadorRoutesProvider>
   );
 }

@@ -9,9 +9,13 @@ import {
 } from "@/lib/ambassadorRoutes";
 import { storytimeShellFromPathname } from "@/config/desktopRoutes";
 
-const AmbassadorRoutesContext = createContext<AmbassadorRouteHelpers | null>(
-  null,
-);
+type AmbassadorRoutesContextValue = {
+  shell: AmbassadorShell;
+  routes: AmbassadorRouteHelpers;
+};
+
+const AmbassadorRoutesContext =
+  createContext<AmbassadorRoutesContextValue | null>(null);
 
 type AmbassadorRoutesProviderProps = {
   shell?: AmbassadorShell;
@@ -22,10 +26,16 @@ export function AmbassadorRoutesProvider({
   shell = "mobile",
   children,
 }: AmbassadorRoutesProviderProps) {
-  const routes = useMemo(() => getAmbassadorRoutes(shell), [shell]);
+  const value = useMemo(
+    () => ({
+      shell,
+      routes: getAmbassadorRoutes(shell),
+    }),
+    [shell],
+  );
 
   return (
-    <AmbassadorRoutesContext.Provider value={routes}>
+    <AmbassadorRoutesContext.Provider value={value}>
       {children}
     </AmbassadorRoutesContext.Provider>
   );
@@ -41,10 +51,13 @@ export function useAmbassadorRoutes(): AmbassadorRouteHelpers {
   const context = useContext(AmbassadorRoutesContext);
   const pathname = usePathname();
 
-  const pathnameRoutes = useMemo(
-    () => getAmbassadorRoutes(ambassadorShellFromPathname(pathname ?? "/")),
-    [pathname],
-  );
+  const pathnameRoutes = useMemo(() => {
+    if (context || !pathname) return null;
+    return getAmbassadorRoutes(ambassadorShellFromPathname(pathname));
+  }, [context, pathname]);
 
-  return context ?? pathnameRoutes;
+  if (context) return context.routes;
+  if (pathnameRoutes) return pathnameRoutes;
+
+  return getAmbassadorRoutes("mobile");
 }
