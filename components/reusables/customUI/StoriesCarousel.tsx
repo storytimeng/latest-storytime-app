@@ -6,6 +6,7 @@ import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { StoryResponseDto } from "@/src/client/types.gen";
+import { cn } from "@/lib/utils";
 import { StoryCoverImage } from "./StoryCoverImage";
 
 interface StoriesCarouselProps {
@@ -14,6 +15,8 @@ interface StoriesCarouselProps {
   autoPlayInterval?: number;
   showControls?: boolean;
   showDots?: boolean;
+  slideClassName?: string;
+  getStoryHref?: (storyId: string) => string;
 }
 
 export function StoriesCarousel({
@@ -22,6 +25,8 @@ export function StoriesCarousel({
   autoPlayInterval = 5000,
   showControls = true,
   showDots = true,
+  slideClassName = "h-52",
+  getStoryHref,
 }: StoriesCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
@@ -110,10 +115,15 @@ export function StoriesCarousel({
             return (
               <motion.div
                 key={story.id}
-                className="relative h-52 rounded-xl flex-shrink-0 w-full"
+                className={cn(
+                  "relative flex-shrink-0 w-full rounded-xl",
+                  slideClassName,
+                )}
               >
                 <Link
-                  href={`/story/${story.id}`}
+                  href={
+                    getStoryHref?.(String(story.id)) ?? `/story/${story.id}`
+                  }
                   className="block w-full h-full"
                 >
                   <StoryCoverImage

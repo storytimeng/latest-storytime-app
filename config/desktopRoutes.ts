@@ -99,7 +99,8 @@ export const DESKTOP_ROUTE_MAP: DesktopRouteEntry[] = [
     desktop: DESKTOP_ROUTES.home,
     label: "Home",
     status: "live",
-    sharedHooks: ["useStories", "useGenres"],
+    sharedHooks: ["useHomeFeed", "useGenres", "useStoryCategories"],
+    notes: "Desktop home with genre filters + responsive story grids (Phase 2)",
   },
   {
     mobile: "/library",
@@ -126,14 +127,16 @@ export const DESKTOP_ROUTE_MAP: DesktopRouteEntry[] = [
     label: "Notifications",
     status: "live",
     sharedHooks: ["useNotifications"],
+    notes: "Desktop notification list + detail modal (Phase 2)",
   },
   // —— Discovery (Phase 4) ——
   {
     mobile: "/search",
     desktop: DESKTOP_ROUTES.search,
     label: "Search",
-    status: "planned",
-    sharedHooks: ["useSearch"],
+    status: "live",
+    sharedHooks: ["useStories", "useSearchStories", "useGenres"],
+    notes: "Split layout: filters sidebar + scrollable results (Phase 2)",
   },
   {
     mobile: "/all-genres",

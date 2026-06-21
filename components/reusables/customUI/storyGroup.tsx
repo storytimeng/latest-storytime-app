@@ -1,7 +1,6 @@
 "use client";
 import { ScrollShadow } from "@heroui/scroll-shadow";
 import { Button } from "@/components/ui/button";
-import { useRouter } from "next/navigation";
 import React from "react";
 import { Magnetik_Bold } from "@/lib/font";
 import { cn } from "@/lib/utils";
@@ -21,6 +20,9 @@ interface StoryGroupProps {
   scrollClassName?: string;
   cardClassName?: string;
   layout?: "horizontal" | "grid";
+  /** Override grid columns (default: grid-cols-2) */
+  gridClassName?: string;
+  getStoryHref?: (storyId: string) => string;
   // Infinite scroll props
   onLoadMore?: () => void;
   hasMore?: boolean;
@@ -38,11 +40,12 @@ const StoryGroup = React.memo(
     scrollClassName,
     cardClassName,
     layout = "horizontal",
+    gridClassName,
+    getStoryHref,
     onLoadMore,
     hasMore = false,
     isLoadingMore = false,
   }: StoryGroupProps) => {
-    const router = useRouter();
     const scrollRef = React.useRef<HTMLDivElement>(null);
 
     // Trigger loadMore when user scrolls 70% through the horizontal list
@@ -53,7 +56,7 @@ const StoryGroup = React.memo(
           onLoadMore();
         }
       },
-      { threshold: 0.7, enabled: layout === "horizontal" && !!onLoadMore }
+      { threshold: 0.7, enabled: layout === "horizontal" && !!onLoadMore },
     );
 
     if (!stories || stories.length === 0) {
@@ -81,9 +84,8 @@ const StoryGroup = React.memo(
       );
     }
 
-    const handleStoryCardClick = (storyId: string | number) => {
-      router.push(`/story/${storyId}`);
-    };
+    const resolveStoryHref = (storyId: string) =>
+      getStoryHref?.(storyId) ?? `/story/${storyId}`;
 
     return (
       <div className={cn("", className)}>
@@ -92,18 +94,16 @@ const StoryGroup = React.memo(
             <h2 className={`body-text-small-medium-auto text-black`}>
               {title}
             </h2>
-             
-            {showSeeAll && categorySlug && (
-                          <Link prefetch={true} href={`/category/${categorySlug}`}>
 
-              <Button
-                variant="ghost"
-                className={`text-grey-2 body-text-smallest-medium-auto`}
-                 
-              >
-                See all
-              </Button>
-               </Link>
+            {showSeeAll && categorySlug && (
+              <Link prefetch={true} href={`/category/${categorySlug}`}>
+                <Button
+                  variant="ghost"
+                  className={`text-grey-2 body-text-smallest-medium-auto`}
+                >
+                  See all
+                </Button>
+              </Link>
             )}
           </div>
         )}
@@ -124,7 +124,7 @@ const StoryGroup = React.memo(
                   key={story.id}
                   story={story}
                   className={cardClassName}
-                  onClick={handleStoryCardClick}
+                  storyHref={resolveStoryHref(String(story.id))}
                 />
               ))}
               {/* Loading indicator */}
@@ -136,20 +136,26 @@ const StoryGroup = React.memo(
             </div>
           </ScrollShadow>
         ) : (
-          <div className={cn("grid grid-cols-2 gap-4", containerClassName)}>
+          <div
+            className={cn(
+              "grid gap-4",
+              gridClassName ?? "grid-cols-2",
+              containerClassName,
+            )}
+          >
             {stories.map((story) => (
               <StoryCard
                 key={story.id}
                 story={story}
                 className={cn("w-full", cardClassName)}
-                onClick={handleStoryCardClick}
+                storyHref={resolveStoryHref(String(story.id))}
               />
             ))}
           </div>
         )}
       </div>
     );
-  }
+  },
 );
 
 StoryGroup.displayName = "StoryGroup";
