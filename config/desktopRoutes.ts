@@ -106,7 +106,12 @@ export const DESKTOP_ROUTE_MAP: DesktopRouteEntry[] = [
     desktop: DESKTOP_ROUTES.library,
     label: "Library",
     status: "live",
-    sharedHooks: ["useLibrary", "useOfflineStories"],
+    sharedHooks: [
+      "useLibraryContent",
+      "useReadingHistory",
+      "useOfflineStories",
+    ],
+    notes: "Desktop library with sidebar filters + grid (Phase 2)",
   },
   {
     mobile: "/pen",

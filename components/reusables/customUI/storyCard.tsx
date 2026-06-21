@@ -37,6 +37,8 @@ interface StoryCardProps {
   className?: string;
   mode?: "default" | "pen";
   hideStats?: boolean;
+  storyHref?: string;
+  linkDisabled?: boolean;
   onEdit?: (storyId: string | number) => void;
   onDelete?: (storyId: string | number) => void;
   onClick?: (storyId: string | number) => void;
@@ -47,6 +49,8 @@ const StoryCard = ({
   className,
   mode = "default",
   hideStats = false,
+  storyHref,
+  linkDisabled = false,
   onEdit,
   onDelete,
   onClick,
@@ -75,13 +79,15 @@ const StoryCard = ({
       "Anonymous";
   const displayGenre = story.genres?.[0] || "Uncategorized";
 
-  const storyLink = `/story/${story.id}`;
+  const storyLink = storyHref ?? `/story/${story.id}`;
 
   const cardContent = (
     <Card
       className={cn(
         "flex-shrink-0 rounded-xl border-none bg-transparent shadow-none space-y-2 relative",
-        isPenMode ? "w-full cursor-pointer" : "w-[160px] cursor-pointer",
+        isPenMode
+          ? "w-full cursor-pointer"
+          : "w-[160px] max-w-full cursor-pointer",
         className,
       )}
       onClick={isPenMode ? handleCardClick : undefined}
@@ -94,7 +100,7 @@ const StoryCard = ({
           height={150}
           className={cn(
             "w-full object-cover rounded-lg transition-transform group-hover:scale-[1.03]",
-            isPenMode ? "aspect-[10/9]" : "h-28",
+            isPenMode ? "aspect-[10/9]" : "h-28 sm:h-36 lg:h-40",
           )}
           loading="lazy"
           sizes="(max-width: 768px) 160px, 200px"
@@ -222,7 +228,7 @@ const StoryCard = ({
   );
 
   // Wrap in Link for default mode, return as-is for pen mode
-  if (isPenMode) {
+  if (isPenMode || linkDisabled) {
     return cardContent;
   }
 
