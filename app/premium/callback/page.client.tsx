@@ -20,6 +20,15 @@ import {
 } from "@/src/lib/authSession";
 
 const PENDING_PAYMENT_REFERENCE_KEY = "pendingPaymentReference";
+const CHECKOUT_RETURN_PATH_KEY = "checkoutReturnPath";
+
+function checkoutReturnPath(): string {
+  if (typeof window === "undefined") return "/home";
+  return (
+    sessionStorage.getItem(CHECKOUT_RETURN_PATH_KEY) ??
+    (window.location.pathname.startsWith("/app") ? "/app/home" : "/home")
+  );
+}
 
 export default function PremiumCallbackPage() {
   const searchParams = useSearchParams();
@@ -102,6 +111,7 @@ export default function PremiumCallbackPage() {
           verifiedRef.current = true;
           awaitingLoginRef.current = false;
           sessionStorage.removeItem(PENDING_PAYMENT_REFERENCE_KEY);
+          sessionStorage.removeItem(CHECKOUT_RETURN_PATH_KEY);
           refreshPremiumStatusRef.current();
           setStatus("success");
           setMessage(
@@ -185,7 +195,7 @@ export default function PremiumCallbackPage() {
           {status === "success" && (
             <Button
               className={`w-full bg-primary-shade-6 text-universal-white ${Magnetik_Medium.className}`}
-              onPress={() => router.push("/home")}
+              onPress={() => router.push(checkoutReturnPath())}
             >
               Start reading
             </Button>
@@ -211,7 +221,7 @@ export default function PremiumCallbackPage() {
               <Button
                 variant="bordered"
                 className="w-full"
-                onPress={() => router.push("/home")}
+                onPress={() => router.push(checkoutReturnPath())}
               >
                 Back to home
               </Button>

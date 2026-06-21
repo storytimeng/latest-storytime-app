@@ -11,3 +11,6 @@ export { DesktopWriteView } from "./DesktopWriteView";
 export { DesktopEditStoryView } from "./DesktopEditStoryView";
 export { DesktopAllGenresView } from "./DesktopAllGenresView";
 export { DesktopCategoryView } from "./DesktopCategoryView";
+export { DesktopProfileView } from "./DesktopProfileView";
+export { DesktopSettingsView } from "./DesktopSettingsView";
+export { DesktopPremiumView } from "./DesktopPremiumView";

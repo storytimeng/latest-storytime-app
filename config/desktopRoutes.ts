@@ -207,20 +207,28 @@ export const DESKTOP_ROUTE_MAP: DesktopRouteEntry[] = [
     desktop: DESKTOP_ROUTES.profile,
     label: "Profile",
     status: "live",
-    sharedHooks: ["useUserProfile"],
+    sharedHooks: ["useUserProfile", "useUserAchievements"],
+    notes: "Profile card, genres, account links, centered modals (Phase 5)",
   },
   {
     mobile: "/settings",
     desktop: DESKTOP_ROUTES.settings,
     label: "Settings",
     status: "live",
+    sharedHooks: ["usePremiumFeatures"],
+    notes: "Sidebar nav + inline settings panels (Phase 5)",
   },
   {
     mobile: "/premium",
     desktop: DESKTOP_ROUTES.premium,
     label: "Premium",
-    status: "planned",
-    sharedHooks: ["usePremiumFeatures", "useSubscriptions"],
+    status: "live",
+    sharedHooks: [
+      "usePremiumFeatures",
+      "useSubscriptionPlans",
+      "useSubscriptionCheckout",
+    ],
+    notes: "Two-column marketing + checkout layout (Phase 5)",
   },
   // —— Ambassador (Phase 6) ——
   {
