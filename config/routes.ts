@@ -22,6 +22,20 @@ export const ROUTES = {
     allGenres: "/all-genres",
     category: "/category",
   },
+  /** Desktop dashboard routes (/app/*) — separate shell, shared hooks */
+  desktop: {
+    home: "/app/home",
+    library: "/app/library",
+    write: "/app/write",
+    notifications: "/app/notifications",
+    profile: "/app/profile",
+    settings: "/app/settings",
+    search: "/app/search",
+    premium: "/app/premium",
+    ambassador: "/app/ambassador",
+    newStory: "/app/stories/new",
+    myStories: "/app/my-stories",
+  },
   story: {
     view: "/story/[id]",
     read: "/story/[id]/read",
