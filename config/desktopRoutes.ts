@@ -147,13 +147,23 @@ export const DESKTOP_ROUTE_MAP: DesktopRouteEntry[] = [
     mobile: "/all-genres",
     desktop: DESKTOP_ROUTES.allGenres,
     label: "All genres",
-    status: "planned",
+    status: "live",
+    sharedHooks: ["useGenres"],
+    notes: "Responsive genre grid (Phase 4)",
   },
   {
     mobile: "/category/[slug]",
     desktop: `${DESKTOP_BASE}/genres/[slug]`,
     label: "Category",
-    status: "planned",
+    status: "live",
+    sharedHooks: [
+      "useStories",
+      "useRecentlyAddedStories",
+      "useTrendingStories",
+      "usePopularStories",
+      "useOnlyOnStorytimeStories",
+    ],
+    notes: "Genre + curated lists with sidebar nav (Phase 4)",
   },
   // —— Stories (Phase 3) ——
   {

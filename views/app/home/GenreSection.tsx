@@ -6,20 +6,20 @@ import { useStories } from "@/src/hooks/useStories";
 
 interface GenreSectionProps {
   genre: string;
+  getStoryHref?: (storyId: string) => string;
+  getCategoryHref?: (categorySlug: string) => string;
 }
 
-const GenreSection: React.FC<GenreSectionProps> = ({ genre }) => {
-  const {
-    stories,
-    isLoading,
-    loadMore,
-    hasMore,
-    isLoadingMore,
-    total,
-  } = useStories({
-    genre,
-    limit: 10,
-  });
+const GenreSection: React.FC<GenreSectionProps> = ({
+  genre,
+  getStoryHref,
+  getCategoryHref,
+}) => {
+  const { stories, isLoading, loadMore, hasMore, isLoadingMore, total } =
+    useStories({
+      genre,
+      limit: 10,
+    });
 
   const Section = useMemo(() => {
     if (!stories.length && !isLoading) return null;
@@ -44,13 +44,25 @@ const GenreSection: React.FC<GenreSectionProps> = ({ genre }) => {
       <StoryGroup
         title={`${genre} Stories (${total})`}
         stories={stories}
-        categorySlug={`${genre.toLowerCase().replace(/\s+/g, '-')}`}
+        categorySlug={`${genre.toLowerCase().replace(/\s+/g, "-")}`}
+        getStoryHref={getStoryHref}
+        getCategoryHref={getCategoryHref}
         onLoadMore={loadMore}
         hasMore={hasMore}
         isLoadingMore={isLoadingMore}
       />
     );
-  }, [stories, isLoading, total, loadMore, hasMore, isLoadingMore, genre]);
+  }, [
+    stories,
+    isLoading,
+    total,
+    loadMore,
+    hasMore,
+    isLoadingMore,
+    genre,
+    getStoryHref,
+    getCategoryHref,
+  ]);
 
   return Section;
 };

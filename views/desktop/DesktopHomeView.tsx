@@ -28,6 +28,10 @@ function storyHref(id: string) {
   return routes.story(id);
 }
 
+function categoryHref(slug: string) {
+  return DESKTOP_ROUTES.category(slug);
+}
+
 export function DesktopHomeView() {
   useHomeFeedInit();
   const isOnline = useOnlineStatus();
@@ -46,6 +50,7 @@ export function DesktopHomeView() {
         layout="grid"
         gridClassName={DESKTOP_GRID}
         getStoryHref={storyHref}
+        getCategoryHref={categoryHref}
         onLoadMore={feed.loadMoreRecent}
         hasMore={feed.hasMoreRecent}
         isLoadingMore={feed.isLoadingMoreRecent}
@@ -68,6 +73,7 @@ export function DesktopHomeView() {
         layout="grid"
         gridClassName={DESKTOP_GRID}
         getStoryHref={storyHref}
+        getCategoryHref={categoryHref}
         onLoadMore={feed.loadMoreTrending}
         hasMore={feed.hasMoreTrending}
         isLoadingMore={feed.isLoadingMoreTrending}
@@ -90,6 +96,7 @@ export function DesktopHomeView() {
         layout="grid"
         gridClassName={DESKTOP_GRID}
         getStoryHref={storyHref}
+        getCategoryHref={categoryHref}
         onLoadMore={feed.loadMorePopular}
         hasMore={feed.hasMorePopular}
         isLoadingMore={feed.isLoadingMorePopular}
@@ -159,7 +166,7 @@ export function DesktopHomeView() {
               Only on Storytime
             </h3>
             <Link
-              href="/category/only-on-storytime"
+              href={DESKTOP_ROUTES.category("only-on-storytime")}
               className="text-sm text-[#361B17]/60 hover:text-primary-colour"
             >
               See all
@@ -193,7 +200,7 @@ export function DesktopHomeView() {
             Genre pick
           </h3>
           <Link
-            href="/all-genres"
+            href={DESKTOP_ROUTES.allGenres}
             className="text-sm text-[#361B17]/60 hover:text-primary-colour"
           >
             See all genres
@@ -240,7 +247,11 @@ export function DesktopHomeView() {
                 key={genre}
                 className="rounded-2xl border border-black/10 bg-white p-4 md:p-5"
               >
-                <GenreSection genre={genre} />
+                <GenreSection
+                  genre={genre}
+                  getStoryHref={storyHref}
+                  getCategoryHref={categoryHref}
+                />
               </div>
             ))}
             <div className="flex justify-center">

@@ -9,3 +9,5 @@ export { DesktopMyStoriesView } from "./DesktopMyStoriesView";
 export { DesktopNewStoryView } from "./DesktopNewStoryView";
 export { DesktopWriteView } from "./DesktopWriteView";
 export { DesktopEditStoryView } from "./DesktopEditStoryView";
+export { DesktopAllGenresView } from "./DesktopAllGenresView";
+export { DesktopCategoryView } from "./DesktopCategoryView";

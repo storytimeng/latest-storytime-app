@@ -15,6 +15,7 @@ const PAGE_TITLES: Record<string, string> = {
   "/app/premium": "Premium",
   "/app/ambassador": "Ambassador",
   "/app/my-stories": "My stories",
+  "/app/genres": "All genres",
 };
 
 function titleFromPath(pathname: string): string {

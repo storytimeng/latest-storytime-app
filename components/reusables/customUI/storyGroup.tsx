@@ -23,6 +23,7 @@ interface StoryGroupProps {
   /** Override grid columns (default: grid-cols-2) */
   gridClassName?: string;
   getStoryHref?: (storyId: string) => string;
+  getCategoryHref?: (categorySlug: string) => string;
   // Infinite scroll props
   onLoadMore?: () => void;
   hasMore?: boolean;
@@ -42,6 +43,7 @@ const StoryGroup = React.memo(
     layout = "horizontal",
     gridClassName,
     getStoryHref,
+    getCategoryHref,
     onLoadMore,
     hasMore = false,
     isLoadingMore = false,
@@ -87,6 +89,9 @@ const StoryGroup = React.memo(
     const resolveStoryHref = (storyId: string) =>
       getStoryHref?.(storyId) ?? `/story/${storyId}`;
 
+    const resolveCategoryHref = (slug: string) =>
+      getCategoryHref?.(slug) ?? `/category/${slug}`;
+
     return (
       <div className={cn("", className)}>
         {title && (
@@ -96,7 +101,7 @@ const StoryGroup = React.memo(
             </h2>
 
             {showSeeAll && categorySlug && (
-              <Link prefetch={true} href={`/category/${categorySlug}`}>
+              <Link prefetch={true} href={resolveCategoryHref(categorySlug)}>
                 <Button
                   variant="ghost"
                   className={`text-grey-2 body-text-smallest-medium-auto`}
