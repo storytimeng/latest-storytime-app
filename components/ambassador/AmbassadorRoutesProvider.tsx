@@ -1,14 +1,16 @@
 "use client";
 
 import { createContext, ReactNode, useContext, useMemo } from "react";
+import { usePathname } from "next/navigation";
 import {
   getAmbassadorRoutes,
   type AmbassadorRouteHelpers,
   type AmbassadorShell,
 } from "@/lib/ambassadorRoutes";
+import { storytimeShellFromPathname } from "@/config/desktopRoutes";
 
-const AmbassadorRoutesContext = createContext<AmbassadorRouteHelpers>(
-  getAmbassadorRoutes("mobile"),
+const AmbassadorRoutesContext = createContext<AmbassadorRouteHelpers | null>(
+  null,
 );
 
 type AmbassadorRoutesProviderProps = {
@@ -29,6 +31,20 @@ export function AmbassadorRoutesProvider({
   );
 }
 
+function ambassadorShellFromPathname(pathname: string): AmbassadorShell {
+  return storytimeShellFromPathname(pathname) === "desktop"
+    ? "desktop"
+    : "mobile";
+}
+
 export function useAmbassadorRoutes(): AmbassadorRouteHelpers {
-  return useContext(AmbassadorRoutesContext);
+  const context = useContext(AmbassadorRoutesContext);
+  const pathname = usePathname();
+
+  const pathnameRoutes = useMemo(
+    () => getAmbassadorRoutes(ambassadorShellFromPathname(pathname ?? "/")),
+    [pathname],
+  );
+
+  return context ?? pathnameRoutes;
 }

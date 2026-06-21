@@ -328,7 +328,7 @@ export function useStoryViewLogic({
         router.push(routes.write);
       }
     }
-  }, [currentStep, mode, router, setCurrentStep]);
+  }, [currentStep, mode, router, routes, setCurrentStep]);
 
   // Handle form submission
   const handleSubmit = useCallback(

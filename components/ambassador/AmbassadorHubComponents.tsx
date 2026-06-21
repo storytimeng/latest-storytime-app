@@ -304,31 +304,11 @@ const QUICK_ACTIONS = [
 
 export function QuickActionsList() {
   const routes = useAmbassadorRoutes();
-  const actions = [
-    {
-      href: routes.share,
-      icon: Link2,
-      title: "Share Your Link",
-      subtitle: "Invite new storytellers",
-    },
-    {
-      href: routes.report,
-      icon: FileText,
-      title: "Monthly Report",
-      subtitle: "Submit your monthly impact",
-    },
-    {
-      href: routes.leaderboard,
-      icon: Trophy,
-      title: "Leaderboard",
-      subtitle: "See top ambassadors",
-    },
-    {
-      href: routes.breakdown,
-      icon: Star,
-      title: "View Score Breakdown",
-      subtitle: "Understand your points",
-    },
+  const hrefs = [
+    routes.share,
+    routes.report,
+    routes.leaderboard,
+    routes.breakdown,
   ] as const;
 
   return (
@@ -342,13 +322,13 @@ export function QuickActionsList() {
         Quick Actions
       </h2>
       <div className="space-y-2">
-        {actions.map((action, index) => {
+        {QUICK_ACTIONS.map((action, index) => {
           const Icon = action.icon;
-          const template = QUICK_ACTIONS[index];
+          const href = hrefs[index];
           return (
             <Link
-              key={action.href}
-              href={action.href}
+              key={href}
+              href={href}
               className="flex items-center gap-3 rounded-2xl bg-white border border-grey-5 px-4 py-3 shadow-sm"
             >
               <span className="w-10 h-10 rounded-xl bg-accent-shade-2 flex items-center justify-center shrink-0">
@@ -361,7 +341,7 @@ export function QuickActionsList() {
                     "text-sm text-primary-colour",
                   )}
                 >
-                  {template.title}
+                  {action.title}
                 </p>
                 <p
                   className={cn(
