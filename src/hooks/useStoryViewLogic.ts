@@ -196,10 +196,21 @@ export function useStoryViewLogic({
           type: "error",
           message: "You are not authorized to edit this story.",
         });
-        router.push(routes.story(storyId));
+        if (storyId) {
+          router.push(routes.story(storyId));
+        }
       }
     }
-  }, [mode, story, isFetchingStory, storeUser, swrUser, storyId, router]);
+  }, [
+    mode,
+    story,
+    isFetchingStory,
+    storeUser,
+    swrUser,
+    storyId,
+    router,
+    routes,
+  ]);
 
   // Transform API story data to form data
   useEffect(() => {
@@ -384,7 +395,7 @@ export function useStoryViewLogic({
 
             if (formData.storyStatus === "Draft") {
               router.push(routes.myStoriesDrafts);
-            } else {
+            } else if (createdStoryId) {
               router.push(routes.story(createdStoryId));
             }
           } else {
@@ -757,7 +768,9 @@ export function useStoryViewLogic({
               type: "success",
               message,
             });
-            router.push(routes.story(storyId));
+            if (storyId) {
+              router.push(routes.story(storyId));
+            }
           } else if (storyUpdateSuccess && !contentUpdateSuccess) {
             showToast({
               type: "warning",
