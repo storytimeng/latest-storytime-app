@@ -62,6 +62,11 @@ export default function AmbassadorWelcomeView() {
     router.push(routes.dashboard);
   };
 
+  const handleOpenHub = () => {
+    markAmbassadorWelcomeSeen();
+    router.push(routes.hub);
+  };
+
   return (
     <div className="min-h-screen bg-accent-shade-1 max-w-md mx-auto pb-10">
       <div className="bg-primary-colour text-white px-4 pt-5 pb-8">
@@ -172,7 +177,7 @@ export default function AmbassadorWelcomeView() {
           </PrimaryFormButton>
           <button
             type="button"
-            onClick={() => router.push(routes.hub)}
+            onClick={handleOpenHub}
             className={cn(
               Magnetik_Medium.className,
               "w-full text-sm text-primary-colour underline underline-offset-2",
