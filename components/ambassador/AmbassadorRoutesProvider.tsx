@@ -51,10 +51,11 @@ export function useAmbassadorRoutes(): AmbassadorRouteHelpers {
   const context = useContext(AmbassadorRoutesContext);
   const pathname = usePathname();
 
+  // Pathname fallback only applies when no provider context is mounted.
   const pathnameRoutes = useMemo(() => {
-    if (context || !pathname) return null;
+    if (!pathname) return null;
     return getAmbassadorRoutes(ambassadorShellFromPathname(pathname));
-  }, [context, pathname]);
+  }, [pathname]);
 
   if (context) return context.routes;
   if (pathnameRoutes) return pathnameRoutes;
