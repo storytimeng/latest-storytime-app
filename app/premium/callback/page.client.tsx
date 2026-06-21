@@ -18,6 +18,7 @@ import {
   hydrateAuthFromCookies,
   prepareAuthSession,
 } from "@/src/lib/authSession";
+import { getPostAuthHomePath } from "@/lib/shellRouting";
 
 const PENDING_PAYMENT_REFERENCE_KEY = "pendingPaymentReference";
 const CHECKOUT_RETURN_PATH_KEY = "checkoutReturnPath";
@@ -25,8 +26,7 @@ const CHECKOUT_RETURN_PATH_KEY = "checkoutReturnPath";
 function checkoutReturnPath(): string {
   if (typeof window === "undefined") return "/home";
   return (
-    sessionStorage.getItem(CHECKOUT_RETURN_PATH_KEY) ??
-    (window.location.pathname.startsWith("/app") ? "/app/home" : "/home")
+    sessionStorage.getItem(CHECKOUT_RETURN_PATH_KEY) ?? getPostAuthHomePath()
   );
 }
 

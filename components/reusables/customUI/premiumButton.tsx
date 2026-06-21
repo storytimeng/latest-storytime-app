@@ -5,6 +5,8 @@ import { Button } from "@heroui/button";
 import { Crown } from "lucide-react";
 import Link from "next/link";
 import { Magnetik_Medium } from "@/lib/font";
+import { useStorytimeShell } from "@/src/hooks/useStorytimeShell";
+import { premiumPathForShell } from "@/lib/shellRouting";
 
 interface PremiumButtonProps {
   variant?: "default" | "small" | "banner";
@@ -17,6 +19,9 @@ const PremiumButton: React.FC<PremiumButtonProps> = ({
   className = "",
   children,
 }) => {
+  const shell = useStorytimeShell();
+  const premiumHref = premiumPathForShell(shell);
+
   const getButtonContent = () => {
     if (children) return children;
 
@@ -52,7 +57,7 @@ const PremiumButton: React.FC<PremiumButtonProps> = ({
   };
 
   return (
-    <Link href="/premium">
+    <Link href={premiumHref}>
       <Button
         className={`${getButtonStyles()} hover:shadow-lg transition-all duration-200 ${className}`}
         size={variant === "small" ? "sm" : variant === "banner" ? "lg" : "md"}

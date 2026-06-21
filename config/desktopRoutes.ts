@@ -302,6 +302,10 @@ export const DESKTOP_ROUTE_MAP: DesktopRouteEntry[] = [
   // —— Cross-shell (Phase 7) ——
   // Auth/onboarding stay on shared URLs; post-auth redirect uses getPostAuthHomePath().
   // Middleware redirects mapped mobile↔desktop routes when shell preference cookie is set.
+  // —— Launch polish (Phase 8) ——
+  // DesktopEntryBanner on mobile shell (md+, auto preference) → /app/home via ShellSwitchLink.
+  // AuthLayoutView split panel on lg; premiumButton + SubscriptionModal shell-aware.
+  // Payment callback + checkout return paths use getPostAuthHomePath / premiumPathForShell.
   // —— Shared (same URL both shells) ——
   {
     mobile: "/auth/login",
@@ -331,6 +335,48 @@ export const DESKTOP_ROUTE_MAP: DesktopRouteEntry[] = [
   },
 ];
 
+type DynamicSegmentName = "id" | "slug";
+
+function hasDynamicSegments(template: string): boolean {
+  return template.includes("[id]") || template.includes("[slug]");
+}
+
+function extractNamedSegments(
+  template: string,
+  path: string,
+): Partial<Record<DynamicSegmentName, string>> | null {
+  const paramNames: DynamicSegmentName[] = [];
+  const pattern = template.replace(/\[(id|slug)\]/g, (_, name: string) => {
+    paramNames.push(name as DynamicSegmentName);
+    return "([^/]+)";
+  });
+
+  if (paramNames.length === 0) return null;
+
+  const match = path.match(new RegExp(`^${pattern}$`));
+  if (!match) return null;
+
+  const values: Partial<Record<DynamicSegmentName, string>> = {};
+  paramNames.forEach((name, index) => {
+    values[name] = match[index + 1];
+  });
+  return values;
+}
+
+function substituteNamedSegments(
+  template: string,
+  values: Partial<Record<DynamicSegmentName, string>>,
+): string {
+  return template.replace(/\[(id|slug)\]/g, (_, name: string) => {
+    const key = name as DynamicSegmentName;
+    const value = values[key];
+    if (value === undefined) {
+      return `[${name}]`;
+    }
+    return value;
+  });
+}
+
 export function isDesktopAppPath(pathname: string | null | undefined): boolean {
   if (!pathname) return false;
   return pathname === DESKTOP_BASE || pathname.startsWith(`${DESKTOP_BASE}/`);
@@ -346,19 +392,12 @@ export function mobilePathToDesktop(mobilePath: string): string | undefined {
   for (const entry of DESKTOP_ROUTE_MAP) {
     if (entry.status === "shared") continue;
 
-    const mobilePattern = entry.mobile
-      .replace(/\[id\]/g, "[^/]+")
-      .replace(/\[slug\]/g, "[^/]+");
-    const regex = new RegExp(`^${mobilePattern}$`);
-    if (regex.test(normalized)) {
-      return entry.mobile.includes("[id]")
-        ? normalized.replace(
-            new RegExp(
-              `^${entry.mobile.replace("[id]", "([^/]+)").replace("[slug]", "([^/]+)")}$`,
-            ),
-            entry.desktop.replace("[id]", "$1").replace("[slug]", "$1"),
-          )
-        : entry.desktop;
+    if (hasDynamicSegments(entry.mobile)) {
+      const values = extractNamedSegments(entry.mobile, normalized);
+      if (values) {
+        return substituteNamedSegments(entry.desktop, values);
+      }
+      continue;
     }
 
     if (entry.mobile === normalized) {
@@ -379,15 +418,10 @@ export function desktopPathToMobile(desktopPath: string): string | undefined {
   for (const entry of DESKTOP_ROUTE_MAP) {
     if (entry.status === "shared") continue;
 
-    if (entry.desktop.includes("[id]") || entry.desktop.includes("[slug]")) {
-      const pattern = entry.desktop
-        .replace(/\[id\]/g, "([^/]+)")
-        .replace(/\[slug\]/g, "([^/]+)");
-      const match = normalized.match(new RegExp(`^${pattern}$`));
-      if (match) {
-        return entry.mobile
-          .replace("[id]", match[1])
-          .replace("[slug]", match[1]);
+    if (hasDynamicSegments(entry.desktop)) {
+      const values = extractNamedSegments(entry.desktop, normalized);
+      if (values) {
+        return substituteNamedSegments(entry.mobile, values);
       }
       continue;
     }

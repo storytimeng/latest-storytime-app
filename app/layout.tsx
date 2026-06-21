@@ -4,6 +4,7 @@ import { Link } from "@heroui/link";
 import clsx from "clsx";
 import { APP_CONFIG } from "@/config/app";
 import { AppRootShell } from "@/lib/appRootShell";
+import { MobileShellExtras } from "@/components/desktop/MobileShellExtras";
 import { Providers } from "./providers";
 import { PWAProvider } from "@/components/PWAProvider";
 import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
@@ -155,6 +156,7 @@ export default function RootLayout({
           <PWAProvider>
             <GenresPreloader />
             <AppRootShell>{children}</AppRootShell>
+            <MobileShellExtras />
             <LoadingOverlay />
             <PWAInstallPrompt />
             <SupportModals />

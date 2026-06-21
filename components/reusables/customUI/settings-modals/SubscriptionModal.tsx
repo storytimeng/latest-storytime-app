@@ -21,6 +21,8 @@ import { showToast } from "@/lib/showNotification";
 import CancelPremiumModal from "@/components/reusables/customUI/CancelPremiumModal";
 import SubscriptionUpgradePanel from "@/components/reusables/customUI/SubscriptionUpgradePanel";
 import { planDurationLabel } from "@/src/lib/subscription-ui";
+import { useStorytimeShell } from "@/src/hooks/useStorytimeShell";
+import { premiumPathForShell } from "@/lib/shellRouting";
 
 function formatDate(isoDate: string): string {
   return new Date(isoDate).toLocaleDateString(undefined, {
@@ -64,6 +66,8 @@ function statusBadgeClass(status: string): string {
 }
 
 const SubscriptionModal: React.FC = () => {
+  const shell = useStorytimeShell();
+  const premiumHref = premiumPathForShell(shell);
   const {
     isPremium,
     premiumExpiresAt,
@@ -233,7 +237,7 @@ const SubscriptionModal: React.FC = () => {
             {!isPremium && (
               <Button
                 as={Link}
-                href="/premium"
+                href={premiumHref}
                 variant="primary"
                 className="w-full"
               >

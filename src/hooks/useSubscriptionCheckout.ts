@@ -7,6 +7,8 @@ import {
 } from "@/src/lib/subscriptions";
 import { useAuthStore } from "@/src/stores/useAuthStore";
 import { useAuthModalStore } from "@/src/stores/useAuthModalStore";
+import { storytimeShellFromPathname } from "@/config/desktopRoutes";
+import { premiumPathForShell } from "@/lib/shellRouting";
 
 const CHECKOUT_RETURN_PATH_KEY = "checkoutReturnPath";
 
@@ -29,9 +31,9 @@ export function useSubscriptionCheckout() {
       const result = await initializeSubscription(planCode, BILLING_CURRENCY);
       if (typeof window !== "undefined") {
         sessionStorage.setItem("pendingPaymentReference", result.reference);
-        const returnPath = window.location.pathname.startsWith("/app")
-          ? "/app/premium"
-          : "/premium";
+        const returnPath = premiumPathForShell(
+          storytimeShellFromPathname(window.location.pathname),
+        );
         sessionStorage.setItem(CHECKOUT_RETURN_PATH_KEY, returnPath);
       }
       window.location.href = result.authorizationUrl;
