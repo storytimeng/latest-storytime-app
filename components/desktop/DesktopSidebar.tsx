@@ -70,8 +70,8 @@ function NavItem({
 
 export function DesktopSidebar() {
   return (
-    <aside className="hidden md:flex md:w-64 md:shrink-0 md:flex-col md:border-r md:border-black/10 md:bg-white">
-      <div className="flex h-14 items-center border-b border-black/10 px-5">
+    <aside className="hidden md:flex md:h-full md:w-64 md:shrink-0 md:flex-col md:overflow-hidden md:border-r md:border-black/10 md:bg-white">
+      <div className="flex h-14 shrink-0 items-center border-b border-black/10 px-5">
         <Link href={`${DESKTOP_BASE}/home`} className="flex items-center">
           <Image
             src={APP_CONFIG.logo.src}
@@ -85,7 +85,7 @@ export function DesktopSidebar() {
       </div>
 
       <nav
-        className="flex flex-1 flex-col gap-1 p-3"
+        className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto p-3"
         aria-label="Desktop navigation"
       >
         <p className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-[#361B17]/45">
@@ -105,7 +105,7 @@ export function DesktopSidebar() {
         ))}
       </nav>
 
-      <div className="border-t border-black/10 p-3">
+      <div className="shrink-0 border-t border-black/10 p-3">
         <ShellSwitchLink
           href="/home"
           preference="mobile"

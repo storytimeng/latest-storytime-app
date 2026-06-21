@@ -29,7 +29,12 @@ export async function AppRootShell({ className, children }: AppRootShellProps) {
 
   const content =
     shell === "desktop" ? (
-      <div className={cn("w-full min-h-screen bg-[#FFFAF1]", className)}>
+      <div
+        className={cn(
+          "w-full h-screen overflow-hidden bg-[#FFFAF1]",
+          className,
+        )}
+      >
         {children}
       </div>
     ) : (
