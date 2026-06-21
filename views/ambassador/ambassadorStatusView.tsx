@@ -33,6 +33,7 @@ import {
   type ApplicationStatus,
 } from "@/src/lib/ambassadors";
 import { useAmbassadorRoutes } from "@/components/ambassador/AmbassadorRoutesProvider";
+import { useAppStoryRoutes } from "@/src/hooks/useAppStoryRoutes";
 import { showToast } from "@/lib/showNotification";
 import { useSupportStore } from "@/src/stores/useSupportStore";
 import { mutate } from "swr";
@@ -189,6 +190,7 @@ function downloadApplicationCopy(application: AmbassadorApplication) {
 export default function AmbassadorStatusView() {
   const router = useRouter();
   const routes = useAmbassadorRoutes();
+  const storyRoutes = useAppStoryRoutes();
   const openSupportModal = useSupportStore((state) => state.openModal);
   const { overview, isLoading } = useAmbassadorOverview();
   const [withdrawing, setWithdrawing] = useState(false);
@@ -404,17 +406,8 @@ export default function AmbassadorStatusView() {
                 onClick={() => {
                   let href = tip.href;
                   if (href === "/ambassador") href = routes.hub;
-                  else if (
-                    routes.profile.startsWith("/app") &&
-                    href === "/home"
-                  ) {
-                    href = "/app/home";
-                  } else if (
-                    routes.profile.startsWith("/app") &&
-                    href === "/pen"
-                  ) {
-                    href = "/app/write";
-                  }
+                  else if (href === "/home") href = storyRoutes.home;
+                  else if (href === "/pen") href = storyRoutes.write;
                   router.push(href);
                 }}
                 className="w-full text-left rounded-2xl border border-grey-4 bg-white p-4 flex items-start gap-3"
@@ -485,7 +478,7 @@ export default function AmbassadorStatusView() {
         </div>
 
         <div className="space-y-3 pt-1">
-          <PrimaryFormButton onClick={() => router.push("/home")}>
+          <PrimaryFormButton onClick={() => router.push(storyRoutes.home)}>
             Home
           </PrimaryFormButton>
 

@@ -7,6 +7,9 @@ import { ArrowLeft, BookOpen, Crown } from "lucide-react";
 import { Button } from "@heroui/button";
 import { Magnetik_Bold, Magnetik_Medium, Magnetik_Regular } from "@/lib/font";
 import { PREMIUM_UPSELL_CONTENT } from "@/src/lib/premiumUpsell";
+import { useAppStoryRoutes } from "@/src/hooks/useAppStoryRoutes";
+import { useStorytimeShell } from "@/src/hooks/useStorytimeShell";
+import { premiumPathForShell } from "@/lib/shellRouting";
 
 interface PremiumExclusiveReadGateProps {
   storyId: string;
@@ -17,13 +20,15 @@ export const PremiumExclusiveReadGate: React.FC<
   PremiumExclusiveReadGateProps
 > = ({ storyId, storyTitle }) => {
   const router = useRouter();
+  const shell = useStorytimeShell();
+  const routes = useAppStoryRoutes();
   const content = PREMIUM_UPSELL_CONTENT.exclusiveStory;
 
   return (
     <div className="min-h-screen bg-accent-shade-1 max-w-[28rem] mx-auto">
       <div className="px-4 pt-6">
         <Link
-          href={`/story/${storyId}`}
+          href={routes.story(storyId)}
           className="inline-flex items-center gap-2 text-primary-colour"
         >
           <ArrowLeft className="w-5 h-5" />
@@ -63,14 +68,14 @@ export const PremiumExclusiveReadGate: React.FC<
         <div className="flex flex-col w-full gap-3 max-w-xs">
           <Button
             className="w-full bg-complimentary-colour text-white font-semibold"
-            onPress={() => router.push("/premium")}
+            onPress={() => router.push(premiumPathForShell(shell))}
           >
             Unlock with Premium
           </Button>
           <Button
             variant="bordered"
             className="w-full border-light-grey-2 text-primary-shade-4"
-            onPress={() => router.push(`/story/${storyId}`)}
+            onPress={() => router.push(routes.story(storyId))}
           >
             View story details
           </Button>

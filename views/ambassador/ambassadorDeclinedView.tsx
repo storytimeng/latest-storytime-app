@@ -15,6 +15,7 @@ import { PrimaryFormButton } from "@/components/ambassador/application-form-ui";
 import { useAmbassadorOverview } from "@/src/hooks/useAmbassador";
 import { useSupportStore } from "@/src/stores/useSupportStore";
 import { useAmbassadorRoutes } from "@/components/ambassador/AmbassadorRoutesProvider";
+import { useAppStoryRoutes } from "@/src/hooks/useAppStoryRoutes";
 
 const GROWTH_TIPS = [
   "Published more stories consistently",
@@ -26,6 +27,7 @@ const GROWTH_TIPS = [
 export default function AmbassadorDeclinedView() {
   const router = useRouter();
   const routes = useAmbassadorRoutes();
+  const storyRoutes = useAppStoryRoutes();
   const openSupportModal = useSupportStore((state) => state.openModal);
   const { overview, isLoading } = useAmbassadorOverview();
 
@@ -184,7 +186,7 @@ export default function AmbassadorDeclinedView() {
         <div className="space-y-3 pt-2">
           <button
             type="button"
-            onClick={() => router.push("/pen")}
+            onClick={() => router.push(storyRoutes.write)}
             className={cn(
               "w-full h-12 rounded-full bg-complimentary-colour text-white text-sm",
               Magnetik_SemiBold.className,

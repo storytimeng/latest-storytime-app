@@ -5,6 +5,7 @@ import { BookOpen, PenLine, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Magnetik_Bold, Magnetik_Medium, Magnetik_Regular } from "@/lib/font";
 import { DESKTOP_ROUTES } from "@/config/desktopRoutes";
+import { ShellSwitchLink } from "@/components/desktop/ShellSwitchLink";
 
 const ACTIONS = [
   {
@@ -69,8 +70,9 @@ export function DesktopWriteView() {
         ))}
       </div>
 
-      <Link
+      <ShellSwitchLink
         href="/pen"
+        preference="mobile"
         className={cn(
           "inline-flex items-center gap-2 text-sm text-[#361B17]/60 hover:text-[#361B17]",
           Magnetik_Medium.className,
@@ -78,7 +80,7 @@ export function DesktopWriteView() {
       >
         <PenLine className="h-4 w-4" />
         Open mobile Pen tab
-      </Link>
+      </ShellSwitchLink>
     </div>
   );
 }

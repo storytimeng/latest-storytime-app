@@ -2,7 +2,12 @@
 
 import React, { ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { usePremiumFeatures, PremiumFeatures } from "@/src/hooks/usePremiumFeatures";
+import {
+  usePremiumFeatures,
+  PremiumFeatures,
+} from "@/src/hooks/usePremiumFeatures";
+import { useStorytimeShell } from "@/src/hooks/useStorytimeShell";
+import { premiumPathForShell } from "@/lib/shellRouting";
 import { Lock } from "lucide-react";
 import { Button } from "@heroui/button";
 import { Magnetik_Medium } from "@/lib/font";
@@ -63,9 +68,7 @@ export const PremiumGate: React.FC<PremiumGateProps> = ({
   }
 
   // Default locked state UI
-  return (
-    <LockedFeatureUI message={lockedMessage} />
-  );
+  return <LockedFeatureUI message={lockedMessage} />;
 };
 
 interface LockedFeatureUIProps {
@@ -81,19 +84,22 @@ const LockedFeatureUI: React.FC<LockedFeatureUIProps> = ({
   onUpgrade,
 }) => {
   const router = useRouter();
+  const shell = useStorytimeShell();
 
   const handleUpgrade = () => {
     if (onUpgrade) {
       onUpgrade();
     } else {
-      router.push("/premium");
+      router.push(premiumPathForShell(shell));
     }
   };
 
   return (
     <div className="flex items-center gap-2 px-3 py-2 bg-light-grey-1 rounded-lg border border-light-grey-2">
       <Lock className="w-4 h-4 text-grey-1" />
-      <span className={`text-xs text-grey-2 ${Magnetik_Medium.className} flex-1`}>
+      <span
+        className={`text-xs text-grey-2 ${Magnetik_Medium.className} flex-1`}
+      >
         {message}
       </span>
       <Button
@@ -114,7 +120,7 @@ const LockedFeatureUI: React.FC<LockedFeatureUIProps> = ({
 export function withPremiumGate<P extends object>(
   WrappedComponent: React.ComponentType<P>,
   feature: keyof PremiumFeatures,
-  fallback?: ReactNode
+  fallback?: ReactNode,
 ) {
   return function PremiumGatedComponent(props: P) {
     return (

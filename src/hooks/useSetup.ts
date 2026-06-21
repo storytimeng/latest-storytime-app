@@ -22,6 +22,7 @@ import type {
 } from "@/components/setup/types";
 import { showToast } from "@/lib/showNotification";
 import { prepareAuthSession } from "@/src/lib/authSession";
+import { getPostAuthHomePath } from "@/lib/shellRouting";
 
 /**
  * Format TimeValue to API-compatible string (e.g., "06:45 AM")
@@ -415,7 +416,7 @@ export function useSetup() {
    * Complete setup and navigate to home
    */
   const completeSetup = useCallback(() => {
-    router.push(SETUP_CONFIG.routes.onComplete);
+    router.push(getPostAuthHomePath());
   }, [router]);
 
   /**

@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Magnetik_Medium } from "@/lib/font";
 import { DESKTOP_NAV_ITEMS } from "@/config/desktopRoutes";
+import { ShellSwitchLink } from "./ShellSwitchLink";
 
 export function DesktopMobileNav() {
   const pathname = usePathname();
@@ -32,15 +33,16 @@ export function DesktopMobileNav() {
           </Link>
         );
       })}
-      <Link
+      <ShellSwitchLink
         href="/home"
+        preference="mobile"
         className={cn(
           "shrink-0 rounded-full px-3 py-1.5 text-xs text-[#361B17]/60",
           Magnetik_Medium.className,
         )}
       >
         Mobile site
-      </Link>
+      </ShellSwitchLink>
     </nav>
   );
 }

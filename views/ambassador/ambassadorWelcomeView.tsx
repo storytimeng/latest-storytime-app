@@ -172,7 +172,7 @@ export default function AmbassadorWelcomeView() {
           </PrimaryFormButton>
           <button
             type="button"
-            onClick={() => router.push("/ambassador/dashboard")}
+            onClick={() => router.push(routes.hub)}
             className={cn(
               Magnetik_Medium.className,
               "w-full text-sm text-primary-colour underline underline-offset-2",

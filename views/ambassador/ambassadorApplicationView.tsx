@@ -32,6 +32,7 @@ import {
   type CreateApplicationPayload,
 } from "@/src/lib/ambassadors";
 import { useAmbassadorRoutes } from "@/components/ambassador/AmbassadorRoutesProvider";
+import { useAppStoryRoutes } from "@/src/hooks/useAppStoryRoutes";
 import { showToast } from "@/lib/showNotification";
 import { mutate } from "swr";
 
@@ -177,6 +178,7 @@ function ApplicationReapplyBlockedScreen({
 }) {
   const router = useRouter();
   const routes = useAmbassadorRoutes();
+  const storyRoutes = useAppStoryRoutes();
   const daysLabel = `${reapplyDaysRemaining} day${reapplyDaysRemaining === 1 ? "" : "s"}`;
 
   return (
@@ -220,7 +222,7 @@ function ApplicationReapplyBlockedScreen({
         </PrimaryFormButton>
         <button
           type="button"
-          onClick={() => router.push("/pen")}
+          onClick={() => router.push(storyRoutes.write)}
           className={cn(
             "w-full h-12 rounded-full bg-complimentary-colour text-white text-sm",
             Magnetik_SemiBold.className,

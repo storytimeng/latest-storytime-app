@@ -11,6 +11,7 @@ import { useLogin } from "@/src/hooks/useAuth";
 import { useLoadingStore } from "@/src/stores/useLoadingStore";
 import { useSupportStore } from "@/src/stores/useSupportStore";
 import { getRememberMePreference } from "@/src/stores/useAuthStore";
+import { getPostAuthHomePath } from "@/lib/shellRouting";
 
 interface LoginFormData {
   email: string;
@@ -42,7 +43,7 @@ export default function LoginView({ onSuccess, onSwitchView }: LoginViewProps) {
   const [errors, setErrors] = useState<Partial<LoginFormData>>({});
 
   useEffect(() => {
-    router.prefetch("/home");
+    router.prefetch(getPostAuthHomePath());
     setFormData((prev) => ({
       ...prev,
       rememberMe: getRememberMePreference(),
@@ -122,9 +123,8 @@ export default function LoginView({ onSuccess, onSwitchView }: LoginViewProps) {
 
       // Fetch and store user profile
       try {
-        const { usersControllerGetProfile } = await import(
-          "@/src/client/sdk.gen"
-        );
+        const { usersControllerGetProfile } =
+          await import("@/src/client/sdk.gen");
         const { useUserStore } = await import("@/src/stores/useUserStore");
         console.log("Fetching user profile...");
         const profileResponse = await usersControllerGetProfile();
@@ -155,7 +155,7 @@ export default function LoginView({ onSuccess, onSwitchView }: LoginViewProps) {
       if (onSuccess) {
         onSuccess();
       } else {
-        router.push("/home");
+        router.push(getPostAuthHomePath());
       }
     } catch (err: any) {
       hideLoading();

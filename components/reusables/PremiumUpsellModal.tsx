@@ -16,6 +16,8 @@ import {
   PREMIUM_UPSELL_CONTENT,
   type PremiumUpsellReason,
 } from "@/src/lib/premiumUpsell";
+import { useStorytimeShell } from "@/src/hooks/useStorytimeShell";
+import { premiumPathForShell } from "@/lib/shellRouting";
 
 interface PremiumUpsellModalProps {
   isOpen: boolean;
@@ -29,11 +31,12 @@ export const PremiumUpsellModal: React.FC<PremiumUpsellModalProps> = ({
   reason,
 }) => {
   const router = useRouter();
+  const shell = useStorytimeShell();
   const content = reason ? PREMIUM_UPSELL_CONTENT[reason] : null;
 
   const handleUpgrade = () => {
     onClose();
-    router.push("/premium");
+    router.push(premiumPathForShell(shell));
   };
 
   return (
@@ -74,7 +77,9 @@ export const PremiumUpsellModal: React.FC<PremiumUpsellModalProps> = ({
                     className="flex items-start gap-2.5 text-sm text-primary-shade-5"
                   >
                     <Check className="w-4 h-4 mt-0.5 shrink-0 text-complimentary-colour" />
-                    <span className={Magnetik_Regular.className}>{benefit}</span>
+                    <span className={Magnetik_Regular.className}>
+                      {benefit}
+                    </span>
                   </li>
                 ))}
               </ul>

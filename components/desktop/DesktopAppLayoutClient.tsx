@@ -1,8 +1,9 @@
 "use client";
 
-import { ReactNode } from "react";
+import { ReactNode, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { DesktopShell } from "./DesktopShell";
+import { writeShellPreferenceClient } from "@/lib/shellRouting";
 
 const PAGE_TITLES: Record<string, string> = {
   "/app/home": "Home",
@@ -45,6 +46,10 @@ function titleFromPath(pathname: string): string {
 export function DesktopAppLayoutClient({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const title = titleFromPath(pathname ?? "/app/home");
+
+  useEffect(() => {
+    writeShellPreferenceClient("desktop");
+  }, []);
 
   return <DesktopShell title={title}>{children}</DesktopShell>;
 }

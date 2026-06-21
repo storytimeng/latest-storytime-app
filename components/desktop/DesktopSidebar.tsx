@@ -19,6 +19,7 @@ import {
   DESKTOP_NAV_ITEMS,
   DESKTOP_SECONDARY_NAV,
 } from "@/config/desktopRoutes";
+import { ShellSwitchLink } from "./ShellSwitchLink";
 
 const ICONS = {
   home: Home,
@@ -106,15 +107,16 @@ export function DesktopSidebar() {
       </nav>
 
       <div className="border-t border-black/10 p-3">
-        <Link
+        <ShellSwitchLink
           href="/home"
+          preference="mobile"
           className={cn(
             "block rounded-lg px-3 py-2 text-xs text-[#361B17]/60 hover:bg-black/[0.04] hover:text-[#361B17]",
             Magnetik_Medium.className,
           )}
         >
           Switch to mobile site →
-        </Link>
+        </ShellSwitchLink>
       </div>
     </aside>
   );

@@ -299,14 +299,17 @@ export const DESKTOP_ROUTE_MAP: DesktopRouteEntry[] = [
     label: "Ambassador welcome",
     status: "live",
   },
-  // —— Shared (mobile URL only for now) ——
+  // —— Cross-shell (Phase 7) ——
+  // Auth/onboarding stay on shared URLs; post-auth redirect uses getPostAuthHomePath().
+  // Middleware redirects mapped mobile↔desktop routes when shell preference cookie is set.
+  // —— Shared (same URL both shells) ——
   {
     mobile: "/auth/login",
     desktop: "/auth/login",
     label: "Login",
     status: "shared",
     notes:
-      "Auth flows stay on mobile routes; redirect to /app/home after login (later)",
+      "Post-auth redirect → /app/home or /home via shell preference (Phase 7)",
   },
   {
     mobile: "/auth/signup",
@@ -360,6 +363,37 @@ export function mobilePathToDesktop(mobilePath: string): string | undefined {
 
     if (entry.mobile === normalized) {
       return entry.desktop;
+    }
+  }
+
+  return undefined;
+}
+
+export function desktopPathToMobile(desktopPath: string): string | undefined {
+  const normalized = desktopPath.split("?")[0];
+
+  if (normalized === DESKTOP_BASE || normalized === `${DESKTOP_BASE}/`) {
+    return "/home";
+  }
+
+  for (const entry of DESKTOP_ROUTE_MAP) {
+    if (entry.status === "shared") continue;
+
+    if (entry.desktop.includes("[id]") || entry.desktop.includes("[slug]")) {
+      const pattern = entry.desktop
+        .replace(/\[id\]/g, "([^/]+)")
+        .replace(/\[slug\]/g, "([^/]+)");
+      const match = normalized.match(new RegExp(`^${pattern}$`));
+      if (match) {
+        return entry.mobile
+          .replace("[id]", match[1])
+          .replace("[slug]", match[1]);
+      }
+      continue;
+    }
+
+    if (entry.desktop === normalized) {
+      return entry.mobile;
     }
   }
 
