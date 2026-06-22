@@ -11,7 +11,6 @@ import { useRegister } from "@/src/hooks/useAuth";
 import { Check, X } from "lucide-react";
 import { useLoadingStore } from "@/src/stores/useLoadingStore";
 import { Select, SelectItem } from "@heroui/select";
-import { useSupportStore } from "@/src/stores/useSupportStore";
 
 interface SignupFormData {
   firstName: string;
@@ -62,7 +61,6 @@ export default function SignupView({
   onSuccess,
   onSwitchView,
 }: SignupViewProps) {
-  const openSupportModal = useSupportStore((state) => state.openModal);
   const router = useRouter();
   const searchParams = useSearchParams();
   const refFromUrl = searchParams.get("ref")?.trim() || "";
@@ -468,21 +466,23 @@ export default function SignupView({
             className="body-text-small-regular text-grey-2"
           >
             Yes, I understand and agree to the Storytime, including the{" "}
-            <button
-              type="button"
-              onClick={() => openSupportModal("terms")}
+            <Link
+              href="/terms"
+              target="_blank"
+              rel="noopener noreferrer"
               className="font-bold text-primary-colour hover:underline"
             >
               User Agreement
-            </button>{" "}
+            </Link>{" "}
             and{" "}
-            <button
-              type="button"
-              onClick={() => openSupportModal("privacy")}
+            <Link
+              href="/privacy"
+              target="_blank"
+              rel="noopener noreferrer"
               className="font-bold text-primary-colour hover:underline"
             >
               Privacy Policy
-            </button>
+            </Link>
           </label>
           {errors.agreeToTerms && (
             <div className="flex items-center gap-1 mt-1">
