@@ -293,11 +293,6 @@ export function useOnlyOnStorytimeStories(
       });
 
       const responseData = (response?.data as any)?.data || response?.data;
-      console.log(
-        "✅ useOnlyOnStorytimeStories: Processed data:",
-        responseData,
-      );
-
       return responseData;
     },
     {
@@ -308,12 +303,19 @@ export function useOnlyOnStorytimeStories(
 
   React.useEffect(() => {
     if (data?.stories) {
+      // Enforce exclusivity on the client side: only stories explicitly flagged
+      // as onlyOnStorytime === true are allowed in this section, regardless of
+      // what the API returns.
+      const exclusiveStories = (data.stories as any[]).filter(
+        (s) => s.onlyOnStorytime === true,
+      );
+
       setAllStories((prev) => {
         if (currentPage === 1) {
-          return data.stories;
+          return exclusiveStories;
         }
         const existingIds = new Set(prev.map((s: any) => s.id));
-        const newStories = data.stories.filter(
+        const newStories = exclusiveStories.filter(
           (s: any) => !existingIds.has(s.id),
         );
         return [...prev, ...newStories];

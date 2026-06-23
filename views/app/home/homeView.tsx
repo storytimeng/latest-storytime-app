@@ -64,7 +64,7 @@ const HomeView = () => {
 
   // Fetch stories by category using dedicated endpoints
   const {
-    stories: exclusiveStories,
+    stories: rawExclusiveStories,
     isLoading: exclusiveLoading,
     loadMore: loadMoreExclusive,
     hasMore: hasMoreExclusive,
@@ -72,6 +72,12 @@ const HomeView = () => {
   } = useOnlyOnStorytimeStories({
     limit: 10,
   });
+
+  // Only render stories that are genuinely exclusive to Storytime
+  const exclusiveStories = useMemo(
+    () => rawExclusiveStories.filter((s: any) => s.onlyOnStorytime === true),
+    [rawExclusiveStories],
+  );
   const {
     stories: recentStories,
     isLoading: recentLoading,
