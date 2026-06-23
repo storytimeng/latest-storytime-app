@@ -106,7 +106,7 @@ const SettingsView = () => {
         return <SupportModal />;
 
       case "delete-account":
-        return <DeleteAccountModal />;
+        return <DeleteAccountModal onClose={closeModal} />;
 
       case "clear-cache":
         return <ClearCacheModal />;

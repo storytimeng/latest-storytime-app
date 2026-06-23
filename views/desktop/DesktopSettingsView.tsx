@@ -56,9 +56,11 @@ function panelTitle(section: string): string {
 function SettingsPanelContent({
   section,
   onCloseLogout,
+  onCloseSection,
 }: {
   section: string;
   onCloseLogout?: () => void;
+  onCloseSection?: () => void;
 }) {
   switch (section) {
     case "security":
@@ -70,7 +72,7 @@ function SettingsPanelContent({
     case "support":
       return <SupportModal />;
     case "delete-account":
-      return <DeleteAccountModal />;
+      return <DeleteAccountModal onClose={onCloseSection} />;
     case "clear-cache":
       return <ClearCacheModal />;
     case "logout":
@@ -278,6 +280,7 @@ export function DesktopSettingsView() {
             <SettingsPanelContent
               section={activeSection}
               onCloseLogout={() => setActiveSection(null)}
+              onCloseSection={() => setActiveSection(null)}
             />
           ) : (
             <div className="py-12 text-center">
