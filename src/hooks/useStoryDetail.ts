@@ -276,7 +276,7 @@ export function useStoryComments(storyId: string | undefined) {
 
 // Hook to fetch story chapters
 export function useStoryChapters(storyId: string | undefined) {
-  const { data, error, isLoading } = useSWR(
+  const { data, error, isLoading, mutate } = useSWR(
     storyId ? `/stories/${storyId}/chapters` : null,
     async () => {
       if (!storyId) return null;
@@ -291,12 +291,13 @@ export function useStoryChapters(storyId: string | undefined) {
     chapters: (data as any) || [],
     isLoading,
     error,
+    mutate,
   };
 }
 
 // Hook to fetch story episodes
 export function useStoryEpisodes(storyId: string | undefined) {
-  const { data, error, isLoading } = useSWR(
+  const { data, error, isLoading, mutate } = useSWR(
     storyId ? `/stories/${storyId}/episodes` : null,
     async () => {
       if (!storyId) return null;
@@ -311,6 +312,7 @@ export function useStoryEpisodes(storyId: string | undefined) {
     episodes: (data as any) || [],
     isLoading,
     error,
+    mutate,
   };
 }
 
