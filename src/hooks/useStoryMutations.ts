@@ -1,4 +1,5 @@
 import React from "react";
+import { mutate as globalMutate } from "swr";
 import {
   storiesControllerRemove,
   storiesControllerCreate,
@@ -25,7 +26,6 @@ export function useDeleteStory() {
         path: { id: storyId },
       });
 
-      console.log("✅ Story deleted successfully:", storyId);
       showToast({
         type: "success",
         message: "Story deleted successfully!",
@@ -34,7 +34,6 @@ export function useDeleteStory() {
     } catch (err) {
       const error =
         err instanceof Error ? err : new Error("Failed to delete story");
-      console.error("❌ Failed to delete story:", error);
       setError(error);
       showToast({
         type: "error",
@@ -69,8 +68,6 @@ export function useCreateStory() {
       });
 
       const result = (response?.data as any)?.data || response?.data;
-      console.log("✅ Story created successfully:", result);
-
       return {
         success: true,
         id: result?.id || result?._id,
@@ -78,7 +75,6 @@ export function useCreateStory() {
     } catch (err) {
       const error =
         err instanceof Error ? err : new Error("Failed to create story");
-      console.error("❌ Failed to create story:", error);
       setError(error);
       showToast({
         type: "error",
@@ -114,12 +110,14 @@ export function useUpdateStory() {
         body: storyData,
       });
 
-      console.log("✅ Story updated successfully:", storyId);
+      // Revalidate all SWR caches that contain this story so the UI reflects
+      // the update immediately without requiring a page refresh.
+      await globalMutate(`/stories/${storyId}`);
+
       return true;
     } catch (err) {
       const error =
         err instanceof Error ? err : new Error("Failed to update story");
-      console.error("❌ Failed to update story:", error);
       setError(error);
       showToast({
         type: "error",
@@ -156,7 +154,6 @@ export function useFetchStory(storyId: string | undefined) {
         });
 
         const result = (response?.data as any)?.data || response?.data;
-        console.log("✅ Story fetched successfully:", result);
         setStory(result);
       } catch (err) {
         const error =
@@ -198,7 +195,13 @@ export function useCreateChapter() {
       });
 
       const result = (response?.data as any)?.data || response?.data;
-      console.log("✅ Chapter created successfully:", result);
+
+      // Revalidate the story (chapter flag may have been auto-enabled) and
+      // the chapters list so the UI reflects the new chapter immediately.
+      await Promise.all([
+        globalMutate(`/stories/${storyId}`),
+        globalMutate(`/stories/${storyId}/chapters`),
+      ]);
 
       return {
         success: true,
@@ -207,7 +210,6 @@ export function useCreateChapter() {
     } catch (err) {
       const error =
         err instanceof Error ? err : new Error("Failed to create chapter");
-      console.error("❌ Failed to create chapter:", error);
       setError(error);
       showToast({
         type: "error",
@@ -250,8 +252,10 @@ export function useCreateMultipleChapters() {
         },
       });
 
-      const result = (response?.data as any)?.data || response?.data;
-      console.log("✅ Multiple chapters created successfully:", result);
+      await Promise.all([
+        globalMutate(`/stories/${storyId}`),
+        globalMutate(`/stories/${storyId}/chapters`),
+      ]);
 
       return {
         success: true,
@@ -306,7 +310,13 @@ export function useCreateEpisode() {
       });
 
       const result = (response?.data as any)?.data || response?.data;
-      console.log("✅ Episode created successfully:", result);
+
+      // Revalidate the story (episodes flag may have been auto-enabled) and
+      // the episodes list so the UI reflects the new episode immediately.
+      await Promise.all([
+        globalMutate(`/stories/${storyId}`),
+        globalMutate(`/stories/${storyId}/episodes`),
+      ]);
 
       return {
         success: true,
@@ -315,7 +325,6 @@ export function useCreateEpisode() {
     } catch (err) {
       const error =
         err instanceof Error ? err : new Error("Failed to create episode");
-      console.error("❌ Failed to create episode:", error);
       setError(error);
       showToast({
         type: "error",
@@ -358,8 +367,10 @@ export function useCreateMultipleEpisodes() {
         },
       });
 
-      const result = (response?.data as any)?.data || response?.data;
-      console.log("✅ Multiple episodes created successfully:", result);
+      await Promise.all([
+        globalMutate(`/stories/${storyId}`),
+        globalMutate(`/stories/${storyId}/episodes`),
+      ]);
 
       return {
         success: true,
