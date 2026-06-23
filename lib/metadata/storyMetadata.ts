@@ -5,6 +5,9 @@ import {
   storiesControllerGetEpisodeById,
 } from "@/src/client/sdk.gen";
 import { client } from "@/src/client/client.gen";
+import { APP_CONFIG } from "@/config/app";
+
+const SITE_URL = APP_CONFIG.url;
 
 // Helper function to strip HTML tags and truncate
 const stripHtmlAndTruncate = (
@@ -64,15 +67,15 @@ export async function generateStoryMetadata(
 ): Promise<Metadata> {
   if (!id) {
     return {
-      title: "Story | Storytime",
-      description: "Read amazing stories on Storytime",
+      title: "Story",
+      description: APP_CONFIG.shortDescription,
     };
   }
 
   try {
     // Configure client for server-side rendering (bypass proxy, use direct API URL)
     client.setConfig({
-      baseUrl: process.env.NEXT_PUBLIC_API_URL || "https://api.storytime.ng",
+      baseUrl: process.env.NEXT_PUBLIC_API_URL || `https://api.${APP_CONFIG.domain}`,
     });
 
     const response = await storiesControllerFindOne({
@@ -117,8 +120,8 @@ export async function generateStoryMetadata(
       // Ensure absolute URLs for images
       const absoluteImageUrl = imageUrl.startsWith("http")
         ? imageUrl
-        : `https://storytime.ng${imageUrl}`;   
-      let storyUrl = `https://storytime.ng/story/${id}/read`;
+        : `${SITE_URL}${imageUrl}`;
+      let storyUrl = `${SITE_URL}/story/${id}/read`;
       if (chapterId) {
         storyUrl += `?chapterId=${chapterId}`;
       } else if (episodeId) {
@@ -128,11 +131,12 @@ export async function generateStoryMetadata(
       return {
         title: fullTitle,
         description: description,
+        alternates: { canonical: storyUrl },
         openGraph: {
           title: displayTitle,
           description: description,
           url: storyUrl,
-          siteName: "Storytime",
+          siteName: APP_CONFIG.name,
           images: [
             {
               url: absoluteImageUrl,
@@ -156,7 +160,7 @@ export async function generateStoryMetadata(
   }
 
   return {
-    title: "Read Story | Storytime",
-    description: "Read amazing stories on Storytime",
+    title: "Read Story",
+    description: APP_CONFIG.shortDescription,
   };
 }
