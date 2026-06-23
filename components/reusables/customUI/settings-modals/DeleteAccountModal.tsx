@@ -5,6 +5,7 @@ import { ModalHeader, ModalBody } from "@heroui/modal";
 import { Button } from "@/components/ui/button";
 import { Magnetik_Bold, Magnetik_Medium, Magnetik_Regular } from "@/lib/font";
 import { useUserStore } from "@/src/stores/useUserStore";
+import { getAuthToken } from "@/src/stores/useAuthStore";
 import { showToast } from "@/lib/showNotification";
 
 interface DeleteAccountModalProps {
@@ -26,10 +27,7 @@ const DeleteAccountModal = ({ onClose }: DeleteAccountModalProps) => {
     setIsLoading(true);
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://api.storytime.ng";
-      const token = document.cookie
-        .split("; ")
-        .find((row) => row.startsWith("authToken="))
-        ?.split("=")[1];
+      const token = getAuthToken();
 
       const res = await fetch(`${apiUrl}/users/${user.id}/request-deletion`, {
         method: "POST",
