@@ -20,12 +20,16 @@ import { OfflineManager } from "@/components/OfflineManager";
 
 export const metadata: Metadata = {
   metadataBase: new URL(APP_CONFIG.url),
-  title: APP_CONFIG.name,
-  description: APP_CONFIG.description,
+  title: {
+    default: `${APP_CONFIG.name} — ${APP_CONFIG.shortDescription}`,
+    template: `%s | ${APP_CONFIG.name}`,
+  },
+  description: APP_CONFIG.shortDescription,
+  keywords: APP_CONFIG.keywords,
   applicationName: APP_CONFIG.name,
-  authors: [{ name: APP_CONFIG.siteName }],
-  creator: APP_CONFIG.siteName,
-  publisher: APP_CONFIG.siteName,
+  authors: [{ name: APP_CONFIG.name, url: APP_CONFIG.url }],
+  creator: APP_CONFIG.name,
+  publisher: APP_CONFIG.name,
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
@@ -36,26 +40,48 @@ export const metadata: Metadata = {
     telephone: false,
   },
   openGraph: {
-    title: APP_CONFIG.name,
-    description: APP_CONFIG.description,
+    title: {
+      default: `${APP_CONFIG.name} — ${APP_CONFIG.shortDescription}`,
+      template: `%s | ${APP_CONFIG.name}`,
+    },
+    description: APP_CONFIG.shortDescription,
     url: APP_CONFIG.url,
-    siteName: APP_CONFIG.siteName,
+    siteName: APP_CONFIG.name,
     images: [
       {
         url: APP_CONFIG.images.banner,
         width: 1200,
         height: 630,
-        alt: APP_CONFIG.name,
+        alt: `${APP_CONFIG.name} — Home To Budding Authors & Readers`,
       },
     ],
     type: "website",
+    locale: APP_CONFIG.socialMeta.ogLocale,
   },
   twitter: {
     card: APP_CONFIG.socialMeta.twitterCard,
     site: APP_CONFIG.socialMeta.twitterSite,
-    title: APP_CONFIG.name,
-    description: APP_CONFIG.description,
+    creator: APP_CONFIG.socialMeta.twitterSite,
+    title: {
+      default: `${APP_CONFIG.name} — ${APP_CONFIG.shortDescription}`,
+      template: `%s | ${APP_CONFIG.name}`,
+    },
+    description: APP_CONFIG.shortDescription,
     images: [APP_CONFIG.images.banner],
+  },
+  alternates: {
+    canonical: APP_CONFIG.url,
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
   },
 };
 
@@ -74,73 +100,28 @@ export default function RootLayout({
   return (
     <html suppressHydrationWarning lang="en">
       <head>
-        {/* iOS Splash Screens */}
-        <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
-        <link
-          rel="apple-touch-startup-image"
-          media="screen and (device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
-          href="/splash/apple-splash-1290-2796.png"
-        />
-        <link
-          rel="apple-touch-startup-image"
-          media="screen and (device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
-          href="/splash/apple-splash-1179-2556.png"
-        />
-        <link
-          rel="apple-touch-startup-image"
-          media="screen and (device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
-          href="/splash/apple-splash-1284-2778.png"
-        />
-        <link
-          rel="apple-touch-startup-image"
-          media="screen and (device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
-          href="/splash/apple-splash-1170-2532.png"
-        />
-        <link
-          rel="apple-touch-startup-image"
-          media="screen and (device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)"
-          href="/splash/apple-splash-1125-2436.png"
-        />
-        <link
-          rel="apple-touch-startup-image"
-          media="screen and (device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
-          href="/splash/apple-splash-828-1792.png"
-        />
-        <link
-          rel="apple-touch-startup-image"
-          media="screen and (device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
-          href="/splash/apple-splash-750-1334.png"
-        />
-        <link
-          rel="apple-touch-startup-image"
-          media="screen and (device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
-          href="/splash/apple-splash-640-1136.png"
-        />
-        {/* iPad splash screens */}
-        <link
-          rel="apple-touch-startup-image"
-          media="screen and (device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
-          href="/splash/apple-splash-2048-2732.png"
-        />
-        <link
-          rel="apple-touch-startup-image"
-          media="screen and (device-width: 834px) and (device-height: 1194px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
-          href="/splash/apple-splash-1668-2388.png"
-        />
-        <link
-          rel="apple-touch-startup-image"
-          media="screen and (device-width: 834px) and (device-height: 1112px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
-          href="/splash/apple-splash-1668-2224.png"
-        />
-        <link
-          rel="apple-touch-startup-image"
-          media="screen and (device-width: 810px) and (device-height: 1080px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
-          href="/splash/apple-splash-1620-2160.png"
-        />
-        <link
-          rel="apple-touch-startup-image"
-          media="screen and (device-width: 768px) and (device-height: 1024px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)"
-          href="/splash/apple-splash-1536-2048.png"
+        <link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192x192.png" />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "Organization",
+              name: "Storytime",
+              url: "https://storytime.ng",
+              logo: "https://storytime.ng/images/logo.png",
+              description:
+                "Storytime is the home for budding authors and curious readers. A cheerful community where stories are shared, skills are nurtured, and imagination comes alive.",
+              sameAs: [
+                "https://twitter.com/storytimeng",
+                "https://instagram.com/storytimeng",
+                "https://facebook.com/storytimeng",
+                "https://tiktok.com/@storytimeng",
+                "https://youtube.com/@storytimeng",
+                "https://linkedin.com/company/storytimeng",
+              ],
+            }),
+          }}
         />
       </head>
       <body

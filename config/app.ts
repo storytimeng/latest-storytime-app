@@ -1,19 +1,38 @@
 export const APP_CONFIG = {
-  name: "Story Time",
-  siteName: "Story Time Nigeria",
+  name: "Storytime",
+  siteName: "Storytime",
   description:
-    "A platform for story writers to share both fictional and non-fictional stories, and for story lovers to read to their satisfaction.",
+    "Storytime is the home for budding authors and curious readers. A cheerful community where stories are shared, skills are nurtured, and imagination comes alive. Whether you're writing your first chapter or discovering your next favourite story, Storytime gives you a place to grow, create and belong. Because every great storyteller starts somewhere.",
+  shortDescription: "Home To Budding Authors & Readers. Read, Write, & Grow.",
   domain: "storytime.ng",
-  url: "https://storytime.ng/",
+  url: "https://storytime.ng",
 
   theme: {
     defaultTheme: "light",
     color: "#ffffff",
   },
 
+  keywords: [
+    "storytime",
+    "read stories online",
+    "write stories",
+    "African stories",
+    "creative writing",
+    "fiction platform",
+    "budding authors",
+    "story community",
+    "Nigerian stories",
+    "Yoruba stories",
+    "Igbo stories",
+    "Hausa stories",
+    "storytelling",
+    "online reading",
+    "story app",
+  ],
+
   logo: {
     src: "/images/logo.png",
-    alt: "Story Time Logo",
+    alt: "Storytime Logo",
     width: 85,
     height: 28,
   },
