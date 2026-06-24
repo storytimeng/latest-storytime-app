@@ -129,8 +129,9 @@ export function useStoryContent({
           id: 1,
           title: "Chapter 1",
           body: "",
+          isDraft: true,
           episodes: storyStructure.hasEpisodes
-            ? [{ id: 1, title: "Episode 1", body: "" }]
+            ? [{ id: 1, title: "Episode 1", body: "", isDraft: true }]
             : undefined,
         },
       ];
@@ -152,7 +153,7 @@ export function useStoryContent({
     // Only create default part/episode if story has episodes but no chapters
     if (storyStructure.hasEpisodes && !storyStructure.hasChapters) {
       console.log("[useStoryContent] Creating default part");
-      return [{ id: 1, title: "Part 1", body: "" }];
+      return [{ id: 1, title: "Part 1", body: "", isDraft: true }];
     }
     // No parts/episodes for this story
     console.log("[useStoryContent] No parts for this story");
@@ -610,7 +611,7 @@ export function useStoryContent({
         ...ch,
         id: index + 1,
         chapterNumber: index + 1,
-        title: ch.title.replace(/^Chapter \d+:?\\s*/, `Chapter ${index + 1}: `),
+        title: ch.title.replace(/^Chapter \d+:?\s*/, `Chapter ${index + 1}: `),
       }));
 
       // Combine renumbered non-deleted with deleted (keep deleted at end)
@@ -649,7 +650,7 @@ export function useStoryContent({
         ...p,
         id: index + 1,
         episodeNumber: index + 1,
-        title: p.title.replace(/^Episode \d+:?\\s*/, `Episode ${index + 1}: `),
+        title: p.title.replace(/^Episode \d+:?\s*/, `Episode ${index + 1}: `),
       }));
 
       // Combine renumbered non-deleted with deleted (keep deleted at end)
@@ -724,6 +725,7 @@ export function useStoryContent({
                     updatedAt: chapterData.updatedAt,
                     chapterNumber:
                       chapterData.chapterNumber ?? ch.chapterNumber,
+                    isDraft: chapterData.isDraft ?? ch.isDraft,
                   }
                 : ch,
             );
@@ -820,6 +822,7 @@ export function useStoryContent({
                     createdAt: episodeData.createdAt,
                     updatedAt: episodeData.updatedAt,
                     episodeNumber: episodeData.episodeNumber ?? p.episodeNumber,
+                    isDraft: episodeData.isDraft ?? p.isDraft,
                   }
                 : p,
             );
