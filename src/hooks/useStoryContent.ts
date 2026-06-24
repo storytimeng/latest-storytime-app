@@ -414,13 +414,10 @@ export function useStoryContent({
         );
       });
 
-      // Always mark as edited when changing chapterNumber (even if chapter not fully loaded)
-      // For title/body, only mark if changed from initial
-      if (field === "chapterNumber") {
+      // chapterNumber and isDraft always mark dirty (structural changes that must be saved)
+      // title/body only mark dirty when they differ from the initial loaded value
+      if (field === "chapterNumber" || field === "isDraft") {
         setEditedChapterIds((prev) => new Set(prev).add(id));
-        console.log(
-          `[useStoryContent] Chapter ${id} marked as edited (chapterNumber changed to ${value})`,
-        );
       } else {
         // Mark as edited if changed from initial
         const initial = initialChaptersData.current.get(id);
@@ -452,13 +449,10 @@ export function useStoryContent({
         return prev.map((p) => (p.id === id ? { ...p, [field]: value } : p));
       });
 
-      // Always mark as edited when changing episodeNumber (even if episode not fully loaded)
-      // For title/body, only mark if changed from initial
-      if (field === "episodeNumber") {
+      // episodeNumber and isDraft always mark dirty (structural changes that must be saved)
+      // title/body only mark dirty when they differ from the initial loaded value
+      if (field === "episodeNumber" || field === "isDraft") {
         setEditedPartIds((prev) => new Set(prev).add(id));
-        console.log(
-          `[useStoryContent] Episode ${id} marked as edited (episodeNumber changed to ${value})`,
-        );
       } else {
         // Mark as edited if changed from initial
         const initial = initialPartsData.current.get(id);
