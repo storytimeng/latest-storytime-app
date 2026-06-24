@@ -53,6 +53,9 @@ export interface Episode {
   uuid?: string;
   title: string;
   body: string;
+  episodeNumber?: number;
+  createdAt?: string;
+  updatedAt?: string;
   isDraft?: boolean;
 }
 

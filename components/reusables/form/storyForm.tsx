@@ -1708,17 +1708,21 @@ const StoryForm: React.FC<StoryFormProps> = ({
             onClick={() => {
               if (isLoading) return;
               const draftData = { ...formData, storyStatus: "Draft" };
+              const chaptersToDraft = (items: typeof chapters) =>
+                items.map((ch) => ({ ...ch, isDraft: true }));
+              const partsToDraft = (items: typeof parts) =>
+                items.map((p) => ({ ...p, isDraft: true }));
               onSubmit(
                 draftData,
                 mode === "edit" && storyStructure.hasChapters
-                  ? getAllModifiedChapters()
+                  ? chaptersToDraft(getAllModifiedChapters())
                   : storyStructure.hasChapters
-                    ? chapters
+                    ? chaptersToDraft(chapters)
                     : undefined,
                 mode === "edit" && !storyStructure.hasChapters
-                  ? getAllModifiedParts()
+                  ? partsToDraft(getAllModifiedParts())
                   : !storyStructure.hasChapters
-                    ? parts
+                    ? partsToDraft(parts)
                     : undefined,
                 mode === "edit" && storyStructure.hasChapters
                   ? getDeletedChapters()
