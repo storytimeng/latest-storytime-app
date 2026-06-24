@@ -45,6 +45,7 @@ export interface Chapter {
   createdAt?: string;
   updatedAt?: string;
   chapterNumber?: number;
+  isDraft?: boolean;
 }
 
 export interface Episode {
@@ -52,6 +53,7 @@ export interface Episode {
   uuid?: string;
   title: string;
   body: string;
+  isDraft?: boolean;
 }
 
 export interface Part {
@@ -62,6 +64,7 @@ export interface Part {
   createdAt?: string;
   updatedAt?: string;
   episodeNumber?: number;
+  isDraft?: boolean;
 }
 
 export interface StoryFormProps {

@@ -37,13 +37,13 @@ interface UseStoryContentReturn {
   toggleEpisode: (episodeKey: string) => void;
   updateChapter: (
     id: number,
-    field: "title" | "body" | "chapterNumber",
-    value: string | number,
+    field: "title" | "body" | "chapterNumber" | "isDraft",
+    value: string | number | boolean,
   ) => void;
   updatePart: (
     id: number,
-    field: "title" | "body" | "episodeNumber",
-    value: string | number,
+    field: "title" | "body" | "episodeNumber" | "isDraft",
+    value: string | number | boolean,
   ) => void;
   markChapterForDeletion: (id: number) => void;
   markPartForDeletion: (id: number) => void;
@@ -287,8 +287,9 @@ export function useStoryContent({
         id: newChapterId,
         title: `Chapter ${newChapterId}`,
         body: "",
+        isDraft: true,
         episodes: storyStructure.hasEpisodes
-          ? [{ id: 1, title: "Episode 1", body: "" }]
+          ? [{ id: 1, title: "Episode 1", body: "", isDraft: true }]
           : undefined,
       },
     ]);
@@ -307,7 +308,7 @@ export function useStoryContent({
     const newPartKey = `episode-${newPartId}`;
     setParts((prev) => [
       ...prev,
-      { id: newPartId, title: `Episode ${newPartId}`, body: "" },
+      { id: newPartId, title: `Episode ${newPartId}`, body: "", isDraft: true },
     ]);
     // Expand the newly added episode (add to existing set, don't replace)
     setExpandedEpisodes((prev) => new Set(prev).add(newPartKey));
@@ -394,8 +395,8 @@ export function useStoryContent({
   const updateChapter = useCallback(
     (
       id: number,
-      field: "title" | "body" | "chapterNumber",
-      value: string | number,
+      field: "title" | "body" | "chapterNumber" | "isDraft",
+      value: string | number | boolean,
     ) => {
       setChapters((prev) => {
         // If updating chapterNumber, ensure it's unique
@@ -434,8 +435,8 @@ export function useStoryContent({
   const updatePart = useCallback(
     (
       id: number,
-      field: "title" | "body" | "episodeNumber",
-      value: string | number,
+      field: "title" | "body" | "episodeNumber" | "isDraft",
+      value: string | number | boolean,
     ) => {
       setParts((prev) => {
         // If updating episodeNumber, ensure it's unique

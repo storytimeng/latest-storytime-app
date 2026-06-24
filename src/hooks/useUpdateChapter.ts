@@ -6,6 +6,7 @@ interface UpdateChapterPayload {
   title?: string;
   content?: string;
   chapterNumber?: number;
+  isDraft?: boolean;
 }
 
 interface UseUpdateChapterReturn {
@@ -82,6 +83,7 @@ export function useUpdateMultipleChapters() {
         title?: string;
         body?: string;
         chapterNumber?: number;
+        isDraft?: boolean;
       }>,
     ): Promise<{ success: boolean; updated: number; failed: number }> => {
       setIsUpdating(true);
@@ -99,6 +101,7 @@ export function useUpdateMultipleChapters() {
             if (chapter.body !== undefined) payload.content = chapter.body;
             if (chapter.chapterNumber !== undefined)
               payload.chapterNumber = chapter.chapterNumber;
+            if (chapter.isDraft !== undefined) payload.isDraft = chapter.isDraft;
 
             const response = await storiesControllerUpdateChapter({
               path: { chapterId: chapter.uuid },

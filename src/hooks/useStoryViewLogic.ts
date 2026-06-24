@@ -266,6 +266,7 @@ export function useStoryViewLogic({
           chapterNumber: ch.chapterNumber,
           createdAt: ch.createdAt,
           updatedAt: ch.updatedAt,
+          isDraft: ch.isDraft ?? false,
         }));
         console.log(
           "[useStoryViewLogic] Setting initialChapters from API chapters:",
@@ -290,6 +291,7 @@ export function useStoryViewLogic({
           episodeNumber: ep.episodeNumber,
           createdAt: ep.createdAt,
           updatedAt: ep.updatedAt,
+          isDraft: ep.isDraft ?? false,
         }));
         console.log(
           "[useStoryViewLogic] Setting initialParts from API episodes:",
@@ -362,6 +364,7 @@ export function useStoryViewLogic({
             const chaptersPayload = _chapters.map((ch) => ({
               title: ch.title,
               body: ch.body,
+              isDraft: ch.isDraft ?? true,
             }));
             result = await createMultipleChapters(
               createdStoryId,
@@ -372,6 +375,7 @@ export function useStoryViewLogic({
             const episodesPayload = _parts.map((ep) => ({
               title: ep.title,
               body: ep.body,
+              isDraft: ep.isDraft ?? true,
             }));
             result = await createMultipleEpisodes(
               createdStoryId,
@@ -639,6 +643,7 @@ export function useStoryViewLogic({
               const chaptersPayload = newChapters.map((ch) => ({
                 title: ch.title,
                 body: ch.body,
+                isDraft: ch.isDraft ?? true,
               }));
 
               const result = await createMultipleChapters(
@@ -664,6 +669,7 @@ export function useStoryViewLogic({
               const partsPayload = newParts.map((p) => ({
                 title: p.title,
                 body: p.body,
+                isDraft: p.isDraft ?? true,
               }));
 
               const result = await createMultipleEpisodes(
@@ -693,6 +699,7 @@ export function useStoryViewLogic({
                 title: ch.title,
                 body: ch.body,
                 chapterNumber: ch.chapterNumber,
+                isDraft: ch.isDraft,
               }));
 
               console.log(
@@ -729,6 +736,7 @@ export function useStoryViewLogic({
                 title: p.title,
                 body: p.body,
                 episodeNumber: p.episodeNumber,
+                isDraft: p.isDraft,
               }));
 
               console.log(
@@ -865,6 +873,7 @@ export function useStoryViewLogic({
                 const chaptersPayload = _chapters.map((ch) => ({
                   title: ch.title,
                   body: ch.body,
+                  isDraft: ch.isDraft ?? true,
                 }));
                 result = await createMultipleChapters(
                   newStoryId,
@@ -875,6 +884,7 @@ export function useStoryViewLogic({
                 const episodesPayload = _parts.map((ep) => ({
                   title: ep.title,
                   body: ep.body,
+                  isDraft: ep.isDraft ?? true,
                 }));
                 result = await createMultipleEpisodes(
                   newStoryId,

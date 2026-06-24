@@ -6,6 +6,7 @@ interface UpdateEpisodePayload {
   title?: string;
   content?: string;
   episodeNumber?: number;
+  isDraft?: boolean;
 }
 
 interface UseUpdateEpisodeReturn {
@@ -82,6 +83,7 @@ export function useUpdateMultipleEpisodes() {
         title?: string;
         body?: string;
         episodeNumber?: number;
+        isDraft?: boolean;
       }>,
     ): Promise<{ success: boolean; updated: number; failed: number }> => {
       setIsUpdating(true);
@@ -99,6 +101,7 @@ export function useUpdateMultipleEpisodes() {
             if (episode.body !== undefined) payload.content = episode.body;
             if (episode.episodeNumber !== undefined)
               payload.episodeNumber = episode.episodeNumber;
+            if (episode.isDraft !== undefined) payload.isDraft = episode.isDraft;
 
             const response = await storiesControllerUpdateEpisode({
               path: { episodeId: episode.uuid },
