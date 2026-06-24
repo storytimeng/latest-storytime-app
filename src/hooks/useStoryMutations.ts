@@ -248,6 +248,7 @@ export function useCreateMultipleChapters() {
             title: ch.title,
             content: ch.body || ch.content,
             chapterNumber: index + 1,
+            isDraft: ch.isDraft ?? true,
           })),
         },
       });
@@ -363,6 +364,7 @@ export function useCreateMultipleEpisodes() {
             title: ep.title,
             content: ep.body || ep.content,
             episodeNumber: index + 1,
+            isDraft: ep.isDraft ?? true,
           })),
         },
       });

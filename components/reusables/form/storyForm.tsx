@@ -1305,6 +1305,24 @@ const StoryForm: React.FC<StoryFormProps> = ({
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
+                          if (!isDeleted) {
+                            updateChapter(chapter.id, "isDraft", !(chapter.isDraft ?? true));
+                          }
+                        }}
+                        className={cn(
+                          "px-2 py-0.5 rounded-full text-xs font-medium transition-colors mr-2",
+                          isDeleted && "opacity-40 pointer-events-none",
+                          chapter.isDraft !== false
+                            ? "bg-amber-100 text-amber-700 hover:bg-amber-200"
+                            : "bg-green-100 text-green-700 hover:bg-green-200",
+                        )}
+                        title={chapter.isDraft !== false ? "Draft — click to publish" : "Published — click to set as draft"}
+                      >
+                        {chapter.isDraft !== false ? "Draft" : "Published"}
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
                           if (isDeleted) {
                             restoreChapter(chapter.id);
                             showToast({
@@ -1528,6 +1546,24 @@ const StoryForm: React.FC<StoryFormProps> = ({
                           </span>
                         )}
                       </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (!isDeleted) {
+                            updatePart(part.id, "isDraft", !(part.isDraft ?? true));
+                          }
+                        }}
+                        className={cn(
+                          "px-2 py-0.5 rounded-full text-xs font-medium transition-colors mr-2",
+                          isDeleted && "opacity-40 pointer-events-none",
+                          part.isDraft !== false
+                            ? "bg-amber-100 text-amber-700 hover:bg-amber-200"
+                            : "bg-green-100 text-green-700 hover:bg-green-200",
+                        )}
+                        title={part.isDraft !== false ? "Draft — click to publish" : "Published — click to set as draft"}
+                      >
+                        {part.isDraft !== false ? "Draft" : "Published"}
+                      </button>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
