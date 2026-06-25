@@ -45,6 +45,10 @@ export type UpdateProfileDto = {
    * Reminder schedule
    */
   reminder?: string;
+  /**
+   * IANA timezone identifier
+   */
+  timezone?: string;
 };
 
 export type UpdateReadingProgressDto = {
