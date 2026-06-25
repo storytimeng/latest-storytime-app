@@ -1,20 +1,14 @@
 import Cookies from "js-cookie";
 import { useAuthStore } from "../stores/useAuthStore";
-import { authControllerRefresh } from "../client/sdk.gen";
 
 // Singleton: prevent concurrent refresh races
 let _refreshPromise: Promise<{ token?: string; refreshToken?: string } | null> | null = null;
 
 const AUTH_TOKEN_KEY = "authToken";
-const REFRESH_TOKEN_KEY = "refreshToken";
 const TOKEN_EXPIRY_KEY = "tokenExpiry";
 
 // Refresh token 5 minutes before it expires
 const REFRESH_BUFFER_MS = 5 * 60 * 1000;
-
-function getStoredRefreshToken(): string | undefined {
-  return useAuthStore.getState().refreshToken || Cookies.get(REFRESH_TOKEN_KEY);
-}
 
 /**
  * Check if token is expired or will expire soon
@@ -79,49 +73,44 @@ async function _doRefresh(): Promise<{
   refreshToken?: string;
 } | null> {
   try {
-    const currentRefreshToken = getStoredRefreshToken();
+    // The httpOnly refresh token cookie is sent automatically by the browser.
+    // We POST to /auth/refresh with credentials: 'include' so the cookie is included.
+    const backendUrl =
+      process.env.NEXT_PUBLIC_API_URL ||
+      process.env.NEXT_PUBLIC_BACKEND_URL ||
+      "";
 
-    if (!currentRefreshToken) {
-      console.error("No refresh token available");
-      return null;
-    }
-
-    // Use proxy so frontend doesn't reveal backend URL
-    const res = await authControllerRefresh({
-      body: {
-        refreshToken: currentRefreshToken,
-      },
+    const res = await fetch(`${backendUrl}/auth/refresh`, {
+      method: "POST",
+      credentials: "include", // sends the httpOnly refreshToken cookie
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}), // body required by DTO validation; cookie carries the token
     });
 
-    if (!res.data) {
-      console.error("No data in refresh response");
+    if (!res.ok) {
+      console.error("Token refresh failed with status:", res.status);
       return null;
     }
 
+    const json = await res.json();
+
     // Unwrap nested data structure: response.data.data
-    let payload = res.data;
+    let payload = json?.data ?? json;
     if (payload && typeof payload === "object" && "data" in payload) {
-      payload = (payload as any).data;
+      payload = payload.data;
     }
 
     const token = payload?.accessToken;
-    const refreshToken = payload?.refreshToken;
-
-    console.log("🔍 Refresh response payload:", {
-      hasToken: !!token,
-      hasRefreshToken: !!refreshToken,
-    });
 
     if (!token) {
       console.error("No access token in refresh response");
       return null;
     }
 
-    // setToken persists cookies using the current "keep me logged in" preference
-    useAuthStore.getState().setToken(token, refreshToken);
+    // Store new access token; refresh token is managed server-side via httpOnly cookie
+    useAuthStore.getState().setToken(token, undefined);
 
-    console.log("✅ Tokens refreshed successfully");
-    return { token, refreshToken };
+    return { token };
   } catch (e) {
     console.error("❌ Token refresh failed", e);
     return null;
@@ -137,16 +126,10 @@ export async function ensureValidToken(): Promise<string | null> {
     useAuthStore.getState().token || Cookies.get(AUTH_TOKEN_KEY);
 
   if (!currentToken) {
-    if (getStoredRefreshToken()) {
-      console.log(
-        "[ensureValidToken] Access token missing, refreshing from stored session...",
-      );
-      const result = await refreshTokens();
-      return result?.token ?? null;
-    }
-
-    console.log("[ensureValidToken] No token found");
-    return null;
+    // No access token — attempt silent refresh using the httpOnly cookie
+    // (browser sends it automatically with credentials: 'include')
+    const result = await refreshTokens();
+    return result?.token ?? null;
   }
 
   // Check if token needs refresh

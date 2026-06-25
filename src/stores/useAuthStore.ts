@@ -82,13 +82,16 @@ function getStorageCookieOptions(token?: string): Cookies.CookieAttributes {
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
+  // Access token stored in JS-accessible cookie (needed to attach to Authorization header)
+  // Refresh token is stored in httpOnly cookie set by the server — never accessible here
   token:
     typeof window !== "undefined" ? Cookies.get(AUTH_TOKEN_KEY) : undefined,
-  refreshToken:
-    typeof window !== "undefined" ? Cookies.get(REFRESH_TOKEN_KEY) : undefined,
+  refreshToken: undefined, // Never stored in JS; server manages via httpOnly cookie
   resetEmail: undefined,
   resetOtp: undefined,
-  setToken: (token, refreshToken) => {
+  setToken: (token, _refreshToken) => {
+    // _refreshToken param kept for backwards compatibility but ignored —
+    // the server already set it as an httpOnly cookie
     if (token) {
       Cookies.set(AUTH_TOKEN_KEY, token, getStorageCookieOptions(token));
 
@@ -105,22 +108,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       Cookies.remove(TOKEN_EXPIRY_KEY);
     }
 
-    if (refreshToken) {
-      Cookies.set(
-        REFRESH_TOKEN_KEY,
-        refreshToken,
-        getStorageCookieOptions(refreshToken),
-      );
-    }
-
-    set(() => ({ token, refreshToken: refreshToken || get().refreshToken }));
+    set(() => ({ token, refreshToken: undefined }));
   },
   setReset: (email?: string, otp?: string) => {
     set(() => ({ resetEmail: email, resetOtp: otp }));
   },
   clear: () => {
     Cookies.remove(AUTH_TOKEN_KEY);
-    Cookies.remove(REFRESH_TOKEN_KEY);
+    Cookies.remove(REFRESH_TOKEN_KEY); // Legacy cleanup in case old cookie exists
     Cookies.remove(TOKEN_EXPIRY_KEY);
     Cookies.remove(REMEMBER_ME_KEY);
     set(() => ({ token: undefined, refreshToken: undefined }));
@@ -129,9 +124,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isAuthenticated: () =>
     Boolean(
       get().token ||
-        get().refreshToken ||
-        (typeof window !== "undefined" &&
-          (Cookies.get(AUTH_TOKEN_KEY) || Cookies.get(REFRESH_TOKEN_KEY))),
+        (typeof window !== "undefined" && Cookies.get(AUTH_TOKEN_KEY)),
     ),
 }));
 
