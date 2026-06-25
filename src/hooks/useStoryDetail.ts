@@ -611,9 +611,10 @@ export function useReadingProgress(storyId: string | undefined, isAuthenticated 
 export function useChapterProgress(
   storyId: string | undefined,
   chapterId: string | undefined,
+  isAuthenticated = false,
 ) {
   const { data, error, isLoading, mutate } = useSWR(
-    storyId && chapterId
+    storyId && chapterId && isAuthenticated
       ? `/users/stories/${storyId}/chapters/${chapterId}/progress`
       : null,
     async () => {
@@ -687,9 +688,10 @@ export function useChapterProgress(
 export function useEpisodeProgress(
   storyId: string | undefined,
   episodeId: string | undefined,
+  isAuthenticated = false,
 ) {
   const { data, error, isLoading, mutate } = useSWR(
-    storyId && episodeId
+    storyId && episodeId && isAuthenticated
       ? `/users/stories/${storyId}/episodes/${episodeId}/progress`
       : null,
     async () => {

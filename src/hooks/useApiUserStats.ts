@@ -1,5 +1,6 @@
 import useSWR from "swr";
 import { usersControllerGetStats } from "@/src/client/sdk.gen";
+import { useAuthStore } from "@/src/stores/useAuthStore";
 
 interface ReadingProgress {
   totalStoriesInProgress?: number;
@@ -29,8 +30,9 @@ interface UserStats {
  * Includes reading/writing time, stories count, badges, etc.
  */
 export function useApiUserStats() {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const { data, error, isLoading, mutate } = useSWR(
-    "/users/stats",
+    isAuthenticated() ? "/users/stats" : null,
     async () => {
       const response = await usersControllerGetStats();
       // Extract from nested structure: response.data.data.stats

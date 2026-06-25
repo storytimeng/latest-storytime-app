@@ -1,5 +1,6 @@
 import useSWR from "swr";
 import { usersControllerGetShareableAchievements } from "@/src/client/sdk.gen";
+import { useAuthStore } from "@/src/stores/useAuthStore";
 
 interface Badge {
   id: string;
@@ -61,8 +62,9 @@ const transformBadge = (badgeId: string, url?: string): Badge => {
  * Hook to fetch user badges and certificates
  */
 export function useUserAchievements() {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const { data, error, isLoading, mutate } = useSWR(
-    "/users/achievements",
+    isAuthenticated() ? "/users/achievements" : null,
     async () => {
       const response = await usersControllerGetShareableAchievements();
       const result = (response?.data as any)?.data?.shareableData || (response?.data as any)?.data || response?.data;

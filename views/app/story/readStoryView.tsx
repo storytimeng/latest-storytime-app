@@ -340,6 +340,7 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
     useChapterProgress(
       hasChapters && isOnline ? storyId : undefined,
       hasChapters && selectedChapterId ? selectedChapterId : undefined,
+      isAuthenticated(),
     );
 
   const { progress: episodeProgress, updateProgress: updateEpisodeProgress } =
@@ -348,6 +349,7 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
       !hasChapters && hasEpisodes && selectedChapterId
         ? selectedChapterId
         : undefined,
+      isAuthenticated(),
     );
 
   // Current progress data
