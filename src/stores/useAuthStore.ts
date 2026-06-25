@@ -18,6 +18,8 @@ const AUTH_TOKEN_KEY = "authToken";
 const REFRESH_TOKEN_KEY = "refreshToken";
 const TOKEN_EXPIRY_KEY = "tokenExpiry";
 const REMEMBER_ME_KEY = "rememberMe";
+/** Non-sensitive flag cookie — tells JS that a server httpOnly session exists */
+const SESSION_FLAG_KEY = "hasSession";
 const PERSISTENT_LOGIN_DAYS = 30;
 
 function baseCookieOptions() {
@@ -90,8 +92,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   resetEmail: undefined,
   resetOtp: undefined,
   setToken: (token, _refreshToken) => {
-    // _refreshToken param kept for backwards compatibility but ignored —
-    // the server already set it as an httpOnly cookie
+    // _refreshToken is ignored — the server already set it as an httpOnly cookie.
     if (token) {
       Cookies.set(AUTH_TOKEN_KEY, token, getStorageCookieOptions(token));
 
@@ -103,9 +104,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           getStorageCookieOptions(token),
         );
       }
+
+      // Non-sensitive flag so isAuthenticated() knows a server session exists
+      // even when the access token cookie has expired and not yet refreshed.
+      Cookies.set(SESSION_FLAG_KEY, "1", getStorageCookieOptions(token));
     } else {
       Cookies.remove(AUTH_TOKEN_KEY);
       Cookies.remove(TOKEN_EXPIRY_KEY);
+      Cookies.remove(SESSION_FLAG_KEY);
     }
 
     set(() => ({ token, refreshToken: undefined }));
@@ -115,16 +121,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
   clear: () => {
     Cookies.remove(AUTH_TOKEN_KEY);
-    Cookies.remove(REFRESH_TOKEN_KEY); // Legacy cleanup in case old cookie exists
+    Cookies.remove(REFRESH_TOKEN_KEY); // Legacy cleanup
     Cookies.remove(TOKEN_EXPIRY_KEY);
     Cookies.remove(REMEMBER_ME_KEY);
+    Cookies.remove(SESSION_FLAG_KEY);
     set(() => ({ token: undefined, refreshToken: undefined }));
   },
   clearReset: () => set(() => ({ resetEmail: undefined, resetOtp: undefined })),
   isAuthenticated: () =>
     Boolean(
       get().token ||
-        (typeof window !== "undefined" && Cookies.get(AUTH_TOKEN_KEY)),
+        (typeof window !== "undefined" &&
+          (Cookies.get(AUTH_TOKEN_KEY) || Cookies.get(SESSION_FLAG_KEY))),
     ),
 }));
 
@@ -133,7 +141,9 @@ export const getAuthToken = () => {
 };
 
 export const getRefreshToken = () => {
-  return useAuthStore.getState().refreshToken || Cookies.get(REFRESH_TOKEN_KEY);
+  // Refresh token is httpOnly — not accessible from JS.
+  // This returns undefined intentionally.
+  return undefined;
 };
 
 export const setAuthToken = (token?: string, refreshToken?: string) => {

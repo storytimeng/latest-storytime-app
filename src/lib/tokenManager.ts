@@ -75,12 +75,15 @@ async function _doRefresh(): Promise<{
   try {
     // The httpOnly refresh token cookie is sent automatically by the browser.
     // We POST to /auth/refresh with credentials: 'include' so the cookie is included.
-    const backendUrl =
-      process.env.NEXT_PUBLIC_API_URL ||
-      process.env.NEXT_PUBLIC_BACKEND_URL ||
-      "";
+    // Use the same base URL logic as heyapi-runtime so proxy mode is respected.
+    const baseUrl =
+      process.env.NEXT_PUBLIC_PROXY === "true"
+        ? "/api/proxy"
+        : process.env.NEXT_PUBLIC_API_URL ||
+          process.env.NEXT_PUBLIC_BACKEND_URL ||
+          "";
 
-    const res = await fetch(`${backendUrl}/auth/refresh`, {
+    const res = await fetch(`${baseUrl}/auth/refresh`, {
       method: "POST",
       credentials: "include", // sends the httpOnly refreshToken cookie
       headers: { "Content-Type": "application/json" },
