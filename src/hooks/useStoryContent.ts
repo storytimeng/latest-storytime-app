@@ -440,7 +440,7 @@ export function useStoryContent({
         // If updating episodeNumber, ensure it's unique
         if (field === "episodeNumber") {
           const numValue =
-            typeof value === "string" ? parseFloat(value) : value;
+            typeof value === "string" ? parseFloat(value) : Number(value);
           const uniqueNumber = findUniqueEpisodeNumber(numValue, id, prev);
           return prev.map((p) =>
             p.id === id ? { ...p, [field]: uniqueNumber } : p,
