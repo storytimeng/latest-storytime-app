@@ -71,7 +71,7 @@ export function useStory(storyId: string | undefined) {
 }
 
 // Hook to manage story likes
-export function useStoryLikes(storyId: string | undefined) {
+export function useStoryLikes(storyId: string | undefined, isAuthenticated = false) {
   const [isLiked, setIsLiked] = React.useState(false);
   const [isLiking, setIsLiking] = React.useState(false);
   const [likeCount, setLikeCount] = React.useState(0);
@@ -92,9 +92,9 @@ export function useStoryLikes(storyId: string | undefined) {
     },
   );
 
-  // Check if user has liked
+  // Check if user has liked — only when authenticated (endpoint requires auth)
   const { data: userLikeData, mutate: mutateUserLike } = useSWR(
-    storyId ? `/stories/${storyId}/likes/check` : null,
+    storyId && isAuthenticated ? `/stories/${storyId}/likes/check` : null,
     async () => {
       if (!storyId) return null;
       try {
@@ -532,9 +532,9 @@ export function useEpisodeComments(episodeId: string | undefined) {
 }
 
 // Hook to get and update reading progress for a story
-export function useReadingProgress(storyId: string | undefined) {
+export function useReadingProgress(storyId: string | undefined, isAuthenticated = false) {
   const { data, error, isLoading, mutate } = useSWR(
-    storyId ? `/users/stories/${storyId}/progress` : null,
+    storyId && isAuthenticated ? `/users/stories/${storyId}/progress` : null,
     async () => {
       if (!storyId) return null;
       try {
@@ -760,9 +760,9 @@ export function useEpisodeProgress(
 }
 
 // Hook to get aggregated reading progress for a story (all chapters/episodes)
-export function useAggregatedProgress(storyId: string | undefined) {
+export function useAggregatedProgress(storyId: string | undefined, isAuthenticated = false) {
   const { data, error, isLoading, mutate } = useSWR(
-    storyId ? `/users/stories/${storyId}/reading-progress` : null,
+    storyId && isAuthenticated ? `/users/stories/${storyId}/reading-progress` : null,
     async () => {
       if (!storyId) return null;
       try {

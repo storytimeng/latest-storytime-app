@@ -104,6 +104,7 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
   );
   const { likeCount, isLiked, toggleLike } = useStoryLikes(
     isOnline ? storyId : undefined,
+    isAuthenticated(),
   );
 
   // Mark as read after delay
@@ -151,7 +152,7 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
 
   // Get progress hooks
   const { progress: storyProgress, updateProgress: updateStoryProgress } =
-    useReadingProgress(isOnline ? storyId : undefined);
+    useReadingProgress(isOnline ? storyId : undefined, isAuthenticated());
 
   // Story metadata lists episodes/chapters by id + number only; content is fetched per part.
   const rawStoryEpisodes = (story as any)?.episodes || [];

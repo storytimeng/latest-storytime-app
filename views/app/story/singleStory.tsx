@@ -78,8 +78,9 @@ const formatReadingTime = (seconds: number): string => {
 };
 
 const SingleStory = ({ storyId }: SingleStoryProps) => {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const { story, isLoading } = useStory(storyId);
-  const { likeCount, isLiked, toggleLike } = useStoryLikes(storyId);
+  const { likeCount, isLiked, toggleLike } = useStoryLikes(storyId, isAuthenticated());
   const {
     commentCount,
     comments,
@@ -88,9 +89,8 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
     deleteComment,
   } = useStoryComments(storyId);
   const { aggregatedData, mutate: mutateProgress } =
-    useAggregatedProgress(storyId);
+    useAggregatedProgress(storyId, isAuthenticated());
   const { user: storeUser } = useUserStore();
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const { openModal: openAuthModal } = useAuthModalStore();
   const router = useRouter();
   const { checkFeature } = usePremiumFeatures();
