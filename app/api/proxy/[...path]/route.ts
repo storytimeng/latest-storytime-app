@@ -7,15 +7,54 @@ const BACKEND_URL =
 const DEBUG_PROXY = process.env.NEXT_PUBLIC_DEBUG_PROXY === "true";
 
 /** Narration generation can take minutes; polling uses short requests. */
-const DEFAULT_PROXY_TIMEOUT_MS = 30_000;
-const AUDIO_PROXY_TIMEOUT_MS = 60_000;
+const DEFAULT_PROXY_TIMEOUT_MS = 55_000; // Render free tier cold-start can take ~45s
+const AUDIO_PROXY_TIMEOUT_MS = 120_000;
 
 function getProxyTimeoutMs(apiPath: string, method: string): number {
   if (method === "GET" && /\/stories\/[^/]+\/audio$/.test(apiPath)) {
     return AUDIO_PROXY_TIMEOUT_MS;
   }
-
   return DEFAULT_PROXY_TIMEOUT_MS;
+}
+
+/** Headers that must never be forwarded from client → backend */
+const BLOCKED_REQUEST_HEADERS = new Set([
+  "host",
+  "connection",
+  "content-length",
+  "accept-encoding",
+  "transfer-encoding",
+]);
+
+/** Response headers that must be forwarded from backend → client */
+const FORWARDED_RESPONSE_HEADERS = new Set([
+  "content-type",
+  "cache-control",
+  "etag",
+  "last-modified",
+  "set-cookie", // Critical: httpOnly refresh token cookie must reach the browser
+]);
+
+function classifyNetworkError(error: any): { status: number; message: string } {
+  const msg: string = error?.message || "";
+  if (error?.name === "TimeoutError" || msg.includes("timeout")) {
+    return {
+      status: 504,
+      message:
+        "Backend timed out. The server may be waking from sleep — please retry in a few seconds.",
+    };
+  }
+  if (
+    msg.includes("ECONNREFUSED") ||
+    msg.includes("ENOTFOUND") ||
+    msg.includes("EAI_AGAIN")
+  ) {
+    return {
+      status: 502,
+      message: "Backend is unreachable. Please try again shortly.",
+    };
+  }
+  return { status: 502, message: "Proxy request failed. Please try again." };
 }
 
 export async function GET(
@@ -100,17 +139,10 @@ async function proxyRequest(
   }
 
   try {
-    // Forward headers
+    // Forward request headers (excluding blocked ones)
     const headers: HeadersInit = {};
     request.headers.forEach((value, key) => {
-      const lowerKey = key.toLowerCase();
-      // Skip headers that shouldn't be forwarded
-      if (
-        lowerKey !== "host" &&
-        lowerKey !== "connection" &&
-        lowerKey !== "content-length" &&
-        lowerKey !== "accept-encoding" // KEY FIX: Don't request compressed response
-      ) {
+      if (!BLOCKED_REQUEST_HEADERS.has(key.toLowerCase())) {
         headers[key] = value;
       }
     });
@@ -125,65 +157,68 @@ async function proxyRequest(
 
     // Get response body as text (fetch automatically decompresses)
     const responseData = await response.text();
-    let parsedResponse = undefined;
+    let parsedResponse: any = undefined;
     try {
       parsedResponse = JSON.parse(responseData);
-    } catch (e) {
-      // Not JSON
+    } catch {
+      // Not JSON — pass through as-is
     }
 
-    // Log response on server console
-    console.log(
-      `[PROXY RESPONSE ${response.status}]`,
-      parsedResponse || responseData.substring(0, 200),
-    );
+    if (DEBUG_PROXY) {
+      console.log(
+        `[PROXY RESPONSE ${response.status}]`,
+        parsedResponse || responseData.substring(0, 200),
+      );
+    }
 
-    // If debug mode is enabled, add debug info to response
+    // Attach debug info only in debug mode
     if (DEBUG_PROXY && parsedResponse) {
       parsedResponse._debug = {
         endpoint: fullUrl,
         method,
-        requestBody: parsedBody,
         responseStatus: response.status,
         timestamp: new Date().toISOString(),
       };
     }
 
-    // Create response - let Next.js handle it properly
-    const nextResponse =
+    // Build Next.js response
+    const noBody =
       response.status === 204 ||
       response.status === 205 ||
-      response.status === 304
-        ? new NextResponse(null, {
+      response.status === 304;
+
+    const nextResponse = noBody
+      ? new NextResponse(null, {
+          status: response.status,
+          statusText: response.statusText,
+        })
+      : parsedResponse
+        ? NextResponse.json(parsedResponse, {
             status: response.status,
             statusText: response.statusText,
           })
-        : parsedResponse
-          ? NextResponse.json(parsedResponse, {
-              status: response.status,
-              statusText: response.statusText,
-            })
-          : new NextResponse(responseData, {
-              status: response.status,
-              statusText: response.statusText,
-              headers: {
-                "Content-Type":
-                  response.headers.get("content-type") || "text/plain",
-              },
-            });
+        : new NextResponse(responseData, {
+            status: response.status,
+            statusText: response.statusText,
+            headers: {
+              "Content-Type":
+                response.headers.get("content-type") || "text/plain",
+            },
+          });
 
-    // Copy safe response headers
+    // Forward safe response headers, including Set-Cookie for httpOnly auth cookies
     response.headers.forEach((value, key) => {
       const lowerKey = key.toLowerCase();
-      // Only copy specific safe headers
       if (
-        lowerKey === "content-type" ||
-        lowerKey === "cache-control" ||
-        lowerKey === "etag" ||
-        lowerKey === "last-modified" ||
+        FORWARDED_RESPONSE_HEADERS.has(lowerKey) ||
         lowerKey.startsWith("x-")
       ) {
-        nextResponse.headers.set(key, value);
+        // set-cookie must use append (multiple cookies are separate header lines)
+        if (lowerKey === "set-cookie") {
+          nextResponse.headers.append(key, value);
+        } else {
+          nextResponse.headers.set(key, value);
+        }
       }
     });
 
@@ -200,29 +235,25 @@ async function proxyRequest(
 
     return nextResponse;
   } catch (error: any) {
-    // Log error details on server console
-    console.error(`\n[PROXY ERROR] ${method} ${fullUrl}`);
-    console.error(`[PROXY ERROR DETAILS]`, error);
-    if (parsedBody) {
-      console.error(`[PROXY ERROR BODY]`, parsedBody);
-    }
+    console.error(`[PROXY ERROR] ${method} ${fullUrl}`, error?.message);
+
+    const { status, message } = classifyNetworkError(error);
 
     return NextResponse.json(
       {
         error: "Proxy request failed",
-        message: error.message,
+        message,
         ...(DEBUG_PROXY && {
           _debug: {
             endpoint: fullUrl,
             method,
-            requestBody: parsedBody,
             errorMessage: error.message,
             errorStack: error.stack,
             timestamp: new Date().toISOString(),
           },
         }),
       },
-      { status: 500 },
+      { status },
     );
   }
 }
