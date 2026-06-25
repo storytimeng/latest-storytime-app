@@ -50,7 +50,19 @@ export const WritingModal = () => {
       }
     }
     if (user?.reminder) {
-      setIsDaily(user.reminder === "daily");
+      const isReminderDaily = user.reminder === "daily";
+      setIsDaily(isReminderDaily);
+      if (!isReminderDaily) {
+        const storedDays = user.reminder.split(",").map((d) => d.trim()).filter(Boolean);
+        if (storedDays.length > 0) {
+          setSelectedDays(storedDays);
+          const weekdays = ["mon", "tue", "wed", "thu", "fri"];
+          const isWeekdayPreset =
+            storedDays.length === 5 &&
+            weekdays.every((d) => storedDays.includes(d));
+          setDayPreset(isWeekdayPreset ? "monToFri" : "custom");
+        }
+      }
     }
   }, [user]);
 
@@ -104,11 +116,11 @@ export const WritingModal = () => {
 
   const handleSave = async () => {
     const formattedTime = `${time.hour}:${time.minute.toString().padStart(2, "0")} ${time.period.toLowerCase()}`;
-    
+    const reminder = isDaily ? "daily" : selectedDays.join(",");
+
     const success = await updateProfile({
       timeToWrite: formattedTime,
-      reminder: isDaily ? "daily" : "custom",
-      // TODO: Add selectedDays to API payload if supported
+      reminder,
     });
 
     if (success) {

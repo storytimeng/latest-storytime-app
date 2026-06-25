@@ -49,8 +49,6 @@ export const ReadingModal = () => {
     
     const success = await updateProfile({
       timeToRead: formattedTime,
-      // Default to daily for reading time as per UI
-      reminder: "daily",
     });
 
     if (success) {

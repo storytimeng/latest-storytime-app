@@ -2,6 +2,9 @@ import Cookies from "js-cookie";
 import { useAuthStore } from "../stores/useAuthStore";
 import { authControllerRefresh } from "../client/sdk.gen";
 
+// Singleton: prevent concurrent refresh races
+let _refreshPromise: Promise<{ token?: string; refreshToken?: string } | null> | null = null;
+
 const AUTH_TOKEN_KEY = "authToken";
 const REFRESH_TOKEN_KEY = "refreshToken";
 const TOKEN_EXPIRY_KEY = "tokenExpiry";
@@ -55,10 +58,23 @@ export function shouldRefreshToken(): boolean {
 }
 
 /**
- * Attempt to refresh tokens by calling the refresh endpoint through the proxy.
- * You can adapt the refresh path to your backend implementation.
+ * Attempt to refresh tokens. Deduplicated: concurrent callers share one in-flight request.
  */
 export async function refreshTokens(): Promise<{
+  token?: string;
+  refreshToken?: string;
+} | null> {
+  if (_refreshPromise) {
+    return _refreshPromise;
+  }
+
+  _refreshPromise = _doRefresh().finally(() => {
+    _refreshPromise = null;
+  });
+  return _refreshPromise;
+}
+
+async function _doRefresh(): Promise<{
   token?: string;
   refreshToken?: string;
 } | null> {

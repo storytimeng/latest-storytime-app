@@ -19,7 +19,7 @@ import {
   hydrateAuthFromCookies,
   prepareAuthSession,
 } from "../src/lib/authSession";
-import { refreshTokens } from "../src/lib/tokenManager";
+import { refreshTokens, isTokenExpired } from "../src/lib/tokenManager";
 
 export interface ProvidersProps {
   children: React.ReactNode;
@@ -51,10 +51,11 @@ export function Providers({ children, themeProps }: ProvidersProps) {
           value={{
             fetcher: async (resource: string, init?: RequestInit) => {
               const headers = new Headers(init?.headers);
-              const token =
-                (await prepareAuthSession()) ||
-                getAuthToken() ||
-                Cookies.get("authToken");
+              const validToken = await prepareAuthSession();
+              const rawToken = !validToken && !isTokenExpired()
+                ? (getAuthToken() || Cookies.get("authToken"))
+                : null;
+              const token = validToken || rawToken;
               if (token) headers.set("Authorization", `Bearer ${token}`);
               const res = await fetch(resource, { ...init, headers });
               if (!res.ok) {
