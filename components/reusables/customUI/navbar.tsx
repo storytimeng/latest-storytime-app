@@ -5,21 +5,24 @@ import React from "react";
 import { Magnetik_Medium } from "@/lib/font";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
+import { useNotifications } from "@/src/hooks/useNotifications";
 
 const Navbar = () => {
   const pathname = usePathname();
+  const { unreadCount } = useNotifications();
 
   const navItems = [
     { path: "/home", icon: Home, label: "Home" },
     { path: "/library", icon: BookOpen, label: "Library" },
     { path: "/pen", icon: PenTool, label: "Pen" },
-    { path: "/notification", icon: Bell, label: "Notification" },
   ];
 
   const isActive = (path: string) => {
     if (path === "/home") return pathname === "/home";
     return pathname.startsWith(path);
   };
+
+  const notificationActive = pathname.startsWith("/notification");
 
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-[#f8f7f7] border-t border-[#AFAFAF] w-full sm:max-w-md sm:mx-auto rounded-t-xl z-50 safe-area-bottom">
@@ -57,6 +60,48 @@ const Navbar = () => {
             </Link>
           );
         })}
+
+        {/* Notification tab — separate so we can overlay the badge */}
+        <Link
+          href="/notification"
+          prefetch={true}
+          className="flex flex-col items-center gap-0.5 sm:gap-1 min-w-0 flex-1 px-1 sm:px-2"
+          aria-label="Notification"
+          aria-current={notificationActive ? "page" : undefined}
+        >
+          <span className="relative inline-flex items-center justify-center">
+            <Bell
+              className={`w-4 h-4 sm:w-5 sm:h-5 transition-colors ${
+                notificationActive ? "fill-[#361B17]" : "text-[#361B17]"
+              }`}
+            />
+
+            {unreadCount > 0 && (
+              <>
+                {/* Ripple ring */}
+                <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-red-500 opacity-75 animate-ping" />
+                {/* Solid dot with count */}
+                <span className="absolute -top-1 -right-1 flex items-center justify-center w-3.5 h-3.5 rounded-full bg-red-500 text-white font-bold leading-none"
+                  style={{ fontSize: "7px" }}
+                >
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
+              </>
+            )}
+          </span>
+
+          <span
+            className={`text-[10px] sm:text-xs ${
+              Magnetik_Medium.className
+            } transition-colors truncate max-w-full ${
+              notificationActive
+                ? "text-primary-colour font-semibold"
+                : "text-[#361B17]"
+            }`}
+          >
+            Notification
+          </span>
+        </Link>
       </nav>
     </div>
   );
