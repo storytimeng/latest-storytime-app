@@ -104,7 +104,7 @@ const NewLibraryView = () => {
       imageUrl: story.imageUrl,
       coverImage: story.imageUrl,
       author: story.author,
-      genres: [], // Reading history doesn't include genres
+      genres: story.genres || [],
       status: story.storyStatus,
       progress: readingProgress[story.id] || 0,
     };
