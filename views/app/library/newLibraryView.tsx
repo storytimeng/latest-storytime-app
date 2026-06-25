@@ -150,9 +150,9 @@ const NewLibraryView = () => {
   }, [handleObserver]);
 
   return (
-    <div className="min-h-screen bg-accent-shade-1 max-w-[28rem] mx-auto pb-20">
+    <div className="min-h-screen bg-accent-shade-1 pb-20 md:pb-6">
       {/* Tabs */}
-      <div className="px-4 pt-5 pb-4">
+      <div className="px-4 md:px-6 lg:px-8 pt-5 pb-4">
         <div className="flex gap-8">
           <button
             onClick={() => setActiveTab("library")}
@@ -194,7 +194,7 @@ const NewLibraryView = () => {
       {((isLoading && activeTab === "library" && page === 1 && isOnline) ||
         (isLoadingOffline && activeTab === "downloads")) && (
         <div className="px-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {[...Array(6)].map((_, i) => (
               <div key={i} className="space-y-2">
                 <div className="h-48 w-full bg-accent-colour animate-pulse rounded-lg" />
@@ -250,7 +250,7 @@ const NewLibraryView = () => {
         <div className="px-4">
           {currentStories.length > 0 ? (
             <>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {currentStories.map((story: any) => (
                   <div key={story.id} className="relative">
                     <StoryCard

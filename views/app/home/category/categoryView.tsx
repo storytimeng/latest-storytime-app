@@ -126,13 +126,13 @@ const CategoryView = ({
   return (
     <div
       ref={scrollContainerRef}
-      className="min-h-screen px-4 pt-4 pb-20 bg-accent-shade-1 overflow-y-auto"
+      className="min-h-screen px-4 md:px-6 lg:px-8 pt-4 pb-20 md:pb-6 bg-accent-shade-1 overflow-y-auto"
     >
       <PageHeader title={title} showBackButton />
 
       <div className="mt-6">
         {isLoading ? (
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {[...Array(6)].map((_, i) => (
               <div
                 key={i}

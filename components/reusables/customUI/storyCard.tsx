@@ -81,7 +81,7 @@ const StoryCard = ({
     <Card
       className={cn(
         "flex-shrink-0 rounded-xl border-none bg-transparent shadow-none space-y-2 relative",
-        isPenMode ? "w-full cursor-pointer" : "w-[160px] cursor-pointer",
+        isPenMode ? "w-full cursor-pointer" : "w-[160px] md:w-[200px] lg:w-[220px] cursor-pointer",
         className,
       )}
       onClick={isPenMode ? handleCardClick : undefined}

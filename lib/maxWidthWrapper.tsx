@@ -13,7 +13,7 @@ export function MaxWidthWrapper({
   return (
     <main
       className={cn(
-        "w-full min-h-screen max-w-md mx-auto bg-[#FFFAF1]",
+        "w-full min-h-screen max-w-md md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto bg-[#FFFAF1]",
         className
       )}
     >
