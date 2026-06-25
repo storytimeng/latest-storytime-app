@@ -46,9 +46,12 @@ export const ReadingModal = () => {
 
   const handleSave = async () => {
     const formattedTime = `${time.hour}:${time.minute.toString().padStart(2, "0")} ${time.period.toLowerCase()}`;
-    
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
     const success = await updateProfile({
       timeToRead: formattedTime,
+      reminder: "daily",
+      timezone,
     });
 
     if (success) {

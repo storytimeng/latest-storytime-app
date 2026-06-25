@@ -117,10 +117,12 @@ export const WritingModal = () => {
   const handleSave = async () => {
     const formattedTime = `${time.hour}:${time.minute.toString().padStart(2, "0")} ${time.period.toLowerCase()}`;
     const reminder = isDaily ? "daily" : selectedDays.join(",");
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
     const success = await updateProfile({
       timeToWrite: formattedTime,
       reminder,
+      timezone,
     });
 
     if (success) {
