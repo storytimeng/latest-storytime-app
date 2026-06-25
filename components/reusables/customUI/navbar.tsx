@@ -6,10 +6,12 @@ import { Magnetik_Medium } from "@/lib/font";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { useNotifications } from "@/src/hooks/useNotifications";
+import { useAuthStore } from "@/src/stores/useAuthStore";
 
 const Navbar = () => {
   const pathname = usePathname();
-  const { unreadCount } = useNotifications();
+  const isLoggedIn = useAuthStore((s) => !!s.token);
+  const { unreadCount } = useNotifications(isLoggedIn);
 
   const navItems = [
     { path: "/home", icon: Home, label: "Home" },

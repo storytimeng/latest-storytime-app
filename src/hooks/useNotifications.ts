@@ -9,12 +9,12 @@ import {
   notificationsControllerDeleteAllNotifications,
 } from "@/src/client";
 
-export function useNotifications() {
+export function useNotifications(enabled = true) {
   const [page, setPage] = React.useState(1);
   const limit = 20;
 
   const { data, error, isLoading, mutate } = useSWR(
-    `/notifications?page=${page}&limit=${limit}`,
+    enabled ? `/notifications?page=${page}&limit=${limit}` : null,
     async () => {
       const response = await notificationsControllerGetUserNotifications({
         query: { page, limit },
@@ -32,7 +32,7 @@ export function useNotifications() {
   );
 
   const { data: unreadCountData, mutate: mutateUnreadCount } = useSWR(
-    "/notifications/unread/count",
+    enabled ? "/notifications/unread/count" : null,
     async () => {
       const response = await notificationsControllerGetUnreadCount();
       // Unwrap the nested data structure
