@@ -403,7 +403,7 @@ export function useStoryContent({
         // If updating chapterNumber, ensure it's unique
         if (field === "chapterNumber") {
           const numValue =
-            typeof value === "string" ? parseFloat(value) : value;
+            typeof value === "string" ? parseFloat(value) : Number(value);
           const uniqueNumber = findUniqueChapterNumber(numValue, id, prev);
           return prev.map((ch) =>
             ch.id === id ? { ...ch, [field]: uniqueNumber } : ch,
