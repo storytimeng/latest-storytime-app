@@ -17,16 +17,10 @@ const staticRoutes: MetadataRoute.Sitemap = [
     priority: 0.9,
   },
   {
-    url: `${BASE}/library`,
-    lastModified: new Date(),
-    changeFrequency: "hourly",
-    priority: 0.9,
-  },
-  {
     url: `${BASE}/search`,
     lastModified: new Date(),
     changeFrequency: "daily",
-    priority: 0.7,
+    priority: 0.8,
   },
   {
     url: `${BASE}/leaderboard`,
@@ -46,13 +40,39 @@ const staticRoutes: MetadataRoute.Sitemap = [
     changeFrequency: "weekly",
     priority: 0.7,
   },
+  // Category discovery pages
+  {
+    url: `${BASE}/category/recently-added`,
+    lastModified: new Date(),
+    changeFrequency: "hourly",
+    priority: 0.9,
+  },
+  {
+    url: `${BASE}/category/trending`,
+    lastModified: new Date(),
+    changeFrequency: "hourly",
+    priority: 0.9,
+  },
+  {
+    url: `${BASE}/category/popular`,
+    lastModified: new Date(),
+    changeFrequency: "daily",
+    priority: 0.8,
+  },
+  {
+    url: `${BASE}/category/only-on-storytime`,
+    lastModified: new Date(),
+    changeFrequency: "daily",
+    priority: 0.8,
+  },
 ];
 
 async function fetchPublishedStories(): Promise<MetadataRoute.Sitemap> {
   try {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || `https://api.${APP_CONFIG.domain}`;
+    const apiUrl =
+      process.env.NEXT_PUBLIC_API_URL || `https://api.${APP_CONFIG.domain}`;
     const res = await fetch(
-      `${apiUrl}/stories?page=1&limit=200&status=published`,
+      `${apiUrl}/stories?page=1&limit=500&status=published`,
       { next: { revalidate: 3600 } },
     );
 
@@ -73,7 +93,38 @@ async function fetchPublishedStories(): Promise<MetadataRoute.Sitemap> {
   }
 }
 
+async function fetchGenrePages(): Promise<MetadataRoute.Sitemap> {
+  try {
+    const apiUrl =
+      process.env.NEXT_PUBLIC_API_URL || `https://api.${APP_CONFIG.domain}`;
+    const res = await fetch(`${apiUrl}/stories/genres`, {
+      next: { revalidate: 86400 }, // refresh genres once a day
+    });
+
+    if (!res.ok) return [];
+
+    const json = await res.json();
+    const genres: Array<string | { name: string }> =
+      json?.data?.genres || json?.genres || json?.data || [];
+
+    return genres.map((g) => {
+      const name = typeof g === "string" ? g : g.name;
+      return {
+        url: `${BASE}/all-genres/${encodeURIComponent(name)}`,
+        lastModified: new Date(),
+        changeFrequency: "weekly" as const,
+        priority: 0.7,
+      };
+    });
+  } catch {
+    return [];
+  }
+}
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const dynamicRoutes = await fetchPublishedStories();
-  return [...staticRoutes, ...dynamicRoutes];
+  const [storyRoutes, genreRoutes] = await Promise.all([
+    fetchPublishedStories(),
+    fetchGenrePages(),
+  ]);
+  return [...staticRoutes, ...storyRoutes, ...genreRoutes];
 }

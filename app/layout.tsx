@@ -102,23 +102,63 @@ export default function RootLayout({
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              "@context": "https://schema.org",
-              "@type": "Organization",
-              name: "Storytime",
-              url: "https://storytime.ng",
-              logo: "https://storytime.ng/images/logo.png",
-              description:
-                "Storytime is the home for budding authors and curious readers. A cheerful community where stories are shared, skills are nurtured, and imagination comes alive.",
-              sameAs: [
-                "https://twitter.com/storytimeng",
-                "https://instagram.com/storytimeng",
-                "https://facebook.com/storytimeng",
-                "https://tiktok.com/@storytimeng",
-                "https://youtube.com/@storytimeng",
-                "https://linkedin.com/company/storytimeng",
-              ],
-            }),
+            __html: JSON.stringify([
+              {
+                "@context": "https://schema.org",
+                "@type": "Organization",
+                "@id": "https://storytime.ng/#organization",
+                name: "Storytime",
+                url: "https://storytime.ng",
+                logo: {
+                  "@type": "ImageObject",
+                  url: "https://storytime.ng/images/logo.png",
+                  width: 85,
+                  height: 28,
+                },
+                description:
+                  "Storytime is the home for budding authors and curious readers. A cheerful community where stories are shared, skills are nurtured, and imagination comes alive.",
+                sameAs: [
+                  "https://twitter.com/storytimeng",
+                  "https://instagram.com/storytimeng",
+                  "https://facebook.com/storytimeng",
+                  "https://tiktok.com/@storytimeng",
+                  "https://youtube.com/@storytimeng",
+                  "https://linkedin.com/company/storytimeng",
+                ],
+              },
+              {
+                "@context": "https://schema.org",
+                "@type": "WebSite",
+                "@id": "https://storytime.ng/#website",
+                url: "https://storytime.ng",
+                name: "Storytime",
+                description: "Home To Budding Authors & Readers. Read, Write, & Grow.",
+                publisher: { "@id": "https://storytime.ng/#organization" },
+                potentialAction: {
+                  "@type": "SearchAction",
+                  target: {
+                    "@type": "EntryPoint",
+                    urlTemplate: "https://storytime.ng/search?q={search_term_string}",
+                  },
+                  "query-input": "required name=search_term_string",
+                },
+              },
+              {
+                "@context": "https://schema.org",
+                "@type": "WebApplication",
+                "@id": "https://storytime.ng/#app",
+                name: "Storytime",
+                url: "https://storytime.ng",
+                applicationCategory: "EntertainmentApplication",
+                operatingSystem: "Web, iOS, Android",
+                offers: {
+                  "@type": "Offer",
+                  price: "0",
+                  priceCurrency: "USD",
+                },
+                publisher: { "@id": "https://storytime.ng/#organization" },
+              },
+            ]),
           }}
         />
       </head>

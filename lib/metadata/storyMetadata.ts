@@ -164,3 +164,56 @@ export async function generateStoryMetadata(
     description: APP_CONFIG.shortDescription,
   };
 }
+
+/** Build an Article JSON-LD object for a story page. Returns null on error. */
+export async function buildStoryJsonLd(id: string): Promise<object | null> {
+  try {
+    client.setConfig({
+      baseUrl: process.env.NEXT_PUBLIC_API_URL || `https://api.${APP_CONFIG.domain}`,
+    });
+
+    const response = await storiesControllerFindOne({ path: { id } });
+    if (response.error || !response.data) return null;
+
+    const data = (response.data as any)?.data ?? response.data;
+    const authorName = data.author?.penName || "Anonymous";
+    const imageUrl = data.imageUrl || data.coverImage;
+    const absoluteImage = imageUrl?.startsWith("http")
+      ? imageUrl
+      : imageUrl
+      ? `${SITE_URL}${imageUrl}`
+      : `${SITE_URL}${APP_CONFIG.images.banner}`;
+    const genres: string[] = (data.genres || []).map((g: any) =>
+      typeof g === "string" ? g : g.name || g
+    );
+
+    return {
+      "@context": "https://schema.org",
+      "@type": "Book",
+      name: data.title,
+      description: stripHtmlAndTruncate(data.description || "", 200),
+      url: `${SITE_URL}/story/${id}`,
+      image: absoluteImage,
+      author: {
+        "@type": "Person",
+        name: authorName,
+      },
+      publisher: {
+        "@type": "Organization",
+        name: APP_CONFIG.name,
+        url: SITE_URL,
+        logo: {
+          "@type": "ImageObject",
+          url: `${SITE_URL}${APP_CONFIG.images.logo}`,
+        },
+      },
+      inLanguage: data.language || "en",
+      genre: genres,
+      datePublished: data.createdAt,
+      dateModified: data.updatedAt || data.createdAt,
+      ...(data.storyStatus === "complete" && { bookFormat: "EBook" }),
+    };
+  } catch {
+    return null;
+  }
+}
