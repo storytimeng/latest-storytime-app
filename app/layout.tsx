@@ -2,6 +2,7 @@ import "@/styles/globals.css";
 import { Metadata, Viewport } from "next";
 import { Link } from "@heroui/link";
 import clsx from "clsx";
+import Script from "next/script";
 import { APP_CONFIG } from "@/config/app";
 import { MaxWidthWrapper } from "@/lib/maxWidthWrapper";
 import { Providers } from "./providers";
@@ -180,6 +181,26 @@ export default function RootLayout({
             <OfflineManager />
           </PWAProvider>
         </Providers>
+
+        {/* Google Analytics — loads after page is interactive, does not block render */}
+        {APP_CONFIG.analytics.googleAnalyticsId && (
+          <>
+            <Script
+              src={`https://www.googletagmanager.com/gtag/js?id=${APP_CONFIG.analytics.googleAnalyticsId}`}
+              strategy="afterInteractive"
+            />
+            <Script id="google-analytics" strategy="afterInteractive">
+              {`
+                window.dataLayer = window.dataLayer || [];
+                function gtag(){dataLayer.push(arguments);}
+                gtag('js', new Date());
+                gtag('config', '${APP_CONFIG.analytics.googleAnalyticsId}', {
+                  page_path: window.location.pathname,
+                });
+              `}
+            </Script>
+          </>
+        )}
       </body>
     </html>
   );

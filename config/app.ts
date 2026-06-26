@@ -83,7 +83,7 @@ export const APP_CONFIG = {
   },
 
   analytics: {
-    googleAnalyticsId: "",
+    googleAnalyticsId: "G-SQKY3GMQ0P",
     googleTagManagerId: "",
   },
 
