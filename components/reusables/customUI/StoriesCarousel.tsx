@@ -64,7 +64,7 @@ export function StoriesCarousel({
 
   if (stories.length === 0) {
     return (
-      <div className="relative h-52 rounded-xl bg-accent-colour flex items-center justify-center">
+      <div className="relative h-52 md:h-80 rounded-xl bg-accent-colour flex items-center justify-center">
         <p className="text-grey-2">No stories available</p>
       </div>
     );
@@ -110,7 +110,7 @@ export function StoriesCarousel({
             return (
               <motion.div
                 key={story.id}
-                className="relative h-52 rounded-xl flex-shrink-0 w-full"
+                className="relative h-52 md:h-80 rounded-xl flex-shrink-0 w-full"
               >
                 <Link
                   href={`/story/${story.id}`}

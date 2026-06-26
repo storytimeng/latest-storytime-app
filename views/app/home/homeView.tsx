@@ -236,7 +236,7 @@ const HomeView = () => {
           </div>
 
           {exclusiveLoading ? (
-            <div className="relative h-52 rounded-xl bg-accent-colour animate-pulse" />
+            <div className="relative h-52 md:h-80 rounded-xl bg-accent-colour animate-pulse" />
           ) : (
             <StoriesCarousel
               stories={exclusiveStories.slice(0, 5)}
