@@ -63,5 +63,23 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function CategoryPage({ params }: Props) {
   const { slug } = await params;
-  return <CategoryView categorySlug={decodeURIComponent(slug)} />;
+  const raw = decodeURIComponent(slug);
+  const known = CATEGORY_META[raw];
+  const label = known?.title ?? raw.split(/[-_]/).map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+
+  const breadcrumbJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: APP_CONFIG.url },
+      { "@type": "ListItem", position: 2, name: label, item: `${APP_CONFIG.url}/category/${encodeURIComponent(raw)}` },
+    ],
+  };
+
+  return (
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
+      <CategoryView categorySlug={raw} />
+    </>
+  );
 }

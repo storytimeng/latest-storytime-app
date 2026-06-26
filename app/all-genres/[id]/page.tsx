@@ -40,7 +40,28 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 const GenrePage = async ({ params }: Props) => {
   const { id } = await params;
-  return <CategoryView categorySlug={decodeURIComponent(id)} type="genre" />;
+  const raw = decodeURIComponent(id);
+  const genreName = raw
+    .split(/[-_]/)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+
+  const breadcrumbJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: APP_CONFIG.url },
+      { "@type": "ListItem", position: 2, name: "Genres", item: `${APP_CONFIG.url}/all-genres` },
+      { "@type": "ListItem", position: 3, name: genreName, item: `${APP_CONFIG.url}/all-genres/${encodeURIComponent(raw)}` },
+    ],
+  };
+
+  return (
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
+      <CategoryView categorySlug={raw} type="genre" />
+    </>
+  );
 };
 
 export default GenrePage;
