@@ -30,6 +30,7 @@ interface ExtendedStory extends Omit<StoryResponseDto, "viewCount"> {
   rating?: number;
   comments?: number;
   viewCount?: number;
+  progress?: number;
 }
 
 interface StoryCardProps {
@@ -111,6 +112,23 @@ const StoryCard = ({
           {displayGenre}
         </div>
 
+        {/* Reading progress bar — shown in library mode when progress > 0 */}
+        {!isPenMode && hideStats && story.progress > 0 && (
+          <div className="absolute bottom-0 left-0 right-0 px-1.5 pb-1.5">
+            <div className="flex items-center gap-1.5">
+              <div className="flex-1 h-1 bg-black/30 rounded-full overflow-hidden backdrop-blur-sm">
+                <div
+                  className="h-full bg-complimentary-colour rounded-full transition-all duration-300"
+                  style={{ width: `${Math.min(story.progress, 100)}%` }}
+                />
+              </div>
+              <span className="text-[9px] font-bold text-white drop-shadow-sm tabular-nums">
+                {Math.round(story.progress)}%
+              </span>
+            </div>
+          </div>
+        )}
+
         {/* Action buttons for pen mode */}
         {isPenMode && (
           <>
@@ -167,8 +185,8 @@ const StoryCard = ({
           </>
         ) : (
           <>
-            {/* Likes + Comments + Views */}
-            {!hideStats && (
+            {/* Likes + Comments + Views (browse mode) or progress label (library mode) */}
+            {!hideStats ? (
               <div className="flex items-center gap-3 text-xs text-[#361B17]">
                 <div className="flex items-center gap-1">
                   <ThumbsUp className="w-3 h-3 fill-[#F8951D] text-[#F8951D]" />
@@ -186,7 +204,11 @@ const StoryCard = ({
                   </span>
                 </div>
               </div>
-            )}
+            ) : story.progress > 0 ? (
+              <p className={cn("text-[10px] text-complimentary-colour", Magnetik_Regular.className)}>
+                {story.progress >= 100 ? "Completed" : `${Math.round(story.progress)}% read`}
+              </p>
+            ) : null}
 
             {/* Author */}
             <div className="flex items-center gap-2">
