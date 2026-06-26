@@ -71,11 +71,6 @@ export const metadata: Metadata = {
   alternates: {
     canonical: APP_CONFIG.url,
   },
-  verification: {
-    other: {
-      "msvalidate.01": "1E776355B431E74E708C85C0685CE258",
-    },
-  },
   robots: {
     index: true,
     follow: true,
@@ -104,6 +99,7 @@ export default function RootLayout({
   return (
     <html suppressHydrationWarning lang="en">
       <head>
+        <meta name="msvalidate.01" content="1E776355B431E74E708C85C0685CE258" />
         <link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192x192.png" />
         <script
           type="application/ld+json"
