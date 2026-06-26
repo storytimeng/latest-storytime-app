@@ -5,7 +5,6 @@ import {
   HelpCircle,
   Phone,
   Trash2,
-  LogOut,
   Database,
   Crown,
 } from "lucide-react";
@@ -77,14 +76,6 @@ export const SETTINGS_OPTIONS: SettingOption[] = [
     id: "delete-account",
     label: "Delete Account",
     icon: <Trash2 size={20} />,
-    hasToggle: false,
-    isDanger: true,
-    // No route, opens modal
-  },
-  {
-    id: "logout",
-    label: "Log Out",
-    icon: <LogOut size={20} />,
     hasToggle: false,
     isDanger: true,
     // No route, opens modal

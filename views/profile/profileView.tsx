@@ -3,7 +3,8 @@
 import React, { useEffect, useState } from "react";
 import { Modal, ModalContent } from "@heroui/modal";
 
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, LogOut } from "lucide-react";
+import { LogoutModal } from "@/components/reusables/customUI";
 import {
   PageHeader,
   GenreButton,
@@ -47,6 +48,7 @@ const ProfileView = () => {
 
   // Keep track of the last active modal to preserve content during exit animation
   const [lastActiveModal, setLastActiveModal] = useState<string | null>(null);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [ambassadorEntryPath, setAmbassadorEntryPath] = useState(
     "/ambassador/welcome",
   );
@@ -373,6 +375,15 @@ const ProfileView = () => {
               subtitle="Subscribe to unlock advanced voices, playback controls, and more"
               className="mb-8"
             />
+
+            {/* Log Out */}
+            <button
+              onClick={() => setShowLogoutModal(true)}
+              className="w-full flex items-center gap-3 px-4 py-4 bg-white rounded-lg text-red-500 hover:bg-red-50 transition-colors mb-10"
+            >
+              <LogOut size={18} className="text-red-500" />
+              <span className="body-text-small-regular-auto">Log Out</span>
+            </button>
           </div>
         </div>
       </div>
@@ -389,6 +400,22 @@ const ProfileView = () => {
         }}
       >
         <ModalContent>{renderModalContent()}</ModalContent>
+      </Modal>
+
+      {/* Logout Modal */}
+      <Modal
+        isOpen={showLogoutModal}
+        onClose={() => setShowLogoutModal(false)}
+        className="m-0"
+        classNames={{
+          wrapper: "items-end",
+          base: "m-0 max-h-[85vh]",
+          backdrop: "bg-black/50",
+        }}
+      >
+        <ModalContent>
+          <LogoutModal onClose={() => setShowLogoutModal(false)} />
+        </ModalContent>
       </Modal>
     </>
   );
