@@ -71,6 +71,11 @@ export const metadata: Metadata = {
   alternates: {
     canonical: APP_CONFIG.url,
   },
+  verification: {
+    other: {
+      "msvalidate.01": "1E776355B431E74E708C85C0685CE258",
+    },
+  },
   robots: {
     index: true,
     follow: true,
