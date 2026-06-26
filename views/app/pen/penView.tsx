@@ -167,7 +167,7 @@ const PenView = () => {
 
   // Empty State Component (when user has no stories at all)
   const EmptyState = () => (
-    <div className="min-h-screen bg-accent-shade-1 max-w-[28rem] mx-auto relative">
+    <div className="min-h-screen bg-accent-shade-1 max-w-[28rem] md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto relative">
       {/* Library Button */}
       <div className="absolute z-10 top-4 right-4">
         <Button
@@ -259,7 +259,7 @@ const PenView = () => {
         </div>
 
         {/* Stories Grid - Show first 4 stories */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {filteredStories
             .slice(0, 4)
             .map((story: ExtendedStory, idx: number) => (
@@ -302,7 +302,7 @@ const PenView = () => {
 
       {/* Stories Grid */}
       {filteredStories.length > 0 ? (
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {filteredStories.map((story: ExtendedStory, idx: number) => (
             <StoryCard
               key={(story as ExtendedStory).id ?? idx}
@@ -337,7 +337,7 @@ const PenView = () => {
   if (showAllStories) {
     return (
       <>
-        <div className="min-h-screen bg-accent-shade-1 max-w-[28rem] mx-auto px-4 pb-6">
+        <div className="min-h-screen bg-accent-shade-1 max-w-[28rem] md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto px-4 md:px-6 lg:px-8 pb-20 md:pb-6">
           {/* Custom Header for All Stories View */}
           <div className="relative flex items-center justify-center pt-4 mb-6">
             <button
@@ -406,7 +406,7 @@ const PenView = () => {
 
   return (
     <>
-      <div className="min-h-screen bg-accent-shade-1 max-w-[28rem] mx-auto px-4 pb-6">
+      <div className="min-h-screen bg-accent-shade-1 max-w-[28rem] md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto px-4 md:px-6 lg:px-8 pb-20 md:pb-6">
         {/* Main Content - My Stories Preview */}
         <MyStoriesPreview />
       </div>
@@ -418,7 +418,7 @@ const PenView = () => {
         placement="bottom"
         classNames={{
           backdrop: "bg-black/50",
-          base: "bg-universal-white rounded-t-3xl m-0 mb-0 max-w-[28rem] mx-auto",
+          base: "bg-universal-white rounded-t-3xl m-0 mb-0 max-w-[28rem] md:max-w-xl mx-auto",
           closeButton: "hidden",
         }}
       >

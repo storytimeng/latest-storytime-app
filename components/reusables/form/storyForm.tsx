@@ -87,7 +87,7 @@ const StoryBriefModal: React.FC<StoryBriefModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50">
-      <div className="bg-universal-white rounded-t-2xl w-full max-w-[28rem] p-6 space-y-6">
+      <div className="bg-universal-white rounded-t-2xl w-full max-w-[28rem] md:max-w-xl p-6 space-y-6">
         <div className="flex items-center justify-between">
           <h2
             className={`text-xl text-primary-colour ${Magnetik_Bold.className}`}
@@ -208,7 +208,7 @@ const AdditionalInfoModal: React.FC<AdditionalInfoModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50">
-      <div className="bg-universal-white rounded-t-2xl w-full max-w-[28rem] p-6 space-y-6">
+      <div className="bg-universal-white rounded-t-2xl w-full max-w-[28rem] md:max-w-xl p-6 space-y-6">
         <div className="flex items-center justify-between">
           <h2
             className={`text-xl text-primary-colour ${Magnetik_Bold.className}`}
@@ -1852,7 +1852,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
         placement="bottom"
         classNames={{
           backdrop: "bg-black/50",
-          base: "bg-universal-white rounded-t-3xl m-0 mb-0 max-w-[28rem] mx-auto",
+          base: "bg-universal-white rounded-t-3xl m-0 mb-0 max-w-[28rem] md:max-w-xl mx-auto",
           closeButton: "hidden",
         }}
       >

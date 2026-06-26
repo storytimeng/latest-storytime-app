@@ -55,7 +55,7 @@ const StoryView: React.FC<StoryViewProps> = ({ mode, storyId }) => {
 
   if (mode === "edit" && isFetchingStory) {
     return (
-      <div className="min-h-screen bg-accent-shade-1 max-w-[28rem] mx-auto">
+      <div className="min-h-screen bg-accent-shade-1 max-w-[28rem] md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto">
         <PageHeader
           title={pageTitle}
           backLink={backLink}
@@ -69,7 +69,7 @@ const StoryView: React.FC<StoryViewProps> = ({ mode, storyId }) => {
 
   return (
     <StoryViewErrorBoundary>
-      <div className="min-h-screen bg-accent-shade-1 max-w-[28rem] mx-auto">
+      <div className="min-h-screen bg-accent-shade-1 max-w-[28rem] md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto">
         {/* Page Header */}
         <PageHeader
           title={pageTitle}
@@ -80,7 +80,7 @@ const StoryView: React.FC<StoryViewProps> = ({ mode, storyId }) => {
         />
 
         {/* Story Form with Suspense for lazy loading */}
-        <div className="px-4">
+        <div className="px-4 md:px-6 lg:px-8">
           <Suspense fallback={<LoadingState message="Loading form..." />}>
             <StoryForm
               mode={mode}
