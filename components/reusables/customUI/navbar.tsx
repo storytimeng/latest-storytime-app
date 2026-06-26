@@ -7,11 +7,14 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { useNotifications } from "@/src/hooks/useNotifications";
 import { useAuthStore } from "@/src/stores/useAuthStore";
+import { useUserStore } from "@/src/stores/useUserStore";
+import { Avatar } from "@heroui/avatar";
 
 const Navbar = () => {
   const pathname = usePathname();
   const isLoggedIn = useAuthStore((s) => !!s.token);
   const { unreadCount } = useNotifications(isLoggedIn);
+  const { user } = useUserStore();
 
   const navItems = [
     { path: "/home", icon: Home, label: "Home" },
@@ -25,11 +28,19 @@ const Navbar = () => {
   };
 
   const notificationActive = pathname.startsWith("/notification");
+  const profileActive = pathname.startsWith("/profile");
 
   const allItems = [
     ...navItems.map(({ path, icon, label }) => ({ path, icon, label, isNotification: false })),
     { path: "/notification", icon: Bell, label: "Notification", isNotification: true },
   ];
+
+  const initials = (user?.penName || user?.firstName || "U")
+    .split(" ")
+    .map((n: string) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
 
   return (
     <>
@@ -150,6 +161,46 @@ const Navbar = () => {
               );
             })}
           </nav>
+
+          {/* Profile avatar */}
+          <Link
+            href="/profile"
+            prefetch={true}
+            aria-label="Go to profile"
+            aria-current={profileActive ? "page" : undefined}
+            className={`flex items-center gap-2.5 pl-3 border-l border-[#AFAFAF]/40 transition-opacity ${
+              profileActive ? "opacity-100" : "opacity-80 hover:opacity-100"
+            }`}
+          >
+            <Avatar
+              src={user?.avatar || user?.profilePicture}
+              name={initials}
+              size="sm"
+              classNames={{
+                base: `transition-all ${
+                  profileActive
+                    ? "ring-2 ring-[#361B17] ring-offset-1"
+                    : "ring-1 ring-[#AFAFAF]/60 hover:ring-[#361B17]/40"
+                } bg-complimentary-shade-1`,
+                name: `${Magnetik_Bold.className} text-white text-[10px]`,
+              }}
+              showFallback
+              fallback={
+                <img
+                  src="/images/storytime-fallback.png"
+                  alt="profile"
+                  className="object-cover w-full h-full"
+                />
+              }
+            />
+            <span
+              className={`text-sm hidden lg:block max-w-[120px] truncate ${Magnetik_Medium.className} ${
+                profileActive ? "text-[#361B17] font-semibold" : "text-[#361B17]/70"
+              }`}
+            >
+              {user?.penName || user?.firstName || "Profile"}
+            </span>
+          </Link>
         </div>
       </header>
     </>
