@@ -497,7 +497,7 @@ export const StoryContent = React.memo(
     return (
       <div
         ref={contentRef}
-        className={`px-4 py-6 ${listenMode ? "pb-40" : "pb-9"} ${hasNavigation ? "pt-44" : "pt-32"}`}
+        className={`px-4 md:px-12 lg:px-24 xl:px-32 py-6 ${listenMode ? "pb-40" : "pb-9"} ${hasNavigation ? "pt-44" : "pt-32"}`}
       >
         {/* Context Menu Popup */}
         {contextMenu.isOpen && !listenMode && (
@@ -525,7 +525,7 @@ export const StoryContent = React.memo(
 
         <div className="mb-6 space-y-4">
           <div
-            className={`text-primary-shade-5 text-sm leading-relaxed ${Magnetik_Regular.className} story-rich-text`}
+            className={`text-primary-shade-5 text-sm md:text-base md:leading-loose ${Magnetik_Regular.className} story-rich-text`}
           >
             {displayBlocks.length > 0 ? (
               displayBlocks.map((block, bIdx) => {

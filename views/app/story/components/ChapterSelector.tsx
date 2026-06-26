@@ -19,7 +19,7 @@ export const ChapterSelector = React.memo(
   }: ChapterSelectorProps) => {
     return (
       <div
-        className={`fixed top-28 left-1/2 -translate-x-1/2 w-full max-w-[28rem] bg-accent-shade-1 px-4 py-3 z-40 transition-transform duration-300 ${
+        className={`fixed top-28 left-1/2 -translate-x-1/2 w-full max-w-[28rem] md:max-w-3xl lg:max-w-5xl xl:max-w-6xl bg-accent-shade-1 px-4 md:px-6 lg:px-8 py-3 z-40 transition-transform duration-300 ${
           isVisible ? "translate-y-0" : "-translate-y-full"
         }`}
       >

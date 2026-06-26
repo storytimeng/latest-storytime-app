@@ -643,7 +643,7 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
     <TTSProvider>
       <div
         ref={contentContainerRef}
-        className="min-h-screen bg-accent-shade-1 relative overflow-hidden max-w-[28rem] mx-auto"
+        className="min-h-screen bg-accent-shade-1 relative max-w-[28rem] md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto"
       >
         {/* Offline Mode Banner */}
         {isUsingOfflineData && <OfflineBanner />}
@@ -731,7 +731,7 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
 
               {/* Interaction Section (only when online) */}
               {isOnline && (
-                <div className="px-4 pb-6">
+                <div className="px-4 md:px-12 lg:px-24 xl:px-32 pb-6">
                   <InteractionSection
                     likeCount={displayLikeCount}
                     commentCount={displayCommentCount}

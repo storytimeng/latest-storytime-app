@@ -44,7 +44,7 @@ export const StoryHeader = React.memo(
       <>
         {/* Header */}
         <div
-          className={`fixed ${isOffline ? "top-10" : "top-0"} left-1/2 -translate-x-1/2 w-full max-w-[28rem] bg-accent-shade-1 px-4 pt-5 pb-4 z-50 transition-transform duration-300 ${
+          className={`fixed ${isOffline ? "top-10" : "top-0"} left-1/2 -translate-x-1/2 w-full max-w-[28rem] md:max-w-3xl lg:max-w-5xl xl:max-w-6xl bg-accent-shade-1 px-4 md:px-6 lg:px-8 pt-5 pb-4 z-50 transition-transform duration-300 ${
             isVisible ? "translate-y-0" : "-translate-y-full"
           }`}
         >
@@ -57,7 +57,7 @@ export const StoryHeader = React.memo(
 
         {/* Title Bar */}
         <div
-          className={`fixed top-16 left-1/2 -translate-x-1/2 w-full max-w-[28rem] bg-accent-colour px-4 py-3 z-50 transition-transform duration-300 ${
+          className={`fixed top-16 left-1/2 -translate-x-1/2 w-full max-w-[28rem] md:max-w-3xl lg:max-w-5xl xl:max-w-6xl bg-accent-colour px-4 md:px-6 lg:px-8 py-3 z-50 transition-transform duration-300 ${
             isVisible ? "translate-y-0" : "-translate-y-full"
           }`}
         >

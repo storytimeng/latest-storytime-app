@@ -132,7 +132,7 @@ export const NavigationBar = React.memo(
     return (
       <>
         <div
-          className={`fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[28rem] bg-accent-shade-1/95 backdrop-blur-md z-40 transition-transform duration-300 ease-in-out border-t border-light-grey-2 shadow-lg ${
+          className={`fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[28rem] md:max-w-3xl lg:max-w-5xl xl:max-w-6xl bg-accent-shade-1/95 backdrop-blur-md z-40 transition-transform duration-300 ease-in-out border-t border-light-grey-2 shadow-lg ${
             isVisible ? "translate-y-0" : "translate-y-full pointer-events-none"
           }`}
         >
