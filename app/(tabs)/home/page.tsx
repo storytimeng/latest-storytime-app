@@ -10,6 +10,10 @@ const HomeView = lazy(() =>
 const HomePage = () => {
   return (
     <TabLayout>
+      {/* Visually hidden H1 for SEO — screen readers and crawlers see it, users don't */}
+      <h1 className="sr-only">
+        Storytime — Read and Write African Stories Online
+      </h1>
       <Suspense
         fallback={
           <div className="min-h-screen bg-accent-shade-1 p-4 space-y-4">
