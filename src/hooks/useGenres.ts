@@ -9,19 +9,16 @@ export function useGenres() {
       if (response.error) {
         throw response.error;
       }
-      // API returns nested structure: { data: { genres: string[] } }
-      // Need to access response.data.data.genres or response.data.genres
-      const genres = (response.data as any)?.data?.genres || response.data?.genres || [];
-      console.log("Genres API response:", response.data);
-      console.log("Extracted genres:", genres);
+      const genres =
+        (response.data as any)?.data?.genres || response.data?.genres || [];
       return genres;
     },
     {
-      revalidateOnFocus: false,
-      shouldRetryOnError: false,
-      // Preload on mount
       revalidateOnMount: true,
-    }
+      revalidateOnFocus: true,      // Refresh when user returns to the tab
+      refreshInterval: 5 * 60 * 1000, // Poll every 5 minutes
+      shouldRetryOnError: false,
+    },
   );
 
   return {
