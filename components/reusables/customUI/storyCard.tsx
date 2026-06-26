@@ -113,17 +113,17 @@ const StoryCard = ({
         </div>
 
         {/* Reading progress bar — shown in library mode when progress > 0 */}
-        {!isPenMode && hideStats && story.progress > 0 && (
+        {!isPenMode && hideStats && (story.progress ?? 0) > 0 && (
           <div className="absolute bottom-0 left-0 right-0 px-1.5 pb-1.5">
             <div className="flex items-center gap-1.5">
               <div className="flex-1 h-1 bg-black/30 rounded-full overflow-hidden backdrop-blur-sm">
                 <div
                   className="h-full bg-complimentary-colour rounded-full transition-all duration-300"
-                  style={{ width: `${Math.min(story.progress, 100)}%` }}
+                  style={{ width: `${Math.min(story.progress ?? 0, 100)}%` }}
                 />
               </div>
               <span className="text-[9px] font-bold text-white drop-shadow-sm tabular-nums">
-                {Math.round(story.progress)}%
+                {Math.round(story.progress ?? 0)}%
               </span>
             </div>
           </div>
@@ -204,9 +204,9 @@ const StoryCard = ({
                   </span>
                 </div>
               </div>
-            ) : story.progress > 0 ? (
+            ) : (story.progress ?? 0) > 0 ? (
               <p className={cn("text-[10px] text-complimentary-colour", Magnetik_Regular.className)}>
-                {story.progress >= 100 ? "Completed" : `${Math.round(story.progress)}% read`}
+                {(story.progress ?? 0) >= 100 ? "Completed" : `${Math.round(story.progress ?? 0)}% read`}
               </p>
             ) : null}
 
