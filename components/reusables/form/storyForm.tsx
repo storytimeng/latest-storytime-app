@@ -1155,8 +1155,8 @@ const StoryForm: React.FC<StoryFormProps> = ({
         {[
           { key: "goAnonymous", label: "Go anonymous" },
           { key: "onlyOnStorytime", label: "Only on Storytime" },
-          { key: "Contains triggers/sensitive content", label: "Trigger" },
-          { key: "copyright protected", label: "Copyright" },
+          { key: "trigger", label: "18+ Content" },
+          { key: "copyright", label: "Copyright" },
         ].map(({ key, label }) => (
           <div key={key} className="flex items-center justify-between">
             <span

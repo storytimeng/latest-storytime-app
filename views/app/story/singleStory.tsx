@@ -1075,6 +1075,11 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
               Only on Storytime
             </span>
           )}
+          {story?.trigger && (
+            <span className="inline-flex items-center gap-1 bg-red-600 text-white text-[10px] font-bold px-2.5 py-1 rounded uppercase tracking-wider shadow-sm">
+              18+
+            </span>
+          )}
           <span
             className={cn(
               "inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded uppercase tracking-wider",

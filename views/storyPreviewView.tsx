@@ -37,7 +37,7 @@ The archangels rode their horses—Lucifer on his silver stallion, Michael on hi
 A disgruntled look was etched on Lucifer's face. Only curiosity and wonder filled Gabriel's and Michael's.
 
 They knew this was the general assembly where Elohim would finally share his upcoming plans for the cosmos.)`,
-    tags: ["Only on Storytime", "Trigger Warning"],
+    tags: ["Only on Storytime", "18+"],
     isAnonymous: true,
     onlyOnStorytime: true,
     hasTrigger: true,
