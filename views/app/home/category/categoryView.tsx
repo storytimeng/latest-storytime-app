@@ -44,10 +44,10 @@ const CategoryView = ({
   // Convert slug to readable genre name for genre type
   const genreName =
     categoryType === "genre"
-      ? categorySlug
-          ?.split("-")
+      ? decodeURIComponent(categorySlug ?? "")
+          .split(/[-_]/)
           .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-          .join(" ")
+          .join(" ") || undefined
       : undefined;
 
   // Get title based on type

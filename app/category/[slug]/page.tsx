@@ -7,5 +7,5 @@ export default async function CategoryPage({
 }) {
   const { slug } = await params;
 
-  return <CategoryView categorySlug={slug} />;
+  return <CategoryView categorySlug={decodeURIComponent(slug)} />;
 }
