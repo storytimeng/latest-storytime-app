@@ -907,7 +907,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
         label="Story Blurb"
         htmlFor="description"
         id="description"
-        placeholder="Summarize your story in 50–100 words…"
+        placeholder="Summarize your story in 20–200 words…"
         value={formData.description}
         onChange={(value) => handleFieldChange("description", value)}
         isInvalid={!!formErrors.description}
@@ -920,27 +920,6 @@ const StoryForm: React.FC<StoryFormProps> = ({
         helperText={STORY_BLURB_HELPER_TEXT}
         className="max-h-[400px]"
       />
-
-      {/* Content Field */}
-      <TextAreaField
-        label="Story Content"
-        htmlFor="content"
-        id="content"
-        placeholder="Write your story content here..."
-        value={formData.content || ""}
-        onChange={(value) => handleFieldChange("content", value)}
-        isInvalid={!!formErrors.content}
-        errorMessage={formErrors.content || ""}
-        required={!storyStructure.hasChapters && !storyStructure.hasEpisodes}
-        rows={6}
-        className="max-h-[400px]"
-        isRichText={true}
-      />
-      {!storyStructure.hasChapters && !storyStructure.hasEpisodes && (
-        <p className="-mt-4 text-xs text-gray-500">
-          Content is required when your story doesn't have chapters or episodes.
-        </p>
-      )}
 
       {/* Show Chapters/Episodes in Edit Mode */}
       {mode === "edit" &&
@@ -1696,17 +1675,18 @@ const StoryForm: React.FC<StoryFormProps> = ({
             label="Story Content"
             htmlFor="content"
             id="content"
-            isInvalid={false}
-            errorMessage=""
-            placeholder="Write your full story here..."
+            isInvalid={!!formErrors.content}
+            errorMessage={formErrors.content || ""}
+            placeholder="Write your full story here. There is no word limit — write as much as your story needs."
             value={formData.content || ""}
             onChange={(value) => handleFieldChange("content", value)}
             rows={20}
             isRichText={true}
           />
           <p className="text-xs text-gray-500">
-            Write your complete story in this field since you selected no
-            chapters or episodes.
+            This is your story body — write the full narrative here. The blurb
+            you wrote earlier is just a short summary shown on the story card;
+            your readers will see this content when they open the story.
           </p>
         </div>
       )}
@@ -1757,6 +1737,20 @@ const StoryForm: React.FC<StoryFormProps> = ({
             className={`flex-1 bg-primary-shade-6 text-universal-white ${Magnetik_Medium.className}`}
             onClick={() => {
               if (isLoading) return;
+              // Guard: standalone stories must have actual content before proceeding
+              if (!storyStructure.hasChapters && !storyStructure.hasEpisodes) {
+                const plainText = (formData.content || "")
+                  .replace(/<[^>]+>/g, "")
+                  .trim();
+                if (plainText.length < 50) {
+                  showToast({
+                    type: "error",
+                    message:
+                      "Please write your story content before publishing. The story body must be at least 50 characters.",
+                  });
+                  return;
+                }
+              }
               if (mode === "edit") {
                 const publishData = { ...formData, storyStatus: "Published" };
                 onSubmit(

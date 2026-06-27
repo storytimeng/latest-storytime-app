@@ -157,16 +157,6 @@ export function useStoryFormState({
       errors.description = blurbError;
     }
 
-    // Content validation: required when no chapters/episodes
-    if (
-      !storyStructure.hasChapters &&
-      !storyStructure.hasEpisodes &&
-      !formData.content?.trim()
-    ) {
-      errors.content =
-        "Story content is required when not using chapters or episodes.";
-    }
-
     if (formData.selectedGenres.length === 0) {
       errors.selectedGenres = "Please select at least one genre";
     }
@@ -178,21 +168,6 @@ export function useStoryFormState({
   // Handle story structure selection
   const handleStructureNext = useCallback(
     (structure: StoryStructure) => {
-      // If user selected no chapters and no episodes, they must have content
-      if (
-        !structure.hasChapters &&
-        !structure.hasEpisodes &&
-        !formData.content?.trim()
-      ) {
-        const { showToast } = require("@/lib/showNotification");
-        showToast({
-          type: "error",
-          message:
-            "You must write story content if you're not using chapters or episodes.",
-        });
-        return;
-      }
-
       setStoryStructure(structure);
       // Update formData with mutually exclusive chapter/episodes flags
       setFormData((prev) => ({
