@@ -20,7 +20,7 @@ const TOKEN_EXPIRY_KEY = "tokenExpiry";
 const REMEMBER_ME_KEY = "rememberMe";
 /** Non-sensitive flag cookie - tells JS that a server httpOnly session exists */
 const SESSION_FLAG_KEY = "hasSession";
-const PERSISTENT_LOGIN_DAYS = 30;
+const PERSISTENT_LOGIN_DAYS = 7;
 
 function baseCookieOptions() {
   return {
@@ -68,11 +68,9 @@ export function setRememberMePreference(remember: boolean): void {
 function getStorageCookieOptions(token?: string): Cookies.CookieAttributes {
   const base = baseCookieOptions();
 
-  if (!getRememberMePreference()) {
-    // Session cookie - cleared when the browser closes
-    return base;
-  }
-
+  // Always use a persistent cookie whose lifetime matches the JWT expiry.
+  // This ensures the browser retains the session across restarts for the
+  // full 7-day token lifetime without requiring "remember me".
   if (token) {
     const jwtExpiry = decodeTokenExpiry(token);
     if (jwtExpiry) {
