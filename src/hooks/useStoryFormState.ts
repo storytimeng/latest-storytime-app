@@ -163,7 +163,7 @@ export function useStoryFormState({
 
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
-  }, [formData, storyStructure]);
+  }, [formData]);
 
   // Handle story structure selection
   const handleStructureNext = useCallback(
