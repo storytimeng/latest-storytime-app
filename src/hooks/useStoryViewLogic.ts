@@ -7,6 +7,7 @@ import {
   useCreateMultipleChapters,
   useCreateMultipleEpisodes,
 } from "@/src/hooks/useStoryMutations";
+import { storiesControllerRemove } from "@/src/client";
 import { useUpdateMultipleChapters } from "@/src/hooks/useUpdateChapter";
 import { useUpdateMultipleEpisodes } from "@/src/hooks/useUpdateEpisode";
 import { useDeleteMultipleChapters } from "@/src/hooks/useDeleteChapter";
@@ -406,6 +407,19 @@ export function useStoryViewLogic({
             const errorMsg =
               result?.error ||
               "Failed to publish. Your work is saved in cache.";
+
+            // Clean up the orphaned story so the author doesn't end up with
+            // a chapter/episode story that has no content attached.
+            try {
+              await storiesControllerRemove({ path: { id: createdStoryId } });
+              setCreatedStoryId(null);
+            } catch (cleanupErr) {
+              console.warn(
+                "[useStoryViewLogic] Orphaned story cleanup failed:",
+                cleanupErr,
+              );
+            }
+
             showToast({
               type: "error",
               message: errorMsg,

@@ -142,12 +142,13 @@ export function useStoryFormState({
   const validateForm = useCallback((): boolean => {
     const errors: Partial<Record<keyof StoryFormData, string>> = {};
 
-    const titleRegex = /^[a-zA-Z0-9\s.,'?!-]+$/;
+    // Supports ASCII, Latin Extended (A-D), and Latin Extended Additional — covers Yoruba, Igbo, and other African scripts
+    const titleRegex = /^[a-zA-Z0-9À-ɏḀ-ỿ\s\-'",.!?()?]+$/;
     if (!formData.title.trim()) {
       errors.title = "Story title is required";
     } else if (!titleRegex.test(formData.title)) {
       errors.title =
-        "Title contains invalid characters. Only letters, numbers, spaces, and basic punctuation are allowed.";
+        "Title contains invalid characters. Only letters (including accented characters), numbers, spaces, and basic punctuation are allowed.";
     }
 
     // Description: 50-100 words

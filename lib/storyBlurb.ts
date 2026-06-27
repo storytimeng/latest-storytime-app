@@ -1,8 +1,8 @@
-export const STORY_BLURB_MIN_WORDS = 50;
-export const STORY_BLURB_MAX_WORDS = 100;
+export const STORY_BLURB_MIN_WORDS = 20;
+export const STORY_BLURB_MAX_WORDS = 200;
 
 export const STORY_BLURB_HELPER_TEXT =
-  "Write a short summary of your story in 50–100 words (about 3–5 sentences). This appears on your story page and helps readers decide whether to read.";
+  "Write a summary of your story in 20–200 words. This appears on your story page and helps readers decide whether to read.";
 
 export function countWords(text: string): number {
   return text.trim().split(/\s+/).filter(Boolean).length;
