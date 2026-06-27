@@ -921,6 +921,20 @@ const StoryForm: React.FC<StoryFormProps> = ({
         className="max-h-[400px]"
       />
 
+      {/* Edit Story Content button — standalone stories in edit mode */}
+      {mode === "edit" &&
+        !storyStructure.hasChapters &&
+        !storyStructure.hasEpisodes && (
+          <Button
+            variant="bordered"
+            size="sm"
+            onClick={() => setCurrentStep("writing")}
+            className="w-full border-dashed border-primary-colour text-primary-colour"
+          >
+            Edit Story Content
+          </Button>
+        )}
+
       {/* Show Chapters/Episodes in Edit Mode */}
       {mode === "edit" &&
         (storyStructure.hasChapters || storyStructure.hasEpisodes) &&
