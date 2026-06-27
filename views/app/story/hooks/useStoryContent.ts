@@ -274,7 +274,15 @@ export function useStoryContent({
         ?.content || ""
     : isChapterMode || isEpisodeMode
       ? resolvedPart?.content || ""
-      : activeStory?.content || activeStory?.description || "";
+      : (() => {
+        // Strip HTML tags to check if the saved content has actual text.
+        // Old stories created before the form fix may have empty-HTML content
+        // (e.g. "<p><br></p>") while the real story text was mistakenly stored
+        // in the description (blurb) field.
+        const raw = activeStory?.content || "";
+        const plainText = raw.replace(/<[^>]+>/g, "").trim();
+        return plainText.length > 0 ? raw : activeStory?.description || "";
+      })();
 
   const currentTitle = isUsingOfflineData
     ? offlineContent.find((c: { id?: string }) => c.id === selectedChapterId)
