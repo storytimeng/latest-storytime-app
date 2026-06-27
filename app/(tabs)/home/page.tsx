@@ -4,15 +4,15 @@ import { TabLayout } from "@/views";
 
 // Lazy load HomeView for better initial load performance
 const HomeView = lazy(() =>
-  import("@/views").then((mod) => ({ default: mod.HomeView }))
+  import("@/views").then((mod) => ({ default: mod.HomeView })),
 );
 
 const HomePage = () => {
   return (
     <TabLayout>
-      {/* Visually hidden H1 for SEO — screen readers and crawlers see it, users don't */}
+      {/* Visually hidden H1 for SEO - screen readers and crawlers see it, users don't */}
       <h1 className="sr-only">
-        Storytime — Read and Write African Stories Online
+        Storytime - Read and Write African Stories Online
       </h1>
       <Suspense
         fallback={

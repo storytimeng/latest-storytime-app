@@ -32,7 +32,8 @@ import { TTSProvider } from "@/components/providers/TTSProvider";
 import { stopBrowserTTS } from "@/src/lib/tts/stopBrowserTTS";
 
 // Component imports
-import { OfflineBanner } from "./components/OfflineBanner";
+// OfflineBanner is rendered globally by <OfflineManager /> in the root layout;
+// importing it here would double-stack it on this page.
 import { StoryHeader } from "./components/StoryHeader";
 import { ChapterSelector } from "./components/ChapterSelector";
 import { StoryContent } from "./components/StoryContent";
@@ -79,7 +80,13 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
       isAuthenticated() ||
       (typeof window !== "undefined" && document.cookie.includes("authToken="));
 
-    if (!hasToken) {
+    // Offline reading must work even when the session cookie has expired —
+    // the story is already cached locally. We only redirect to login when
+    // the user is online (or offline with no local copy of the story).
+    const isOfflineNow =
+      typeof navigator !== "undefined" && !navigator.onLine;
+
+    if (!hasToken && !isOfflineNow) {
       openAuthModal("login");
       router.push(`/story/${storyId}`);
     }
@@ -93,12 +100,15 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
 
   // Check online/offline status
   const isOnline = useOnlineStatus();
-  const { updateLastRead, syncChapterIfNeeded, syncEpisodeIfNeeded } =
-    useOfflineStories();
-  const { isUsingOfflineData, offlineStory, offlineContent } =
-    useOfflineContent(isOnline, storyId, updateLastRead);
+  const { syncChapterIfNeeded, syncEpisodeIfNeeded } = useOfflineStories();
+  // Offline data is loaded on mount regardless of online state so that an
+  // already-downloaded story remains readable when the network drops mid-read.
+  const { isUsingOfflineData, offlineStory, offlineContent, updateLastRead } =
+    useOfflineContent(storyId);
 
-  // Data hooks - only fetch when online
+  // Data hooks - only fetch when online. If the user has this story saved
+  // offline, we still try the network for fresh metadata; useStoryContent
+  // prefers the offline copy when the network response is empty or fails.
   const { story, isLoading: isStoryLoading } = useStory(
     isOnline ? storyId : undefined,
   );
@@ -121,6 +131,14 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
 
     return () => clearTimeout(timer);
   }, [isOnline, storyId, markAsRead]);
+
+  // When the user goes offline while reading, record the lastRead timestamp
+  // so the "Continue reading" surface can pick up where they left off.
+  useEffect(() => {
+    if (!isOnline && isUsingOfflineData) {
+      updateLastRead();
+    }
+  }, [isOnline, isUsingOfflineData, updateLastRead]);
 
   // Reading progress tracking
   const contentContainerRef = useRef<HTMLDivElement>(null);
@@ -645,9 +663,6 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
         ref={contentContainerRef}
         className="min-h-screen bg-accent-shade-1 relative max-w-[28rem] md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto"
       >
-        {/* Offline Mode Banner */}
-        {isUsingOfflineData && <OfflineBanner />}
-
         {/* Story Header */}
         <StoryHeader
           storyId={storyId}
@@ -773,7 +788,7 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
                 </div>
               )}
 
-              {/* Audio player — human narration */}
+              {/* Audio player - human narration */}
               {readingMode === "listen" && (
                 <StoryAudioBar
                   isVisible={isNavVisible}
@@ -795,7 +810,7 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
                 />
               )}
 
-              {/* Browser TTS navigation — read mode with multi-part stories */}
+              {/* Browser TTS navigation - read mode with multi-part stories */}
               {readingMode === "read" && hasNavigation && navigationList && (
                 <NavigationBar
                   currentIndex={currentIndex}

@@ -8,6 +8,7 @@ import { MaxWidthWrapper } from "@/lib/maxWidthWrapper";
 import { Providers } from "./providers";
 import { PWAProvider } from "@/components/PWAProvider";
 import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
+import { SerwistProvider } from "@serwist/turbopack/react";
 
 import { fontSans } from "@/config/fonts";
 import { cn } from "@/lib/utils";
@@ -20,7 +21,7 @@ import { OfflineManager } from "@/components/OfflineManager";
 export const metadata: Metadata = {
   metadataBase: new URL(APP_CONFIG.url),
   title: {
-    default: `${APP_CONFIG.name} — ${APP_CONFIG.shortDescription}`,
+    default: `${APP_CONFIG.name} - ${APP_CONFIG.shortDescription}`,
     template: `%s | ${APP_CONFIG.name}`,
   },
   description: APP_CONFIG.shortDescription,
@@ -40,7 +41,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: {
-      default: `${APP_CONFIG.name} — ${APP_CONFIG.shortDescription}`,
+      default: `${APP_CONFIG.name} - ${APP_CONFIG.shortDescription}`,
       template: `%s | ${APP_CONFIG.name}`,
     },
     description: APP_CONFIG.shortDescription,
@@ -51,7 +52,7 @@ export const metadata: Metadata = {
         url: APP_CONFIG.images.banner,
         width: 1200,
         height: 630,
-        alt: `${APP_CONFIG.name} — Home To Budding Authors & Readers`,
+        alt: `${APP_CONFIG.name} - Home To Budding Authors & Readers`,
       },
     ],
     type: "website",
@@ -62,7 +63,7 @@ export const metadata: Metadata = {
     site: APP_CONFIG.socialMeta.twitterSite,
     creator: APP_CONFIG.socialMeta.twitterSite,
     title: {
-      default: `${APP_CONFIG.name} — ${APP_CONFIG.shortDescription}`,
+      default: `${APP_CONFIG.name} - ${APP_CONFIG.shortDescription}`,
       template: `%s | ${APP_CONFIG.name}`,
     },
     description: APP_CONFIG.shortDescription,
@@ -172,18 +173,20 @@ export default function RootLayout({
           Magnetik_Medium.variable,
         )}
       >
-        <Providers themeProps={{ attribute: "class", defaultTheme: "light" }}>
-          <PWAProvider>
-            <GenresPreloader />
-            <MaxWidthWrapper>{children}</MaxWidthWrapper>
-            <LoadingOverlay />
-            <PWAInstallPrompt />
-            <SupportModals />
-            <OfflineManager />
-          </PWAProvider>
-        </Providers>
+        <SerwistProvider swUrl="/serwist/sw.js">
+          <Providers themeProps={{ attribute: "class", defaultTheme: "light" }}>
+            <PWAProvider>
+              <GenresPreloader />
+              <MaxWidthWrapper>{children}</MaxWidthWrapper>
+              <LoadingOverlay />
+              <PWAInstallPrompt />
+              <SupportModals />
+              <OfflineManager />
+            </PWAProvider>
+          </Providers>
+        </SerwistProvider>
 
-        {/* Microsoft Clarity — session recording and heatmaps */}
+        {/* Microsoft Clarity - session recording and heatmaps */}
         <Script id="microsoft-clarity" strategy="afterInteractive">
           {`(function(c,l,a,r,i,t,y){
             c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
@@ -192,7 +195,7 @@ export default function RootLayout({
           })(window,document,"clarity","script","xd3cge82i5");`}
         </Script>
 
-        {/* Google Analytics — loads after page is interactive, does not block render */}
+        {/* Google Analytics - loads after page is interactive, does not block render */}
         {APP_CONFIG.analytics.googleAnalyticsId && (
           <>
             <Script

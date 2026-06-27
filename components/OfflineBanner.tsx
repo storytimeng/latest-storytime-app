@@ -1,56 +1,81 @@
-/**
- * Global Offline Banner Component
- * Displays sync status and offline notification
- */
-
 "use client";
 
-import React from "react";
 import { useOnlineStatus } from "@/src/hooks/useOnlineStatus";
 import { useOfflineQueue } from "@/src/hooks/useOfflineQueue";
 import { CloudOff, RefreshCw, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import React from "react";
 
-export const OfflineBanner = () => {
+/**
+ * Global, layout-level status banner.
+ *
+ * Mounted once by <OfflineManager /> inside the root layout so it does not
+ * appear "inside" any specific page or cover page content. The banner is
+ * intentionally:
+ *   - Thinline (~28px) and pinned to the very top of the viewport.
+ *   - `pointer-events-none` on the wrapper so it never intercepts taps; the
+ *     inner pill re-enables pointer events so it stays dismissible.
+ *   - Hidden entirely when the network is up and the queue is empty.
+ *
+ * Two states surface a banner:
+ *   1. Offline (orange) — shows count of pending offline actions if any.
+ *   2. Reconnecting / syncing (green) — until the queue drains.
+ */
+export const OfflineBanner = React.memo(() => {
   const isOnline = useOnlineStatus();
   const { queuedCount, isSyncing } = useOfflineQueue();
 
-  if (isOnline && queuedCount === 0) return null;
+  if (isOnline && queuedCount === 0 && !isSyncing) return null;
+
+  const variant = !isOnline
+    ? "offline"
+    : isSyncing
+      ? "syncing"
+      : "synced";
+
+  const bg = {
+    offline: "bg-orange-500",
+    syncing: "bg-blue-500",
+    synced: "bg-green-500",
+  }[variant];
+
+  const label = !isOnline
+    ? queuedCount > 0
+      ? `Offline · ${queuedCount} pending`
+      : "Offline"
+    : isSyncing
+      ? "Syncing offline changes…"
+      : "Synced";
+
+  const Icon = !isOnline
+    ? CloudOff
+    : isSyncing
+      ? RefreshCw
+      : CheckCircle2;
 
   return (
     <div
-      className={cn(
-        "fixed top-0 left-0 right-0 z-[100] px-4 py-2 flex items-center justify-between transition-all duration-300 animate-in slide-in-from-top",
-        isOnline ? "bg-green-500" : "bg-orange-500"
-      )}
+      role="status"
+      aria-live="polite"
+      // Outer wrapper: pass clicks through to the page below.
+      className="pointer-events-none fixed inset-x-0 top-0 z-[100] flex justify-center px-2 pt-1"
     >
-      <div className="flex items-center gap-3 text-white">
-        {!isOnline ? (
-          <CloudOff className="w-4 h-4" />
-        ) : (
-          <RefreshCw className={cn("w-4 h-4", isSyncing && "animate-spin")} />
+      <div
+        className={cn(
+          // Inner pill: stop clicks from falling through so the banner is
+          // still discoverable but doesn't block content beneath it.
+          "pointer-events-auto inline-flex h-7 items-center gap-1.5 rounded-full px-3 text-[11px] font-medium text-white shadow-md",
+          bg,
         )}
-        <span className="text-xs font-medium">
-          {!isOnline 
-            ? `Offline - ${queuedCount > 0 ? `${queuedCount} changes pending` : "Reading only"}`
-            : isSyncing 
-              ? "Synchronizing your changes..." 
-              : "Connection restored - Syncing..."}
-        </span>
+      >
+        <Icon
+          className={cn("h-3.5 w-3.5", isSyncing && "animate-spin")}
+          aria-hidden
+        />
+        <span className="leading-none">{label}</span>
       </div>
-
-      {isSyncing && (
-        <div className="flex items-center gap-2 text-white/80">
-          <RefreshCw className="w-3 h-3 animate-spin" />
-        </div>
-      )}
-      
-      {isOnline && !isSyncing && queuedCount === 0 && (
-         <div className="flex items-center gap-2 text-white">
-            <CheckCircle2 className="w-4 h-4" />
-            <span className="text-xs font-medium">Synced!</span>
-         </div>
-      )}
     </div>
   );
-};
+});
+
+OfflineBanner.displayName = "OfflineBanner";

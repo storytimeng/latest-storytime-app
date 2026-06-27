@@ -5,7 +5,7 @@ import { refreshTokens } from "@/src/lib/tokenManager";
 
 export type SupportedCurrency = "NGN" | "USD" | "GHS" | "ZAR" | "KES";
 
-/** Active billing currency — Paystack merchant is NGN-only for now */
+/** Active billing currency - Paystack merchant is NGN-only for now */
 export const BILLING_CURRENCY: SupportedCurrency = "NGN";
 
 export interface SubscriptionPlan {

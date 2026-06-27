@@ -32,7 +32,7 @@ const StoryPreviewView = () => {
     coverImage: "/images/nature.jpg",
     description: `The sons of the morning ascended to the heavenly court, having been summoned by Elohim Himself.
 
-The archangels rode their horses—Lucifer on his silver stallion, Michael on his chestnut stallion, and Gabriel on his golden stallion. Behind them, their winged hosts followed.
+The archangels rode their horses-Lucifer on his silver stallion, Michael on his chestnut stallion, and Gabriel on his golden stallion. Behind them, their winged hosts followed.
 
 A disgruntled look was etched on Lucifer's face. Only curiosity and wonder filled Gabriel's and Michael's.
 

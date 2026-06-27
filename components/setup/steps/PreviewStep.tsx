@@ -1,4 +1,8 @@
-import { Magnetik_Medium, Magnetik_Regular, Magnetik_SemiBold } from "@/lib/font";
+import {
+  Magnetik_Medium,
+  Magnetik_Regular,
+  Magnetik_SemiBold,
+} from "@/lib/font";
 import StepContainer from "../shared/StepContainer";
 import type { StepComponentProps, TimeValue } from "../types";
 
@@ -74,7 +78,7 @@ export default function PreviewStep({
             <div
               className={`border border-light-grey-2 rounded-lg px-4 py-3 body-text-small-regular-auto ${Magnetik_Regular.className}`}
             >
-              {penName || "—"}
+              {penName || "-"}
             </div>
           </div>
           <div>
@@ -146,10 +150,10 @@ export default function PreviewStep({
               >
                 {formatTime(writeTime)}{" "}
                 {writeDaily
-                  ? "— Daily"
+                  ? "- Daily"
                   : writeDays.length
-                  ? `— ${writeDays.join(", ")}`
-                  : ""}
+                    ? `- ${writeDays.join(", ")}`
+                    : ""}
               </div>
             </div>
           </div>

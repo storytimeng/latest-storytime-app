@@ -1,7 +1,7 @@
 /**
  * Desktop dashboard route map (/app/*).
  *
- * Phase 0 reference — mobile routes stay unchanged; desktop builds here
+ * Phase 0 reference - mobile routes stay unchanged; desktop builds here
  * segment by segment. Status drives Phase 1+ rollout tracking.
  */
 
@@ -103,7 +103,7 @@ export const DESKTOP_ROUTES = {
  * `shared` = keep mobile URL (auth, payments, onboarding).
  */
 export const DESKTOP_ROUTE_MAP: DesktopRouteEntry[] = [
-  // —— Core tabs (Phase 2) ——
+  // -- Core tabs (Phase 2) --
   {
     mobile: "/home",
     desktop: DESKTOP_ROUTES.home,
@@ -140,7 +140,7 @@ export const DESKTOP_ROUTE_MAP: DesktopRouteEntry[] = [
     sharedHooks: ["useNotifications"],
     notes: "Desktop notification list + detail modal (Phase 2)",
   },
-  // —— Discovery (Phase 4) ——
+  // -- Discovery (Phase 4) --
   {
     mobile: "/search",
     desktop: DESKTOP_ROUTES.search,
@@ -171,7 +171,7 @@ export const DESKTOP_ROUTE_MAP: DesktopRouteEntry[] = [
     ],
     notes: "Genre + curated lists with sidebar nav (Phase 4)",
   },
-  // —— Stories (Phase 3) ——
+  // -- Stories (Phase 3) --
   {
     mobile: "/story/[id]",
     desktop: `${DESKTOP_BASE}/stories/[id]`,
@@ -207,7 +207,7 @@ export const DESKTOP_ROUTE_MAP: DesktopRouteEntry[] = [
     label: "My stories",
     status: "live",
   },
-  // —— Account (Phase 5) ——
+  // -- Account (Phase 5) --
   {
     mobile: "/profile",
     desktop: DESKTOP_ROUTES.profile,
@@ -236,7 +236,7 @@ export const DESKTOP_ROUTE_MAP: DesktopRouteEntry[] = [
     ],
     notes: "Two-column marketing + checkout layout (Phase 5)",
   },
-  // —— Ambassador (Phase 6) ——
+  // -- Ambassador (Phase 6) --
   {
     mobile: "/ambassador",
     desktop: DESKTOP_ROUTES.ambassador,
@@ -299,14 +299,14 @@ export const DESKTOP_ROUTE_MAP: DesktopRouteEntry[] = [
     label: "Ambassador welcome",
     status: "live",
   },
-  // —— Cross-shell (Phase 7) ——
+  // -- Cross-shell (Phase 7) --
   // Auth/onboarding stay on shared URLs; post-auth redirect uses getPostAuthHomePath().
   // Middleware redirects mapped mobile↔desktop routes when shell preference cookie is set.
-  // —— Launch polish (Phase 8) ——
+  // -- Launch polish (Phase 8) --
   // DesktopEntryBanner on mobile shell (md+, auto preference) → /app/home via ShellSwitchLink.
   // AuthLayoutView split panel on lg; premiumButton + SubscriptionModal shell-aware.
   // Payment callback + checkout return paths use getPostAuthHomePath / premiumPathForShell.
-  // —— Shared (same URL both shells) ——
+  // -- Shared (same URL both shells) --
   {
     mobile: "/auth/login",
     desktop: "/auth/login",

@@ -1306,7 +1306,11 @@ const StoryForm: React.FC<StoryFormProps> = ({
                         onClick={(e) => {
                           e.stopPropagation();
                           if (!isDeleted) {
-                            updateChapter(chapter.id, "isDraft", !(chapter.isDraft ?? true));
+                            updateChapter(
+                              chapter.id,
+                              "isDraft",
+                              !(chapter.isDraft ?? true),
+                            );
                           }
                         }}
                         className={cn(
@@ -1316,7 +1320,11 @@ const StoryForm: React.FC<StoryFormProps> = ({
                             ? "bg-amber-100 text-amber-700 hover:bg-amber-200"
                             : "bg-green-100 text-green-700 hover:bg-green-200",
                         )}
-                        title={chapter.isDraft !== false ? "Draft — click to publish" : "Published — click to set as draft"}
+                        title={
+                          chapter.isDraft !== false
+                            ? "Draft - click to publish"
+                            : "Published - click to set as draft"
+                        }
                       >
                         {chapter.isDraft !== false ? "Draft" : "Published"}
                       </button>
@@ -1550,7 +1558,11 @@ const StoryForm: React.FC<StoryFormProps> = ({
                         onClick={(e) => {
                           e.stopPropagation();
                           if (!isDeleted) {
-                            updatePart(part.id, "isDraft", !(part.isDraft ?? true));
+                            updatePart(
+                              part.id,
+                              "isDraft",
+                              !(part.isDraft ?? true),
+                            );
                           }
                         }}
                         className={cn(
@@ -1560,7 +1572,11 @@ const StoryForm: React.FC<StoryFormProps> = ({
                             ? "bg-amber-100 text-amber-700 hover:bg-amber-200"
                             : "bg-green-100 text-green-700 hover:bg-green-200",
                         )}
-                        title={part.isDraft !== false ? "Draft — click to publish" : "Published — click to set as draft"}
+                        title={
+                          part.isDraft !== false
+                            ? "Draft - click to publish"
+                            : "Published - click to set as draft"
+                        }
                       >
                         {part.isDraft !== false ? "Draft" : "Published"}
                       </button>

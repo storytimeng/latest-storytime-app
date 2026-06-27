@@ -5,14 +5,14 @@ import { NextRequest, NextResponse } from "next/server";
  * On-demand revalidation endpoint.
  *
  * Call this from the backend (e.g. after a story is published/updated/deleted)
- * to immediately purge the sitemap and story page caches — no waiting for the
+ * to immediately purge the sitemap and story page caches - no waiting for the
  * 30-minute revalidate window.
  *
  * POST /api/revalidate
  * Headers: { Authorization: "Bearer <REVALIDATE_SECRET>" }
  * Body (JSON, all fields optional):
- *   { storyId?: string }   — purge a specific story page
- *   {}                     — purge sitemap only
+ *   { storyId?: string }   - purge a specific story page
+ *   {}                     - purge sitemap only
  */
 export async function POST(req: NextRequest) {
   const secret = process.env.REVALIDATE_SECRET;
@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// Health-check — lets you confirm the endpoint exists without side effects
+// Health-check - lets you confirm the endpoint exists without side effects
 export async function GET() {
   return NextResponse.json({ ok: true, endpoint: "revalidate" });
 }

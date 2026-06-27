@@ -41,7 +41,7 @@ function classifyNetworkError(error: any): { status: number; message: string } {
     return {
       status: 504,
       message:
-        "Backend timed out. The server may be waking from sleep — please retry in a few seconds.",
+        "Backend timed out. The server may be waking from sleep - please retry in a few seconds.",
     };
   }
   if (
@@ -161,7 +161,7 @@ async function proxyRequest(
     try {
       parsedResponse = JSON.parse(responseData);
     } catch {
-      // Not JSON — pass through as-is
+      // Not JSON - pass through as-is
     }
 
     if (DEBUG_PROXY) {

@@ -3,7 +3,11 @@ import { client } from "./client/client.gen";
 import { createClientConfig } from "./heyapi-runtime";
 import { getAuthToken } from "./stores/useAuthStore";
 import { isAuthExemptPath, hasAuthSession } from "@/src/lib/authSession";
-import { refreshTokens, ensureValidToken, isTokenExpired } from "./lib/tokenManager";
+import {
+  refreshTokens,
+  ensureValidToken,
+  isTokenExpired,
+} from "./lib/tokenManager";
 import { setupApiInterceptor } from "@/lib/offline/apiInterceptor";
 
 // Initialize HeyAPI client config immediately
@@ -24,7 +28,7 @@ try {
       const validToken = await ensureValidToken();
       if (validToken) return validToken;
 
-      // Only use the stored token if it is NOT expired — never send a known-bad token
+      // Only use the stored token if it is NOT expired - never send a known-bad token
       const rawToken = getAuthToken() || Cookies.get("authToken");
       if (rawToken && !isTokenExpired()) return rawToken;
 

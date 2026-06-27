@@ -113,7 +113,7 @@ const RichTextEditor = ({
   useEffect(() => {
     if (!editor) return;
 
-    // Prop update came from this editor's own onChange — nothing to apply.
+    // Prop update came from this editor's own onChange - nothing to apply.
     if (value === lastEmittedHtmlRef.current) return;
 
     const isEditorEmpty = editor.getText().trim() === "";

@@ -18,6 +18,7 @@ import {
   X,
   Eye,
   Heart,
+  AlertCircle,
 } from "lucide-react";
 import Image from "next/image";
 import { Magnetik_Regular, Magnetik_Bold } from "@/lib";
@@ -215,6 +216,11 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
   const [downloadingItems, setDownloadingItems] = useState<Set<string>>(
     new Set(),
   );
+  // Per-item download failure tracking — used to render an inline error
+  // icon on the row instead of a toast (successes are silent).
+  const [failedDownloads, setFailedDownloads] = useState<Set<string>>(
+    new Set(),
+  );
   const longPressTimer = React.useRef<NodeJS.Timeout | null>(null);
 
   const handleTouchStart = (id: string) => {
@@ -244,6 +250,15 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
     }
 
     if (downloadingItems.has(item.id)) return;
+
+    // Optimistically clear any prior failure indicator for this item so the
+    // user gets immediate visual feedback that we are retrying.
+    setFailedDownloads((prev) => {
+      if (!prev.has(item.id)) return prev;
+      const next = new Set(prev);
+      next.delete(item.id);
+      return next;
+    });
 
     setDownloadingItems((prev) => new Set(prev).add(item.id));
     try {
@@ -294,12 +309,12 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
         );
       }
 
-      // Update downloaded status
+      // Success: silent — update downloaded state for the row tick.
       setDownloadedContentIds((prev) => new Set(prev).add(item.id));
-      showToast({ type: "success", message: "Downloaded" });
     } catch (error) {
       console.error(`Failed to download item ${item.id}:`, error);
-      showToast({ type: "error", message: "Download failed" });
+      // Failure: mark the row inline; no toast.
+      setFailedDownloads((prev) => new Set(prev).add(item.id));
     } finally {
       setDownloadingItems((prev) => {
         const next = new Set(prev);
@@ -326,7 +341,12 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
           storyId,
           structure as any,
         );
-        const ids = new Set(downloadedItems.map((item: any) => item.id));
+        // The IndexedDB store uses a composite key (`userId_chapterId`) as
+        // the row id, but the UI rows reference the API's `chapterId` /
+        // `episodeId`. Use the canonical id so the membership check works.
+        const ids = new Set(
+          downloadedItems.map((item: any) => item.chapterId ?? item.episodeId),
+        );
         setDownloadedContentIds(ids);
       }
     };
@@ -441,17 +461,22 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
         await downloadAdditionalContent(storyId, structure as any, content);
       }
 
-      // Refresh downloaded status
+      // Refresh downloaded status — silent success.
       const newDownloadedIds = new Set(downloadedContentIds);
       itemsToDownload.forEach((item) => newDownloadedIds.add(item.id));
       setDownloadedContentIds(newDownloadedIds);
       setIsSelectionMode(false);
       setSelectedContentIds(new Set());
       setIsDownloaded(true);
-      showToast({ type: "success", message: "Downloaded successfully" });
     } catch (error) {
       console.error("Bulk download error:", error);
-      showToast({ type: "error", message: "Download failed" });
+      // Mark every queued item as failed so the row shows the error icon.
+      // The user can retry by tapping the icon on each row.
+      setFailedDownloads((prev) => {
+        const next = new Set(prev);
+        itemsToDownload.forEach((item: any) => next.add(item.id));
+        return next;
+      });
     } finally {
       setIsDownloading(false);
     }
@@ -500,10 +525,13 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
       }
     }
 
-    // Filter out already downloaded
-    itemsToDownload = itemsToDownload.filter(
-      (item: any) => !downloadedContentIds.has(item.id),
-    );
+// Filter out already downloaded — compare against API chapterId /
+      // episodeId, not the composite IndexedDB row id.
+      itemsToDownload = itemsToDownload.filter(
+        (item: any) =>
+          !downloadedContentIds.has(item.id) &&
+          !downloadedContentIds.has(item.chapterId ?? item.episodeId),
+      );
 
     if (itemsToDownload.length === 0) {
       showToast({ type: "info", message: "No new items to download" });
@@ -591,13 +619,13 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
 
       await Promise.all(promises);
 
-      showToast({ type: "success", message: "Marked as read" });
+      // Success — silent. Refresh progress from server.
       setIsSelectionMode(false);
       setSelectedContentIds(new Set());
       mutateProgress();
     } catch (error) {
       console.error("Bulk mark as read error:", error);
-      showToast({ type: "error", message: "Failed to mark as read" });
+      // No toast — keep failure silent at this layer.
     }
   };
 
@@ -797,16 +825,12 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
         return;
       }
 
-      const success = await downloadStory(story, content);
-      if (success) {
-        setIsDownloaded(true);
-      }
+      // Wrap so that "success = silent", "failure = inline state" applies.
+      await downloadStory(story, content);
+      setIsDownloaded(true);
     } catch (error) {
       console.error("Download error:", error);
-      showToast({
-        type: "error",
-        message: "Failed to download story",
-      });
+      // Failure is already reflected in `isDownloaded` state — keep silent.
     } finally {
       setIsDownloading(false);
     }
@@ -929,7 +953,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
     try {
       await createComment(reviewText);
       setReviewText("");
-      showToast({ type: "success", message: "Review posted successfully!" });
+      // Success — silent.
     } catch (error: any) {
       const errorMessage = error?.message || "Failed to post review";
       showToast({ type: "error", message: errorMessage });
@@ -1483,6 +1507,18 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
                       <div className="flex items-center justify-center w-8 h-8 text-green-500 rounded-full bg-green-500/10">
                         <Check size={16} />
                       </div>
+                    ) : failedDownloads.has(item.id) ? (
+                      // Inline failure indicator. Tap to retry; no toast.
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSingleDownload(item, index);
+                        }}
+                        title="Download failed — tap to retry"
+                        className="flex items-center justify-center w-8 h-8 text-red-500 transition-colors border border-red-500/30 rounded-full bg-red-500/10 hover:bg-red-500/20"
+                      >
+                        <AlertCircle size={16} />
+                      </button>
                     ) : (
                       <button
                         onClick={(e) => {

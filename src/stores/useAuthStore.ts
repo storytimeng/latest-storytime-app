@@ -18,7 +18,7 @@ const AUTH_TOKEN_KEY = "authToken";
 const REFRESH_TOKEN_KEY = "refreshToken";
 const TOKEN_EXPIRY_KEY = "tokenExpiry";
 const REMEMBER_ME_KEY = "rememberMe";
-/** Non-sensitive flag cookie — tells JS that a server httpOnly session exists */
+/** Non-sensitive flag cookie - tells JS that a server httpOnly session exists */
 const SESSION_FLAG_KEY = "hasSession";
 const PERSISTENT_LOGIN_DAYS = 30;
 
@@ -69,7 +69,7 @@ function getStorageCookieOptions(token?: string): Cookies.CookieAttributes {
   const base = baseCookieOptions();
 
   if (!getRememberMePreference()) {
-    // Session cookie — cleared when the browser closes
+    // Session cookie - cleared when the browser closes
     return base;
   }
 
@@ -85,14 +85,14 @@ function getStorageCookieOptions(token?: string): Cookies.CookieAttributes {
 
 export const useAuthStore = create<AuthState>((set, get) => ({
   // Access token stored in JS-accessible cookie (needed to attach to Authorization header)
-  // Refresh token is stored in httpOnly cookie set by the server — never accessible here
+  // Refresh token is stored in httpOnly cookie set by the server - never accessible here
   token:
     typeof window !== "undefined" ? Cookies.get(AUTH_TOKEN_KEY) : undefined,
   refreshToken: undefined, // Never stored in JS; server manages via httpOnly cookie
   resetEmail: undefined,
   resetOtp: undefined,
   setToken: (token, _refreshToken) => {
-    // _refreshToken is ignored — the server already set it as an httpOnly cookie.
+    // _refreshToken is ignored - the server already set it as an httpOnly cookie.
     if (token) {
       Cookies.set(AUTH_TOKEN_KEY, token, getStorageCookieOptions(token));
 
@@ -141,7 +141,7 @@ export const getAuthToken = () => {
 };
 
 export const getRefreshToken = () => {
-  // Refresh token is httpOnly — not accessible from JS.
+  // Refresh token is httpOnly - not accessible from JS.
   // This returns undefined intentionally.
   return undefined;
 };

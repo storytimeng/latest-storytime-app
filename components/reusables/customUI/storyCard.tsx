@@ -82,7 +82,9 @@ const StoryCard = ({
     <Card
       className={cn(
         "flex-shrink-0 rounded-xl border-none bg-transparent shadow-none space-y-2 relative",
-        isPenMode ? "w-full cursor-pointer" : "w-[160px] md:w-[200px] lg:w-[220px] cursor-pointer",
+        isPenMode
+          ? "w-full cursor-pointer"
+          : "w-[160px] md:w-[200px] lg:w-[220px] cursor-pointer",
         className,
       )}
       onClick={isPenMode ? handleCardClick : undefined}
@@ -112,7 +114,7 @@ const StoryCard = ({
           {displayGenre}
         </div>
 
-        {/* Reading progress bar — shown in library mode when progress > 0 */}
+        {/* Reading progress bar - shown in library mode when progress > 0 */}
         {!isPenMode && hideStats && (story.progress ?? 0) > 0 && (
           <div className="absolute bottom-0 left-0 right-0 px-1.5 pb-1.5">
             <div className="flex items-center gap-1.5">
@@ -205,8 +207,15 @@ const StoryCard = ({
                 </div>
               </div>
             ) : (story.progress ?? 0) > 0 ? (
-              <p className={cn("text-[10px] text-complimentary-colour", Magnetik_Regular.className)}>
-                {(story.progress ?? 0) >= 100 ? "Completed" : `${Math.round(story.progress ?? 0)}% read`}
+              <p
+                className={cn(
+                  "text-[10px] text-complimentary-colour",
+                  Magnetik_Regular.className,
+                )}
+              >
+                {(story.progress ?? 0) >= 100
+                  ? "Completed"
+                  : `${Math.round(story.progress ?? 0)}% read`}
               </p>
             ) : null}
 

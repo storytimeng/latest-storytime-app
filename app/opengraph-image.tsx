@@ -2,7 +2,7 @@ import { ImageResponse } from "next/og";
 import { APP_CONFIG } from "@/config/app";
 
 export const runtime = "edge";
-export const alt = `${APP_CONFIG.name} — ${APP_CONFIG.shortDescription}`;
+export const alt = `${APP_CONFIG.name} - ${APP_CONFIG.shortDescription}`;
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -17,7 +17,8 @@ export default function OgImage() {
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          background: "linear-gradient(135deg, #361B17 0%, #5C2E22 60%, #F8951D 100%)",
+          background:
+            "linear-gradient(135deg, #361B17 0%, #5C2E22 60%, #F8951D 100%)",
           padding: "60px",
           fontFamily: "sans-serif",
         }}

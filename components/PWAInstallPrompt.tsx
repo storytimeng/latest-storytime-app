@@ -11,46 +11,48 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 }
 
+// iOS detection helpers (skill: SKILL.md → Install Prompt Handling)
+const isIOS = () =>
+  typeof navigator !== "undefined" &&
+  /iPad|iPhone|iPod/.test(navigator.userAgent) &&
+  !(window as any).MSStream;
+
+const isStandalone = () =>
+  typeof window !== "undefined" &&
+  (window.matchMedia("(display-mode: standalone)").matches ||
+    (window.navigator as any).standalone === true);
+
 export const PWAInstallPrompt = () => {
   const [deferredPrompt, setDeferredPrompt] =
     useState<BeforeInstallPromptEvent | null>(null);
   const [showPrompt, setShowPrompt] = useState(false);
+  const [showIOSBanner, setShowIOSBanner] = useState(false);
 
   useEffect(() => {
-    // Check if already installed
-    const isStandalone =
-      window.matchMedia("(display-mode: standalone)").matches ||
-      (window.navigator as any).standalone ||
-      document.referrer.includes("android-app://");
-
-    if (isStandalone) {
-      return; // Already installed, don't show prompt
+    if (isStandalone()) {
+      return; // Already installed, don't show anything.
     }
 
-    // Check if user previously dismissed
     const dismissed = localStorage.getItem("pwa-install-dismissed");
     if (dismissed) {
       const dismissedDate = new Date(dismissed);
       const daysSinceDismissed =
         (Date.now() - dismissedDate.getTime()) / (1000 * 60 * 60 * 24);
-
-      // Show again after 7 days
-      if (daysSinceDismissed < 7) {
-        return;
-      }
+      if (daysSinceDismissed < 7) return;
     }
 
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
-
-      // Show prompt after 5 seconds delay
-      setTimeout(() => {
-        setShowPrompt(true);
-      }, 5000);
+      setTimeout(() => setShowPrompt(true), 5000);
     };
 
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+
+    // iOS path: no beforeinstallprompt; show manual-instructions banner.
+    if (isIOS()) {
+      setTimeout(() => setShowIOSBanner(true), 3000);
+    }
 
     return () => {
       window.removeEventListener(
@@ -82,9 +84,14 @@ export const PWAInstallPrompt = () => {
     localStorage.setItem("pwa-install-dismissed", new Date().toISOString());
   };
 
-  if (!showPrompt || !deferredPrompt) return null;
+  const handleIOSDismiss = () => {
+    setShowIOSBanner(false);
+    localStorage.setItem("pwa-install-dismissed", new Date().toISOString());
+  };
 
-  return (
+  // Android / Chrome / Edge with native install prompt.
+  if (showPrompt && deferredPrompt) {
+    return (
     <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 z-[9998] animate-slide-up">
       <div className="bg-universal-white rounded-lg shadow-2xl border border-light-grey-2 p-4">
         <button
@@ -134,5 +141,54 @@ export const PWAInstallPrompt = () => {
         </div>
       </div>
     </div>
-  );
+    );
+  }
+
+  // iOS Safari / WebKit: no native prompt, show manual-instructions banner.
+  if (showIOSBanner) {
+    return (
+      <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 z-[9998] animate-slide-up">
+        <div className="bg-universal-white rounded-lg shadow-2xl border border-light-grey-2 p-4">
+          <button
+            onClick={handleIOSDismiss}
+            className="absolute top-2 right-2 text-grey-2 hover:text-primary-colour"
+            aria-label="Dismiss"
+          >
+            <X className="w-5 h-5" />
+          </button>
+
+          <div className="flex items-start gap-3 pr-6">
+            <div className="w-12 h-12 bg-complimentary-colour rounded-lg flex items-center justify-center flex-shrink-0">
+              <Download className="w-6 h-6 text-white" />
+            </div>
+
+            <div className="flex-1 min-w-0">
+              <h3
+                className={cn(
+                  "text-primary-colour text-sm font-bold mb-1",
+                  Magnetik_Bold.className
+                )}
+              >
+                Install Storytime App
+              </h3>
+              <p className="text-grey-2 text-xs mb-2">
+                Tap the <strong>Share</strong> button below, then choose{" "}
+                <strong>Add to Home Screen</strong>.
+              </p>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={handleIOSDismiss}
+                className="text-grey-2"
+              >
+                Got it
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return null;
 };

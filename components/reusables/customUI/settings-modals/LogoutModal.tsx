@@ -24,7 +24,7 @@ const LogoutModal: React.FC<LogoutModalProps> = ({ onClose }) => {
         message: "Logged out successfully",
       });
       // Replace (don't push) so back button won't return to settings.
-      // Do not call onClose here — it navigates back to /settings? and cancels this redirect.
+      // Do not call onClose here - it navigates back to /settings? and cancels this redirect.
       router.replace("/auth/login");
     } catch (error) {
       console.error("Logout error:", error);

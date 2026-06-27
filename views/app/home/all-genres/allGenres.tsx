@@ -13,7 +13,7 @@ const AllGenres = () => {
   const isOnline = useOnlineStatus();
   const { genres, isLoading } = useGenres();
 
-  // Normalize genres — API may return strings or objects with a name field
+  // Normalize genres - API may return strings or objects with a name field
   const genreList: string[] = React.useMemo(() => {
     if (!genres || !Array.isArray(genres)) return [];
     return genres
@@ -48,7 +48,9 @@ const AllGenres = () => {
         </div>
       ) : genreList.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">
-          <p className="text-primary-shade-4 text-sm">No genres available yet.</p>
+          <p className="text-primary-shade-4 text-sm">
+            No genres available yet.
+          </p>
         </div>
       ) : (
         <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 pb-8 mt-10">
@@ -56,7 +58,9 @@ const AllGenres = () => {
             <Button
               key={genre}
               onClick={() =>
-                router.push(`/all-genres/${encodeURIComponent(genre.toLowerCase())}`)
+                router.push(
+                  `/all-genres/${encodeURIComponent(genre.toLowerCase())}`,
+                )
               }
               className="relative py-[14px] text-white leading-none h-fit font-medium rounded-lg border-none shadow-sm"
               style={{

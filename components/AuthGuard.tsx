@@ -9,7 +9,7 @@ import {
 
 /**
  * Silently restores auth session from cookies on navigation.
- * Does not show the login modal — that is handled by story views when needed.
+ * Does not show the login modal - that is handled by story views when needed.
  */
 export const AuthGuard = () => {
   const pathname = usePathname();

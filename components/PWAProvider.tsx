@@ -23,7 +23,9 @@ export const PWAProvider = ({ children }: PWAProviderProps) => {
     }
   }, [isAppReady, minSplashTimePassed]);
 
-  // Mark app as ready after hydration
+  // Mark app as ready after hydration + wire up update toasts.
+  // (Service worker registration itself is handled by <SerwistProvider>
+  // in app/layout.tsx - it serves /serwist/sw.js.)
   useEffect(() => {
     // Check if running as PWA
     const isPWA =
@@ -44,60 +46,50 @@ export const PWAProvider = ({ children }: PWAProviderProps) => {
     // Mark app as ready after hydration (next tick)
     setIsAppReady(true);
 
-    // Register Serwist service worker
-    if (typeof window !== "undefined" && "serviceWorker" in navigator) {
-      // Register the service worker
-      navigator.serviceWorker
-        .register("/sw.js")
-        .then((registration) => {
-          console.log("Service Worker registered:", registration);
+    // Request persistent storage to reduce data eviction risk.
+    requestPersistentStorage();
 
-          // Request persistent storage to prevent data eviction
-          requestPersistentStorage();
+    // Listen for SW updates so we can prompt the user.
+    if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
+      navigator.serviceWorker.addEventListener("controllerchange", () => {
+        if (!isAppReady) return;
+        showToast({ message: "App updated successfully!", type: "info" });
+      });
 
-          // Handle updates
-          registration.addEventListener("updatefound", () => {
-            const newWorker = registration.installing;
-            if (newWorker) {
-              newWorker.addEventListener("statechange", () => {
-                if (
-                  newWorker.state === "installed" &&
-                  navigator.serviceWorker.controller
-                ) {
-                  // New content is available
-                  showToast({
-                    type: "info",
-                    message: "New version available! Refresh to update.",
-                    duration: 5000,
-                  });
-                }
+      navigator.serviceWorker.getRegistration().then((registration) => {
+        if (!registration) return;
+        const onUpdateFound = () => {
+          const newWorker = registration.installing;
+          if (!newWorker) return;
+          newWorker.addEventListener("statechange", () => {
+            if (
+              newWorker.state === "installed" &&
+              navigator.serviceWorker.controller
+            ) {
+              showToast({
+                type: "info",
+                message: "New version available! Refresh to update.",
+                duration: 5000,
               });
             }
           });
-        })
-        .catch((error) => {
-          console.error("Service Worker registration failed:", error);
-        });
-
-      // Handle controller change (when new SW takes over)
-      navigator.serviceWorker.addEventListener("controllerchange", () => {
-        if (!isAppReady) return;
-
-        showToast({ message: "App updated successfully!", type: "info" });
+        };
+        registration.addEventListener("updatefound", onUpdateFound);
       });
     }
 
     // Track PWA install
-    window.addEventListener("appinstalled", () => {
+    const onAppInstalled = () => {
       showToast({
         type: "success",
         message: "App installed! You can now use it offline.",
         duration: 5000,
       });
-    });
+    };
+    window.addEventListener("appinstalled", onAppInstalled);
 
     return () => {
-      window.removeEventListener("appinstalled", () => {});
+      window.removeEventListener("appinstalled", onAppInstalled);
     };
   }, []);
 

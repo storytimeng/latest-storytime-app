@@ -149,7 +149,7 @@ const CancelPremiumModal: React.FC<CancelPremiumModalProps> = ({
           <p
             className={`text-sm text-primary-shade-4 leading-relaxed ${Magnetik_Regular.className}`}
           >
-            Premium makes Storytime richer — stories you can hear, save, and
+            Premium makes Storytime richer - stories you can hear, save, and
             enjoy even without an internet connection.
           </p>
 
@@ -173,7 +173,7 @@ const CancelPremiumModal: React.FC<CancelPremiumModalProps> = ({
               className={`text-xs text-primary-shade-4 bg-complimentary-colour/5 rounded-lg px-3 py-2.5 ${Magnetik_Regular.className}`}
             >
               If you cancel now, you keep Premium until{" "}
-              {formatExpiryDate(premiumExpiresAt)} — no further charges.
+              {formatExpiryDate(premiumExpiresAt)} - no further charges.
             </p>
           )}
 

@@ -129,7 +129,7 @@ const SubscriptionModal: React.FC = () => {
                     className={`text-sm text-primary-colour mt-1 ${Magnetik_SemiBold.className}`}
                   >
                     {isSubscriptionCancelled
-                      ? "Cancelled — access until expiry"
+                      ? "Cancelled - access until expiry"
                       : currentPlanName
                         ? `${planDurationLabel(currentPlanCode ?? "")} plan`
                         : "Active membership"}

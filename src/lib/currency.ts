@@ -2,7 +2,7 @@ import type { SupportedCurrency } from "@/src/lib/subscriptions";
 
 export const DEFAULT_CURRENCY: SupportedCurrency = "NGN";
 
-/** Active billing currency — Paystack merchant is NGN-only for now */
+/** Active billing currency - Paystack merchant is NGN-only for now */
 export const BILLING_CURRENCY: SupportedCurrency = "NGN";
 
 const COUNTRY_CURRENCY_MAP: Record<string, SupportedCurrency> = {

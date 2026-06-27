@@ -368,7 +368,7 @@ const ProfileView = () => {
               ))}
             </div>
 
-            {/* Premium upsell — hidden automatically for active subscribers */}
+            {/* Premium upsell - hidden automatically for active subscribers */}
             <PremiumBanner
               emoji="✨"
               title="Go Premium"

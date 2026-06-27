@@ -2,7 +2,10 @@ import Cookies from "js-cookie";
 import { useAuthStore } from "../stores/useAuthStore";
 
 // Singleton: prevent concurrent refresh races
-let _refreshPromise: Promise<{ token?: string; refreshToken?: string } | null> | null = null;
+let _refreshPromise: Promise<{
+  token?: string;
+  refreshToken?: string;
+} | null> | null = null;
 
 const AUTH_TOKEN_KEY = "authToken";
 const TOKEN_EXPIRY_KEY = "tokenExpiry";
@@ -14,8 +17,7 @@ const REFRESH_BUFFER_MS = 5 * 60 * 1000;
  * Check if token is expired or will expire soon
  */
 export function isTokenExpired(): boolean {
-  const token =
-    useAuthStore.getState().token || Cookies.get(AUTH_TOKEN_KEY);
+  const token = useAuthStore.getState().token || Cookies.get(AUTH_TOKEN_KEY);
   const expiryStr = Cookies.get(TOKEN_EXPIRY_KEY);
 
   if (expiryStr) {
@@ -129,7 +131,7 @@ export async function ensureValidToken(): Promise<string | null> {
     useAuthStore.getState().token || Cookies.get(AUTH_TOKEN_KEY);
 
   if (!currentToken) {
-    // No access token — attempt silent refresh using the httpOnly cookie
+    // No access token - attempt silent refresh using the httpOnly cookie
     // (browser sends it automatically with credentials: 'include')
     const result = await refreshTokens();
     return result?.token ?? null;

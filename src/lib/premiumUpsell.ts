@@ -18,7 +18,7 @@ export const PREMIUM_UPSELL_CONTENT: Record<
 > = {
   exclusiveStory: {
     feature: "exclusiveStories",
-    title: "Only on Storytime — Premium stories",
+    title: "Only on Storytime - Premium stories",
     description:
       "This story is exclusive to Storytime. Upgrade to Premium to read it and unlock our full library of original fiction.",
     benefits: [
@@ -31,7 +31,7 @@ export const PREMIUM_UPSELL_CONTENT: Record<
     feature: "audioNarration",
     title: "Listen with natural voice narration",
     description:
-      "Premium members can listen to stories with studio-quality narration — perfect for commutes, chores, or winding down.",
+      "Premium members can listen to stories with studio-quality narration - perfect for commutes, chores, or winding down.",
     benefits: [
       "Human-like narration for every story",
       "Multiple voice options",
@@ -40,7 +40,7 @@ export const PREMIUM_UPSELL_CONTENT: Record<
   },
   offlineDownload: {
     feature: "offlineDownload",
-    title: "Read anywhere — even offline",
+    title: "Read anywhere - even offline",
     description:
       "Download stories to your device and keep reading without Wi‑Fi or mobile data.",
     benefits: [
@@ -59,7 +59,11 @@ export function isExclusiveStory(story: {
 }
 
 export function canReadExclusiveStory(
-  story: { onlyOnStorytime?: boolean; requiresPremium?: boolean; authorId?: string },
+  story: {
+    onlyOnStorytime?: boolean;
+    requiresPremium?: boolean;
+    authorId?: string;
+  },
   options: { isPremium: boolean; userId?: string | null },
 ): boolean {
   if (!isExclusiveStory(story)) {

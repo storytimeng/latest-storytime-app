@@ -248,7 +248,7 @@ export default function SignupView({
 
       showToast({
         type: "success",
-        message: "Account created — check your email",
+        message: "Account created - check your email",
         duration: 3000,
       });
       if (onSuccess) {

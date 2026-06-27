@@ -208,7 +208,7 @@ function ApplicationReapplyBlockedScreen({
           )}
         >
           Your previous application wasn&apos;t approved. Keep building your
-          presence on Storytime — you can submit a new application once the
+          presence on Storytime - you can submit a new application once the
           waiting period ends.
         </p>
       </div>

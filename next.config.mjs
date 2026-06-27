@@ -1,12 +1,4 @@
-import withSerwistInit from "@serwist/next";
-
-const withSerwist = withSerwistInit({
-  swSrc: "app/sw.ts",
-  swDest: "public/sw.js",
-  cacheOnNavigation: true,
-  reloadOnOnline: true,
-  disable: process.env.NODE_ENV === "development",
-});
+import { withSerwist } from "@serwist/turbopack";
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -16,9 +8,6 @@ const nextConfig = {
   compiler: {
     removeConsole: process.env.NODE_ENV === "production",
   },
-
-  // Tell Next 16 you're aware of Turbopack but webpack handles the SW plugin
-  turbopack: {},
 
   images: {
     formats: ["image/avif", "image/webp"],
@@ -33,12 +22,9 @@ const nextConfig = {
       { protocol: "http", hostname: "**" },
     ],
   },
-
-  // Drop the manual splitChunks — Next 16 + Turbopack handles this better natively
-  // Only keep webpack for serwist compatibility
-  webpack: (config, { dev, isServer }) => {
-    return config;
-  },
 };
 
+// withSerwist just augments the Next config to mark esbuild/esbuild-wasm as
+// external server packages so the Route Handler at app/serwist/[path]/route.ts
+// can import them under Turbopack. All SW generation lives in that route file.
 export default withSerwist(nextConfig);

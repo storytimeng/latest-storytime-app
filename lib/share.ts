@@ -75,7 +75,7 @@ export async function shareReferralLink(
 ): Promise<boolean> {
   return shareContent({
     title: "Join Storytime",
-    text: `Join me on Storytime — discover amazing stories! Use my referral code: ${referralCode}`,
+    text: `Join me on Storytime - discover amazing stories! Use my referral code: ${referralCode}`,
     url: shareUrl,
   });
 }
@@ -98,7 +98,7 @@ export function shareReferralViaWhatsApp(
  */
 export function shareReferralViaTwitter(shareUrl: string) {
   const text = encodeURIComponent(
-    "Join me on Storytime — discover amazing stories!",
+    "Join me on Storytime - discover amazing stories!",
   );
   window.open(
     `https://twitter.com/intent/tweet?text=${text}&url=${encodeURIComponent(shareUrl)}`,
