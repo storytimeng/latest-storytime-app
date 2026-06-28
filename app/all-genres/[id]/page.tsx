@@ -65,7 +65,3 @@ const GenrePage = async ({ params }: Props) => {
 };
 
 export default GenrePage;
-
-export function generateStaticParams() {
-  return [];
-}

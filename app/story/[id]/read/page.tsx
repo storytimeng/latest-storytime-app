@@ -47,7 +47,3 @@ export default async function ReadStoryPage({ params }: Props) {
     </>
   );
 }
-
-export function generateStaticParams() {
-  return [];
-}

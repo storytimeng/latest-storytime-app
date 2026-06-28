@@ -7,7 +7,9 @@
     "dev": "npm run generate:client && node scripts/dev.mjs",
     "build": "next build",
     "build:android": "node scripts/android-build.mjs",
-    "android:sync": "pnpm exec cap sync",
+    "build:android:release": "node scripts/android-build.mjs --release",
+    "build:android:no-apk": "node scripts/android-build.mjs --no-apk",
+    "android:sync": "pnpm exec cap sync android",
     "android:open": "pnpm exec cap open android",
     "start": "next start",
     "lint": "eslint --fix"
