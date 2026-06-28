@@ -15,8 +15,9 @@ export function useGenres() {
     },
     {
       revalidateOnMount: true,
-      revalidateOnFocus: true,      // Refresh when user returns to the tab
-      refreshInterval: 5 * 60 * 1000, // Poll every 5 minutes
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      dedupingInterval: 10 * 60 * 1000, // 10-min dedup — genres rarely change
       shouldRetryOnError: false,
     },
   );

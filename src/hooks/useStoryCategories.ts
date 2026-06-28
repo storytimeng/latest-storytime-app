@@ -7,7 +7,56 @@ import {
   storiesControllerFindOnlyOnStorytime,
   searchStories,
 } from "@/src/client";
+import { client } from "@/src/client/client.gen";
 import { StoriesListResponseDto } from "@/src/client/types.gen";
+
+/** 5-minute stale time for home feed data — avoids refetching on every tab switch */
+const HOME_FEED_SWR_CONFIG = {
+  revalidateOnFocus: false,
+  revalidateOnReconnect: false,
+  dedupingInterval: 5 * 60 * 1000,
+} as const;
+
+export interface HomeFeedSection {
+  stories: any[];
+  total: number;
+  totalPages: number;
+  page: number;
+  limit: number;
+}
+
+export interface HomeFeedData {
+  popular: HomeFeedSection;
+  recentlyAdded: HomeFeedSection;
+  trending: HomeFeedSection;
+  exclusive: HomeFeedSection;
+}
+
+/**
+ * Single-request home feed. Replaces the 4 separate category hooks.
+ * The backend runs all four queries in parallel, cutting round trips from 5 → 2.
+ */
+export function useHomeFeed(limit: number = 10) {
+  const { data, error, isLoading, mutate } = useSWR(
+    `/stories/home-feed?limit=${limit}`,
+    async () => {
+      const response = await client.get({ url: `/stories/home-feed`, query: { limit } });
+      const body = (response as any)?.data ?? response;
+      return body as HomeFeedData;
+    },
+    HOME_FEED_SWR_CONFIG,
+  );
+
+  return {
+    popular: data?.popular?.stories ?? [],
+    recentlyAdded: data?.recentlyAdded?.stories ?? [],
+    trending: data?.trending?.stories ?? [],
+    exclusive: (data?.exclusive?.stories ?? []).filter((s: any) => s.onlyOnStorytime === true),
+    isLoading,
+    error,
+    mutate,
+  };
+}
 
 interface UseStoryCategoryOptions {
   page?: number;
