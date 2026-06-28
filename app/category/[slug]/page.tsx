@@ -27,6 +27,10 @@ const CATEGORY_META: Record<string, { title: string; description: string }> = {
   },
 };
 
+export function generateStaticParams() {
+  return Object.keys(CATEGORY_META).map((slug) => ({ slug }));
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const raw = decodeURIComponent(slug);

@@ -56,3 +56,7 @@ export default async function ReferralRedirectPage({
 
   redirect("/auth/signup");
 }
+
+export function generateStaticParams() {
+  return [];
+}

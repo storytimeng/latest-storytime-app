@@ -6,10 +6,15 @@
     "generate:client": "node scripts/generate-client.js",
     "dev": "npm run generate:client && node scripts/dev.mjs",
     "build": "next build",
+    "build:android": "node scripts/android-build.mjs",
+    "android:sync": "pnpm exec cap sync",
+    "android:open": "pnpm exec cap open android",
     "start": "next start",
     "lint": "eslint --fix"
   },
   "dependencies": {
+    "@capacitor/android": "^8.4.1",
+    "@capacitor/core": "^8.4.1",
     "@heroui/accordion": "2.2.24",
     "@heroui/alert": "2.2.27",
     "@heroui/autocomplete": "2.3.29",
@@ -86,6 +91,7 @@
     "zustand": "^4.5.7"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.4.1",
     "@eslint/compat": "^2.1.0",
     "@eslint/js": "^9.39.4",
     "@hey-api/openapi-ts": "^0.88.2",
@@ -100,6 +106,7 @@
     "@typescript-eslint/eslint-plugin": "8.34.1",
     "@typescript-eslint/parser": "8.34.1",
     "autoprefixer": "^10.5.0",
+    "cross-env": "^10.1.0",
     "dotenv": "^17.4.2",
     "esbuild": "^0.28.1",
     "eslint": "9.25.1",

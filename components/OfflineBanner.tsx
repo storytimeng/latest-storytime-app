@@ -27,11 +27,7 @@ export const OfflineBanner = React.memo(() => {
 
   if (isOnline && queuedCount === 0 && !isSyncing) return null;
 
-  const variant = !isOnline
-    ? "offline"
-    : isSyncing
-      ? "syncing"
-      : "synced";
+  const variant = !isOnline ? "offline" : isSyncing ? "syncing" : "synced";
 
   const bg = {
     offline: "bg-orange-500",
@@ -47,11 +43,7 @@ export const OfflineBanner = React.memo(() => {
       ? "Syncing offline changes…"
       : "Synced";
 
-  const Icon = !isOnline
-    ? CloudOff
-    : isSyncing
-      ? RefreshCw
-      : CheckCircle2;
+  const Icon = !isOnline ? CloudOff : isSyncing ? RefreshCw : CheckCircle2;
 
   return (
     <div
