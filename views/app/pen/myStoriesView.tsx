@@ -16,7 +16,7 @@ import PageHeader from "@/components/reusables/customUI/pageHeader";
 import { Magnetik_Bold, Magnetik_Medium, Magnetik_Regular } from "@/lib/font";
 import { StoryCard } from "@/components/reusables/customUI";
 import { useLibrary } from "@/src/hooks/useLibrary";
-import { useDeleteStory } from "@/src/hooks/useStoryMutations";
+import { useDeleteStory, useRequestStoryDeletion } from "@/src/hooks/useStoryMutations";
 import type { StoryResponseDto } from "@/src/client/types.gen";
 
 // Locally extend StoryResponseDto for UI needs
@@ -33,10 +33,12 @@ const MyStoriesView = () => {
   const router = useRouter();
   const [selectedTab, setSelectedTab] = useState<TabKey>("Recent");
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
   const [storyToDelete, setStoryToDelete] = useState<{
     id: string | number;
     title: string;
   } | null>(null);
+  const [requestReason, setRequestReason] = useState("");
   const deleteCountdown = React.useRef(5);
   const countdownInterval = React.useRef<NodeJS.Timeout | null>(null);
   const [canDelete, setCanDelete] = React.useState(false);
@@ -45,8 +47,9 @@ const MyStoriesView = () => {
   // Fetch stories from user's library
   const { stories, isLoading, mutate } = useLibrary();
 
-  // Delete story hook
+  // Delete / request-deletion hooks
   const { deleteStory, isDeleting } = useDeleteStory();
+  const { requestDeletion, isRequesting } = useRequestStoryDeletion();
 
   // Filter stories by tab
   const filteredStories = useMemo(() => {
@@ -81,12 +84,18 @@ const MyStoriesView = () => {
 
   const handleDeleteStory = (storyId: string | number) => {
     const story = filteredStories.find((s: ExtendedStory) => s.id === storyId);
-    if (story) {
-      setStoryToDelete({ id: storyId, title: (story as ExtendedStory).title });
+    if (!story) return;
+    setStoryToDelete({ id: storyId, title: (story as ExtendedStory).title });
+
+    const isDraft = (story as ExtendedStory).status === "Draft";
+    if (isDraft) {
       deleteCountdown.current = 5;
       setCountdownDisplay(5);
       setCanDelete(false);
       setIsDeleteModalOpen(true);
+    } else {
+      setRequestReason("");
+      setIsRequestModalOpen(true);
     }
   };
 
@@ -134,6 +143,21 @@ const MyStoriesView = () => {
   const cancelDelete = () => {
     setIsDeleteModalOpen(false);
     setStoryToDelete(null);
+  };
+
+  const confirmRequestDeletion = async () => {
+    if (!storyToDelete) return;
+    const success = await requestDeletion(String(storyToDelete.id), requestReason || undefined);
+    if (success) mutate();
+    setIsRequestModalOpen(false);
+    setStoryToDelete(null);
+    setRequestReason("");
+  };
+
+  const cancelRequest = () => {
+    setIsRequestModalOpen(false);
+    setStoryToDelete(null);
+    setRequestReason("");
   };
 
   const handleViewStory = (storyId: string | number) => {
@@ -207,6 +231,66 @@ const MyStoriesView = () => {
           </div>
         )}
       </div>
+
+      {/* Request Deletion Modal (published/ongoing stories) */}
+      <Modal
+        isOpen={isRequestModalOpen}
+        onClose={cancelRequest}
+        placement="bottom"
+        classNames={{
+          backdrop: "bg-black/50",
+          base: "bg-universal-white rounded-t-3xl m-0 mb-0 max-w-[28rem] mx-auto",
+          closeButton: "hidden",
+        }}
+      >
+        <ModalContent>
+          <ModalHeader className="flex items-center justify-between px-6 pt-6 pb-4">
+            <button onClick={cancelRequest} className="text-primary-colour">
+              <ArrowLeft size={20} />
+            </button>
+            <h2 className="flex-1 text-center body-text-small-medium-auto text-primary-colour">
+              Request Story Removal
+            </h2>
+            <button onClick={cancelRequest} className="text-primary-colour">
+              <X size={20} />
+            </button>
+          </ModalHeader>
+
+          <ModalBody className="px-6 py-6 space-y-4">
+            <p className="text-center body-text-small-medium-auto text-primary-colour">
+              &ldquo;{storyToDelete?.title}&rdquo;
+            </p>
+            <p className="text-center text-sm text-gray-500">
+              Published stories cannot be deleted directly. Submit a removal
+              request and our team will review it within a few days.
+            </p>
+            <textarea
+              className="w-full rounded-lg border border-gray-200 p-3 text-sm text-primary-colour placeholder-gray-400 resize-none focus:outline-none focus:ring-2 focus:ring-primary-colour/30"
+              rows={3}
+              placeholder="Reason for removal (optional)"
+              value={requestReason}
+              onChange={(e) => setRequestReason(e.target.value)}
+            />
+          </ModalBody>
+
+          <ModalFooter className="flex gap-4 px-6 pt-0 pb-8">
+            <Button
+              onPress={confirmRequestDeletion}
+              isLoading={isRequesting}
+              isDisabled={isRequesting}
+              className="flex-1 py-7 text-base rounded-full bg-primary-colour text-white body-text-small-medium-auto"
+            >
+              Submit Request
+            </Button>
+            <Button
+              onPress={cancelRequest}
+              className="flex-1 py-7 text-base bg-transparent border-2 rounded-full border-primary-colour text-primary-colour body-text-small-medium-auto"
+            >
+              Cancel
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
 
       {/* Delete Confirmation Modal */}
       <Modal
