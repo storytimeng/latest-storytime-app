@@ -120,9 +120,17 @@ try {
                 const retryOpts: RequestInit = {
                   method: opts.method,
                   headers: new Headers(opts.headers),
-                  body: opts.body,
+                  body: opts.body != null
+                    ? typeof opts.body === "string"
+                      ? opts.body
+                      : JSON.stringify(opts.body)
+                    : undefined,
                   credentials: opts.credentials || "include",
                 };
+                // Ensure Content-Type is set when we have a JSON body
+                if (opts.body != null) {
+                  (retryOpts.headers as Headers).set("Content-Type", "application/json");
+                }
 
                 // Update Authorization header
                 if (newToken) {
@@ -168,9 +176,18 @@ try {
           const retryOpts: RequestInit = {
             method: opts.method,
             headers: new Headers(opts.headers),
-            body: opts.body,
+            body: opts.body != null
+              ? typeof opts.body === "string"
+                ? opts.body
+                : JSON.stringify(opts.body)
+              : undefined,
             credentials: opts.credentials || "include",
           };
+
+          // Ensure Content-Type is set when we have a JSON body
+          if (opts.body != null) {
+            (retryOpts.headers as Headers).set("Content-Type", "application/json");
+          }
 
           (retryOpts.headers as Headers).set(
             "Authorization",
