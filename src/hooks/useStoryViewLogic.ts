@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
+import { mutate as globalMutate } from "swr";
 import { useRouter } from "next/navigation";
 import {
   useCreateStory,
@@ -790,7 +791,35 @@ export function useStoryViewLogic({
               type: "success",
               message,
             });
+
             if (storyId) {
+              // Bust every SWR cache entry that could hold stale story data.
+              // updateStory already calls globalMutate('/stories/${storyId}') but
+              // chapter/episode list and individual chapter keys are missed.
+              const cacheKeys: Promise<any>[] = [
+                globalMutate(`/stories/${storyId}`),
+                globalMutate(`/stories/${storyId}/chapters`),
+                globalMutate(`/stories/${storyId}/episodes`),
+              ];
+
+              // Invalidate individual chapter caches for each modified chapter
+              (_chapters || []).forEach((ch) => {
+                if (ch.uuid) cacheKeys.push(globalMutate(`/stories/chapters/${ch.uuid}`));
+              });
+
+              // Invalidate individual episode caches for each modified episode
+              (_parts || []).forEach((p) => {
+                if (p.uuid) cacheKeys.push(globalMutate(`/stories/episodes/${p.uuid}`));
+              });
+
+              await Promise.all(cacheKeys);
+
+              // Clear IndexedDB story cache so stale offline data doesn't surface
+              const userId = storeUser?.id;
+              if (userId) {
+                clearStoryCache(storyId, userId).catch(() => {});
+              }
+
               router.push(routes.story(storyId));
             }
           } else if (storyUpdateSuccess && !contentUpdateSuccess) {
