@@ -41,7 +41,9 @@ export function useHomeFeed(limit: number = 10) {
     `/stories/home-feed?limit=${limit}`,
     async () => {
       const response = await client.get({ url: `/stories/home-feed`, query: { limit } });
-      const body = (response as any)?.data ?? response;
+      // TransformInterceptor wraps all responses: { statusType, statusCode, data: <payload>, ... }
+      // so actual payload is at response.data.data
+      const body = (response?.data as any)?.data ?? (response?.data as any);
       return body as HomeFeedData;
     },
     HOME_FEED_SWR_CONFIG,
