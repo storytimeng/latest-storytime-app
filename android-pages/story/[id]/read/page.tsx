@@ -1,40 +1,16 @@
-"use client";
-
-/**
- * Android override for /story/[id]/read
- *
- * The web version reads `searchParams` (chapterId / episodeId) server-side
- * to generate per-chapter metadata. For the Android static export we read
- * those params client-side from `useSearchParams` and pass them straight to
- * ReadStoryView – fully compatible with `output: export`.
- */
-
 import { Suspense } from "react";
 import { Skeleton } from "@heroui/skeleton";
-import { ReadStoryView } from "@/views/app/story/readStoryView";
-import { useParams, useSearchParams } from "next/navigation";
+import ReadStoryClient from "./client";
 
 export function generateStaticParams() {
   return [];
 }
 
-function ReadStoryContent() {
-  const { id } = useParams<{ id: string }>();
-  const searchParams = useSearchParams();
-  const storyId = id ?? "";
-  const chapterId = searchParams.get("chapterId") ?? undefined;
-  const episodeId = searchParams.get("episodeId") ?? undefined;
+type Props = { params: Promise<{ id: string }> };
 
-  return (
-    <ReadStoryView
-      storyId={storyId}
-      chapterId={chapterId}
-      episodeId={episodeId}
-    />
-  );
-}
-
-export default function ReadStoryPage() {
+export default async function ReadStoryPage({ params }: Props) {
+  const { id } = await params;
+  
   return (
     <Suspense
       fallback={
@@ -44,7 +20,7 @@ export default function ReadStoryPage() {
         </div>
       }
     >
-      <ReadStoryContent />
+      <ReadStoryClient storyId={id} />
     </Suspense>
   );
 }

@@ -194,7 +194,9 @@ try {
   swapAndroidPage("all-genres/[id]/page.tsx");
   swapAndroidPage("story/[id]/page.tsx");
   swapAndroidPage("story/[id]/read/page.tsx");
+  swapAndroidPage("story/[id]/read/client.tsx");
   swapAndroidPage("r/[slug]/page.tsx");
+  swapAndroidPage("r/[slug]/client.tsx");
   swapAndroidPage("edit-story/[id]/page.tsx");
 
   // ── 2. Hide web-only files (no Android equivalent) ─────────────────────────
