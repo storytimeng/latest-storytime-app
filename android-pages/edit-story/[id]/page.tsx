@@ -10,10 +10,12 @@
  * we can't add it to the original file directly.
  */
 
-import EditStoryClientPage from "@/app/edit-story/[id]/page";
+import { EditStoryView } from "@/views";
 
 export function generateStaticParams() {
   return [];
 }
 
-export default EditStoryClientPage;
+export default function EditStoryPage() {
+  return <EditStoryView />;
+}
