@@ -49,9 +49,8 @@ const HomeView = () => {
   // Single request for all four home sections
   const { exclusive, recentlyAdded, trending, popular, isLoading: feedLoading } = useHomeFeed(10);
 
-  if (!isOnline) return <OfflineIndicator />;
-
   // Sort genres: selected first, then alphabetical
+  // Must be called before any conditional return to satisfy Rules of Hooks
   const sortedGenres = useMemo(() => {
     return [...genres].sort((a, b) => {
       const aSelected = selectedGenres.includes(a);
@@ -67,6 +66,8 @@ const HomeView = () => {
     () => [...popular].sort((a: any, b: any) => (b.popularityScore || 0) - (a.popularityScore || 0)),
     [popular],
   );
+
+  if (!isOnline) return <OfflineIndicator />;
 
   return (
     <div className="min-h-screen px-4 md:px-6 lg:px-8 pt-4 space-y-4 bg-accent-shade-1 relative">
