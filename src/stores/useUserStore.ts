@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { persist, createJSONStorage } from "zustand/middleware";
 
 export interface UserProfile {
   id: string;
@@ -32,7 +32,7 @@ interface UserState {
 
 // Safe localStorage wrapper — swallows QuotaExceededError so a large avatar
 // or profile payload doesn't crash the whole app.
-const safeStorage = {
+const safeLocalStorage = {
   getItem: (name: string) => {
     try { return localStorage.getItem(name); } catch { return null; }
   },
@@ -57,7 +57,7 @@ export const useUserStore = create<UserState>()(
     }),
     {
       name: "user-storage",
-      storage: safeStorage,
+      storage: createJSONStorage(() => safeLocalStorage),
       // Only persist the lightweight identity fields — exclude avatar/profilePicture
       // (may be base64 data URLs) which can exceed the ~5 MB localStorage quota.
       partialize: (state) => ({
