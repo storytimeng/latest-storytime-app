@@ -192,6 +192,8 @@ try {
   swapAndroidPage("category/page.tsx");
   swapAndroidPage("category/[slug]/page.tsx");
   swapAndroidPage("all-genres/[id]/page.tsx");
+  swapAndroidPage("story/page.tsx");
+  swapAndroidPage("story/client.tsx");
   swapAndroidPage("story/[id]/page.tsx");
   swapAndroidPage("story/[id]/read/page.tsx");
   swapAndroidPage("story/[id]/read/client.tsx");
