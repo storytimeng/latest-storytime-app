@@ -63,9 +63,12 @@ export function useRequestStoryDeletion() {
         url: `/stories/${storyId}/request-deletion`,
         body: reason ? { reason } : {},
       });
+      // Invalidate the library cache so the story disappears from the user's
+      // list immediately (backend now excludes pending-deletion stories).
+      await globalMutate("/stories/my-library");
       showToast({
         type: "success",
-        message: "Deletion request submitted. Our team will review it shortly.",
+        message: "Story removed from your library. Our team will review the deletion request.",
       });
       return true;
     } catch {
