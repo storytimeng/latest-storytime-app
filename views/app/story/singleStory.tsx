@@ -811,7 +811,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
           {
             id: storyId,
             title: story.title,
-            content: story.content || story.description || "",
+            content: story.content || "",
             number: 1,
           },
         ];

@@ -481,12 +481,12 @@ export function useStoryViewLogic({
         // The API integration below looks correct
 
         // Content logic:
-        // - For stories WITH chapters/episodes: content can be description (for CREATE) or empty
+        // - For stories WITH chapters/episodes: the body is added per-chapter/episode, not here
         // - For stories WITHOUT chapters/episodes: content is the actual story text from formData.content
-        // - Description and content are SEPARATE fields and should not be mixed in updates
+        // - description (blurb) must NEVER be used as a fallback for content — they are separate fields
         const contentText =
           hasChapters || hasEpisodes
-            ? formData.content || formData.description || "" // Use description as fallback for CREATE
+            ? formData.content || ""
             : formData.content ||
               (_parts && _parts.length > 0
                 ? _parts.map((p) => `${p.title}\n${p.body}`).join("\n\n")
