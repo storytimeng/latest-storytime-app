@@ -75,18 +75,35 @@ async function fetchPublishedStories(): Promise<MetadataRoute.Sitemap> {
   try {
     const apiUrl =
       process.env.NEXT_PUBLIC_API_URL || `https://api.${APP_CONFIG.domain}`;
-    const res = await fetch(
-      `${apiUrl}/stories?page=1&limit=500&status=published`,
-      { next: { revalidate: 1800 } },
-    );
 
-    if (!res.ok) return [];
+    const allStories: Array<{ id: string; updatedAt?: string }> = [];
+    const limit = 100;
+    let page = 1;
+    let hasMore = true;
 
-    const json = await res.json();
-    const stories: Array<{ id: string; updatedAt?: string }> =
-      json?.data?.items || json?.data || [];
+    while (hasMore) {
+      const res = await fetch(
+        `${apiUrl}/stories?page=${page}&limit=${limit}`,
+        { next: { revalidate: 1800 } },
+      );
 
-    return stories.map((story) => ({
+      if (!res.ok) break;
+
+      const json = await res.json();
+      const items: Array<{ id: string; updatedAt?: string }> =
+        json?.data?.items || json?.data || [];
+
+      allStories.push(...items);
+
+      // Stop if we got fewer items than the limit (last page)
+      hasMore = items.length === limit;
+      page++;
+
+      // Safety cap: fetch at most 10 pages (1000 stories)
+      if (page > 10) break;
+    }
+
+    return allStories.map((story) => ({
       url: `${BASE}/story/${story.id}`,
       lastModified: story.updatedAt ? new Date(story.updatedAt) : new Date(),
       changeFrequency: "weekly" as const,
