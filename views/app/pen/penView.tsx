@@ -25,7 +25,7 @@ import { useRouter } from "next/navigation";
 
 import { useUserProfile } from "@/src/hooks/useUserProfile";
 import { useLibrary } from "@/src/hooks/useLibrary";
-import { useDeleteStory } from "@/src/hooks/useStoryMutations";
+import { useDeleteStory, useRequestStoryDeletion } from "@/src/hooks/useStoryMutations";
 import type { StoryResponseDto } from "@/src/client/types.gen";
 
 // Locally extend StoryResponseDto for UI needs
@@ -51,6 +51,8 @@ const PenView = () => {
   const [selectedTab, setSelectedTab] = useState<TabKey>("Recent");
   const [showAllStories, setShowAllStories] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
+  const [requestReason, setRequestReason] = useState("");
   const [storyToDelete, setStoryToDelete] = useState<{
     id: string | number;
     title: string;
@@ -65,8 +67,9 @@ const PenView = () => {
   // Fetch stories from user's library
   const { stories, isLoading, mutate } = useLibrary();
 
-  // Delete story hook
+  // Delete story hooks
   const { deleteStory, isDeleting } = useDeleteStory();
+  const { requestDeletion, isRequesting } = useRequestStoryDeletion();
 
   // Filter stories by tab
   // Backend returns storyStatus: "complete" | "ongoing" | "drafts"
@@ -102,15 +105,21 @@ const PenView = () => {
     router.push(`/edit-story/${storyId}`);
   };
 
-  // Find story by id from filteredStories
+  // Route to direct delete (drafts) or deletion request (published/ongoing)
   const handleDeleteStory = (storyId: string | number) => {
     const story = filteredStories.find((s: ExtendedStory) => s.id === storyId);
-    if (story) {
-      setStoryToDelete({ id: storyId, title: (story as ExtendedStory).title });
+    if (!story) return;
+    setStoryToDelete({ id: storyId, title: (story as ExtendedStory).title });
+
+    const isDraft = (story as any).storyStatus === "drafts";
+    if (isDraft) {
       deleteCountdown.current = 5;
       setCountdownDisplay(5);
       setCanDelete(false);
       setIsDeleteModalOpen(true);
+    } else {
+      setRequestReason("");
+      setIsRequestModalOpen(true);
     }
   };
 
@@ -158,6 +167,21 @@ const PenView = () => {
   const cancelDelete = () => {
     setIsDeleteModalOpen(false);
     setStoryToDelete(null);
+  };
+
+  const confirmRequestDeletion = async () => {
+    if (!storyToDelete) return;
+    const success = await requestDeletion(String(storyToDelete.id), requestReason || undefined);
+    if (success) mutate();
+    setIsRequestModalOpen(false);
+    setStoryToDelete(null);
+    setRequestReason("");
+  };
+
+  const cancelRequest = () => {
+    setIsRequestModalOpen(false);
+    setStoryToDelete(null);
+    setRequestReason("");
   };
 
   const handleViewStory = (storyId: string | number) => {
@@ -392,9 +416,63 @@ const PenView = () => {
               </Button>
               <Button
                 onPress={confirmDelete}
+                isLoading={isDeleting}
+                isDisabled={!canDelete || isDeleting}
                 className="flex-1 py-6 rounded-full bg-primary-shade-6 text-universal-white body-text-small-medium-auto"
               >
-                Yes
+                {canDelete ? "Yes, Delete" : `Yes (${countdownDisplay})`}
+              </Button>
+            </ModalFooter>
+          </ModalContent>
+        </Modal>
+
+        {/* Deletion Request Modal (published/ongoing stories) */}
+        <Modal
+          isOpen={isRequestModalOpen}
+          onClose={cancelRequest}
+          classNames={{
+            backdrop: "bg-black/50",
+            closeButton: "hidden",
+          }}
+        >
+          <ModalContent>
+            <ModalHeader className="flex items-center justify-between px-6 pt-6 pb-4">
+              <button onClick={cancelRequest} className="text-primary-colour">
+                <ArrowLeft size={20} />
+              </button>
+              <h2 className="flex-1 text-center body-text-small-medium-auto text-primary-colour">
+                Request Story Removal
+              </h2>
+              <button onClick={cancelRequest} className="text-primary-colour">
+                <X size={20} />
+              </button>
+            </ModalHeader>
+            <ModalBody className="px-6 py-4">
+              <p className="text-center body-text-small-medium-auto text-primary-colour">
+                &ldquo;{storyToDelete?.title}&rdquo; is published. Our team will review your request and remove it shortly.
+              </p>
+              <textarea
+                className="mt-4 w-full rounded-xl border border-gray-200 bg-gray-50 p-3 text-sm text-primary-colour resize-none focus:outline-none focus:ring-2 focus:ring-primary-colour"
+                rows={3}
+                placeholder="Reason for removal (optional)"
+                value={requestReason}
+                onChange={(e) => setRequestReason(e.target.value)}
+              />
+            </ModalBody>
+            <ModalFooter className="flex gap-4 px-6 pt-0 pb-6">
+              <Button
+                onPress={confirmRequestDeletion}
+                isLoading={isRequesting}
+                isDisabled={isRequesting}
+                className="flex-1 py-6 rounded-full bg-primary-colour text-white body-text-small-medium-auto"
+              >
+                Submit Request
+              </Button>
+              <Button
+                onPress={cancelRequest}
+                className="flex-1 py-6 bg-transparent border-2 rounded-full border-primary-colour text-primary-colour body-text-small-medium-auto"
+              >
+                Cancel
               </Button>
             </ModalFooter>
           </ModalContent>
@@ -458,6 +536,62 @@ const PenView = () => {
               className="flex-1 py-7 text-base bg-transparent border-2 rounded-full border-primary-colour text-primary-colour body-text-small-medium-auto"
             >
               No
+            </Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
+
+      {/* Deletion Request Modal (for published/ongoing stories) */}
+      <Modal
+        isOpen={isRequestModalOpen}
+        onClose={cancelRequest}
+        placement="bottom"
+        classNames={{
+          backdrop: "bg-black/50",
+          base: "bg-universal-white rounded-t-3xl m-0 mb-0 max-w-[28rem] md:max-w-xl mx-auto",
+          closeButton: "hidden",
+        }}
+      >
+        <ModalContent>
+          <ModalHeader className="flex items-center justify-between px-6 pt-6 pb-4">
+            <button onClick={cancelRequest} className="text-primary-colour">
+              <ArrowLeft size={20} />
+            </button>
+            <h2 className="flex-1 text-center body-text-small-medium-auto text-primary-colour">
+              Request Story Removal
+            </h2>
+            <button onClick={cancelRequest} className="text-primary-colour">
+              <X size={20} />
+            </button>
+          </ModalHeader>
+
+          <ModalBody className="px-6 py-4">
+            <p className="text-center body-text-small-medium-auto text-primary-colour">
+              &ldquo;{storyToDelete?.title}&rdquo; is published. Our team will review your request and remove it shortly.
+            </p>
+            <textarea
+              className="mt-4 w-full rounded-xl border border-gray-200 bg-gray-50 p-3 text-sm text-primary-colour resize-none focus:outline-none focus:ring-2 focus:ring-primary-colour"
+              rows={3}
+              placeholder="Reason for removal (optional)"
+              value={requestReason}
+              onChange={(e) => setRequestReason(e.target.value)}
+            />
+          </ModalBody>
+
+          <ModalFooter className="flex gap-4 px-6 pt-0 pb-8">
+            <Button
+              onPress={confirmRequestDeletion}
+              isLoading={isRequesting}
+              isDisabled={isRequesting}
+              className="flex-1 py-7 text-base rounded-full bg-primary-colour text-white body-text-small-medium-auto"
+            >
+              Submit Request
+            </Button>
+            <Button
+              onPress={cancelRequest}
+              className="flex-1 py-7 text-base bg-transparent border-2 rounded-full border-primary-colour text-primary-colour body-text-small-medium-auto"
+            >
+              Cancel
             </Button>
           </ModalFooter>
         </ModalContent>
