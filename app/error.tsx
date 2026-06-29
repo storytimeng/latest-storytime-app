@@ -76,19 +76,18 @@ export default function Error({
           </Button>
         </div>
 
-        {/* Error details in dev mode */}
-        {process.env.NODE_ENV === "development" && (
-          <details className="mt-8 text-left">
-            <summary
-              className={`${Magnetik_Medium.className} text-xs text-grey-1 cursor-pointer`}
-            >
-              Error Details (Dev Only)
-            </summary>
-            <pre className="mt-2 p-3 bg-black/5 rounded text-xs text-red-500 overflow-auto">
-              {error.message}
-            </pre>
-          </details>
-        )}
+        {/* Error details — always visible so crashes can be diagnosed */}
+        <details className="mt-8 text-left">
+          <summary
+            className={`${Magnetik_Medium.className} text-xs text-grey-1 cursor-pointer`}
+          >
+            Error Details
+          </summary>
+          <pre className="mt-2 p-3 bg-black/5 rounded text-xs text-red-500 overflow-auto whitespace-pre-wrap break-all">
+            {error.name}: {error.message}
+            {process.env.NODE_ENV === "development" && `\n\n${error.stack}`}
+          </pre>
+        </details>
       </div>
     </div>
   );
