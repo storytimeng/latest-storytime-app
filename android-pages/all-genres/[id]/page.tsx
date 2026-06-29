@@ -1,8 +1,8 @@
 import { CategoryView } from "@/views";
 
 export function generateStaticParams() {
-  // No genres are known at build time; the app fetches them at runtime.
-  return [];
+  // Return a dummy param so Next.js doesn't fail the static export.
+  return [{ id: "index" }];
 }
 
 type Props = { params: Promise<{ id: string }> };

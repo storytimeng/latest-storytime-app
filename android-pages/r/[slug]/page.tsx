@@ -1,7 +1,7 @@
 import ReferralClient from "./client";
 
 export function generateStaticParams() {
-  return [];
+  return [{ slug: "index" }];
 }
 
 type Props = { params: Promise<{ slug: string }> };

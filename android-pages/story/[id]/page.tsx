@@ -1,8 +1,7 @@
 import StoryPageClient from "@/app/story/[id]/StoryPageClient";
 
 export function generateStaticParams() {
-  // Story IDs are runtime values – pre-render the empty shell only.
-  return [];
+  return [{ id: "index" }];
 }
 
 type Props = { params: Promise<{ id: string }> };

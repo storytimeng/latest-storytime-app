@@ -3,7 +3,7 @@ import { Skeleton } from "@heroui/skeleton";
 import ReadStoryClient from "./client";
 
 export function generateStaticParams() {
-  return [];
+  return [{ id: "index" }];
 }
 
 type Props = { params: Promise<{ id: string }> };

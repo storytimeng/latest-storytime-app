@@ -13,7 +13,7 @@
 import { EditStoryView } from "@/views";
 
 export function generateStaticParams() {
-  return [];
+  return [{ id: "index" }];
 }
 
 export default function EditStoryPage() {
