@@ -69,28 +69,27 @@ const PenView = () => {
   const { deleteStory, isDeleting } = useDeleteStory();
 
   // Filter stories by tab
+  // Backend returns storyStatus: "complete" | "ongoing" | "drafts"
   const filteredStories = useMemo(() => {
     if (!stories) return [];
     switch (selectedTab) {
       case "Recent":
         return [...stories].sort(
           (a, b) =>
-            new Date(b.lastEdited || b.writingDate || b.updatedAt).getTime() -
-            new Date(a.lastEdited || a.writingDate || a.updatedAt).getTime(),
+            new Date((b as any).updatedAt || (b as any).createdAt || 0).getTime() -
+            new Date((a as any).updatedAt || (a as any).createdAt || 0).getTime(),
         );
       case "Ongoing":
         return stories.filter(
-          (story: ExtendedStory) => story.status === "Ongoing",
+          (story: ExtendedStory) => (story as any).storyStatus === "ongoing",
         );
       case "Published":
         return stories.filter(
-          (story: ExtendedStory) =>
-            story.status === "Completed" || story.storyStatus === "complete",
+          (story: ExtendedStory) => (story as any).storyStatus === "complete",
         );
       case "Drafts":
         return stories.filter(
-          (story: ExtendedStory) =>
-            story.status === "Draft" || story.storyStatus === "drafts",
+          (story: ExtendedStory) => (story as any).storyStatus === "drafts",
         );
       default:
         return stories;
