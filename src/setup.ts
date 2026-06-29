@@ -3,6 +3,7 @@ import { client } from "./client/client.gen";
 import { createClientConfig } from "./heyapi-runtime";
 import { getAuthToken } from "./stores/useAuthStore";
 import { isAuthExemptPath, hasAuthSession } from "@/src/lib/authSession";
+import { useAuthModalStore } from "@/src/stores/useAuthModalStore";
 import {
   refreshTokens,
   ensureValidToken,
@@ -224,6 +225,7 @@ try {
           if (!onPaymentReturn && hadSession) {
             const { clearAuth } = await import("./stores/useAuthStore");
             clearAuth();
+            useAuthModalStore.getState().openModal("login");
           }
 
           return response;
@@ -242,6 +244,7 @@ try {
         if (!onPaymentReturn && hadSession) {
           const { clearAuth } = await import("./stores/useAuthStore");
           clearAuth();
+          useAuthModalStore.getState().openModal("login");
         }
 
         return response;
