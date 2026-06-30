@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 
-process.env.SERWIST_SUPPRESS_TURBOPACK_WARNING = "1";
+//process.env.SERWIST_SUPPRESS_TURBOPACK_WARNING = "1";
 
 const child = spawn("npx", ["next", "dev", ...process.argv.slice(2)], {
   stdio: "inherit",

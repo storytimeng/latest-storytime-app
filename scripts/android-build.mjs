@@ -96,7 +96,11 @@ if (!ANDROID_SDK) {
   console.log("✓ Android SDK:", ANDROID_SDK);
   // Write local.properties so Gradle can find the SDK
   const localProps = `sdk.dir=${ANDROID_SDK.replace(/\\/g, "\\\\")}`;
-  fs.writeFileSync(path.join("android", "local.properties"), localProps, "utf8");
+  fs.writeFileSync(
+    path.join("android", "local.properties"),
+    localProps,
+    "utf8",
+  );
 }
 
 if (!JAVA_HOME) {
@@ -109,14 +113,17 @@ if (!JAVA_HOME) {
 const buildEnv = {
   ...process.env,
   NEXT_PUBLIC_PLATFORM: "android",
-  ...(ANDROID_SDK && { ANDROID_HOME: ANDROID_SDK, ANDROID_SDK_ROOT: ANDROID_SDK }),
+  ...(ANDROID_SDK && {
+    ANDROID_HOME: ANDROID_SDK,
+    ANDROID_SDK_ROOT: ANDROID_SDK,
+  }),
   ...(JAVA_HOME && { JAVA_HOME }),
 };
 
 // ─── File swap helpers ────────────────────────────────────────────────────────
 
 const swapped = []; // { appPath, bakPath }
-const hidden = [];  // { original, backup }
+const hidden = []; // { original, backup }
 
 /**
  * Swap android-pages/<rel> → app/<rel>
@@ -185,7 +192,9 @@ function restore() {
 
 try {
   console.log("\n📱 Storytime Android Build\n");
-  console.log(`Mode: ${RELEASE ? "RELEASE" : "DEBUG"}${NO_APK ? " (export + sync only)" : ""}\n`);
+  console.log(
+    `Mode: ${RELEASE ? "RELEASE" : "DEBUG"}${NO_APK ? " (export + sync only)" : ""}\n`,
+  );
 
   // ── 1. Swap android-pages overrides into app/ ──────────────────────────────
   console.log("Step 1: Swapping Android page overrides...");
@@ -207,7 +216,7 @@ try {
   hide("app/api");
   hide("app/robots.ts");
   hide("app/sitemap.ts");
-
+  hide(".env.local");
   // ── 3. Next.js static export ───────────────────────────────────────────────
   console.log("\nStep 3: Building Next.js static export...\n");
   execSync("next build", { stdio: "inherit", env: buildEnv });
@@ -219,7 +228,8 @@ try {
   // ── 5. Gradle APK build ────────────────────────────────────────────────────
   if (!NO_APK) {
     console.log(`\nStep 5: Running gradlew ${GRADLE_TASK}...\n`);
-    const gradlew = process.platform === "win32" ? ".\\gradlew.bat" : "./gradlew";
+    const gradlew =
+      process.platform === "win32" ? ".\\gradlew.bat" : "./gradlew";
     execSync(`${gradlew} ${GRADLE_TASK}`, {
       stdio: "inherit",
       cwd: path.resolve("android"),
