@@ -3,6 +3,12 @@
 import { defaultCache } from "@serwist/turbopack/worker";
 import type { PrecacheEntry, SerwistGlobalConfig } from "serwist";
 import { Serwist } from "serwist";
+import { NetworkFirst } from "serwist";
+
+const readerPagesHandler = new NetworkFirst({
+  cacheName: "reader-pages",
+  networkTimeoutSeconds: 10,
+});
 
 declare global {
   interface WorkerGlobalScope extends SerwistGlobalConfig {
@@ -11,13 +17,63 @@ declare global {
 }
 
 declare const self: ServiceWorkerGlobalScope;
+// Cache the HTML shell for /story/[id]/read keyed by pathname only.
+// Any ?chapterId= / ?episodeId= variation then gets the same shell,
+// and the React component loads chapter content from IndexedDB.
+const READER_SHELL_CACHE = "reader-shells-v1";
+
+const readerShellHandler = {
+  handle: async ({ request }: { request: Request }): Promise<Response> => {
+    const url = new URL(request.url);
+    // Strip search params so all chapter variants share one cached shell
+    const shellKey = url.origin + url.pathname;
+    const cache = await caches.open(READER_SHELL_CACHE);
+
+    try {
+      const response = await fetch(request);
+      if (response.ok) {
+        // Always refresh the shell when online
+        await cache.put(shellKey, response.clone());
+        return response;
+      }
+    } catch {
+      // Network unavailable — fall through to cache
+    }
+
+    const cached = await cache.match(shellKey);
+    if (cached) return cached;
+
+    // Last resort: generic offline page
+    const offline = await caches.match("/~offline");
+    return (
+      offline ??
+      new Response("Offline", {
+        status: 503,
+        headers: { "Content-Type": "text/plain" },
+      })
+    );
+  },
+};
 
 const serwist = new Serwist({
   precacheEntries: self.__SW_MANIFEST,
   skipWaiting: true,
   clientsClaim: true,
   navigationPreload: true,
-  runtimeCaching: defaultCache,
+  runtimeCaching: [
+    // Must come before defaultCache so it wins for these paths
+    {
+      matcher: ({ url }: { url: URL }) =>
+        /\/story\/[^/]+\/read/.test(url.pathname),
+      handler: readerPagesHandler,
+    },
+    {
+      matcher: ({ url }: { url: URL }) =>
+        /\/story\/[^/]+\/read$/.test(url.pathname),
+      handler: readerShellHandler,
+    },
+    ...defaultCache,
+  ],
   // When a navigation request fails, serve /~offline (registered as an
   // additionalPrecacheEntry in app/serwist/[path]/route.ts).
   // The matcher restricts the fallback to top-level navigations only so
@@ -26,7 +82,7 @@ const serwist = new Serwist({
     entries: [
       {
         url: "/~offline",
-        matcher({ request }) {
+        matcher({ request }: { request: Request }) {
           return request.destination === "document";
         },
       },

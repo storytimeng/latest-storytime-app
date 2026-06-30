@@ -83,8 +83,7 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
     // Offline reading must work even when the session cookie has expired —
     // the story is already cached locally. We only redirect to login when
     // the user is online (or offline with no local copy of the story).
-    const isOfflineNow =
-      typeof navigator !== "undefined" && !navigator.onLine;
+    const isOfflineNow = typeof navigator !== "undefined" && !navigator.onLine;
 
     if (!hasToken && !isOfflineNow) {
       openAuthModal("login");

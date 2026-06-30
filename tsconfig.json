@@ -35,7 +35,9 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
-    ".next/dev/types/**/*.ts"
+    ".next/dev/types/**/*.ts",
+    "app/opengraph-image.tsx.disabled",
+    ".next/dev/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules"

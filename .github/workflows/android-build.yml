@@ -1,0 +1,147 @@
+name: Android Build
+
+on:
+  push:
+    branches:
+      - android
+    tags:
+      - "v*"
+  pull_request:
+    branches:
+      - android
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: "Build type"
+        required: true
+        default: "debug"
+        type: choice
+        options:
+          - debug
+          - release
+
+concurrency:
+  group: android-build-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write # needed for the release-creation step
+
+jobs:
+  build:
+    name: Build Android APK (${{ github.event.inputs.build_type || (startsWith(github.ref, 'refs/tags/v') && 'release') || 'debug' }})
+    runs-on: ubuntu-latest
+
+    env:
+      NODE_VERSION: "22"
+      JAVA_VERSION: "21"
+      PNPM_VERSION: "10"
+      IS_RELEASE: ${{ github.event.inputs.build_type == 'release' || startsWith(github.ref, 'refs/tags/v') }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('android/gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: |
+            gradle-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Create .env.local for build
+        run: |
+          cat > .env.local << EOF
+          NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}
+          NEXT_PUBLIC_BACKEND_URL=${{ secrets.NEXT_PUBLIC_BACKEND_URL }}
+          NEXT_PUBLIC_PLATFORM=android
+          EOF
+
+      - name: Build Next.js static export
+        run: node scripts/android-build.mjs --no-apk
+
+      - name: Make gradlew executable
+        run: chmod +x android/gradlew
+
+      # ── Decode keystore BEFORE gradle build, so signing config can find it ──
+      - name: Decode keystore
+        if: ${{ env.IS_RELEASE == 'true' }}
+        run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > ${{ runner.temp }}/keystore.jks
+
+      - name: Build Debug APK
+        if: ${{ env.IS_RELEASE != 'true' }}
+        run: |
+          cd android
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Build Release APK
+        if: ${{ env.IS_RELEASE == 'true' }}
+        run: |
+          cd android
+          ./gradlew assembleRelease --no-daemon
+        env:
+          ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/keystore.jks
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+
+      - name: Upload Debug APK
+        if: ${{ env.IS_RELEASE != 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: storytime-debug-${{ github.run_number }}
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 14
+
+      - name: Upload Release APK
+        if: ${{ env.IS_RELEASE == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: storytime-release-${{ github.run_number }}
+          path: android/app/build/outputs/apk/release/*.apk
+          retention-days: 30
+
+      # ── Only creates an actual GitHub Release on a version tag push ────────
+      - name: Create GitHub Release
+        if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+        uses: softprops/action-gh-release@v2
+        with:
+          files: android/app/build/outputs/apk/release/*.apk
+          generate_release_notes: true
+
+      - name: Build summary
+        if: always()
+        run: |
+          echo "## Android Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "| | |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| Branch | \`${{ github.ref_name }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Build type | \`${{ env.IS_RELEASE == 'true' && 'release' || 'debug' }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Run | \`#${{ github.run_number }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Commit | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY

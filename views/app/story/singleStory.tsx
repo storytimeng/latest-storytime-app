@@ -81,7 +81,10 @@ const formatReadingTime = (seconds: number): string => {
 const SingleStory = ({ storyId }: SingleStoryProps) => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const { story, isLoading } = useStory(storyId);
-  const { likeCount, isLiked, toggleLike } = useStoryLikes(storyId, isAuthenticated());
+  const { likeCount, isLiked, toggleLike } = useStoryLikes(
+    storyId,
+    isAuthenticated(),
+  );
   const {
     commentCount,
     comments,
@@ -89,8 +92,10 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
     updateComment,
     deleteComment,
   } = useStoryComments(storyId);
-  const { aggregatedData, mutate: mutateProgress } =
-    useAggregatedProgress(storyId, isAuthenticated());
+  const { aggregatedData, mutate: mutateProgress } = useAggregatedProgress(
+    storyId,
+    isAuthenticated(),
+  );
   const { user: storeUser } = useUserStore();
   const { openModal: openAuthModal } = useAuthModalStore();
   const router = useRouter();
@@ -525,13 +530,13 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
       }
     }
 
-// Filter out already downloaded — compare against API chapterId /
-      // episodeId, not the composite IndexedDB row id.
-      itemsToDownload = itemsToDownload.filter(
-        (item: any) =>
-          !downloadedContentIds.has(item.id) &&
-          !downloadedContentIds.has(item.chapterId ?? item.episodeId),
-      );
+    // Filter out already downloaded — compare against API chapterId /
+    // episodeId, not the composite IndexedDB row id.
+    itemsToDownload = itemsToDownload.filter(
+      (item: any) =>
+        !downloadedContentIds.has(item.id) &&
+        !downloadedContentIds.has(item.chapterId ?? item.episodeId),
+    );
 
     if (itemsToDownload.length === 0) {
       showToast({ type: "info", message: "No new items to download" });

@@ -432,13 +432,13 @@ export type CreateStoryDto = {
      */
     title: string;
     /**
-     * Short description of the story (50-100 words)
+     * Short description of the story (20-200 words)
      */
     description: string;
     /**
-     * The main content/body of the story
+     * The main content/body of the story. Required when the story has no chapters or episodes.
      */
-    content: string;
+    content?: string;
     /**
      * Array of genres to categorize the story
      */
@@ -2765,6 +2765,25 @@ export type StoriesControllerFindOnlyOnStorytimeResponses = {
 
 export type StoriesControllerFindOnlyOnStorytimeResponse = StoriesControllerFindOnlyOnStorytimeResponses[keyof StoriesControllerFindOnlyOnStorytimeResponses];
 
+export type StoriesControllerFindHomeFeedData = {
+    body?: never;
+    path?: never;
+    query?: {
+        /**
+         * Stories per section (default: 10)
+         */
+        limit?: number;
+    };
+    url: '/stories/home-feed';
+};
+
+export type StoriesControllerFindHomeFeedResponses = {
+    /**
+     * Home feed retrieved successfully
+     */
+    200: unknown;
+};
+
 export type StoriesControllerGetMyLibraryData = {
     body?: never;
     path?: never;
@@ -2896,6 +2915,10 @@ export type StoriesControllerRemoveData = {
 
 export type StoriesControllerRemoveErrors = {
     /**
+     * Not owner or story is not a draft
+     */
+    403: unknown;
+    /**
      * Story not found
      */
     404: unknown;
@@ -2998,6 +3021,14 @@ export type StoriesControllerCreateErrors = {
         path?: string;
     };
     /**
+     * Unauthorized - Valid JWT token required
+     */
+    401: unknown;
+    /**
+     * Forbidden - You can only create stories for your own account
+     */
+    403: unknown;
+    /**
      * Author not found - The provided author ID does not exist
      */
     404: unknown;
@@ -3013,6 +3044,38 @@ export type StoriesControllerCreateResponses = {
 };
 
 export type StoriesControllerCreateResponse = StoriesControllerCreateResponses[keyof StoriesControllerCreateResponses];
+
+export type StoriesControllerRequestDeletionData = {
+    body?: {
+        reason?: string;
+    };
+    path: {
+        /**
+         * Story UUID
+         */
+        id: string;
+    };
+    query?: never;
+    url: '/stories/{id}/request-deletion';
+};
+
+export type StoriesControllerRequestDeletionErrors = {
+    /**
+     * Request already pending or story is a draft
+     */
+    400: unknown;
+    /**
+     * Not the story owner
+     */
+    403: unknown;
+};
+
+export type StoriesControllerRequestDeletionResponses = {
+    /**
+     * Deletion request submitted
+     */
+    201: unknown;
+};
 
 export type StoriesControllerCreateChapterData = {
     body: CreateChapterDto;
@@ -5179,6 +5242,99 @@ export type AdminControllerUpdateChapterCommentData = {
 };
 
 export type AdminControllerUpdateChapterCommentResponses = {
+    200: unknown;
+};
+
+export type AdminControllerGetPopularitySettingsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/admin/popularity-settings';
+};
+
+export type AdminControllerGetPopularitySettingsResponses = {
+    /**
+     * Settings retrieved successfully
+     */
+    200: unknown;
+};
+
+export type AdminControllerUpdatePopularitySettingsData = {
+    body: {
+        /**
+         * Preset key from the presets list
+         */
+        preset?: string;
+        /**
+         * Custom cron expression (overrides preset)
+         */
+        cronExpression?: string;
+        isEnabled?: boolean;
+    };
+    path?: never;
+    query?: never;
+    url: '/admin/popularity-settings';
+};
+
+export type AdminControllerUpdatePopularitySettingsResponses = {
+    /**
+     * Settings updated successfully
+     */
+    200: unknown;
+};
+
+export type AdminControllerTriggerPopularityRefreshData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/admin/popularity-settings/trigger';
+};
+
+export type AdminControllerTriggerPopularityRefreshResponses = {
+    /**
+     * Bulk refresh completed
+     */
+    200: unknown;
+};
+
+export type AdminControllerGetStoryDeletionRequestsData = {
+    body?: never;
+    path?: never;
+    query?: {
+        status?: 'pending' | 'approved' | 'rejected';
+    };
+    url: '/admin/story-deletion-requests';
+};
+
+export type AdminControllerGetStoryDeletionRequestsResponses = {
+    200: unknown;
+};
+
+export type AdminControllerApproveStoryDeletionData = {
+    body?: never;
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/admin/story-deletion-requests/{id}/approve';
+};
+
+export type AdminControllerApproveStoryDeletionResponses = {
+    200: unknown;
+};
+
+export type AdminControllerRejectStoryDeletionData = {
+    body?: {
+        reason?: string;
+    };
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/admin/story-deletion-requests/{id}/reject';
+};
+
+export type AdminControllerRejectStoryDeletionResponses = {
     200: unknown;
 };
 

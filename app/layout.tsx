@@ -1,3 +1,4 @@
+import { IS_ANDROID } from "@/lib/platform";
 import "@/styles/globals.css";
 import { Metadata, Viewport } from "next";
 import { Link } from "@heroui/link";
@@ -18,72 +19,77 @@ import { GenresPreloader } from "@/components/preloaders/GenresPreloader";
 import { SupportModals } from "@/components/reusables/modals/SupportModals";
 import { OfflineManager } from "@/components/OfflineManager";
 
-export const metadata: Metadata = {
-  metadataBase: new URL(APP_CONFIG.url),
-  title: {
-    default: `${APP_CONFIG.name} - ${APP_CONFIG.shortDescription}`,
-    template: `%s | ${APP_CONFIG.name}`,
-  },
-  description: APP_CONFIG.shortDescription,
-  keywords: APP_CONFIG.keywords,
-  applicationName: APP_CONFIG.name,
-  authors: [{ name: APP_CONFIG.name, url: APP_CONFIG.url }],
-  creator: APP_CONFIG.name,
-  publisher: APP_CONFIG.name,
-  manifest: "/manifest.json",
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "default",
-    title: APP_CONFIG.name,
-  },
-  formatDetection: {
-    telephone: false,
-  },
-  openGraph: {
-    title: {
-      default: `${APP_CONFIG.name} - ${APP_CONFIG.shortDescription}`,
-      template: `%s | ${APP_CONFIG.name}`,
-    },
-    description: APP_CONFIG.shortDescription,
-    url: APP_CONFIG.url,
-    siteName: APP_CONFIG.name,
-    images: [
-      {
-        url: APP_CONFIG.images.banner,
-        width: 1200,
-        height: 630,
-        alt: `${APP_CONFIG.name} - Home To Budding Authors & Readers`,
+export const metadata: Metadata = IS_ANDROID
+  ? {
+      title: "Storytime",
+      description: "Storytime",
+    }
+  : {
+      metadataBase: new URL(APP_CONFIG.url),
+      title: {
+        default: `${APP_CONFIG.name} - ${APP_CONFIG.shortDescription}`,
+        template: `%s | ${APP_CONFIG.name}`,
       },
-    ],
-    type: "website",
-    locale: APP_CONFIG.socialMeta.ogLocale,
-  },
-  twitter: {
-    card: APP_CONFIG.socialMeta.twitterCard,
-    site: APP_CONFIG.socialMeta.twitterSite,
-    creator: APP_CONFIG.socialMeta.twitterSite,
-    title: {
-      default: `${APP_CONFIG.name} - ${APP_CONFIG.shortDescription}`,
-      template: `%s | ${APP_CONFIG.name}`,
-    },
-    description: APP_CONFIG.shortDescription,
-    images: [APP_CONFIG.images.banner],
-  },
-  alternates: {
-    canonical: APP_CONFIG.url,
-  },
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: {
-      index: true,
-      follow: true,
-      "max-video-preview": -1,
-      "max-image-preview": "large",
-      "max-snippet": -1,
-    },
-  },
-};
+      description: APP_CONFIG.shortDescription,
+      keywords: APP_CONFIG.keywords,
+      applicationName: APP_CONFIG.name,
+      authors: [{ name: APP_CONFIG.name, url: APP_CONFIG.url }],
+      creator: APP_CONFIG.name,
+      publisher: APP_CONFIG.name,
+      manifest: "/manifest.json",
+      appleWebApp: {
+        capable: true,
+        statusBarStyle: "default",
+        title: APP_CONFIG.name,
+      },
+      formatDetection: {
+        telephone: false,
+      },
+      openGraph: {
+        title: {
+          default: `${APP_CONFIG.name} - ${APP_CONFIG.shortDescription}`,
+          template: `%s | ${APP_CONFIG.name}`,
+        },
+        description: APP_CONFIG.shortDescription,
+        url: APP_CONFIG.url,
+        siteName: APP_CONFIG.name,
+        images: [
+          {
+            url: APP_CONFIG.images.banner,
+            width: 1200,
+            height: 630,
+            alt: `${APP_CONFIG.name} - Home To Budding Authors & Readers`,
+          },
+        ],
+        type: "website",
+        locale: APP_CONFIG.socialMeta.ogLocale,
+      },
+      twitter: {
+        card: APP_CONFIG.socialMeta.twitterCard,
+        site: APP_CONFIG.socialMeta.twitterSite,
+        creator: APP_CONFIG.socialMeta.twitterSite,
+        title: {
+          default: `${APP_CONFIG.name} - ${APP_CONFIG.shortDescription}`,
+          template: `%s | ${APP_CONFIG.name}`,
+        },
+        description: APP_CONFIG.shortDescription,
+        images: [APP_CONFIG.images.banner],
+      },
+      alternates: {
+        canonical: APP_CONFIG.url,
+      },
+      robots: {
+        index: true,
+        follow: true,
+        googleBot: {
+          index: true,
+          follow: true,
+          "max-video-preview": -1,
+          "max-image-preview": "large",
+          "max-snippet": -1,
+        },
+      },
+    };
 
 export const viewport: Viewport = {
   themeColor: "#F8951D",
@@ -101,7 +107,11 @@ export default function RootLayout({
     <html suppressHydrationWarning lang="en">
       <head>
         <meta name="msvalidate.01" content="1E776355B431E74E708C85C0685CE258" />
-        <link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192x192.png" />
+        <link
+          rel="apple-touch-icon"
+          sizes="192x192"
+          href="/icons/icon-192x192.png"
+        />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -135,13 +145,15 @@ export default function RootLayout({
                 "@id": "https://storytime.ng/#website",
                 url: "https://storytime.ng",
                 name: "Storytime",
-                description: "Home To Budding Authors & Readers. Read, Write, & Grow.",
+                description:
+                  "Home To Budding Authors & Readers. Read, Write, & Grow.",
                 publisher: { "@id": "https://storytime.ng/#organization" },
                 potentialAction: {
                   "@type": "SearchAction",
                   target: {
                     "@type": "EntryPoint",
-                    urlTemplate: "https://storytime.ng/search?q={search_term_string}",
+                    urlTemplate:
+                      "https://storytime.ng/search?q={search_term_string}",
                   },
                   "query-input": "required name=search_term_string",
                 },
@@ -187,16 +199,20 @@ export default function RootLayout({
         </SerwistProvider>
 
         {/* Microsoft Clarity - session recording and heatmaps */}
-        <Script id="microsoft-clarity" strategy="afterInteractive">
-          {`(function(c,l,a,r,i,t,y){
+
+        {!IS_ANDROID && (
+          <Script id="microsoft-clarity" strategy="afterInteractive">
+            {`(function(c,l,a,r,i,t,y){
             c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
             t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i+"?ref=bwt";
             y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
           })(window,document,"clarity","script","xd3cge82i5");`}
-        </Script>
+          </Script>
+        )}
 
         {/* Google Analytics - loads after page is interactive, does not block render */}
-        {APP_CONFIG.analytics.googleAnalyticsId && (
+
+        {!IS_ANDROID && APP_CONFIG.analytics.googleAnalyticsId && (
           <>
             <Script
               src={`https://www.googletagmanager.com/gtag/js?id=${APP_CONFIG.analytics.googleAnalyticsId}`}
