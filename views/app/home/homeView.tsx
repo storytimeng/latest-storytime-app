@@ -16,7 +16,12 @@ import { useGenres } from "@/src/hooks/useGenres";
 import { useStoriesFilterStore } from "@/src/stores/useStoriesFilterStore";
 import { useUserStore } from "@/src/stores/useUserStore";
 import { Avatar } from "@heroui/avatar";
-import { useHomeFeed } from "@/src/hooks/useStoryCategories";
+import {
+  usePopularStories,
+  useRecentlyAddedStories,
+  useTrendingStories,
+  useOnlyOnStorytimeStories,
+} from "@/src/hooks/useStoryCategories";
 import { useOnlineStatus } from "@/src/hooks/useOnlineStatus";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
 
@@ -34,6 +39,13 @@ function SectionSkeleton() {
   );
 }
 
+/** Skeleton for the carousel while exclusive stories load */
+function CarouselSkeleton() {
+  return <div className="relative h-52 md:h-80 rounded-xl bg-accent-colour animate-pulse" />;
+}
+
+const HOME_LIMIT = 10;
+
 const HomeView = () => {
   const { user } = useUserStore();
   const isOnline = useOnlineStatus();
@@ -46,11 +58,13 @@ const HomeView = () => {
     useStoriesFilterStore.getState().clearGenres();
   }, []);
 
-  // Single request for all four home sections
-  const { exclusive, recentlyAdded, trending, popular, isLoading: feedLoading } = useHomeFeed(10);
+  // Four independent fetches — each section renders as soon as its own data arrives
+  const { stories: exclusiveStories, isLoading: exclusiveLoading } = useOnlyOnStorytimeStories({ limit: HOME_LIMIT });
+  const { stories: recentStories, isLoading: recentLoading } = useRecentlyAddedStories({ limit: HOME_LIMIT });
+  const { stories: trendingStories, isLoading: trendingLoading } = useTrendingStories({ limit: HOME_LIMIT });
+  const { stories: popularStories, isLoading: popularLoading } = usePopularStories({ limit: HOME_LIMIT });
 
   // Sort genres: selected first, then alphabetical
-  // Must be called before any conditional return to satisfy Rules of Hooks
   const sortedGenres = useMemo(() => {
     return [...genres].sort((a, b) => {
       const aSelected = selectedGenres.includes(a);
@@ -63,8 +77,14 @@ const HomeView = () => {
 
   // Popular sorted client-side by score
   const sortedPopular = useMemo(
-    () => [...popular].sort((a: any, b: any) => (b.popularityScore || 0) - (a.popularityScore || 0)),
-    [popular],
+    () => [...popularStories].sort((a: any, b: any) => (b.popularityScore || 0) - (a.popularityScore || 0)),
+    [popularStories],
+  );
+
+  // Exclusive filtered to only truly exclusive stories
+  const exclusive = useMemo(
+    () => exclusiveStories.filter((s: any) => s.onlyOnStorytime === true),
+    [exclusiveStories],
   );
 
   if (!isOnline) return <OfflineIndicator />;
@@ -109,7 +129,7 @@ const HomeView = () => {
 
       <PremiumBanner />
 
-      {/* Only on Storytime carousel — shows as soon as data arrives */}
+      {/* Only on Storytime carousel — renders as soon as exclusive data arrives */}
       {!selectedGenres.length && (
         <div>
           <div className="flex items-center justify-between mb-2 h-fit">
@@ -118,8 +138,8 @@ const HomeView = () => {
               <Button variant="ghost" className="text-grey-2 body-text-smallest-medium-auto">See more</Button>
             </Link>
           </div>
-          {feedLoading ? (
-            <div className="relative h-52 md:h-80 rounded-xl bg-accent-colour animate-pulse" />
+          {exclusiveLoading ? (
+            <CarouselSkeleton />
           ) : exclusive.length > 0 ? (
             <StoriesCarousel
               stories={exclusive.slice(0, 5)}
@@ -162,7 +182,7 @@ const HomeView = () => {
         </div>
       </div>
 
-      {/* Story sections */}
+      {/* Story sections — each renders independently as its data arrives */}
       <div className="pb-20 md:pb-6 space-y-4">
         {selectedGenres.length > 0 ? (
           <>
@@ -179,35 +199,37 @@ const HomeView = () => {
               </Button>
             </div>
           </>
-        ) : feedLoading ? (
-          <div className="space-y-4">
-            <SectionSkeleton />
-            <SectionSkeleton />
-            <SectionSkeleton />
-          </div>
         ) : (
           <>
-            {recentlyAdded.length > 0 && (
+            {recentLoading ? (
+              <SectionSkeleton />
+            ) : recentStories.length > 0 ? (
               <StoryGroup
                 title="Recently Added Stories"
-                stories={recentlyAdded}
+                stories={recentStories}
                 categorySlug="recently-added"
               />
-            )}
-            {trending.length > 0 && (
+            ) : null}
+
+            {trendingLoading ? (
+              <SectionSkeleton />
+            ) : trendingStories.length > 0 ? (
               <StoryGroup
                 title="Trending Now"
-                stories={trending}
+                stories={trendingStories}
                 categorySlug="trending"
               />
-            )}
-            {sortedPopular.length > 0 && (
+            ) : null}
+
+            {popularLoading ? (
+              <SectionSkeleton />
+            ) : sortedPopular.length > 0 ? (
               <StoryGroup
                 title="Popular This Week"
                 stories={sortedPopular}
                 categorySlug="popular"
               />
-            )}
+            ) : null}
           </>
         )}
       </div>
