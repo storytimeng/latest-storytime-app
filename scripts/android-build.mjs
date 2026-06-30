@@ -57,29 +57,98 @@ function detectAndroidSdk() {
 }
 
 function detectJavaHome() {
-  // Already set and valid
+  // 1. Respect existing JAVA_HOME if it's actually valid
   const existing = process.env.JAVA_HOME;
-  if (existing && fs.existsSync(path.join(existing, "bin"))) return existing;
-
-  // Android Studio bundled JDK (Windows)
-  const bundled = [
-    "C:\\Program Files\\Android\\jdk",
-    "C:\\Program Files\\Android\\Android Studio\\jbr",
-    "C:\\Program Files\\Android\\Android Studio\\jre",
-  ];
-  for (const p of bundled) {
-    if (fs.existsSync(path.join(p, "bin"))) return p;
+  if (existing && fs.existsSync(path.join(existing, "bin"))) {
+    return existing;
   }
 
-  // Standalone JDK
-  const javaBase = "C:\\Program Files\\Java";
-  if (fs.existsSync(javaBase)) {
-    const jdks = fs
-      .readdirSync(javaBase)
-      .filter((d) => fs.existsSync(path.join(javaBase, d, "bin")))
-      .sort()
-      .reverse(); // prefer newer versions
-    if (jdks.length > 0) return path.join(javaBase, jdks[0]);
+  // 2. Try resolving from `java` already on PATH (works on any machine/OS)
+  try {
+    const javaBin =
+      process.platform === "win32"
+        ? execSync("where java", { encoding: "utf8" }).split(/\r?\n/)[0].trim()
+        : execSync("which java", { encoding: "utf8" }).trim();
+
+    if (javaBin) {
+      // javaBin is like .../jdk-21/bin/java(.exe) -> strip "bin/java" twice
+      const candidate = path.resolve(javaBin, "..", "..");
+      if (fs.existsSync(path.join(candidate, "bin"))) return candidate;
+    }
+  } catch {
+    // `java` not on PATH, fall through to directory scanning
+  }
+
+  // 3. Scan common install locations per-OS
+  const searchDirs =
+    process.platform === "win32"
+      ? [
+          "C:\\Program Files\\Java",
+          "C:\\Program Files (x86)\\Java",
+          "C:\\Program Files\\Eclipse Adoptium",
+          "C:\\Program Files\\Android\\Android Studio\\jbr",
+          "C:\\Program Files\\Android\\jdk",
+          path.join(
+            os.homedir(),
+            "AppData",
+            "Local",
+            "Programs",
+            "Eclipse Adoptium",
+          ),
+          path.join(os.homedir(), ".jdks"), // IntelliJ/Android Studio managed JDKs
+        ]
+      : process.platform === "darwin"
+        ? [
+            "/Library/Java/JavaVirtualMachines",
+            "/opt/homebrew/opt",
+            "/usr/local/opt",
+            path.join(os.homedir(), ".jdks"),
+            "/Applications/Android Studio.app/Contents/jbr/Contents/Home",
+          ]
+        : [
+            "/usr/lib/jvm",
+            "/opt/jdk",
+            path.join(os.homedir(), ".jdks"),
+            "/usr/lib/android-studio/jbr",
+          ];
+
+  const found = [];
+
+  for (const dir of searchDirs) {
+    if (!fs.existsSync(dir)) continue;
+
+    // Some paths ARE the JDK home directly (e.g. the jbr path itself)
+    if (
+      fs.existsSync(
+        path.join(
+          dir,
+          "bin",
+          process.platform === "win32" ? "java.exe" : "java",
+        ),
+      )
+    ) {
+      found.push(dir);
+      continue;
+    }
+
+    // Others are containers with versioned subfolders (Java/jdk-21, jvm/temurin-17, etc.)
+    try {
+      for (const entry of fs.readdirSync(dir)) {
+        const sub = path.join(dir, entry);
+        const macNested = path.join(sub, "Contents", "Home"); // macOS .jdk bundles
+        if (fs.existsSync(path.join(sub, "bin"))) found.push(sub);
+        else if (fs.existsSync(path.join(macNested, "bin")))
+          found.push(macNested);
+      }
+    } catch {
+      // unreadable dir, skip
+    }
+  }
+
+  if (found.length > 0) {
+    // Prefer the newest-looking version string, descending sort
+    found.sort().reverse();
+    return found[0];
   }
 
   return null;
@@ -108,6 +177,8 @@ if (!JAVA_HOME) {
 } else {
   console.log("✓ JAVA_HOME:", JAVA_HOME);
 }
+
+checkSigning();
 
 // Build-time environment
 const buildEnv = {
@@ -159,6 +230,32 @@ function hide(target) {
   hidden.push({ original: target, backup });
   console.log(`  🙈 Hidden: ${target}`);
 }
+
+/**
+ * Check for signing config (keystore.properties or env vars) and warn if missing.
+ */
+// add near the top, after RELEASE/GRADLE_TASK are defined
+function checkSigning() {
+  const ksPropsPath = path.join("android", "keystore.properties");
+  const hasLocalProps = fs.existsSync(ksPropsPath);
+  const hasEnvSigning =
+    process.env.ANDROID_KEYSTORE_PATH &&
+    process.env.ANDROID_KEYSTORE_PASSWORD &&
+    process.env.ANDROID_KEY_ALIAS &&
+    process.env.ANDROID_KEY_PASSWORD;
+
+  if (RELEASE && !hasLocalProps && !hasEnvSigning) {
+    console.warn(
+      "⚠  No signing config found — neither android/keystore.properties nor ANDROID_KEYSTORE_* env vars are set.\n" +
+        "   The release build WILL fail with 'storeFile not set'.",
+    );
+  } else if (RELEASE) {
+    console.log(
+      `✓ Signing config: ${hasLocalProps ? "keystore.properties" : "environment variables"}`,
+    );
+  }
+}
+checkSigning();
 
 /**
  * Restore everything – always called in `finally`.

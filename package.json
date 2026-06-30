@@ -11,8 +11,8 @@
     "build:android:no-apk": "node scripts/android-build.mjs --no-apk",
     "android:sync": "pnpm exec cap sync android",
     "android:open": "pnpm exec cap open android",
-    "android:gradle:debug": "cd android && gradlew.bat assembleDebug",
-    "android:gradle:release": "cd android && gradlew.bat assembleRelease",
+    "android:gradle:debug": "node scripts/android-gradle-only.mjs",
+    "android:gradle:release": "node scripts/android-gradle-only.mjs --release",
     "start": "next start",
     "lint": "eslint --fix"
   },

@@ -1,4 +1,15 @@
 apply plugin: 'com.android.application'
+def keystorePropertiesFile = rootProject.file("keystore.properties")
+def keystoreProperties = new Properties()
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
+// Fallback chain: keystore.properties (local) -> env vars (CI)
+def ksStoreFile     = keystoreProperties['storeFile']     ?: System.getenv("ANDROID_KEYSTORE_PATH")
+def ksStorePassword = keystoreProperties['storePassword'] ?: System.getenv("ANDROID_KEYSTORE_PASSWORD")
+def ksKeyAlias       = keystoreProperties['keyAlias']      ?: System.getenv("ANDROID_KEY_ALIAS")
+def ksKeyPassword    = keystoreProperties['keyPassword']   ?: System.getenv("ANDROID_KEY_PASSWORD")
 
 android {
     namespace = "com.storytimeng"
@@ -20,6 +31,24 @@ android {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+
+      signingConfigs {
+        release {
+            if (ksStoreFile) {
+                storeFile file(ksStoreFile)
+                storePassword ksStorePassword
+                keyAlias ksKeyAlias
+                keyPassword ksKeyPassword
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            signingConfig signingConfigs.release
+            minifyEnabled false   // keep whatever you already have here
         }
     }
 }
