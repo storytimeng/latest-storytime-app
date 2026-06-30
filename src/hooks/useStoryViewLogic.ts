@@ -468,7 +468,11 @@ export function useStoryViewLogic({
         }
 
         // Content validation for stories without chapters/episodes
-        if (!hasChapters && !hasEpisodes && !formData.content?.trim()) {
+        // Strip HTML tags before checking — TipTap's empty state is "<p><br></p>", not ""
+        const contentPlainText = (formData.content || "")
+          .replace(/<[^>]+>/g, "")
+          .trim();
+        if (!hasChapters && !hasEpisodes && !contentPlainText) {
           showToast({
             type: "error",
             message:
