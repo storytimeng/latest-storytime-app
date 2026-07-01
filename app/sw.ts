@@ -3,7 +3,7 @@
 import { defaultCache } from "@serwist/turbopack/worker";
 import type { PrecacheEntry, SerwistGlobalConfig } from "serwist";
 import { Serwist } from "serwist";
-import { NetworkFirst } from "serwist";
+import { NetworkFirst, NetworkOnly } from "serwist";
 
 const readerPagesHandler = new NetworkFirst({
   cacheName: "reader-pages",
@@ -55,12 +55,21 @@ const readerShellHandler = {
   },
 };
 
+// API proxy routes must never be cached — error responses (502, 504) should
+// not be served from cache on retry, and stale data must not hide fresh results.
+const apiProxyHandler = new NetworkOnly();
+
 const serwist = new Serwist({
   precacheEntries: self.__SW_MANIFEST,
   skipWaiting: true,
   clientsClaim: true,
   navigationPreload: true,
   runtimeCaching: [
+    // API proxy: always hit the network, never cache (errors or successes)
+    {
+      matcher: ({ url }: { url: URL }) => url.pathname.startsWith("/api/proxy/"),
+      handler: apiProxyHandler,
+    },
     // Must come before defaultCache so it wins for these paths
     {
       matcher: ({ url }: { url: URL }) =>
