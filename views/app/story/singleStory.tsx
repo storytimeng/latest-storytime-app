@@ -25,6 +25,8 @@ import { Magnetik_Regular, Magnetik_Bold } from "@/lib";
 import { cn } from "@/lib";
 import { genreCategoryPath } from "@/lib/genre";
 import { getStoryCoverSrc } from "@/lib/storyCover";
+import { IS_ANDROID } from "@/lib/platform";
+import { rewriteForCapacitor } from "@/lib/linkRewrite";
 import { StoryCoverImage } from "@/components/reusables/customUI";
 import {
   useStory,
@@ -719,10 +721,11 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
         continueTarget?.id ??
         (hasContent ? contentList[0]?.id : undefined);
 
-      if (targetId) {
-        return `/story/${storyId}/read?${structure === "chapters" ? "chapterId" : "episodeId"}=${targetId}`;
-      }
-      return `/story/${storyId}/read`;
+      const rawUrl = targetId
+        ? `/story/${storyId}/read?${structure === "chapters" ? "chapterId" : "episodeId"}=${targetId}`
+        : `/story/${storyId}/read`;
+
+      return IS_ANDROID ? rewriteForCapacitor(rawUrl) : rawUrl;
     },
     [continueTarget?.id, contentList, hasContent, storyId, structure],
   );

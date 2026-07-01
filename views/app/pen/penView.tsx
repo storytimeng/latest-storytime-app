@@ -22,6 +22,7 @@ import {
 import { Magnetik_Bold, Magnetik_Medium, Magnetik_Regular } from "@/lib/font";
 import { StoryCard } from "@/components/reusables/customUI";
 import { useRouter } from "next/navigation";
+import { rewriteForCapacitor } from "@/lib/linkRewrite";
 
 import { useUserProfile } from "@/src/hooks/useUserProfile";
 import { useLibrary } from "@/src/hooks/useLibrary";
@@ -100,7 +101,7 @@ const PenView = () => {
   const hasStories = filteredStories.length > 0;
 
   const handleEditStory = (storyId: string | number) => {
-    router.push(`/edit-story/${storyId}`);
+    router.push(rewriteForCapacitor(`/edit-story/${storyId}`));
   };
 
   // Find story by id from filteredStories
@@ -162,7 +163,7 @@ const PenView = () => {
   };
 
   const handleViewStory = (storyId: string | number) => {
-    router.push(`/story/${storyId}`);
+    router.push(rewriteForCapacitor(`/story/${storyId}`));
   };
 
   // Empty State Component (when user has no stories at all)

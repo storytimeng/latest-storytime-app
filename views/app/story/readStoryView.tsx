@@ -20,6 +20,7 @@ import {
   useEpisodeProgress,
   useMarkStoryAsRead,
 } from "@/src/hooks/useStoryDetail";
+import { rewriteForCapacitor } from "@/lib/linkRewrite";
 import {
   useOfflineStories,
   useOnlineStatus,
@@ -73,7 +74,7 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
 
   useEffect(() => {
     // Prefetch parent story route
-    router.prefetch(`/story/${storyId}`);
+    router.prefetch(rewriteForCapacitor(`/story/${storyId}`));
 
     // Check both store and cookies to avoid false negatives during hydration
     const hasToken =
@@ -87,7 +88,7 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
 
     if (!hasToken && !isOfflineNow) {
       openAuthModal("login");
-      router.push(`/story/${storyId}`);
+      router.push(rewriteForCapacitor(`/story/${storyId}`));
     }
   }, [isAuthenticated, openAuthModal, router, storyId]);
 

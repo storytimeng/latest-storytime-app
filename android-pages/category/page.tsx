@@ -14,6 +14,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { genreToCategorySlug } from "@/lib/genre";
+import { rewriteForCapacitor } from "@/lib/linkRewrite";
 
 export default function CategoryIndexPage() {
   const router = useRouter();
@@ -21,8 +22,11 @@ export default function CategoryIndexPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const genre = params.get("genre");
+    const slug = params.get("slug");
 
-    if (genre?.trim()) {
+    if (slug?.trim()) {
+      router.replace(`/category/${decodeURIComponent(slug)}`);
+    } else if (genre?.trim()) {
       router.replace(`/category/${genreToCategorySlug(genre)}`);
     } else {
       router.replace("/all-genres");
