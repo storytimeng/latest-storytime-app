@@ -5,9 +5,10 @@ import { useUserStore, type UserProfile } from "../stores/useUserStore";
 import { useAuthStore } from "../stores/useAuthStore";
 
 export function useUserProfile() {
+  const token = useAuthStore((state) => state.token);
   const { isAuthenticated } = useAuthStore();
   const { setUser } = useUserStore();
-  const isLoggedIn = isAuthenticated();
+  const isLoggedIn = !!(token || isAuthenticated());
 
   const { data, error, isLoading, mutate } = useSWR(
     isLoggedIn ? "profile" : null,
