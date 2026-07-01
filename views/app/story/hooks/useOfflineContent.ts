@@ -6,7 +6,7 @@ export function useOfflineContent(storyId: string) {
   const { user } = useUserStore();
   const userId = user?.id;
 
-  const [isUsingOfflineData, setIsUsingOfflineData] = useState(false);
+  const [hasOfflineRecord, setHasOfflineRecord] = useState(false);
   const [offlineStory, setOfflineStory] = useState<any>(null);
   const [offlineContent, setOfflineContent] = useState<any[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -24,7 +24,7 @@ export function useOfflineContent(storyId: string) {
       }
 
       setOfflineStory(offlineStoryData);
-      setIsUsingOfflineData(true);
+      setHasOfflineRecord(true);
 
       if (offlineStoryData.structure === "chapters") {
         const offlineChapters = await chaptersStore.getByIndex(
@@ -65,6 +65,23 @@ export function useOfflineContent(storyId: string) {
     loadOffline();
   }, [loadOffline]);
 
+  /**
+   * True only when the device is offline AND the specific chapter/episode
+   * being requested actually exists in local storage. A stale or partial
+   * offline record for the story metadata (hasOfflineRecord) is NOT enough
+   * on its own to shadow the network fetch — that was the previous bug:
+   * any local record at all forced every chapter to resolve from offline
+   * storage, even chapters that were never downloaded, silently blanking
+   * the reader with zero network calls.
+   */
+  const isContentAvailableOffline = useCallback(
+    (contentId: string | null | undefined) => {
+      if (!contentId || !hasOfflineRecord) return false;
+      return offlineContent.some((c: any) => c.id === contentId);
+    },
+    [hasOfflineRecord, offlineContent],
+  );
+
   const updateLastRead = useCallback(async () => {
     if (!userId || !storyId || !offlineStory) return;
     try {
@@ -79,9 +96,10 @@ export function useOfflineContent(storyId: string) {
   }, [userId, storyId, offlineStory]);
 
   return {
-    isUsingOfflineData,
+    hasOfflineRecord,
     offlineStory,
     offlineContent,
+    isContentAvailableOffline,
     isLoaded,
     updateLastRead,
   };

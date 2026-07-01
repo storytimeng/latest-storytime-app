@@ -1,23 +1,5 @@
 /**
  * android-build.mjs
- *
- * Builds the Next.js app as a static export for Capacitor Android, then
- * optionally runs `gradlew assembleDebug` or `gradlew assembleRelease`.
- *
- * Usage:
- *   node scripts/android-build.mjs            # debug APK (default)
- *   node scripts/android-build.mjs --release  # release APK
- *   node scripts/android-build.mjs --no-apk   # Next.js export + cap sync only
- *
- * Strategy:
- *  1. Swap android-pages/<route>/page.tsx  →  app/<route>/page.tsx
- *     (originals are backed up as app/<route>/page.tsx.web.bak)
- *  2. Hide purely web-only files (api, robots, sitemap, opengraph-image)
- *     by moving them to .android-temp/
- *  3. Run `next build`  (NEXT_PUBLIC_PLATFORM=android)
- *  4. Run `cap sync android`  (copies out/ → android assets)
- *  5. Optionally run `gradlew assembleDebug|assembleRelease`
- *  6. Restore everything in the `finally` block
  */
 
 import { execSync } from "node:child_process";
@@ -25,61 +7,49 @@ import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
 
-// ─── CLI flags ────────────────────────────────────────────────────────────────
+// ─── CLI flags ────────────────────────────────────────────────────────────
 
 const args = process.argv.slice(2);
 const RELEASE = args.includes("--release");
 const NO_APK = args.includes("--no-apk");
 const GRADLE_TASK = RELEASE ? "assembleRelease" : "assembleDebug";
 
-// ─── Environment auto-detection ───────────────────────────────────────────────
+// ─── Environment auto-detection ────────────────────────────────────────────
 
 function detectAndroidSdk() {
-  // 1. Already set correctly
   const existing = process.env.ANDROID_HOME || process.env.ANDROID_SDK_ROOT;
   if (existing && fs.existsSync(path.join(existing, "platform-tools"))) {
     return existing;
   }
-
-  // 2. Common Windows locations
   const candidates = [
     path.join(os.homedir(), "AppData", "Local", "Android", "Sdk"),
     "C:\\Android\\Sdk",
     "C:\\Program Files\\Android\\Sdk",
     "C:\\Program Files (x86)\\Android\\Sdk",
   ];
-
   for (const p of candidates) {
     if (fs.existsSync(path.join(p, "platform-tools"))) return p;
   }
-
   return null;
 }
 
 function detectJavaHome() {
-  // 1. Respect existing JAVA_HOME if it's actually valid
   const existing = process.env.JAVA_HOME;
   if (existing && fs.existsSync(path.join(existing, "bin"))) {
     return existing;
   }
-
-  // 2. Try resolving from `java` already on PATH (works on any machine/OS)
   try {
     const javaBin =
       process.platform === "win32"
         ? execSync("where java", { encoding: "utf8" }).split(/\r?\n/)[0].trim()
         : execSync("which java", { encoding: "utf8" }).trim();
-
     if (javaBin) {
-      // javaBin is like .../jdk-21/bin/java(.exe) -> strip "bin/java" twice
       const candidate = path.resolve(javaBin, "..", "..");
       if (fs.existsSync(path.join(candidate, "bin"))) return candidate;
     }
   } catch {
-    // `java` not on PATH, fall through to directory scanning
+    // `java` not on PATH, fall through
   }
-
-  // 3. Scan common install locations per-OS
   const searchDirs =
     process.platform === "win32"
       ? [
@@ -95,7 +65,7 @@ function detectJavaHome() {
             "Programs",
             "Eclipse Adoptium",
           ),
-          path.join(os.homedir(), ".jdks"), // IntelliJ/Android Studio managed JDKs
+          path.join(os.homedir(), ".jdks"),
         ]
       : process.platform === "darwin"
         ? [
@@ -111,13 +81,9 @@ function detectJavaHome() {
             path.join(os.homedir(), ".jdks"),
             "/usr/lib/android-studio/jbr",
           ];
-
   const found = [];
-
   for (const dir of searchDirs) {
     if (!fs.existsSync(dir)) continue;
-
-    // Some paths ARE the JDK home directly (e.g. the jbr path itself)
     if (
       fs.existsSync(
         path.join(
@@ -130,12 +96,10 @@ function detectJavaHome() {
       found.push(dir);
       continue;
     }
-
-    // Others are containers with versioned subfolders (Java/jdk-21, jvm/temurin-17, etc.)
     try {
       for (const entry of fs.readdirSync(dir)) {
         const sub = path.join(dir, entry);
-        const macNested = path.join(sub, "Contents", "Home"); // macOS .jdk bundles
+        const macNested = path.join(sub, "Contents", "Home");
         if (fs.existsSync(path.join(sub, "bin"))) found.push(sub);
         else if (fs.existsSync(path.join(macNested, "bin")))
           found.push(macNested);
@@ -144,13 +108,10 @@ function detectJavaHome() {
       // unreadable dir, skip
     }
   }
-
   if (found.length > 0) {
-    // Prefer the newest-looking version string, descending sort
     found.sort().reverse();
     return found[0];
   }
-
   return null;
 }
 
@@ -163,7 +124,6 @@ if (!ANDROID_SDK) {
   );
 } else {
   console.log("✓ Android SDK:", ANDROID_SDK);
-  // Write local.properties so Gradle can find the SDK
   const localProps = `sdk.dir=${ANDROID_SDK.replace(/\\/g, "\\\\")}`;
   fs.writeFileSync(
     path.join("android", "local.properties"),
@@ -178,9 +138,6 @@ if (!JAVA_HOME) {
   console.log("✓ JAVA_HOME:", JAVA_HOME);
 }
 
-checkSigning();
-
-// Build-time environment
 const buildEnv = {
   ...process.env,
   NEXT_PUBLIC_PLATFORM: "android",
@@ -191,36 +148,16 @@ const buildEnv = {
   ...(JAVA_HOME && { JAVA_HOME }),
 };
 
-// ─── File swap helpers ────────────────────────────────────────────────────────
+// ─── Helpers ────────────────────────────────────────────────────────────────
 
-const swapped = []; // { appPath, bakPath }
 const hidden = []; // { original, backup }
+const restructured = []; // undo callbacks, run in reverse order
 
 /**
- * Swap android-pages/<rel> → app/<rel>
- * The original is saved as app/<rel>.web.bak so it is never deleted.
- */
-function swapAndroidPage(rel) {
-  const src = path.join("android-pages", rel);
-  const dest = path.join("app", rel);
-  const bak = dest + ".web.bak";
-
-  if (!fs.existsSync(src)) return;
-
-  // Back up original web version if it exists
-  if (fs.existsSync(dest)) {
-    fs.renameSync(dest, bak);
-  }
-
-  fs.mkdirSync(path.dirname(dest), { recursive: true });
-  fs.copyFileSync(src, dest);
-  swapped.push({ appPath: dest, bakPath: bak });
-  console.log(`  ↔  Swapped: android-pages/${rel} → app/${rel}`);
-}
-
-/**
- * Hide a file or directory that has no Android equivalent.
- * The original is moved to .android-temp/ and restored after build.
+ * Hide a file or directory that has no Android equivalent, or that
+ * relies on generateStaticParams → single fallback id, which only
+ * resolves real values under SSR (dynamicParams) and 404s under
+ * static export (no server to fall back to).
  */
 function hide(target) {
   if (!fs.existsSync(target)) return;
@@ -232,9 +169,29 @@ function hide(target) {
 }
 
 /**
- * Check for signing config (keystore.properties or env vars) and warn if missing.
+ * Write a temporary file (doesn't exist beforehand, or gets overwritten).
+ * Restored/removed after build. Used when a flattened page needs a file
+ * that currently only lives inside a folder about to be hidden.
  */
-// add near the top, after RELEASE/GRADLE_TASK are defined
+function writeTempFile(dest, content) {
+  const existed = fs.existsSync(dest);
+  const backupContent = existed ? fs.readFileSync(dest, "utf8") : null;
+
+  fs.mkdirSync(path.dirname(dest), { recursive: true });
+  fs.writeFileSync(dest, content, "utf8");
+
+  restructured.push(() => {
+    if (existed) {
+      fs.writeFileSync(dest, backupContent, "utf8");
+      console.log(`  ↩  Restored original: ${dest}`);
+    } else {
+      fs.unlinkSync(dest);
+      console.log(`  ↩  Removed temp file: ${dest}`);
+    }
+  });
+  console.log(`  📄 Wrote temp file: ${dest}`);
+}
+
 function checkSigning() {
   const ksPropsPath = path.join("android", "keystore.properties");
   const hasLocalProps = fs.existsSync(ksPropsPath);
@@ -257,22 +214,94 @@ function checkSigning() {
 }
 checkSigning();
 
-/**
- * Restore everything – always called in `finally`.
- */
+// ─── r's client, copied out of [slug] before that folder is hidden ─────────
+
+const R_CLIENT_CONTENT = `"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Spinner } from "@heroui/spinner";
+
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_URL ||
+  process.env.NEXT_PUBLIC_BACKEND_URL ||
+  "http://localhost:3001";
+
+export default function ReferralClient({ slug }: { slug: string }) {
+  const router = useRouter();
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    if (!slug) {
+      router.replace("/auth/signup");
+      return;
+    }
+
+    const resolve = async () => {
+      try {
+        const res = await fetch(
+          \`\${API_BASE.replace(/\\/$/, "")}/ambassadors/referrals/resolve/\${encodeURIComponent(slug)}\`,
+        );
+
+        if (res.ok) {
+          const json = await res.json();
+          const data = json?.data ?? json;
+          const referralCode = data?.referralCode?.trim();
+
+          if (referralCode) {
+            router.replace(\`/auth/signup?ref=\${encodeURIComponent(referralCode)}\`);
+            return;
+          }
+        }
+      } catch {
+        setError(true);
+      }
+
+      router.replace("/auth/signup");
+    };
+
+    resolve();
+  }, [slug, router]);
+
+  if (error) return null;
+
+  return (
+    <div className="flex items-center justify-center min-h-screen">
+      <Spinner size="lg" />
+    </div>
+  );
+}
+`;
+
+const R_PAGE_FIXED_IMPORT = `"use client";
+
+import ReferralClient from "./client";
+import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
+
+function ReferralEntryInner() {
+  const searchParams = useSearchParams();
+  const slug = searchParams.get("slug") ?? "";
+
+  return <ReferralClient slug={slug} />;
+}
+
+export default function ReferralEntryPage() {
+  return (
+    <Suspense fallback={null}>
+      <ReferralEntryInner />
+    </Suspense>
+  );
+}
+`;
+
 function restore() {
   console.log("\n🔄 Restoring files...");
 
-  // Restore swapped android pages (remove temp, put web original back)
-  for (const { appPath, bakPath } of swapped.reverse()) {
-    if (fs.existsSync(appPath)) fs.unlinkSync(appPath);
-    if (fs.existsSync(bakPath)) {
-      fs.renameSync(bakPath, appPath);
-      console.log(`  ↩  Restored: ${appPath}`);
-    }
+  for (const undo of restructured.reverse()) {
+    undo();
   }
 
-  // Restore hidden files
   for (const { original, backup } of hidden.reverse()) {
     if (fs.existsSync(backup)) {
       fs.renameSync(backup, original);
@@ -285,7 +314,7 @@ function restore() {
   }
 }
 
-// ─── Main ─────────────────────────────────────────────────────────────────────
+// ─── Main ─────────────────────────────────────────────────────────────────
 
 try {
   console.log("\n📱 Storytime Android Build\n");
@@ -293,40 +322,49 @@ try {
     `Mode: ${RELEASE ? "RELEASE" : "DEBUG"}${NO_APK ? " (export + sync only)" : ""}\n`,
   );
 
-  // ── 1. Swap android-pages overrides into app/ ──────────────────────────────
-  console.log("Step 1: Swapping Android page overrides...");
-  swapAndroidPage("category/page.tsx");
-  swapAndroidPage("category/[slug]/page.tsx");
-  swapAndroidPage("all-genres/page.tsx");
-  swapAndroidPage("all-genres/client.tsx");
-  swapAndroidPage("all-genres/[id]/page.tsx");
-  swapAndroidPage("story/page.tsx");
-  swapAndroidPage("story/client.tsx");
-  swapAndroidPage("story/[id]/page.tsx");
-  swapAndroidPage("story/[id]/read/page.tsx");
-  swapAndroidPage("story/[id]/read/client.tsx");
-  swapAndroidPage("edit-story/[id]/client.tsx");
-  swapAndroidPage("r/page.tsx");
-  swapAndroidPage("r/[slug]/page.tsx");
-  swapAndroidPage("r/[slug]/client.tsx");
-  swapAndroidPage("edit-story/[id]/page.tsx");
-
-  // ── 2. Hide web-only files (no Android equivalent) ─────────────────────────
-  console.log("\nStep 2: Hiding web-only routes...");
+  // ── 1. Hide web-only files (no Android equivalent) ──────────────────────
+  console.log("Step 1: Hiding web-only routes...");
   hide("app/opengraph-image.tsx");
   hide("app/api");
   hide("app/robots.ts");
   hide("app/sitemap.ts");
   hide(".env.local");
-  // ── 3. Next.js static export ───────────────────────────────────────────────
+
+  // ── 2. Flatten/exclude dynamic-segment routes for static export ─────────
+  // story/page.tsx, all-genres/page.tsx, edit-story/page.tsx, and
+  // category/page.tsx already live in app/ as fully self-contained,
+  // query-param-based flattened routes — no android-pages swap needed.
+  // Their [id] siblings rely on generateStaticParams → a single fallback
+  // id, which only resolves real ids under SSR; under static export
+  // there's no server to fall back to, so any real id 404s. Since
+  // nothing outside references into these folders, they're hidden
+  // wholesale for the Android build and restored after.
+  console.log("\nStep 2: Flattening dynamic routes...");
+
+  hide("app/story/[id]");
+  hide("app/all-genres/[id]");
+  hide("app/edit-story/[id]");
+
+  // r is the one exception: app/r/page.tsx imports its client from
+  // "./[slug]/client" — a real cross-dependency into the folder we're
+  // about to hide. Copy that client out and fix the import before hiding.
+  writeTempFile("app/r/client.tsx", R_CLIENT_CONTENT);
+  writeTempFile("app/r/page.tsx", R_PAGE_FIXED_IMPORT);
+  hide("app/r/[slug]");
+
+  // category/[slug] uses a fixed KNOWN_SLUGS list, not a runtime id —
+  // every real slug gets a real file. Not hidden; left as a normal
+  // static-export dynamic route.
+
+  // ── 3. Next.js static export ─────────────────────────────────────────────
   console.log("\nStep 3: Building Next.js static export...\n");
   execSync("next build", { stdio: "inherit", env: buildEnv });
 
-  // ── 4. Capacitor sync ──────────────────────────────────────────────────────
+  // ── 4. Capacitor sync ─────────────────────────────────────────────────────
   console.log("\nStep 4: Running cap sync android...\n");
   execSync("pnpm exec cap sync android", { stdio: "inherit", env: buildEnv });
 
-  // ── 5. Gradle APK build ────────────────────────────────────────────────────
+  // ── 5. Gradle APK build ───────────────────────────────────────────────────
   if (!NO_APK) {
     console.log(`\nStep 5: Running gradlew ${GRADLE_TASK}...\n`);
     const gradlew =
