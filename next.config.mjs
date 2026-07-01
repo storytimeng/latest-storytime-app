@@ -1,7 +1,7 @@
 import { withSerwist } from "@serwist/turbopack";
 
 /** @type {import('next').NextConfig} */
-const isAndroid = process.env.NEXT_PUBLIC_PLATFORM === "android";
+const isAndroid = process.env.NEXT_PUBLIC_PLATFORM == "android";
 const nextConfig = {
   reactStrictMode: true,
   compress: true,
