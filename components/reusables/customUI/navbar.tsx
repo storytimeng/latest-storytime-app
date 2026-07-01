@@ -4,7 +4,7 @@ import { Home, BookOpen, PenTool, Bell } from "lucide-react";
 import React from "react";
 import { Magnetik_Medium, Magnetik_Bold } from "@/lib/font";
 import { usePathname } from "next/navigation";
-import Link from "next/link";
+import { Link } from "@/components/AppLink";
 import { useNotifications } from "@/src/hooks/useNotifications";
 import { useAuthStore } from "@/src/stores/useAuthStore";
 import { useUserStore } from "@/src/stores/useUserStore";

@@ -11,7 +11,7 @@ import { useAuthStore } from "@/src/stores/useAuthStore";
 import PasswordTipsModal from "@/components/reusables/customUI/passwordTipsModal";
 import { useLoadingStore } from "@/src/stores/useLoadingStore";
 import { Check, X } from "lucide-react";
-import Link from "next/link";
+import { Link } from "@/components/AppLink";
 
 interface UpdatePasswordFormData {
   currentPassword?: string;

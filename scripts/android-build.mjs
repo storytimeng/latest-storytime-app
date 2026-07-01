@@ -297,12 +297,15 @@ try {
   console.log("Step 1: Swapping Android page overrides...");
   swapAndroidPage("category/page.tsx");
   swapAndroidPage("category/[slug]/page.tsx");
+  swapAndroidPage("all-genres/page.tsx");
   swapAndroidPage("all-genres/[id]/page.tsx");
   swapAndroidPage("story/page.tsx");
   swapAndroidPage("story/client.tsx");
   swapAndroidPage("story/[id]/page.tsx");
   swapAndroidPage("story/[id]/read/page.tsx");
   swapAndroidPage("story/[id]/read/client.tsx");
+  swapAndroidPage("edit-story/[id]/client.tsx");
+  swapAndroidPage("r/page.tsx");
   swapAndroidPage("r/[slug]/page.tsx");
   swapAndroidPage("r/[slug]/client.tsx");
   swapAndroidPage("edit-story/[id]/page.tsx");

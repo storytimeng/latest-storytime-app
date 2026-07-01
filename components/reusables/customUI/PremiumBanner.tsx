@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import Link from "next/link";
+import { Link } from "@/components/AppLink";
 import { Card } from "@heroui/card";
 import { Magnetik_Regular, Magnetik_Bold } from "@/lib/font";
 import { usePremiumFeatures } from "@/src/hooks/usePremiumFeatures";

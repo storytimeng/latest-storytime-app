@@ -2,7 +2,7 @@
 
 import { motion, useMotionValue, useTransform, animate } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
+import { Link } from "@/components/AppLink";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { StoryResponseDto } from "@/src/client/types.gen";

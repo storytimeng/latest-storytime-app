@@ -19,7 +19,7 @@ import {
   SkipForward,
 } from "lucide-react";
 import { Magnetik_Bold, Magnetik_Medium, Magnetik_Regular } from "@/lib/font";
-import Link from "next/link";
+import { Link } from "@/components/AppLink";
 
 interface StoryPremiumProps {
   title?: string;

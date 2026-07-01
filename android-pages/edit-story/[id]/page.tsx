@@ -10,12 +10,17 @@
  * we can't add it to the original file directly.
  */
 
-import { EditStoryView } from "@/views";
+import { Suspense } from "react";
+import EditStoryClient from "./client";
 
 export function generateStaticParams() {
   return [{ id: "index" }];
 }
 
 export default function EditStoryPage() {
-  return <EditStoryView />;
+  return (
+    <Suspense fallback={null}>
+      <EditStoryClient />
+    </Suspense>
+  );
 }

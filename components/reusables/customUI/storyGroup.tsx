@@ -7,7 +7,7 @@ import { Magnetik_Bold } from "@/lib/font";
 import { cn } from "@/lib/utils";
 import StoryCard from "./storyCard";
 import { useInfiniteScroll } from "@/src/hooks/useInfiniteScroll";
-import Link from "next/link";
+import { Link } from "@/components/AppLink";
 
 import { StoryResponseDto } from "@/src/client/types.gen";
 

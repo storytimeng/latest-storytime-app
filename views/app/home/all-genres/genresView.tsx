@@ -2,7 +2,7 @@
 
 import { PageHeader } from "@/components/reusables";
 import { useGenres } from "@/src/hooks/useGenres";
-import Link from "next/link";
+import { Link } from "@/components/AppLink";
 
 const GenresView = () => {
   const { genres, isLoading } = useGenres();

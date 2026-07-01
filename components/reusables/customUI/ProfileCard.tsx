@@ -3,7 +3,7 @@
 import React from "react";
 import { Button } from "@heroui/button";
 import { Camera, Settings } from "lucide-react";
-import Link from "next/link";
+import { Link } from "@/components/AppLink";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { cn } from "@/lib";

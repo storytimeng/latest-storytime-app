@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import Link from "next/link";
+import { Link } from "@/components/AppLink";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Crown, Lock } from "lucide-react";
 import { Button } from "@heroui/button";

@@ -3,7 +3,7 @@
 import React from "react";
 import { Button } from "@heroui/button";
 import { Crown } from "lucide-react";
-import Link from "next/link";
+import { Link } from "@/components/AppLink";
 import { Magnetik_Medium } from "@/lib/font";
 
 interface PremiumButtonProps {

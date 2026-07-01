@@ -1,5 +1,5 @@
 "use client";
-import Link from "next/link";
+import { Link } from "@/components/AppLink";
 import { useRouter } from "next/navigation";
 import React, { useState, useEffect } from "react";
 import {

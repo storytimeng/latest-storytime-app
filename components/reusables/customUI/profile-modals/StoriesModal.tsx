@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Magnetik_Bold, Magnetik_Medium, Magnetik_Regular } from "@/lib/font";
 import { useUserStories } from "@/src/hooks/useUserStories";
 import { Skeleton } from "@heroui/skeleton";
-import Link from "next/link";
+import { Link } from "@/components/AppLink";
 import { Edit, Eye, ThumbsUp, MessageSquare } from "lucide-react";
 
 export const StoriesModal = () => {

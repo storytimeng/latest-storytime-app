@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { Button } from "@heroui/button";
 import { Modal, ModalContent } from "@heroui/modal";
 import { ArrowLeft, Volume2, Download, Bookmark, Loader2 } from "lucide-react";
-import Link from "next/link";
+import { Link } from "@/components/AppLink";
 import Image from "next/image";
 import {
   Magnetik_Medium,
