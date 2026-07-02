@@ -6,6 +6,9 @@ import { execSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
+import { createRequire } from "node:module";
+
+const require = createRequire(import.meta.url);
 
 // ─── CLI flags ────────────────────────────────────────────────────────────
 
@@ -358,7 +361,14 @@ try {
 
   // ── 3. Next.js static export ─────────────────────────────────────────────
   console.log("\nStep 3: Building Next.js static export...\n");
-  execSync("next build", { stdio: "inherit", env: buildEnv });
+  // Invoke Next.js' bin script directly via node, not via a bare
+  // `next build` shell command. CI runners don't put node_modules/.bin
+  // on PATH for shells spawned by execSync, so `next` isn't found
+  // there even though pnpm just installed it. Resolving the script
+  // via the package itself also sidesteps the .cmd-vs-shell-script
+  // shim differences between Windows and Linux.
+  const nextBin = require.resolve("next/dist/bin/next");
+  execSync(`node "${nextBin}" build`, { stdio: "inherit", env: buildEnv });
 
   // ── 4. Capacitor sync ─────────────────────────────────────────────────────
   console.log("\nStep 4: Running cap sync android...\n");
