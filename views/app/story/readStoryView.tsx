@@ -1,5 +1,4 @@
 "use client";
-
 import React, {
   useState,
   Suspense,
@@ -31,6 +30,7 @@ import { useAuthModalStore } from "@/src/stores/useAuthModalStore";
 import { useTTSStore } from "@/src/stores/useTTSStore";
 import { TTSProvider } from "@/components/providers/TTSProvider";
 import { stopBrowserTTS } from "@/src/lib/tts/stopBrowserTTS";
+import PageHeader from "@/components/reusables/customUI/pageHeader";
 
 // Component imports
 // OfflineBanner is rendered globally by <OfflineManager /> in the root layout;
@@ -612,6 +612,7 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
   if (isStoryLoading && !isUsingOfflineData) {
     return (
       <div className="min-h-screen p-4 space-y-4 bg-accent-shade-1">
+        <PageHeader backLink={`/story?id=${storyId}`} showBackButton />
         <Skeleton className="w-full h-12 rounded-lg" />
         <Skeleton className="w-full rounded-lg h-96" />
       </div>
@@ -622,6 +623,7 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
   if (!activeStory) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-accent-shade-1">
+        <PageHeader backLink={`/story?id=${storyId}`} showBackButton />
         <p className="text-primary">
           {!isOnline ? "Story not available offline" : "Story not found"}
         </p>

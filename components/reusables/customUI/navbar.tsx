@@ -23,6 +23,8 @@ const Navbar = () => {
   ];
 
   const isActive = (path: string) => {
+    if (pathname === "/" && path === "/home") return true;
+
     if (path === "/home") return pathname === "/home";
     return pathname.startsWith(path);
   };
@@ -31,8 +33,18 @@ const Navbar = () => {
   const profileActive = pathname.startsWith("/profile");
 
   const allItems = [
-    ...navItems.map(({ path, icon, label }) => ({ path, icon, label, isNotification: false })),
-    { path: "/notification", icon: Bell, label: "Notification", isNotification: true },
+    ...navItems.map(({ path, icon, label }) => ({
+      path,
+      icon,
+      label,
+      isNotification: false,
+    })),
+    {
+      path: "/notification",
+      icon: Bell,
+      label: "Notification",
+      isNotification: true,
+    },
   ];
 
   const initials = (user?.penName || user?.firstName || "U")
@@ -68,7 +80,9 @@ const Navbar = () => {
                 />
                 <span
                   className={`text-[10px] sm:text-xs ${Magnetik_Medium.className} transition-colors truncate max-w-full ${
-                    active ? "text-primary-colour font-semibold" : "text-[#361B17]"
+                    active
+                      ? "text-primary-colour font-semibold"
+                      : "text-[#361B17]"
                   }`}
                 >
                   {label}
@@ -105,7 +119,9 @@ const Navbar = () => {
             </span>
             <span
               className={`text-[10px] sm:text-xs ${Magnetik_Medium.className} transition-colors truncate max-w-full ${
-                notificationActive ? "text-primary-colour font-semibold" : "text-[#361B17]"
+                notificationActive
+                  ? "text-primary-colour font-semibold"
+                  : "text-[#361B17]"
               }`}
             >
               Notification
@@ -116,16 +132,21 @@ const Navbar = () => {
 
       {/* ── Tablet / desktop top navbar (hidden below md) ────────────────── */}
       <header className="hidden md:flex sticky top-0 z-50 w-full bg-[#f8f7f7] border-b border-[#AFAFAF] shadow-sm">
-        <div className="w-full max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto px-6 lg:px-8 flex items-center justify-between h-14">
+        <div className="flex items-center justify-between w-full max-w-3xl px-6 mx-auto lg:max-w-5xl xl:max-w-6xl lg:px-8 h-14">
           {/* Brand */}
-          <Link href="/home" className={`text-lg font-bold text-[#361B17] ${Magnetik_Bold.className}`}>
+          <Link
+            href="/home"
+            className={`text-lg font-bold text-[#361B17] ${Magnetik_Bold.className}`}
+          >
             Storytime
           </Link>
 
           {/* Nav links */}
           <nav className="flex items-center gap-1" aria-label="Main navigation">
             {allItems.map(({ path, icon: Icon, label, isNotification }) => {
-              const active = isNotification ? notificationActive : isActive(path);
+              const active = isNotification
+                ? notificationActive
+                : isActive(path);
               return (
                 <Link
                   key={path}
@@ -140,12 +161,14 @@ const Navbar = () => {
                   }`}
                 >
                   <span className="relative inline-flex">
-                    <Icon className={`w-4 h-4 ${active ? "fill-[#361B17]" : ""}`} />
+                    <Icon
+                      className={`w-4 h-4 ${active ? "fill-[#361B17]" : ""}`}
+                    />
                     {isNotification && unreadCount > 0 && (
                       <>
-                        <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-red-500 opacity-75 animate-ping" />
+                        <span className="absolute w-3 h-3 bg-red-500 rounded-full opacity-75 -top-1 -right-1 animate-ping" />
                         <span
-                          className="absolute -top-1 -right-1 flex items-center justify-center w-3 h-3 rounded-full bg-red-500 text-white font-bold leading-none"
+                          className="absolute flex items-center justify-center w-3 h-3 font-bold leading-none text-white bg-red-500 rounded-full -top-1 -right-1"
                           style={{ fontSize: "6px" }}
                         >
                           {unreadCount > 9 ? "9+" : unreadCount}
@@ -195,7 +218,9 @@ const Navbar = () => {
             />
             <span
               className={`text-sm hidden lg:block max-w-[120px] truncate ${Magnetik_Medium.className} ${
-                profileActive ? "text-[#361B17] font-semibold" : "text-[#361B17]/70"
+                profileActive
+                  ? "text-[#361B17] font-semibold"
+                  : "text-[#361B17]/70"
               }`}
             >
               {user?.penName || user?.firstName || "Profile"}

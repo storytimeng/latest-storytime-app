@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { SplashScreen } from "@/components/SplashScreen";
 import { showToast } from "@/lib/showNotification";
 import { requestPersistentStorage } from "@/lib/backgroundSync";
-
+import { IS_ANDROID } from "@/lib/platform";
 interface PWAProviderProps {
   children: React.ReactNode;
 }
@@ -14,7 +14,38 @@ export const PWAProvider = ({ children }: PWAProviderProps) => {
   const [isAppReady, setIsAppReady] = useState(false);
   const [minSplashTimePassed, setMinSplashTimePassed] = useState(false);
   const minDisplayTime = 1200; // ms, can adjust as needed
+  // Add to PWAProvider.tsx, inside the component, as a new useEffect:
 
+  useEffect(() => {
+    if (!IS_ANDROID) return;
+
+    let backButtonListener: any;
+
+    const setupBackButton = async () => {
+      const { App } = await import("@capacitor/app");
+
+      backButtonListener = await App.addListener(
+        "backButton",
+        ({ canGoBack }) => {
+          // canGoBack reflects Capacitor's own WebView history check.
+          // Since navigation now uses window.location.assign/replace (real
+          // document loads), browser history is populated normally, so
+          // history.back() correctly moves to the previous real page.
+          if (canGoBack || window.history.length > 1) {
+            window.history.back();
+          } else {
+            App.exitApp();
+          }
+        },
+      );
+    };
+
+    void setupBackButton();
+
+    return () => {
+      backButtonListener?.remove();
+    };
+  }, []);
   // Hide splash when both app is ready and min time passed
   useEffect(() => {
     if (isAppReady && minSplashTimePassed) {
