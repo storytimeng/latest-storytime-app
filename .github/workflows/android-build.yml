@@ -35,17 +35,18 @@ jobs:
     env:
       NODE_VERSION: "22"
       JAVA_VERSION: "21"
-      PNPM_VERSION: "11.9.0"
       IS_RELEASE: ${{ github.event.inputs.build_type == 'release' || startsWith(github.ref, 'refs/tags/v') }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # Install pnpm using the version declared in package.json's
+      # "packageManager" field (single source of truth). Do NOT also pass
+      # `version:` here — action-setup v4 errors if both are set, even when
+      # the values match.
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
