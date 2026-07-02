@@ -10,6 +10,7 @@ const nextConfig = {
     removeConsole: process.env.NODE_ENV === "production",
   },
   output: isAndroid ? "export" : undefined,
+  trailingSlash: isAndroid ? true : undefined,
   images: {
     unoptimized: isAndroid,
     formats: ["image/avif", "image/webp"],

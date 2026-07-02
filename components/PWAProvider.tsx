@@ -33,10 +33,8 @@ export const PWAProvider = ({ children }: PWAProviderProps) => {
       (window.navigator as any).standalone ||
       document.referrer.includes("android-app://");
 
-    // Only show splash in PWA mode or first visit
     const hasSeenSplash = sessionStorage.getItem("splash-shown");
-
-    if (!isPWA && hasSeenSplash) {
+    if (hasSeenSplash) {
       setShowSplash(false);
       setIsAppReady(true);
       setMinSplashTimePassed(true);
