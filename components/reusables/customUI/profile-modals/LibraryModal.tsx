@@ -6,7 +6,7 @@ import { Magnetik_Bold, Magnetik_Medium, Magnetik_Regular } from "@/lib/font";
 import { storiesControllerGetMyLibrary } from "@/src/client/sdk.gen";
 import useSWR from "swr";
 import { Skeleton } from "@heroui/skeleton";
-import Link from "next/link";
+import { Link } from "@/components/AppLink";
 import { Eye } from "lucide-react";
 
 export const LibraryModal = () => {

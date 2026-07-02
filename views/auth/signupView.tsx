@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
+import { Link } from "@/components/AppLink";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FormField, PasswordField } from "@/components/reusables/form";
 import { Button } from "@/components/ui/button";

@@ -21,7 +21,8 @@ interface UseStoryContentProps {
   structure: StoryStructure;
   offlineStory: any;
   offlineContent: any[];
-  isUsingOfflineData: boolean;
+  isOnline: boolean;
+  isContentAvailableOffline: (contentId: string | null | undefined) => boolean;
   syncChapterIfNeeded?: (
     chapterId: string,
     serverChapter: any,
@@ -67,7 +68,8 @@ export function useStoryContent({
   structure,
   offlineStory,
   offlineContent,
-  isUsingOfflineData,
+  isOnline,
+  isContentAvailableOffline,
   syncChapterIfNeeded,
   syncEpisodeIfNeeded,
   initialContentId,
@@ -78,6 +80,13 @@ export function useStoryContent({
   const [partsCache, setPartsCache] = useState<Record<string, PartCacheEntry>>(
     {},
   );
+
+  // Recomputed against the CURRENT selectedChapterId, not just the initial
+  // one from the URL — so switching chapters while offline correctly
+  // re-evaluates whether the new chapter is actually available locally,
+  // instead of freezing the offline/online decision at mount time.
+  const isUsingOfflineData =
+    !isOnline && isContentAvailableOffline(selectedChapterId);
 
   const activeStory = isUsingOfflineData ? offlineStory : story;
   const activeChapters = isUsingOfflineData ? offlineContent : chapters;
@@ -342,6 +351,7 @@ export function useStoryContent({
 
   return {
     selectedChapterId,
+    isUsingOfflineData,
     currentContent,
     currentTitle,
     currentComments,

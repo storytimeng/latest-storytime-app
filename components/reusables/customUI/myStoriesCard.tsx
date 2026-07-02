@@ -3,7 +3,7 @@
 import React from "react";
 import { Button } from "@heroui/button";
 import { Edit, Trash2 } from "lucide-react";
-import Link from "next/link";
+import { Link } from "@/components/AppLink";
 import { Magnetik_Medium, Magnetik_Regular } from "@/lib/font";
 import { cn } from "@/lib/utils";
 import { StoryCoverImage } from "./StoryCoverImage";

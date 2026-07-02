@@ -7,7 +7,8 @@ import { Magnetik_Bold } from "@/lib/font";
 import { cn } from "@/lib/utils";
 import StoryCard from "./storyCard";
 import { useInfiniteScroll } from "@/src/hooks/useInfiniteScroll";
-import Link from "next/link";
+import { Link } from "@/components/AppLink";
+import { rewriteForCapacitor } from "@/lib/linkRewrite";
 
 import { StoryResponseDto } from "@/src/client/types.gen";
 
@@ -53,7 +54,7 @@ const StoryGroup = React.memo(
           onLoadMore();
         }
       },
-      { threshold: 0.7, enabled: layout === "horizontal" && !!onLoadMore }
+      { threshold: 0.7, enabled: layout === "horizontal" && !!onLoadMore },
     );
 
     if (!stories || stories.length === 0) {
@@ -82,7 +83,7 @@ const StoryGroup = React.memo(
     }
 
     const handleStoryCardClick = (storyId: string | number) => {
-      router.push(`/story/${storyId}`);
+      router.push(rewriteForCapacitor(`/story/${storyId}`));
     };
 
     return (
@@ -92,18 +93,16 @@ const StoryGroup = React.memo(
             <h2 className={`body-text-small-medium-auto text-black`}>
               {title}
             </h2>
-             
-            {showSeeAll && categorySlug && (
-                          <Link prefetch={true} href={`/category/${categorySlug}`}>
 
-              <Button
-                variant="ghost"
-                className={`text-grey-2 body-text-smallest-medium-auto`}
-                 
-              >
-                See all
-              </Button>
-               </Link>
+            {showSeeAll && categorySlug && (
+              <Link prefetch={true} href={`/category/${categorySlug}`}>
+                <Button
+                  variant="ghost"
+                  className={`text-grey-2 body-text-smallest-medium-auto`}
+                >
+                  See all
+                </Button>
+              </Link>
             )}
           </div>
         )}
@@ -136,7 +135,12 @@ const StoryGroup = React.memo(
             </div>
           </ScrollShadow>
         ) : (
-          <div className={cn("grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4", containerClassName)}>
+          <div
+            className={cn(
+              "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4",
+              containerClassName,
+            )}
+          >
             {stories.map((story) => (
               <StoryCard
                 key={story.id}
@@ -149,7 +153,7 @@ const StoryGroup = React.memo(
         )}
       </div>
     );
-  }
+  },
 );
 
 StoryGroup.displayName = "StoryGroup";

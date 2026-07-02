@@ -1,4 +1,10 @@
 import { DESKTOP_ROUTES } from "@/config/desktopRoutes";
+import { IS_ANDROID } from "@/lib/platform";
+import { rewriteForCapacitor } from "@/lib/linkRewrite";
+
+function maybeRewriteHref(href: string) {
+  return IS_ANDROID ? rewriteForCapacitor(href) : href;
+}
 
 export type StoryShell = "mobile" | "desktop";
 
@@ -26,23 +32,24 @@ const MOBILE_ROUTES: StoryRouteHelpers = {
   myStories: "/my-stories",
   newStory: "/new-story",
   premium: "/premium",
-  story: (id) => `/story/${id}`,
+  story: (id) => maybeRewriteHref(`/story/${id}`),
   readStory: (id, options) => {
     const base = `/story/${id}/read`;
+    let url = base;
     if (options?.chapterId) {
-      return `${base}?chapterId=${options.chapterId}`;
+      url = `${base}?chapterId=${options.chapterId}`;
+    } else if (options?.episodeId) {
+      url = `${base}?episodeId=${options.episodeId}`;
     }
-    if (options?.episodeId) {
-      return `${base}?episodeId=${options.episodeId}`;
-    }
-    return base;
+    return maybeRewriteHref(url);
   },
-  editStory: (id) => `/edit-story/${id}`,
+  editStory: (id) => maybeRewriteHref(`/edit-story/${id}`),
   storyResume: (id, progress) => {
-    if (progress && progress > 0 && progress < 100) {
-      return `/story/${id}/read`;
-    }
-    return `/story/${id}`;
+    const url =
+      progress && progress > 0 && progress < 100
+        ? `/story/${id}/read`
+        : `/story/${id}`;
+    return maybeRewriteHref(url);
   },
   myStoriesDrafts: "/my-stories?tab=drafts",
 };
@@ -54,23 +61,24 @@ const DESKTOP_STORY_ROUTES: StoryRouteHelpers = {
   myStories: DESKTOP_ROUTES.myStories,
   newStory: DESKTOP_ROUTES.newStory,
   premium: DESKTOP_ROUTES.premium,
-  story: (id) => DESKTOP_ROUTES.story(id),
+  story: (id) => maybeRewriteHref(DESKTOP_ROUTES.story(id)),
   readStory: (id, options) => {
     const base = DESKTOP_ROUTES.readStory(id);
+    let url = base;
     if (options?.chapterId) {
-      return `${base}?chapterId=${options.chapterId}`;
+      url = `${base}?chapterId=${options.chapterId}`;
+    } else if (options?.episodeId) {
+      url = `${base}?episodeId=${options.episodeId}`;
     }
-    if (options?.episodeId) {
-      return `${base}?episodeId=${options.episodeId}`;
-    }
-    return base;
+    return maybeRewriteHref(url);
   },
-  editStory: (id) => DESKTOP_ROUTES.editStory(id),
+  editStory: (id) => maybeRewriteHref(DESKTOP_ROUTES.editStory(id)),
   storyResume: (id, progress) => {
-    if (progress && progress > 0 && progress < 100) {
-      return DESKTOP_ROUTES.readStory(id);
-    }
-    return DESKTOP_ROUTES.story(id);
+    const url =
+      progress && progress > 0 && progress < 100
+        ? DESKTOP_ROUTES.readStory(id)
+        : DESKTOP_ROUTES.story(id);
+    return maybeRewriteHref(url);
   },
   myStoriesDrafts: `${DESKTOP_ROUTES.myStories}?tab=drafts`,
 };

@@ -1,8 +1,10 @@
-import React from "react";
-import { AllGenresView } from "@/views";
+import { Suspense } from "react";
+import AllGenresClient from "./client";
 
-const Page = () => {
-  return <AllGenresView />;
-};
-
-export default Page;
+export default function Page() {
+  return (
+    <Suspense fallback={null}>
+      <AllGenresClient />
+    </Suspense>
+  );
+}

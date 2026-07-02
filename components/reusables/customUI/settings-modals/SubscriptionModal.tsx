@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { Modal, ModalContent, ModalHeader, ModalBody } from "@heroui/modal";
 import { Loader2 } from "lucide-react";
-import Link from "next/link";
+import { Link } from "@/components/AppLink";
 import useSWR from "swr";
 import {
   Magnetik_Bold,

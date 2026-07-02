@@ -7,7 +7,7 @@ import { PageHeader } from "@/components/reusables/customUI";
 import { useOnlineStatus } from "@/src/hooks/useOnlineStatus";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
 import { useGenres } from "@/src/hooks/useGenres";
-
+import { rewriteForCapacitor } from "@/lib/linkRewrite";
 const AllGenres = () => {
   const router = useRouter();
   const isOnline = useOnlineStatus();
@@ -59,7 +59,9 @@ const AllGenres = () => {
               key={genre}
               onClick={() =>
                 router.push(
-                  `/all-genres/${encodeURIComponent(genre.toLowerCase())}`,
+                  rewriteForCapacitor(
+                    `/all-genres/${encodeURIComponent(genre.toLowerCase())}`,
+                  ),
                 )
               }
               className="relative py-[14px] text-white leading-none h-fit font-medium rounded-lg border-none shadow-sm"

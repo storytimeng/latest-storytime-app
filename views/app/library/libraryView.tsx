@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { Button } from "@heroui/button";
 import { Search, Filter, BookOpen } from "lucide-react";
-import Link from "next/link";
+import { Link } from "@/components/AppLink";
 import { Magnetik_Bold, Magnetik_Medium, Magnetik_Regular } from "@/lib/font";
 import { getStoryCoverSrc } from "@/lib/storyCover";
 import { useSearchParams } from "next/navigation";

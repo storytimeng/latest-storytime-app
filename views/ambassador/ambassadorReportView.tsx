@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
+import { Link } from "@/components/AppLink";
 import { ArrowLeft, Check, FileText, Loader2 } from "lucide-react";
 import { cn } from "@/lib";
 import {

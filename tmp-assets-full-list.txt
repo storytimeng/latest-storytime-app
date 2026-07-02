@@ -1,0 +1,30 @@
+﻿C:\Github\latest-storytime-app\storytime-ng\assets\icon.png
+C:\Github\latest-storytime-app\storytime-ng\assets\Android\App Icon\mipmap-anydpi-v26\ic_background.svg
+C:\Github\latest-storytime-app\storytime-ng\assets\Android\App Icon\mipmap-anydpi-v26\ic_foreground.svg
+C:\Github\latest-storytime-app\storytime-ng\assets\Android\App Icon\mipmap-hdpi\ic_launcher.png
+C:\Github\latest-storytime-app\storytime-ng\assets\Android\App Icon\mipmap-hdpi\ic_launcher_foreground.png
+C:\Github\latest-storytime-app\storytime-ng\assets\Android\App Icon\mipmap-hdpi\ic_launcher_round.png
+C:\Github\latest-storytime-app\storytime-ng\assets\Android\App Icon\mipmap-mdpi\ic_launcher.png
+C:\Github\latest-storytime-app\storytime-ng\assets\Android\App Icon\mipmap-mdpi\ic_launcher_foreground.png
+C:\Github\latest-storytime-app\storytime-ng\assets\Android\App Icon\mipmap-mdpi\ic_launcher_round.png
+C:\Github\latest-storytime-app\storytime-ng\assets\Android\App Icon\mipmap-xhdpi\ic_launcher.png
+C:\Github\latest-storytime-app\storytime-ng\assets\Android\App Icon\mipmap-xhdpi\ic_launcher_foreground.png
+C:\Github\latest-storytime-app\storytime-ng\assets\Android\App Icon\mipmap-xhdpi\ic_launcher_round.png
+C:\Github\latest-storytime-app\storytime-ng\assets\Android\App Icon\mipmap-xxhdpi\ic_launcher.png
+C:\Github\latest-storytime-app\storytime-ng\assets\Android\App Icon\mipmap-xxhdpi\ic_launcher_foreground.png
+C:\Github\latest-storytime-app\storytime-ng\assets\Android\App Icon\mipmap-xxhdpi\ic_launcher_round.png
+C:\Github\latest-storytime-app\storytime-ng\assets\Android\App Icon\mipmap-xxxhdpi\ic_launcher.png
+C:\Github\latest-storytime-app\storytime-ng\assets\Android\App Icon\mipmap-xxxhdpi\ic_launcher_foreground.png
+C:\Github\latest-storytime-app\storytime-ng\assets\Android\App Icon\mipmap-xxxhdpi\ic_launcher_round.png
+C:\Github\latest-storytime-app\storytime-ng\assets\Android\Notification Icon\drawable-hdpi\ic_notification.png
+C:\Github\latest-storytime-app\storytime-ng\assets\Android\Notification Icon\drawable-mdpi\ic_notification.png
+C:\Github\latest-storytime-app\storytime-ng\assets\Android\Notification Icon\drawable-xhdpi\ic_notification.png
+C:\Github\latest-storytime-app\storytime-ng\assets\Android\Notification Icon\drawable-xxhdpi\ic_notification.png
+C:\Github\latest-storytime-app\storytime-ng\assets\Android\Notification Icon\drawable-xxxhdpi\ic_notification.png
+C:\Github\latest-storytime-app\storytime-ng\assets\Android\Play Store Icon\ic_playstore.png
+C:\Github\latest-storytime-app\storytime-ng\assets\Android\Play Store Icon\ic_playstore_legacy.png
+C:\Github\latest-storytime-app\storytime-ng\assets\Android\Status Bar Icon\drawable-hdpi\ic_status_bar.png
+C:\Github\latest-storytime-app\storytime-ng\assets\Android\Status Bar Icon\drawable-mdpi\ic_status_bar.png
+C:\Github\latest-storytime-app\storytime-ng\assets\Android\Status Bar Icon\drawable-xhhdpi\ic_status_bar.png
+C:\Github\latest-storytime-app\storytime-ng\assets\Android\Status Bar Icon\drawable-xxhhdpi\ic_status_bar.png
+C:\Github\latest-storytime-app\storytime-ng\assets\Android\Status Bar Icon\drawable-xxxhhdpi\ic_status_bar.png

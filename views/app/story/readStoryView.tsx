@@ -1,5 +1,4 @@
 "use client";
-
 import React, {
   useState,
   Suspense,
@@ -20,6 +19,7 @@ import {
   useEpisodeProgress,
   useMarkStoryAsRead,
 } from "@/src/hooks/useStoryDetail";
+import { rewriteForCapacitor } from "@/lib/linkRewrite";
 import {
   useOfflineStories,
   useOnlineStatus,
@@ -30,6 +30,7 @@ import { useAuthModalStore } from "@/src/stores/useAuthModalStore";
 import { useTTSStore } from "@/src/stores/useTTSStore";
 import { TTSProvider } from "@/components/providers/TTSProvider";
 import { stopBrowserTTS } from "@/src/lib/tts/stopBrowserTTS";
+import PageHeader from "@/components/reusables/customUI/pageHeader";
 
 // Component imports
 // OfflineBanner is rendered globally by <OfflineManager /> in the root layout;
@@ -73,7 +74,7 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
 
   useEffect(() => {
     // Prefetch parent story route
-    router.prefetch(`/story/${storyId}`);
+    router.prefetch(rewriteForCapacitor(`/story/${storyId}`));
 
     // Check both store and cookies to avoid false negatives during hydration
     const hasToken =
@@ -87,7 +88,7 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
 
     if (!hasToken && !isOfflineNow) {
       openAuthModal("login");
-      router.push(`/story/${storyId}`);
+      router.push(rewriteForCapacitor(`/story/${storyId}`));
     }
   }, [isAuthenticated, openAuthModal, router, storyId]);
 
@@ -100,10 +101,13 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
   // Check online/offline status
   const isOnline = useOnlineStatus();
   const { syncChapterIfNeeded, syncEpisodeIfNeeded } = useOfflineStories();
-  // Offline data is loaded on mount regardless of online state so that an
-  // already-downloaded story remains readable when the network drops mid-read.
-  const { isUsingOfflineData, offlineStory, offlineContent, updateLastRead } =
-    useOfflineContent(storyId);
+  const {
+    hasOfflineRecord,
+    offlineStory,
+    offlineContent,
+    isContentAvailableOffline,
+    updateLastRead,
+  } = useOfflineContent(storyId);
 
   // Data hooks - only fetch when online. If the user has this story saved
   // offline, we still try the network for fresh metadata; useStoryContent
@@ -130,14 +134,6 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
 
     return () => clearTimeout(timer);
   }, [isOnline, storyId, markAsRead]);
-
-  // When the user goes offline while reading, record the lastRead timestamp
-  // so the "Continue reading" surface can pick up where they left off.
-  useEffect(() => {
-    if (!isOnline && isUsingOfflineData) {
-      updateLastRead();
-    }
-  }, [isOnline, isUsingOfflineData, updateLastRead]);
 
   // Reading progress tracking
   const contentContainerRef = useRef<HTMLDivElement>(null);
@@ -210,19 +206,12 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
   const setSelectedNarrationVoiceId = useTTSStore(
     (state) => state.setSelectedNarrationVoiceId,
   );
-  const { defaultVoice } = useStoryAudioVoices(isOnline && !isUsingOfflineData);
-  const narrationVoice = selectedNarrationVoiceId ?? defaultVoice;
-
-  useEffect(() => {
-    if (!selectedNarrationVoiceId && defaultVoice) {
-      setSelectedNarrationVoiceId(defaultVoice);
-    }
-  }, [defaultVoice, selectedNarrationVoiceId, setSelectedNarrationVoiceId]);
 
   // Custom hooks for derived state
   const isNavVisible = useScrollVisibility();
   const {
     selectedChapterId,
+    isUsingOfflineData,
     currentContent,
     currentTitle,
     currentComments,
@@ -243,11 +232,32 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
     structure,
     offlineStory,
     offlineContent,
-    isUsingOfflineData,
+    isOnline,
+    isContentAvailableOffline,
     syncChapterIfNeeded,
     syncEpisodeIfNeeded,
     initialContentId: initialContentId || undefined,
   });
+
+  // When the user goes offline while reading, record the lastRead timestamp
+  // so the "Continue reading" surface can pick up where they left off.
+  // Moved below useStoryContent() since isUsingOfflineData is now derived
+  // there (per-chapter, reactive to selectedChapterId changes) rather than
+  // computed statically from the URL's initial chapterId/episodeId.
+  useEffect(() => {
+    if (!isOnline && isUsingOfflineData) {
+      updateLastRead();
+    }
+  }, [isOnline, isUsingOfflineData, updateLastRead]);
+
+  const { defaultVoice } = useStoryAudioVoices(isOnline && !isUsingOfflineData);
+  const narrationVoice = selectedNarrationVoiceId ?? defaultVoice;
+
+  useEffect(() => {
+    if (!selectedNarrationVoiceId && defaultVoice) {
+      setSelectedNarrationVoiceId(defaultVoice);
+    }
+  }, [defaultVoice, selectedNarrationVoiceId, setSelectedNarrationVoiceId]);
 
   const updateContentUrl = useCallback(
     (contentId: string) => {
@@ -319,6 +329,20 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
       isOnline &&
       !isUsingOfflineData &&
       checkFeature("audioNarration"),
+    storyTitle: activeStory?.title,
+    partTitle: currentTitle,
+    authorName: activeStory?.anonymous
+      ? "Anonymous"
+      : activeStory?.author?.penName || "Anonymous",
+    artworkUrl:
+      (activeStory as any)?.imageUrl || (activeStory as any)?.coverImage,
+    // Uses the plain nav handlers directly (no storyAudio.stop() call) —
+    // useStoryAudio already stops/reloads playback internally whenever
+    // chapterId/episodeId changes, so this avoids a circular dependency
+    // on storyAudio itself while still keeping lock-screen prev/next in
+    // sync with the same URL-updating navigation the in-app UI uses.
+    onPreviousTrack: hasNavigation ? handlePreviousWithUrl : undefined,
+    onNextTrack: hasNavigation ? handleNextWithUrl : undefined,
   });
 
   const handleReadingModeChange = useCallback(
@@ -345,7 +369,6 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
     storyAudio.stop();
     handleNextWithUrl();
   }, [handleNextWithUrl, storyAudio.stop]);
-
   // Memoize word count to avoid recalculating on every render/interval
   const totalWords = React.useMemo(() => {
     if (!currentContent) return 0;
@@ -467,16 +490,6 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
     const contentHeight = contentRect.height;
     const contentBottom = contentRect.bottom;
 
-    // Calculate how much of the content has been scrolled past the bottom of the viewport
-    // When contentTop is at clientHeight, we are at 0% (start of content entering view)
-    // When contentBottom is at clientHeight, we are at 100% (end of content entering view)
-
-    // However, usually "read" means the user has scrolled it out of view (top) or it's fully visible.
-    // A better metric for "reading" text is: how much of the text has passed the user's eye line?
-    // Let's assume the user reads at the bottom of the screen (worst case) or middle.
-    // Standard practice: Percentage of content that is above the bottom of the viewport.
-
-    // Distance from top of content to bottom of viewport
     const visibleContentHeight = clientHeight - contentTop;
 
     let percentageRead = 0;
@@ -487,15 +500,12 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
       percentageRead = (visibleContentHeight / contentHeight) * 100;
     }
 
-    // Clamp percentage
     percentageRead = Math.min(100, Math.max(0, percentageRead));
 
-    // If the bottom of the content is visible in the viewport, consider it 100% read
     if (contentBottom <= clientHeight) {
       percentageRead = 100;
     }
 
-    // Calculate words read based on percentage
     const wordsRead = Math.floor((percentageRead / 100) * totalWords);
 
     return {
@@ -602,6 +612,7 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
   if (isStoryLoading && !isUsingOfflineData) {
     return (
       <div className="min-h-screen p-4 space-y-4 bg-accent-shade-1">
+        <PageHeader backLink={`/story?id=${storyId}`} showBackButton />
         <Skeleton className="w-full h-12 rounded-lg" />
         <Skeleton className="w-full rounded-lg h-96" />
       </div>
@@ -612,6 +623,7 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
   if (!activeStory) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-accent-shade-1">
+        <PageHeader backLink={`/story?id=${storyId}`} showBackButton />
         <p className="text-primary">
           {!isOnline ? "Story not available offline" : "Story not found"}
         </p>
@@ -699,18 +711,18 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
           </div>
         ) : isPartLoading && !currentContent ? (
           <div className="px-4 py-8 space-y-4">
-            <div className="h-1 w-full overflow-hidden rounded-full bg-light-grey-2">
-              <div className="h-full w-1/3 animate-pulse rounded-full bg-complimentary-colour" />
+            <div className="w-full h-1 overflow-hidden rounded-full bg-light-grey-2">
+              <div className="w-1/3 h-full rounded-full animate-pulse bg-complimentary-colour" />
             </div>
-            <Skeleton className="w-full rounded-lg h-64" />
+            <Skeleton className="w-full h-64 rounded-lg" />
           </div>
         ) : (
           currentContent && (
             <React.Fragment>
               {isPartLoading ? (
-                <div className="sticky top-28 z-30 px-4">
-                  <div className="h-1 w-full overflow-hidden rounded-full bg-light-grey-2">
-                    <div className="h-full w-1/3 animate-pulse rounded-full bg-complimentary-colour" />
+                <div className="sticky z-30 px-4 top-28">
+                  <div className="w-full h-1 overflow-hidden rounded-full bg-light-grey-2">
+                    <div className="w-1/3 h-full rounded-full animate-pulse bg-complimentary-colour" />
                   </div>
                 </div>
               ) : null}
@@ -745,7 +757,7 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
 
               {/* Interaction Section (only when online) */}
               {isOnline && (
-                <div className="px-4 md:px-12 lg:px-24 xl:px-32 pb-6">
+                <div className="px-4 pb-6 md:px-12 lg:px-24 xl:px-32">
                   <InteractionSection
                     likeCount={displayLikeCount}
                     commentCount={displayCommentCount}

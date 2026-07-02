@@ -2,7 +2,7 @@
 
 import React from "react";
 import { ArrowLeft } from "lucide-react";
-import Link from "next/link";
+import { Link } from "@/components/AppLink";
 import { cn } from "@/lib/utils";
 
 interface PageHeaderProps {

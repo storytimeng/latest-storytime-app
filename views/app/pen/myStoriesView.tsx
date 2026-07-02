@@ -12,6 +12,7 @@ import { Tabs, Tab } from "@heroui/tabs";
 import { Button } from "@heroui/button";
 import { ArrowLeft, X, BookOpen } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { rewriteForCapacitor } from "@/lib/linkRewrite";
 import PageHeader from "@/components/reusables/customUI/pageHeader";
 import { Magnetik_Bold, Magnetik_Medium, Magnetik_Regular } from "@/lib/font";
 import { StoryCard } from "@/components/reusables/customUI";
@@ -80,7 +81,7 @@ const MyStoriesView = () => {
   }, [selectedTab, stories]);
 
   const handleEditStory = (storyId: string | number) => {
-    router.push(`/edit-story/${storyId}`);
+    router.push(rewriteForCapacitor(`/edit-story/${storyId}`));
   };
 
   const handleDeleteStory = (storyId: string | number) => {
@@ -162,7 +163,7 @@ const MyStoriesView = () => {
   };
 
   const handleViewStory = (storyId: string | number) => {
-    router.push(`/story/${storyId}`);
+    router.push(rewriteForCapacitor(`/story/${storyId}`));
   };
 
   return (

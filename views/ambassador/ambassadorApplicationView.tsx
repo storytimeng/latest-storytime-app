@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Check, Loader2 } from "lucide-react";
-import Link from "next/link";
+import { Link } from "@/components/AppLink";
 import { cn } from "@/lib";
 import {
   Magnetik_Bold,

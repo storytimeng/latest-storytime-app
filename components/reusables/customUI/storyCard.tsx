@@ -4,7 +4,7 @@ import { Card } from "@heroui/card";
 import { ThumbsUp, Pencil, Trash2, Eye } from "lucide-react";
 import Image from "next/image";
 import React from "react";
-import Link from "next/link";
+import { Link } from "@/components/AppLink";
 import { Magnetik_Regular } from "@/lib/font";
 import { cn } from "@/lib/utils";
 import { StoryResponseDto, AuthorDto } from "@/src/client/types.gen";

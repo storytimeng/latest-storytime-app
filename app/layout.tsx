@@ -103,6 +103,19 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const content = (
+    <Providers themeProps={{ attribute: "class", defaultTheme: "light" }}>
+      <PWAProvider>
+        <GenresPreloader />
+        <MaxWidthWrapper>{children}</MaxWidthWrapper>
+        <LoadingOverlay />
+        <PWAInstallPrompt />
+        <SupportModals />
+        <OfflineManager />
+      </PWAProvider>
+    </Providers>
+  );
+
   return (
     <html suppressHydrationWarning lang="en">
       <head>
@@ -185,18 +198,11 @@ export default function RootLayout({
           Magnetik_Medium.variable,
         )}
       >
-        <SerwistProvider swUrl="/serwist/sw.js">
-          <Providers themeProps={{ attribute: "class", defaultTheme: "light" }}>
-            <PWAProvider>
-              <GenresPreloader />
-              <MaxWidthWrapper>{children}</MaxWidthWrapper>
-              <LoadingOverlay />
-              <PWAInstallPrompt />
-              <SupportModals />
-              <OfflineManager />
-            </PWAProvider>
-          </Providers>
-        </SerwistProvider>
+        {IS_ANDROID ? (
+          content
+        ) : (
+          <SerwistProvider swUrl="/serwist/sw.js">{content}</SerwistProvider>
+        )}
 
         {/* Microsoft Clarity - session recording and heatmaps */}
 

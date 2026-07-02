@@ -1,5 +1,5 @@
 "use client";
-import Link from "next/link";
+import { Link } from "@/components/AppLink";
 import { useRouter } from "next/navigation";
 import React, { useState, useEffect } from "react";
 import {
@@ -25,6 +25,8 @@ import { Magnetik_Regular, Magnetik_Bold } from "@/lib";
 import { cn } from "@/lib";
 import { genreCategoryPath } from "@/lib/genre";
 import { getStoryCoverSrc } from "@/lib/storyCover";
+import { IS_ANDROID } from "@/lib/platform";
+import { rewriteForCapacitor } from "@/lib/linkRewrite";
 import { StoryCoverImage } from "@/components/reusables/customUI";
 import {
   useStory,
@@ -60,6 +62,7 @@ import {
   canReadExclusiveStory,
   isExclusiveStory,
 } from "@/src/lib/premiumUpsell";
+import PageHeader from "@/components/reusables/customUI/pageHeader";
 
 interface SingleStoryProps {
   storyId?: string;
@@ -719,10 +722,11 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
         continueTarget?.id ??
         (hasContent ? contentList[0]?.id : undefined);
 
-      if (targetId) {
-        return `/story/${storyId}/read?${structure === "chapters" ? "chapterId" : "episodeId"}=${targetId}`;
-      }
-      return `/story/${storyId}/read`;
+      const rawUrl = targetId
+        ? `/story/${storyId}/read?${structure === "chapters" ? "chapterId" : "episodeId"}=${targetId}`
+        : `/story/${storyId}/read`;
+
+      return IS_ANDROID ? rewriteForCapacitor(rawUrl) : rawUrl;
     },
     [continueTarget?.id, contentList, hasContent, storyId, structure],
   );
@@ -871,16 +875,16 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
         </div>
 
         {/* Content Skeleton - Below hero */}
-        <div className="relative px-4 -mt-16 z-10">
+        <div className="relative z-10 px-4 -mt-16">
           {/* Badges */}
           <div className="flex gap-2 mb-3">
             <Skeleton className="w-24 h-6 rounded" />
             <Skeleton className="w-20 h-6 rounded" />
           </div>
           {/* Title */}
-          <Skeleton className="w-3/4 h-8 rounded-lg mb-2" />
+          <Skeleton className="w-3/4 h-8 mb-2 rounded-lg" />
           {/* CTA Button */}
-          <Skeleton className="w-full h-14 rounded-full my-4" />
+          <Skeleton className="w-full my-4 rounded-full h-14" />
           {/* Stats Row */}
           <div className="flex gap-2 mb-4">
             <Skeleton className="w-20 h-6 rounded-md" />
@@ -889,9 +893,9 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
             <Skeleton className="w-20 h-6 rounded-md" />
           </div>
           {/* Description */}
-          <Skeleton className="w-full h-12 rounded-md mb-4" />
+          <Skeleton className="w-full h-12 mb-4 rounded-md" />
           {/* Author */}
-          <Skeleton className="w-48 h-5 rounded-md mb-4" />
+          <Skeleton className="w-48 h-5 mb-4 rounded-md" />
         </div>
 
         {/* Tabs Skeleton */}
@@ -920,8 +924,11 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
 
   if (!story) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-accent-shade-1">
-        <p className="text-primary">Story not found</p>
+      <div className="min-h-screen bg-accent-shade-1">
+        <PageHeader backLink="/home" showBackButton />
+        <div className="flex items-center justify-center px-4 py-20">
+          <p className="text-center text-primary">Story not found</p>
+        </div>
       </div>
     );
   }
@@ -1096,7 +1103,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
       </div>
 
       {/* Content Section - Below Hero */}
-      <div className="relative px-4 -mt-16 z-10">
+      <div className="relative z-10 px-4 -mt-16">
         {/* Badges Row */}
         <div className="flex flex-wrap items-center gap-2 mb-3">
           {isExclusive && (
@@ -1164,7 +1171,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
         )}
 
         {/* Stats Row */}
-        <div className="flex items-center gap-2 flex-wrap text-xs text-primary/70 mb-4">
+        <div className="flex flex-wrap items-center gap-2 mb-4 text-xs text-primary/70">
           <div className="flex items-center gap-1.5 bg-white/50 px-2 py-1 rounded-md">
             <Eye size={12} className="text-primary/60" />
             <span className="font-medium text-primary">
@@ -1186,13 +1193,13 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
             </span>
           </div>
           <div className="flex items-center gap-1.5 bg-white/50 px-2 py-1 rounded-md">
-            <Star size={12} className="fill-current text-yellow-500" />
+            <Star size={12} className="text-yellow-500 fill-current" />
             <span className="font-medium text-primary">
               {starRating.toFixed(1)}
             </span>
           </div>
           {story.genres?.[0] && (
-            <span className="bg-white/50 px-2 py-1 rounded-md font-medium text-primary">
+            <span className="px-2 py-1 font-medium rounded-md bg-white/50 text-primary">
               {story.genres[0]}
             </span>
           )}
@@ -1211,7 +1218,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
           {story.description && story.description.length > 100 && (
             <button
               onClick={() => setActiveTab("details")}
-              className="text-complimentary-colour text-sm font-medium mt-1"
+              className="mt-1 text-sm font-medium text-complimentary-colour"
             >
               More
             </button>
@@ -1221,10 +1228,10 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
         {/* Author Section */}
         <button
           onClick={onOpenCollaborators}
-          className="flex items-center gap-2 text-xs text-primary/50 uppercase tracking-wider mb-4 hover:text-primary/70 transition-colors"
+          className="flex items-center gap-2 mb-4 text-xs tracking-wider uppercase transition-colors text-primary/50 hover:text-primary/70"
         >
           <span className="font-medium">Show Writers & Cast</span>
-          <span className="text-primary/80 font-bold normal-case">
+          <span className="font-bold normal-case text-primary/80">
             {author?.penName || author?.name || "Unknown"}
             {collaborators &&
               collaborators.length > 0 &&
@@ -1520,7 +1527,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
                           handleSingleDownload(item, index);
                         }}
                         title="Download failed — tap to retry"
-                        className="flex items-center justify-center w-8 h-8 text-red-500 transition-colors border border-red-500/30 rounded-full bg-red-500/10 hover:bg-red-500/20"
+                        className="flex items-center justify-center w-8 h-8 text-red-500 transition-colors border rounded-full border-red-500/30 bg-red-500/10 hover:bg-red-500/20"
                       >
                         <AlertCircle size={16} />
                       </button>

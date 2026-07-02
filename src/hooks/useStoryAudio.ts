@@ -15,6 +15,46 @@ interface UseStoryAudioOptions {
   episodeId?: string | null;
   voice?: string | null;
   enabled?: boolean;
+  // Media Session metadata — lock screen / notification cover art
+  storyTitle?: string;
+  partTitle?: string; // e.g. "Chapter 4" — shown as the track title
+  authorName?: string;
+  artworkUrl?: string;
+  // Lets the OS-level lock screen / notification prev/next buttons drive
+  // chapter navigation, same as the in-app chevrons.
+  onPreviousTrack?: () => void;
+  onNextTrack?: () => void;
+}
+
+function updateMediaSessionMetadata({
+  storyTitle,
+  partTitle,
+  authorName,
+  artworkUrl,
+}: {
+  storyTitle?: string;
+  partTitle?: string;
+  authorName?: string;
+  artworkUrl?: string;
+}) {
+  if (typeof navigator === "undefined" || !("mediaSession" in navigator)) {
+    return;
+  }
+
+  const artwork = artworkUrl
+    ? [
+        { src: artworkUrl, sizes: "96x96", type: "image/jpeg" },
+        { src: artworkUrl, sizes: "192x192", type: "image/jpeg" },
+        { src: artworkUrl, sizes: "512x512", type: "image/jpeg" },
+      ]
+    : [];
+
+  navigator.mediaSession.metadata = new MediaMetadata({
+    title: partTitle || storyTitle || "Storytime",
+    artist: authorName || "Storytime",
+    album: storyTitle || "",
+    artwork,
+  });
 }
 
 export function useStoryAudio({
@@ -23,6 +63,12 @@ export function useStoryAudio({
   episodeId,
   voice,
   enabled = true,
+  storyTitle,
+  partTitle,
+  authorName,
+  artworkUrl,
+  onPreviousTrack,
+  onNextTrack,
 }: UseStoryAudioOptions) {
   const playbackRate = useTTSStore((state) => state.playbackRate);
   const volume = useTTSStore((state) => state.volume);
@@ -65,6 +111,22 @@ export function useStoryAudio({
     const totalDurationSeconds = manifestRef.current?.totalDurationSeconds;
 
     tts.setElapsedSeconds(Math.floor(elapsed));
+
+    if (
+      typeof navigator !== "undefined" &&
+      "mediaSession" in navigator &&
+      totalDurationSeconds
+    ) {
+      try {
+        navigator.mediaSession.setPositionState({
+          duration: totalDurationSeconds,
+          playbackRate: audio?.playbackRate ?? 1,
+          position: Math.min(elapsed, totalDurationSeconds),
+        });
+      } catch {
+        // Some browsers throw if called before metadata/duration is valid — safe to ignore.
+      }
+    }
 
     if (currentSegment && totalDurationSeconds) {
       const sentenceEstimate = Math.floor(
@@ -121,6 +183,10 @@ export function useStoryAudio({
       elapsedOffsetRef.current = 0;
       tts.stop();
       tts.setElapsedSeconds(0);
+
+      if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
+        navigator.mediaSession.playbackState = "none";
+      }
     },
     [clearProgressTimer, reportListen],
   );
@@ -144,6 +210,10 @@ export function useStoryAudio({
       audio.playbackRate = tts.playbackRate;
       audio.volume = tts.volume;
       audioRef.current = audio;
+
+      if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
+        navigator.mediaSession.playbackState = "playing";
+      }
 
       await new Promise<void>((resolve, reject) => {
         audio.onended = () => resolve();
@@ -260,6 +330,10 @@ export function useStoryAudio({
     audioRef.current?.pause();
     useTTSStore.getState().pause();
     clearProgressTimer();
+
+    if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
+      navigator.mediaSession.playbackState = "paused";
+    }
   }, [clearProgressTimer]);
 
   const resume = useCallback(async () => {
@@ -272,6 +346,10 @@ export function useStoryAudio({
     useTTSStore.getState().play();
     clearProgressTimer();
     progressTimerRef.current = setInterval(updateElapsed, 250);
+
+    if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
+      navigator.mediaSession.playbackState = "playing";
+    }
   }, [clearProgressTimer, playSegment, updateElapsed]);
 
   const seek = useCallback(
@@ -303,6 +381,10 @@ export function useStoryAudio({
             void playSegmentRef.current(index + 1);
           };
           await audio.play();
+
+          if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
+            navigator.mediaSession.playbackState = "playing";
+          }
           return;
         }
         accumulated = next;
@@ -315,6 +397,79 @@ export function useStoryAudio({
   useEffect(() => {
     stopPlaybackRef.current = stopPlayback;
   }, [stopPlayback]);
+
+  // Wire lock-screen / notification action handlers once. These call
+  // through refs so the handlers always see the latest play/pause/etc,
+  // without needing to be re-registered every render.
+  const playRef = useRef(play);
+  const pauseRef = useRef(pause);
+  const resumeRef = useRef(resume);
+  const seekRef = useRef(seek);
+  const onPreviousTrackRef = useRef(onPreviousTrack);
+  const onNextTrackRef = useRef(onNextTrack);
+
+  useEffect(() => {
+    playRef.current = play;
+    pauseRef.current = pause;
+    resumeRef.current = resume;
+    seekRef.current = seek;
+    onPreviousTrackRef.current = onPreviousTrack;
+    onNextTrackRef.current = onNextTrack;
+  }, [play, pause, resume, seek, onPreviousTrack, onNextTrack]);
+
+  useEffect(() => {
+    if (typeof navigator === "undefined" || !("mediaSession" in navigator)) {
+      return;
+    }
+
+    navigator.mediaSession.setActionHandler("play", () => {
+      void resumeRef.current();
+    });
+    navigator.mediaSession.setActionHandler("pause", () => {
+      pauseRef.current();
+    });
+    navigator.mediaSession.setActionHandler("stop", () => {
+      stopPlaybackRef.current();
+    });
+    navigator.mediaSession.setActionHandler("seekto", (details) => {
+      if (typeof details.seekTime === "number") {
+        void seekRef.current(details.seekTime);
+      }
+    });
+
+    if (onPreviousTrackRef.current) {
+      navigator.mediaSession.setActionHandler("previoustrack", () => {
+        onPreviousTrackRef.current?.();
+      });
+    }
+    if (onNextTrackRef.current) {
+      navigator.mediaSession.setActionHandler("nexttrack", () => {
+        onNextTrackRef.current?.();
+      });
+    }
+
+    return () => {
+      navigator.mediaSession.setActionHandler("play", null);
+      navigator.mediaSession.setActionHandler("pause", null);
+      navigator.mediaSession.setActionHandler("stop", null);
+      navigator.mediaSession.setActionHandler("seekto", null);
+      navigator.mediaSession.setActionHandler("previoustrack", null);
+      navigator.mediaSession.setActionHandler("nexttrack", null);
+    };
+    // Only re-register when presence of prev/next changes, not on every
+    // render — the refs above keep the handlers current regardless.
+  }, [Boolean(onPreviousTrack), Boolean(onNextTrack)]);
+
+  // Update lock-screen/notification metadata (title, artist, cover art)
+  // whenever the chapter/story identity changes.
+  useEffect(() => {
+    updateMediaSessionMetadata({
+      storyTitle,
+      partTitle,
+      authorName,
+      artworkUrl,
+    });
+  }, [storyTitle, partTitle, authorName, artworkUrl]);
 
   useEffect(() => {
     if (!enabled) {

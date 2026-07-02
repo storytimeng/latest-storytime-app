@@ -1,7 +1,8 @@
 "use client";
 
 import React from "react";
-import Link from "next/link";
+import { Link } from "@/components/AppLink";
+import { rewriteForCapacitor } from "@/lib/linkRewrite";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, BookOpen, Crown } from "lucide-react";
 import { Button } from "@heroui/button";
@@ -70,7 +71,9 @@ export const PremiumExclusiveReadGate: React.FC<
           <Button
             variant="bordered"
             className="w-full border-light-grey-2 text-primary-shade-4"
-            onPress={() => router.push(`/story/${storyId}`)}
+            onPress={() =>
+              router.push(rewriteForCapacitor(`/story/${storyId}`))
+            }
           >
             View story details
           </Button>

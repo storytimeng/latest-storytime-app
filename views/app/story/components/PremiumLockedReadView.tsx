@@ -1,7 +1,8 @@
 "use client";
 
 import React from "react";
-import Link from "next/link";
+import { Link } from "@/components/AppLink";
+import { rewriteForCapacitor } from "@/lib/linkRewrite";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Crown, Lock } from "lucide-react";
 import { Button } from "@heroui/button";
@@ -85,7 +86,7 @@ export const PremiumLockedReadView: React.FC<PremiumLockedReadViewProps> = ({
         <Button
           variant="light"
           className="text-primary-shade-4"
-          onPress={() => router.push(`/story/${storyId}`)}
+          onPress={() => router.push(rewriteForCapacitor(`/story/${storyId}`))}
         >
           Preview story details
         </Button>

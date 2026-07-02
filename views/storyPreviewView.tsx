@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { Button } from "@heroui/button";
 import { ArrowLeft, Edit } from "lucide-react";
-import Link from "next/link";
+import { Link } from "@/components/AppLink";
 import Image from "next/image";
 import { Magnetik_Bold, Magnetik_Medium, Magnetik_Regular } from "@/lib/font";
 

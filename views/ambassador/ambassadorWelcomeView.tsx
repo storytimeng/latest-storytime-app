@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
+import { Link } from "@/components/AppLink";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { cn } from "@/lib";
 import {

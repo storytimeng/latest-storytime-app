@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import Link from "next/link";
+import { Link } from "@/components/AppLink";
 import { Switch } from "@heroui/switch";
 import { ChevronRight } from "lucide-react";
 import { Magnetik_Regular } from "@/lib/font";

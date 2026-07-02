@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { Eye, EyeOff, Lock, AlertCircle } from "lucide-react";
 import { Input } from "@heroui/input";
-import Link from "next/link";
+import { Link } from "@/components/AppLink";
 
 interface PasswordInputProps {
   PasswordText: string;

@@ -3,7 +3,7 @@
 import { SelectField } from "@/components/reusables/form";
 import { Magnetik_Bold } from "@/lib/font";
 import { ArrowLeft, MessageSquare, ThumbsUp } from "lucide-react";
-import Link from "next/link";
+import { Link } from "@/components/AppLink";
 import React, { useState } from "react";
 
 interface FullStoryProps {

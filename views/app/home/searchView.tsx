@@ -4,7 +4,7 @@ import { SearchResult } from "@/components/reusables/customUI";
 import { SearchField } from "@/components/reusables/form";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Search } from "lucide-react";
-import Link from "next/link";
+import { Link } from "@/components/AppLink";
 import React, { useCallback, useState } from "react";
 import { useGenres } from "@/src/hooks/useGenres";
 import { useDebounce } from "@/src/hooks/useDebounce";

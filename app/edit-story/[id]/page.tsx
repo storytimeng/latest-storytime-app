@@ -1,13 +1,26 @@
-"use client";
+/**
+ * Android override for /edit-story/[id]
+ *
+ * The web version is `"use client"` which prevents co-located
+ * `generateStaticParams`. This wrapper is a server component shell that
+ * exports `generateStaticParams` (empty – IDs are runtime values) and
+ * re-exports the client component as the default page.
+ *
+ * Next.js requires `generateStaticParams` to live in a server component, so
+ * we can't add it to the original file directly.
+ */
 
-import { useParams } from "next/navigation";
-import { EditStoryView } from "@/views";
+import { Suspense } from "react";
+import EditStoryClient from "./client";
 
-const EditStoryPage = () => {
-  const params = useParams();
-  const id = params.id as string;
+export function generateStaticParams() {
+  return [{ id: "index" }];
+}
 
-  return <EditStoryView />;
-};
-
-export default EditStoryPage;
+export default function EditStoryPage() {
+  return (
+    <Suspense fallback={null}>
+      <EditStoryClient />
+    </Suspense>
+  );
+}
