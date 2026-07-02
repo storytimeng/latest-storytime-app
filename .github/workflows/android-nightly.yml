@@ -11,153 +11,153 @@ name: Android Nightly Debug
 # having to click "Run workflow".
 
 on:
-  push:
-    branches:
-      - android
-  # Catch any commit that didn't trigger a push (e.g. a force-push that
-  # rewrote a ref, or a tag move) and run once a day so a release is
-  # always available even if no one pushed.
-  schedule:
-    # 02:00 UTC every day.
-    - cron: "0 2 * * *"
-  workflow_dispatch:
+    push:
+        branches:
+            - android
+    # Catch any commit that didn't trigger a push (e.g. a force-push that
+    # rewrote a ref, or a tag move) and run once a day so a release is
+    # always available even if no one pushed.
+    schedule:
+        # 02:00 UTC every day.
+        - cron: "0 2 * * *"
+    workflow_dispatch:
 
 # Don't let multiple nightly runs pile up; queue the new one and drop
 # older pending runs in the same group.
 concurrency:
-  group: android-nightly-${{ github.ref }}
-  cancel-in-progress: true
+    group: android-nightly-${{ github.ref }}
+    cancel-in-progress: true
 
 permissions:
-  contents: write # needed to create a release
+    contents: write # needed to create a release
 
 jobs:
-  build:
-    name: Build & publish nightly debug APK
-    runs-on: ubuntu-latest
+    build:
+        name: Build & publish nightly debug APK
+        runs-on: ubuntu-latest
 
-    env:
-      NODE_VERSION: "22"
-      JAVA_VERSION: "21"
-      # All runs from this workflow produce a debug APK; IS_RELEASE
-      # here means "publish as a GitHub release", not "sign with
-      # the release keystore".
-      PUBLISH_RELEASE: "true"
+        env:
+            NODE_VERSION: "22"
+            JAVA_VERSION: "21"
+            # All runs from this workflow produce a debug APK; IS_RELEASE
+            # here means "publish as a GitHub release", not "sign with
+            # the release keystore".
+            PUBLISH_RELEASE: "true"
 
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
 
-      # Install pnpm using the version declared in package.json's
-      # "packageManager" field. Do NOT also pass `with.version:` —
-      # action-setup v4 errors out if both are set, even if the values
-      # match.
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+            # Install pnpm using the version declared in package.json's
+            # "packageManager" field. Do NOT also pass `with.version:` —
+            # action-setup v4 errors out if both are set, even if the values
+            # match.
+            - name: Setup pnpm
+              uses: pnpm/action-setup@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: "pnpm"
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: ${{ env.NODE_VERSION }}
+                  cache: "pnpm"
 
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: "temurin"
-          java-version: ${{ env.JAVA_VERSION }}
+            - name: Setup Java
+              uses: actions/setup-java@v4
+              with:
+                  distribution: "temurin"
+                  java-version: ${{ env.JAVA_VERSION }}
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+            - name: Setup Android SDK
+              uses: android-actions/setup-android@v3
 
-      - name: Cache Gradle
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: gradle-${{ runner.os }}-${{ hashFiles('android/gradle/wrapper/gradle-wrapper.properties') }}
-          restore-keys: |
-            gradle-${{ runner.os }}-
+            - name: Cache Gradle
+              uses: actions/cache@v4
+              with:
+                  path: |
+                      ~/.gradle/caches
+                      ~/.gradle/wrapper
+                  key: gradle-${{ runner.os }}-${{ hashFiles('android/gradle/wrapper/gradle-wrapper.properties') }}
+                  restore-keys: |
+                      gradle-${{ runner.os }}-
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+            - name: Install dependencies
+              run: pnpm install --frozen-lockfile
 
-      - name: Create .env.local for build
-        run: |
-          cat > .env.local << EOF
-          NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}
-          NEXT_PUBLIC_BACKEND_URL=${{ secrets.NEXT_PUBLIC_BACKEND_URL }}
-          NEXT_PUBLIC_PLATFORM=android
-          NEXT_PUBLIC_DEBUG_PROXY=false
-          NEXT_PUBLIC_PROXY=false
-          EOF
+            - name: Create .env.local for build
+              run: |
+                  cat > .env.local << EOF
+                  NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}
+                  NEXT_PUBLIC_BACKEND_URL=${{ secrets.NEXT_PUBLIC_BACKEND_URL }}
+                  NEXT_PUBLIC_PLATFORM=android
+                  NEXT_PUBLIC_DEBUG_PROXY=false
+                  NEXT_PUBLIC_PROXY=false
+                  EOF
 
-      - name: Build Next.js static export
-        run: node scripts/android-build.mjs --no-apk
+            - name: Build Next.js static export
+              run: node scripts/android-build.mjs --no-apk
 
-      - name: Make gradlew executable
-        run: chmod +x android/gradlew
+            - name: Make gradlew executable
+              run: chmod +x android/gradlew
 
-      - name: Build Debug APK
-        run: |
-          cd android
-          ./gradlew assembleDebug --no-daemon
+            - name: Build Debug APK
+              run: |
+                  cd android
+                  ./gradlew assembleDebug --no-daemon
 
-      - name: Sanity check the APK
-        run: |
-          APK="android/app/build/outputs/apk/debug/app-debug.apk"
-          if [ ! -f "$APK" ]; then
-            echo "::error::Expected APK at $APK but it was not produced."
-            exit 1
-          fi
-          echo "✓ APK: $APK ($(du -h "$APK" | cut -f1))"
+            - name: Sanity check the APK
+              run: |
+                  APK="android/app/build/outputs/apk/debug/app-debug.apk"
+                  if [ ! -f "$APK" ]; then
+                    echo "::error::Expected APK at $APK but it was not produced."
+                    exit 1
+                  fi
+                  echo "✓ APK: $APK ($(du -h "$APK" | cut -f1))"
 
-      # ── Step 1/2: upload the raw APK as a workflow artifact ────────────
-      - name: Set run metadata
-        id: meta
-        run: |
-          # YYYY-MM-DD-NNN for the tag. Includes the run number so two
-          # pushes in the same day don't collide.
-          echo "date=$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
-          echo "tag=nightly-$(date -u +%Y-%m-%d)-${{ github.run_number }}" >> "$GITHUB_OUTPUT"
-          echo "sha_short=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+            # ── Step 1/2: upload the raw APK as a workflow artifact ────────────
+            - name: Set run metadata
+              id: meta
+              run: |
+                  # YYYY-MM-DD-NNN for the tag. Includes the run number so two
+                  # pushes in the same day don't collide.
+                  echo "date=$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
+                  echo "tag=nightly-$(date -u +%Y-%m-%d)-${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+                  echo "sha_short=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
 
-      - name: Upload Debug APK artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: storytime-debug-${{ github.run_number }}
-          path: android/app/build/outputs/apk/debug/app-debug.apk
-          retention-days: 30
+            - name: Upload Debug APK artifact
+              uses: actions/upload-artifact@v4
+              with:
+                  name: storytime-debug-${{ github.run_number }}
+                  path: android/app/build/outputs/apk/debug/app-debug.apk
+                  retention-days: 30
 
-      - name: Publish GitHub pre-release
-        if: env.PUBLISH_RELEASE == 'true'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ steps.meta.outputs.tag }}
-          name: "Storytime Debug · ${{ steps.meta.outputs.date }} · ${{ steps.meta.outputs.sha_short }}"
-          prerelease: true
-          generate_release_notes: true
-          body: |
-            **Debug APK** built from `${{ github.ref_name }}` @ `${{ github.sha }}`.
+            - name: Publish GitHub pre-release
+              if: env.PUBLISH_RELEASE == 'true'
+              uses: softprops/action-gh-release@v2
+              with:
+                  tag_name: ${{ steps.meta.outputs.tag }}
+                  name: "Storytime Debug · ${{ steps.meta.outputs.date }} · ${{ steps.meta.outputs.sha_short }}"
+                  prerelease: true
+                  generate_release_notes: true
+                  body: |
+                      **Debug APK** built from `${{ github.ref_name }}` @ `${{ github.sha }}`.
 
-            - Trigger: `${{ github.event_name }}`
-            - Run: [#${{ github.run_number }}](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
-            - Branch: `${{ github.ref_name }}`
+                      - Trigger: `${{ github.event_name }}`
+                      - Run: [#${{ github.run_number }}](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})
+                      - Branch: `${{ github.ref_name }}`
 
-            Install with `adb install app-debug.apk` after downloading.
-          files: android/app/build/outputs/apk/debug/app-debug.apk
+                      Install with `adb install app-debug.apk` after downloading.
+                  files: android/app/build/outputs/apk/debug/app-debug.apk
 
-      - name: Build summary
-        if: always()
-        run: |
-          echo "## Android Nightly Debug Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| | |" >> $GITHUB_STEP_SUMMARY
-          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
-          echo "| Trigger | \`${{ github.event_name }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Branch | \`${{ github.ref_name }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Commit | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Run | \`#${{ github.run_number }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Artifact | \`storytime-debug-${{ github.run_number }}\` (30 days) |" >> $GITHUB_STEP_SUMMARY
-          echo "| Release | [nightly-…](https://github.com/${{ github.repository }}/releases) |" >> $GITHUB_STEP_SUMMARY
+            - name: Build summary
+              if: always()
+              run: |
+                  echo "## Android Nightly Debug Summary" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "| | |" >> $GITHUB_STEP_SUMMARY
+                  echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+                  echo "| Trigger | \`${{ github.event_name }}\` |" >> $GITHUB_STEP_SUMMARY
+                  echo "| Branch | \`${{ github.ref_name }}\` |" >> $GITHUB_STEP_SUMMARY
+                  echo "| Commit | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+                  echo "| Run | \`#${{ github.run_number }}\` |" >> $GITHUB_STEP_SUMMARY
+                  echo "| Artifact | \`storytime-debug-${{ github.run_number }}\` (30 days) |" >> $GITHUB_STEP_SUMMARY
+                  echo "| Release | [nightly-…](https://github.com/${{ github.repository }}/releases) |" >> $GITHUB_STEP_SUMMARY
