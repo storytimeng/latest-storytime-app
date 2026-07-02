@@ -18,6 +18,7 @@ import LoadingOverlay from "@/components/reusables/customUI/loadingOverlay";
 import { GenresPreloader } from "@/components/preloaders/GenresPreloader";
 import { SupportModals } from "@/components/reusables/modals/SupportModals";
 import { OfflineManager } from "@/components/OfflineManager";
+import { PullToRefreshWrapper } from "@/components/PullToRefreshWrapper";
 
 export const metadata: Metadata = IS_ANDROID
   ? {
@@ -107,7 +108,14 @@ export default function RootLayout({
     <Providers themeProps={{ attribute: "class", defaultTheme: "light" }}>
       <PWAProvider>
         <GenresPreloader />
-        <MaxWidthWrapper>{children}</MaxWidthWrapper>
+        {/* PullToRefreshWrapper is mounted inside Providers/SWRConfig (it
+            uses useSWRConfig) but OUTSIDE all fixed-position overlays so
+            the pull-down gesture only drags the page content, not the
+            navbar, offline banner, modals, or install prompt. The wrapper
+            itself is a no-op on non-Android platforms. */}
+        <PullToRefreshWrapper>
+          <MaxWidthWrapper>{children}</MaxWidthWrapper>
+        </PullToRefreshWrapper>
         <LoadingOverlay />
         <PWAInstallPrompt />
         <SupportModals />
