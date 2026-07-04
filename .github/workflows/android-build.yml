@@ -79,12 +79,12 @@ jobs:
       - name: Create .env.local for build
         run: |
           cat > .env.local << EOF
-          NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}
-          NEXT_PUBLIC_BACKEND_URL=${{ secrets.NEXT_PUBLIC_BACKEND_URL }}
+          NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}
+          NEXT_PUBLIC_BACKEND_URL=${{vars.NEXT_PUBLIC_API_URL}}
           NEXT_PUBLIC_PLATFORM=android
           ANDROID_KEYSTORE_BASE64=${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           ANDROID_KEYSTORE_PASSWORD=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          ANDROID_KEY_ALIAS=${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_ALIAS=${{ vars.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD=${{ secrets.ANDROID_KEY_PASSWORD }}
           NEXT_PUBLIC_DEBUG_PROXY=false
           NEXT_PUBLIC_PROXY=false
