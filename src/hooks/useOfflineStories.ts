@@ -117,6 +117,7 @@ export function useOfflineStories() {
         content: string;
         number: number;
       }>,
+      structureOverride?: "chapters" | "episodes" | "single",
     ) => {
       if (!userId) {
         showToast({
@@ -135,19 +136,16 @@ export function useOfflineStories() {
       }
 
       try {
-        // Determine structure: chapters, episodes, or single
-        let structure: "chapters" | "episodes" | "single" = "single";
-        if (
-          story.structure === "chapters" ||
-          (story.totalChapters && story.totalChapters > 0)
-        ) {
-          structure = "chapters";
-        } else if (
-          story.structure === "episodes" ||
-          (story.totalEpisodes && story.totalEpisodes > 0)
-        ) {
-          structure = "episodes";
-        }
+        // Prefer the caller's structure (already computed correctly in the
+        // component from `story.chapter` / `story.episodes`). Only fall back
+        // to guessing if the caller didn't pass one.
+        let structure: "chapters" | "episodes" | "single" =
+          structureOverride ??
+          (story.episodes?.length > 0
+            ? "episodes"
+            : story.chapter === true || story.chapters?.length > 0
+              ? "chapters"
+              : "single");
 
         const downloadedAt = Date.now();
         const lastUpdatedAt = story.updatedAt
@@ -161,13 +159,13 @@ export function useOfflineStories() {
           userId,
           title: story.title,
           description: story.description,
-          coverImage: story.coverImage,
+          coverImage: story.imageUrl ?? story.coverImage,
           author: story.author,
           genres: story.genres || [],
-          status: story.status,
+          status: story.storyStatus ?? story.status,
           structure,
-          totalChapters: story.totalChapters,
-          totalEpisodes: story.totalEpisodes,
+          totalChapters: story.chapters?.length ?? story.totalChapters,
+          totalEpisodes: story.episodes?.length ?? story.totalEpisodes,
           downloadedAt,
           lastUpdatedAt,
           metadata: {
@@ -183,21 +181,7 @@ export function useOfflineStories() {
             ? new Date((item as any).updatedAt).getTime()
             : downloadedAt;
 
-          if (structure === "chapters") {
-            const chapter: OfflineChapter = {
-              id: `${userId}_${item.id}`,
-              chapterId: item.id,
-              storyId: story.id,
-              userId,
-              chapterNumber: item.number,
-              title: item.title,
-              content: item.content,
-              wordCount: item.content ? item.content.split(/\s+/).length : 0,
-              downloadedAt,
-              lastUpdatedAt: itemUpdatedAt,
-            };
-            await chaptersStore.put(chapter);
-          } else if (structure === "episodes") {
+          if (structure === "episodes") {
             const episode: OfflineEpisode = {
               id: `${userId}_${item.id}`,
               episodeId: item.id,
@@ -211,13 +195,14 @@ export function useOfflineStories() {
             };
             await episodesStore.put(episode);
           } else {
-            // For single stories, store as a chapter with number 1
+            // "chapters" AND "single" both live in chaptersStore — but
+            // ALWAYS respect item.number, never hardcode it.
             const chapter: OfflineChapter = {
               id: `${userId}_${item.id}`,
               chapterId: item.id,
               storyId: story.id,
               userId,
-              chapterNumber: 1,
+              chapterNumber: item.number,
               title: item.title,
               content: item.content,
               wordCount: item.content ? item.content.split(/\s+/).length : 0,

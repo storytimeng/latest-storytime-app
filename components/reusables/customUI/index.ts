@@ -16,10 +16,11 @@ import SettingsOption from "./SettingsOption";
 import SettingsList from "./SettingsList";
 import { StoriesCarousel } from "./StoriesCarousel";
 import { StoryCoverImage } from "./StoryCoverImage";
-
+import { OfflineAwareStoryCard } from "./OfflineAwareStoryCard";
 export {
   Header,
   GenreButton,
+  OfflineAwareStoryCard,
   Navbar,
   StoryCard,
   MyStoriesCard,
