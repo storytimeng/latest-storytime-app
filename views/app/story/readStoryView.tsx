@@ -1,4 +1,5 @@
 "use client";
+
 import React, {
   useState,
   Suspense,
@@ -6,8 +7,11 @@ import React, {
   useRef,
   useCallback,
 } from "react";
+
 import { useSearchParams, useRouter } from "next/navigation";
+
 import { Skeleton } from "@heroui/skeleton";
+
 import {
   useStory,
   useStoryLikes,
@@ -19,42 +23,72 @@ import {
   useEpisodeProgress,
   useMarkStoryAsRead,
 } from "@/src/hooks/useStoryDetail";
+
 import { rewriteForCapacitor } from "@/lib/linkRewrite";
+
 import {
   useOfflineStories,
   useOnlineStatus,
 } from "@/src/hooks/useOfflineStories";
+
 import { useUserStore } from "@/src/stores/useUserStore";
+
 import { useAuthStore } from "@/src/stores/useAuthStore";
+
 import { useAuthModalStore } from "@/src/stores/useAuthModalStore";
+
 import { useTTSStore } from "@/src/stores/useTTSStore";
+
 import { TTSProvider } from "@/components/providers/TTSProvider";
+
 import { stopBrowserTTS } from "@/src/lib/tts/stopBrowserTTS";
+
 import PageHeader from "@/components/reusables/customUI/pageHeader";
 
 // Component imports
+
 // OfflineBanner is rendered globally by <OfflineManager /> in the root layout;
+
 // importing it here would double-stack it on this page.
+
 import { StoryHeader } from "./components/StoryHeader";
+
 import { ChapterSelector } from "./components/ChapterSelector";
+
 import { StoryContent } from "./components/StoryContent";
+
 import { InteractionSection } from "./components/InteractionSection";
+
 import { NavigationBar } from "./components/NavigationBar";
+
 import { StoryAudioBar } from "./components/StoryAudioBar";
+
 import { StoryPartFooter } from "./components/StoryPartFooter";
+
 import { CommentsSection } from "./components/CommentsSection";
+
 import type { StoryReadingMode } from "./components/StoryHeader";
 
 // Custom hooks
+
 import { useScrollVisibility } from "./hooks/useScrollVisibility";
+
 import { useOfflineContent } from "./hooks/useOfflineContent";
+
 import { useStoryContent } from "./hooks/useStoryContent";
+
 import { useStoryAudio } from "@/src/hooks/useStoryAudio";
+
 import { useStoryAudioVoices } from "@/src/hooks/useStoryAudioVoices";
+
 import { usePremiumFeatures } from "@/src/hooks/usePremiumFeatures";
+
 import { usePremiumUpsell } from "@/src/hooks/usePremiumUpsell";
+
 import { PremiumUpsellModal } from "@/components/reusables/PremiumUpsellModal";
+
 import { PremiumLockedReadView } from "./components/PremiumLockedReadView";
+
 import { canReadExclusiveStory } from "@/src/lib/premiumUpsell";
 
 interface ReadStoryViewProps {
@@ -63,65 +97,94 @@ interface ReadStoryViewProps {
 
 export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
   const router = useRouter();
+
   const searchParams = useSearchParams();
+
   const initialChapterId = searchParams.get("chapterId");
+
   const initialEpisodeId = searchParams.get("episodeId");
+
   const initialContentId = initialChapterId || initialEpisodeId;
 
   // Auth check
+
   const { openModal: openAuthModal } = useAuthModalStore();
+
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
   useEffect(() => {
     // Prefetch parent story route
+
     router.prefetch(rewriteForCapacitor(`/story/${storyId}`));
 
     // Check both store and cookies to avoid false negatives during hydration
+
     const hasToken =
       isAuthenticated() ||
       (typeof window !== "undefined" && document.cookie.includes("authToken="));
 
     // Offline reading must work even when the session cookie has expired —
+
     // the story is already cached locally. We only redirect to login when
+
     // the user is online (or offline with no local copy of the story).
+
     const isOfflineNow = typeof navigator !== "undefined" && !navigator.onLine;
 
     if (!hasToken && !isOfflineNow) {
       openAuthModal("login");
+
       router.push(rewriteForCapacitor(`/story/${storyId}`));
     }
   }, [isAuthenticated, openAuthModal, router, storyId]);
 
   // Get current user
+
   const { user } = useUserStore();
+
   const { isPremium, checkFeature } = usePremiumFeatures();
+
   const { requireFeature, upsellReason, closeUpsell, isUpsellOpen } =
     usePremiumUpsell();
 
   // Check online/offline status
+
   const isOnline = useOnlineStatus();
+
   const { syncChapterIfNeeded, syncEpisodeIfNeeded } = useOfflineStories();
+
   const {
     hasOfflineRecord,
+
     offlineStory,
+
     offlineContent,
+
     isContentAvailableOffline,
+
     updateLastRead,
   } = useOfflineContent(storyId);
 
   // Data hooks - only fetch when online. If the user has this story saved
+
   // offline, we still try the network for fresh metadata; useStoryContent
+
   // prefers the offline copy when the network response is empty or fails.
+
   const { story, isLoading: isStoryLoading } = useStory(
     isOnline ? storyId : undefined,
   );
+
   const { likeCount, isLiked, toggleLike } = useStoryLikes(
     isOnline ? storyId : undefined,
+
     isAuthenticated(),
   );
 
   // Mark as read after delay
+
   const { markAsRead } = useMarkStoryAsRead();
+
   const hasMarkedAsReadRef = useRef(false);
 
   useEffect(() => {
@@ -129,6 +192,7 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
 
     const timer = setTimeout(() => {
       markAsRead(storyId);
+
       hasMarkedAsReadRef.current = true;
     }, 5000); // 5 seconds delay
 
@@ -136,56 +200,74 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
   }, [isOnline, storyId, markAsRead]);
 
   // Reading progress tracking
+
   const contentContainerRef = useRef<HTMLDivElement>(null);
+
   const storyContentRef = useRef<HTMLDivElement>(null); // Ref for the actual story text container
+
   const commentsSectionRef = useRef<HTMLDivElement>(null);
+
   const accumulatedTimeRef = useRef<number>(0); // Track time before current session
+
   const lastVisibilityChangeRef = useRef<number>(Date.now());
+
   const hasRestoredScrollRef = useRef<boolean>(false);
 
   // Handle page visibility to track accurate reading time
+
   useEffect(() => {
     const handleVisibilityChange = () => {
       const now = Date.now();
+
       if (document.hidden) {
         // User left: add current session time to accumulated
+
         accumulatedTimeRef.current +=
           (now - lastVisibilityChangeRef.current) / 1000;
       } else {
         // User returned: reset start time for new session
+
         lastVisibilityChangeRef.current = now;
       }
     };
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
+
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, []);
 
   // Get progress hooks
+
   const { progress: storyProgress, updateProgress: updateStoryProgress } =
     useReadingProgress(isOnline ? storyId : undefined, isAuthenticated());
 
   // Story metadata lists episodes/chapters by id + number only; content is fetched per part.
+
   const rawStoryEpisodes = (story as any)?.episodes || [];
+
   const rawStoryChapters = (story as any)?.chapters || [];
 
   const storyEpisodes = Array.isArray(rawStoryEpisodes)
     ? rawStoryEpisodes.filter((ep: { id?: string }) => ep?.id)
     : [];
+
   const storyChapters = Array.isArray(rawStoryChapters)
     ? rawStoryChapters.filter((ch: { id?: string }) => ch?.id)
     : [];
 
   // Match preview page: episodes take priority over chapters
+
   const hasEpisodes = storyEpisodes.length > 0;
+
   const hasChapters =
     !hasEpisodes &&
     (story as any)?.chapter === true &&
     storyChapters.length > 0;
 
   const effectiveEpisodes = hasEpisodes ? storyEpisodes : [];
+
   const effectiveChapters = hasChapters ? storyChapters : [];
 
   const structure = hasChapters
@@ -195,55 +277,91 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
       : "single";
 
   // Use counts from story data if available, otherwise use hook counts
+
   const displayLikeCount = (story as any)?.likeCount ?? likeCount ?? 0;
 
   // UI State
+
   const [showDropdown, setShowDropdown] = useState(false);
+
   const [readingMode, setReadingMode] = useState<StoryReadingMode>("read");
+
   const selectedNarrationVoiceId = useTTSStore(
     (state) => state.selectedNarrationVoiceId,
   );
+
   const setSelectedNarrationVoiceId = useTTSStore(
     (state) => state.setSelectedNarrationVoiceId,
   );
 
   // Custom hooks for derived state
+
   const isNavVisible = useScrollVisibility();
+
   const {
     selectedChapterId,
+
     isUsingOfflineData,
+
     currentContent,
+
     currentTitle,
+
     currentComments,
+
     hasNavigation,
+
     navigationList,
+
     currentIndex,
+
     activeStory,
+
     handleChapterChange,
+
     isLoading: isContentLoading,
+
     isPartLoading,
+
     nextPart,
+
     prevPart,
+
     partLabel,
   } = useStoryContent({
     story,
+
     chapters: effectiveChapters,
+
     episodes: effectiveEpisodes,
+
     structure,
+
     offlineStory,
+
     offlineContent,
+
     isOnline,
+
     isContentAvailableOffline,
+
     syncChapterIfNeeded,
+
     syncEpisodeIfNeeded,
+
     initialContentId: initialContentId || undefined,
   });
 
   // When the user goes offline while reading, record the lastRead timestamp
+
   // so the "Continue reading" surface can pick up where they left off.
+
   // Moved below useStoryContent() since isUsingOfflineData is now derived
+
   // there (per-chapter, reactive to selectedChapterId changes) rather than
+
   // computed statically from the URL's initial chapterId/episodeId.
+
   useEffect(() => {
     if (!isOnline && isUsingOfflineData) {
       updateLastRead();
@@ -251,6 +369,7 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
   }, [isOnline, isUsingOfflineData, updateLastRead]);
 
   const { defaultVoice } = useStoryAudioVoices(isOnline && !isUsingOfflineData);
+
   const narrationVoice = selectedNarrationVoiceId ?? defaultVoice;
 
   useEffect(() => {
@@ -262,23 +381,30 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
   const updateContentUrl = useCallback(
     (contentId: string) => {
       const params = new URLSearchParams(searchParams.toString());
+
       params.delete("chapterId");
+
       params.delete("episodeId");
+
       if (structure === "chapters") {
         params.set("chapterId", contentId);
       } else if (structure === "episodes") {
         params.set("episodeId", contentId);
       }
+
       router.replace(`?${params.toString()}`, { scroll: false });
     },
+
     [router, searchParams, structure],
   );
 
   const handleChapterChangeWithUrl = useCallback(
     (contentId: string) => {
       handleChapterChange(contentId);
+
       updateContentUrl(contentId);
     },
+
     [handleChapterChange, updateContentUrl],
   );
 
@@ -286,15 +412,21 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
     const idx = navigationList.findIndex(
       (item: { id: string }) => item.id === selectedChapterId,
     );
+
     if (idx > 0) {
       const prevId = navigationList[idx - 1].id;
+
       handleChapterChange(prevId);
+
       updateContentUrl(prevId);
     }
   }, [
     navigationList,
+
     selectedChapterId,
+
     handleChapterChange,
+
     updateContentUrl,
   ]);
 
@@ -302,47 +434,113 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
     const idx = navigationList.findIndex(
       (item: { id: string }) => item.id === selectedChapterId,
     );
+
     if (idx >= 0 && idx < navigationList.length - 1) {
       const nextId = navigationList[idx + 1].id;
+
       handleChapterChange(nextId);
+
       updateContentUrl(nextId);
     }
   }, [
     navigationList,
+
     selectedChapterId,
+
     handleChapterChange,
+
     updateContentUrl,
   ]);
 
+  // Get chapter/episode progress hooks based on content type - only call the one we need.
+
+  // MOVED UP: these need to land before useStoryAudio so currentProgress is in scope
+
+  // when useStoryAudio({ initialProgressPercent: ... }) evaluates its argument.
+
+  const { progress: chapterProgress, updateProgress: updateChapterProgress } =
+    useChapterProgress(
+      hasChapters && isOnline ? storyId : undefined,
+
+      hasChapters && selectedChapterId ? selectedChapterId : undefined,
+
+      isAuthenticated(),
+    );
+
+  const { progress: episodeProgress, updateProgress: updateEpisodeProgress } =
+    useEpisodeProgress(
+      !hasChapters && hasEpisodes && isOnline ? storyId : undefined,
+
+      !hasChapters && hasEpisodes && selectedChapterId
+        ? selectedChapterId
+        : undefined,
+
+      isAuthenticated(),
+    );
+
+  // Current progress data
+
+  const currentProgress = hasChapters
+    ? chapterProgress
+    : hasEpisodes
+      ? episodeProgress
+      : null;
+
   const audioChapterId =
     hasChapters && selectedChapterId ? selectedChapterId : null;
+
   const audioEpisodeId =
     !hasChapters && hasEpisodes && selectedChapterId ? selectedChapterId : null;
 
   const storyAudio = useStoryAudio({
     storyId,
+
     chapterId: audioChapterId,
+
     episodeId: audioEpisodeId,
+
     voice: narrationVoice,
+
     enabled:
       readingMode === "listen" &&
       isOnline &&
       !isUsingOfflineData &&
       checkFeature("audioNarration"),
+
     storyTitle: activeStory?.title,
+
     partTitle: currentTitle,
+
     authorName: activeStory?.anonymous
       ? "Anonymous"
       : activeStory?.author?.penName || "Anonymous",
+
     artworkUrl:
       (activeStory as any)?.imageUrl || (activeStory as any)?.coverImage,
+
     // Uses the plain nav handlers directly (no storyAudio.stop() call) —
+
     // useStoryAudio already stops/reloads playback internally whenever
+
     // chapterId/episodeId changes, so this avoids a circular dependency
+
     // on storyAudio itself while still keeping lock-screen prev/next in
+
     // sync with the same URL-updating navigation the in-app UI uses.
+
     onPreviousTrack: hasNavigation ? handlePreviousWithUrl : undefined,
+
     onNextTrack: hasNavigation ? handleNextWithUrl : undefined,
+
+    // Resume narration from the saved reading percentage for whichever
+
+    // chapter/episode is currently selected. useChapterProgress/
+
+    // useEpisodeProgress are already keyed on selectedChapterId, so this
+
+    // updates automatically as the user navigates chapters.
+
+    initialProgressPercent: (currentProgress as any)?.percentageRead ?? 0,
   });
 
   const handleReadingModeChange = useCallback(
@@ -351,65 +549,55 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
         if (!requireFeature("audioNarration")) {
           return;
         }
+
         stopBrowserTTS();
       } else {
         storyAudio.stop();
       }
+
       setReadingMode(mode);
     },
+
     [requireFeature, storyAudio.stop],
   );
 
   const handleAudioPreviousChapter = useCallback(() => {
     storyAudio.stop();
+
     handlePreviousWithUrl();
   }, [handlePreviousWithUrl, storyAudio.stop]);
 
   const handleAudioNextChapter = useCallback(() => {
     storyAudio.stop();
+
     handleNextWithUrl();
   }, [handleNextWithUrl, storyAudio.stop]);
+
   // Memoize word count to avoid recalculating on every render/interval
+
   const totalWords = React.useMemo(() => {
     if (!currentContent) return 0;
+
     return currentContent.trim().split(/\s+/).length;
   }, [currentContent]);
 
-  // Get chapter/episode progress hooks based on content type - only call the one we need
-  const { progress: chapterProgress, updateProgress: updateChapterProgress } =
-    useChapterProgress(
-      hasChapters && isOnline ? storyId : undefined,
-      hasChapters && selectedChapterId ? selectedChapterId : undefined,
-      isAuthenticated(),
-    );
-
-  const { progress: episodeProgress, updateProgress: updateEpisodeProgress } =
-    useEpisodeProgress(
-      !hasChapters && hasEpisodes && isOnline ? storyId : undefined,
-      !hasChapters && hasEpisodes && selectedChapterId
-        ? selectedChapterId
-        : undefined,
-      isAuthenticated(),
-    );
-
-  // Current progress data
-  const currentProgress = hasChapters
-    ? chapterProgress
-    : hasEpisodes
-      ? episodeProgress
-      : null;
-
   // Get comment creation function based on content type
+
   const {
     comments: storyComments,
+
     createComment: createStoryComment,
+
     updateComment: updateStoryComment,
+
     deleteComment: deleteStoryComment,
   } = useStoryComments(structure === "single" ? storyId : undefined);
 
   const {
     createComment: createChapterComment,
+
     updateComment: updateChapterComment,
+
     deleteComment: deleteChapterComment,
   } = useChapterComments(
     structure === "chapters" && selectedChapterId
@@ -419,7 +607,9 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
 
   const {
     createComment: createEpisodeComment,
+
     updateComment: updateEpisodeComment,
+
     deleteComment: deleteEpisodeComment,
   } = useEpisodeComments(
     structure === "episodes" && selectedChapterId
@@ -428,8 +618,10 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
   );
 
   // Use comments from current content
+
   const comments =
     structure === "single" ? storyComments : currentComments || [];
+
   const displayCommentCount = comments.length;
 
   const handleCreateComment = async (text: string, parentId?: string) => {
@@ -463,31 +655,42 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
   };
 
   // Calculate reading progress based on scroll position
+
   const calculateProgress = useCallback(() => {
     if (!isOnline) return;
 
     // Calculate active reading time
+
     const currentSessionTime = !document.hidden
       ? (Date.now() - lastVisibilityChangeRef.current) / 1000
       : 0;
+
     const readingTimeSeconds = Math.floor(
       accumulatedTimeRef.current + currentSessionTime,
     );
 
     // If we can't measure content, return basic stats
+
     if (!storyContentRef.current) {
       return {
         percentageRead: 0,
+
         wordsRead: 0,
+
         totalWords,
+
         readingTimeSeconds,
       };
     }
 
     const clientHeight = window.innerHeight;
+
     const contentRect = storyContentRef.current.getBoundingClientRect();
+
     const contentTop = contentRect.top;
+
     const contentHeight = contentRect.height;
+
     const contentBottom = contentRect.bottom;
 
     const visibleContentHeight = clientHeight - contentTop;
@@ -510,21 +713,27 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
 
     return {
       percentageRead: Math.round(percentageRead),
+
       wordsRead,
+
       totalWords,
+
       readingTimeSeconds,
     };
   }, [totalWords, isOnline]);
 
   // Update reading progress - no debounce since interval controls frequency
+
   const updateReadingProgress = useCallback(async () => {
     if (!isOnline || !user) return;
 
     const progressData = calculateProgress();
+
     if (!progressData) return;
 
     try {
       // Update chapter/episode progress - story progress is auto-aggregated by backend
+
       if (hasChapters && selectedChapterId) {
         await updateChapterProgress(progressData);
       } else if (hasEpisodes && selectedChapterId) {
@@ -535,19 +744,30 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
     }
   }, [
     isOnline,
+
     user,
+
     calculateProgress,
+
     hasChapters,
+
     hasEpisodes,
+
     selectedChapterId,
+
     currentIndex,
+
     updateChapterProgress,
+
     updateEpisodeProgress,
+
     updateStoryProgress,
   ]);
 
   // Initialize start time ONCE from saved progress
+
   const isTimeInitializedRef = useRef(false);
+
   useEffect(() => {
     if (!currentProgress || isTimeInitializedRef.current) return;
 
@@ -555,10 +775,12 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
       (currentProgress as any)?.readingTimeSeconds || 0;
 
     accumulatedTimeRef.current = existingReadingTime;
+
     isTimeInitializedRef.current = true;
   }, [currentProgress]);
 
   // Restore scroll position from progress
+
   useEffect(() => {
     if (
       !currentProgress ||
@@ -570,16 +792,21 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
     }
 
     const percentageRead = (currentProgress as any)?.percentageRead || 0;
+
     if (percentageRead > 0 && percentageRead < 95) {
       // Wait for content to render
+
       setTimeout(() => {
         const scrollHeight = document.documentElement.scrollHeight;
+
         const clientHeight = document.documentElement.clientHeight;
+
         const targetScroll =
           ((scrollHeight - clientHeight) * percentageRead) / 100;
 
         window.scrollTo({
           top: targetScroll,
+
           behavior: "smooth",
         });
 
@@ -589,6 +816,7 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
   }, [currentProgress, isContentLoading]);
 
   // Timer: update progress every 5 seconds
+
   useEffect(() => {
     if (!isOnline || !user) return;
 
@@ -598,32 +826,40 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
 
     return () => {
       clearInterval(interval);
+
       // Final progress update on unmount
+
       updateReadingProgress();
     };
   }, [isOnline, user, updateReadingProgress]);
 
   // Reset when chapter/episode changes
+
   useEffect(() => {
     hasRestoredScrollRef.current = false;
   }, [selectedChapterId]);
 
   // Loading state
+
   if (isStoryLoading && !isUsingOfflineData) {
     return (
       <div className="min-h-screen p-4 space-y-4 bg-accent-shade-1">
         <PageHeader backLink={`/story?id=${storyId}`} showBackButton />
+
         <Skeleton className="w-full h-12 rounded-lg" />
+
         <Skeleton className="w-full rounded-lg h-96" />
       </div>
     );
   }
 
   // Story not found
+
   if (!activeStory) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-accent-shade-1">
         <PageHeader backLink={`/story?id=${storyId}`} showBackButton />
+
         <p className="text-primary">
           {!isOnline ? "Story not available offline" : "Story not found"}
         </p>
@@ -633,9 +869,11 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
 
   const storyAuthorId =
     (activeStory as { authorId?: string }).authorId || activeStory.author?.id;
+
   const isStoryAuthor = Boolean(
     user?.id === storyAuthorId || user?.authorId === storyAuthorId,
   );
+
   const isExclusiveLocked =
     !isUsingOfflineData &&
     !isStoryAuthor &&
@@ -643,10 +881,13 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
       {
         onlyOnStorytime: (activeStory as { onlyOnStorytime?: boolean })
           .onlyOnStorytime,
+
         requiresPremium: (activeStory as { requiresPremium?: boolean })
           .requiresPremium,
+
         authorId: storyAuthorId,
       },
+
       { isPremium, userId: user?.id },
     );
 
@@ -657,6 +898,7 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
           storyId={storyId}
           storyTitle={activeStory.title}
         />
+
         <PremiumUpsellModal
           isOpen={isUpsellOpen}
           onClose={closeUpsell}
@@ -675,6 +917,7 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
         className="min-h-screen bg-accent-shade-1 relative max-w-[28rem] md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto"
       >
         {/* Story Header */}
+
         <StoryHeader
           storyId={storyId}
           currentTitle={currentTitle}
@@ -694,6 +937,7 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
         />
 
         {/* Chapter Selector */}
+
         {hasNavigation && navigationList && (
           <ChapterSelector
             navigationList={navigationList}
@@ -705,6 +949,7 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
         )}
 
         {/* Story Content */}
+
         {isContentLoading && !currentContent ? (
           <div className="px-4 py-8">
             <Skeleton className="w-full rounded-lg h-96" />
@@ -714,6 +959,7 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
             <div className="w-full h-1 overflow-hidden rounded-full bg-light-grey-2">
               <div className="w-1/3 h-full rounded-full animate-pulse bg-complimentary-colour" />
             </div>
+
             <Skeleton className="w-full h-64 rounded-lg" />
           </div>
         ) : (
@@ -756,6 +1002,7 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
               ) : null}
 
               {/* Interaction Section (only when online) */}
+
               {isOnline && (
                 <div className="px-4 pb-6 md:px-12 lg:px-24 xl:px-32">
                   <InteractionSection
@@ -768,6 +1015,7 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
                   />
 
                   {/* Comments Section */}
+
                   <div ref={commentsSectionRef} className="pb-24">
                     <Suspense
                       fallback={
@@ -786,8 +1034,10 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
                           user
                             ? {
                                 id: user.id,
+
                                 penName:
                                   user.penName || user.firstName || "Anonymous",
+
                                 avatar:
                                   user.avatar || user.profilePicture || "",
                               }
@@ -800,6 +1050,7 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
               )}
 
               {/* Audio player - human narration */}
+
               {readingMode === "listen" && (
                 <StoryAudioBar
                   isVisible={isNavVisible}
@@ -822,6 +1073,7 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
               )}
 
               {/* Browser TTS navigation - read mode with multi-part stories */}
+
               {readingMode === "read" && hasNavigation && navigationList && (
                 <NavigationBar
                   currentIndex={currentIndex}
@@ -839,6 +1091,7 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
           )
         )}
       </div>
+
       <PremiumUpsellModal
         isOpen={isUpsellOpen}
         onClose={closeUpsell}

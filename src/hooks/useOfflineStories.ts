@@ -28,6 +28,19 @@ export function useOfflineStories() {
     percentUsed: 0,
   });
 
+  const getOfflineStory = useCallback(
+    async (storyId: string): Promise<OfflineStory | undefined> => {
+      if (!userId) return undefined;
+      try {
+        return await storiesStore.get(`${userId}_${storyId}`);
+      } catch (error) {
+        console.error("Failed to get offline story:", error);
+        return undefined;
+      }
+    },
+    [userId],
+  );
+
   // Load all offline stories
   const loadOfflineStories = useCallback(async () => {
     if (!userId) {
@@ -118,6 +131,7 @@ export function useOfflineStories() {
         number: number;
       }>,
       structureOverride?: "chapters" | "episodes" | "single",
+      coverImageBlob?: Blob,
     ) => {
       if (!userId) {
         showToast({
@@ -160,6 +174,7 @@ export function useOfflineStories() {
           title: story.title,
           description: story.description,
           coverImage: story.imageUrl ?? story.coverImage,
+          coverImageBlob,
           author: story.author,
           genres: story.genres || [],
           status: story.storyStatus ?? story.status,
@@ -613,6 +628,7 @@ export function useOfflineStories() {
     offlineStories,
     isLoading,
     storageInfo,
+    getOfflineStory,
     isStoryDownloaded,
     getDownloadedContent,
     downloadStory,

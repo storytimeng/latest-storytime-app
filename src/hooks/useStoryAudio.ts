@@ -15,15 +15,16 @@ interface UseStoryAudioOptions {
   episodeId?: string | null;
   voice?: string | null;
   enabled?: boolean;
-  // Media Session metadata — lock screen / notification cover art
   storyTitle?: string;
-  partTitle?: string; // e.g. "Chapter 4" — shown as the track title
+  partTitle?: string;
   authorName?: string;
   artworkUrl?: string;
-  // Lets the OS-level lock screen / notification prev/next buttons drive
-  // chapter navigation, same as the in-app chevrons.
   onPreviousTrack?: () => void;
   onNextTrack?: () => void;
+  // Saved reading/listening progress (0-100) for the CURRENT chapter or
+  // episode. Used to resume narration where the reader left off instead
+  // of always starting a chapter's audio from 0:00.
+  initialProgressPercent?: number;
 }
 
 function updateMediaSessionMetadata({
@@ -69,6 +70,7 @@ export function useStoryAudio({
   artworkUrl,
   onPreviousTrack,
   onNextTrack,
+  initialProgressPercent = 0,
 }: UseStoryAudioOptions) {
   const playbackRate = useTTSStore((state) => state.playbackRate);
   const volume = useTTSStore((state) => state.volume);
@@ -82,9 +84,33 @@ export function useStoryAudio({
   const reportedListenRef = useRef(false);
   const manifestRef = useRef<StoryAudioManifest | null>(null);
 
+  // Whether we've already applied the saved-progress resume point for the
+  // CURRENT chapter/episode. Reset whenever chapterId/episodeId changes so
+  // each new chapter gets exactly one chance to resume from its own
+  // progress, and re-pressing play mid-chapter doesn't jump back.
+  const initialProgressAppliedRef = useRef(false);
+  const initialProgressPercentRef = useRef(initialProgressPercent);
+
+  // Set when the OS lock screen / notification "next"/"previous" action
+  // fires, so the manifest-ready effect below knows to auto-resume
+  // playback for the new chapter once it loads — matching how a normal
+  // audiobook/podcast player behaves on hardware "next track". In-app
+  // chevron navigation (handleAudioNextChapter in ReadStoryView) goes
+  // through a different path that calls stop() directly and never sets
+  // this flag, so it intentionally does NOT auto-resume.
+  const autoplayOnLoadRef = useRef(false);
+
   const [manifest, setManifest] = useState<StoryAudioManifest | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    initialProgressPercentRef.current = initialProgressPercent;
+  }, [initialProgressPercent]);
+
+  useEffect(() => {
+    initialProgressAppliedRef.current = false;
+  }, [chapterId, episodeId]);
 
   const clearProgressTimer = useCallback(() => {
     if (progressTimerRef.current) {
@@ -186,6 +212,14 @@ export function useStoryAudio({
 
       if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
         navigator.mediaSession.playbackState = "none";
+        // Clear the lock-screen scrubber immediately rather than leaving
+        // the previous chapter's stale position/duration displayed until
+        // the next updateElapsed tick fires for whatever plays next.
+        try {
+          navigator.mediaSession.setPositionState();
+        } catch {
+          // Not all browsers support clearing with no args — safe to ignore.
+        }
       }
     },
     [clearProgressTimer, reportListen],
@@ -241,6 +275,49 @@ export function useStoryAudio({
   useEffect(() => {
     playSegmentRef.current = playSegment;
   }, [playSegment]);
+
+  // Moved above `play` (and `loadManifest`) so `play` can call it directly
+  // instead of needing a ref — `seek` has no dependency on either of them.
+  const seek = useCallback(
+    async (seconds: number) => {
+      const tts = useTTSStore.getState();
+      const segments = segmentsRef.current;
+      const totalDurationSeconds = manifestRef.current?.totalDurationSeconds;
+      if (!segments.length || !totalDurationSeconds) return;
+
+      const target = Math.max(0, Math.min(seconds, totalDurationSeconds));
+      let accumulated = 0;
+
+      for (let index = 0; index < segments.length; index += 1) {
+        const next = accumulated + segments[index].durationSeconds;
+        if (target <= next) {
+          stopPlayback({ report: false });
+          segmentIndexRef.current = index;
+          elapsedOffsetRef.current = accumulated;
+          tts.play();
+          clearProgressTimer();
+          progressTimerRef.current = setInterval(updateElapsed, 250);
+
+          const audio = new Audio(segments[index].url);
+          audio.playbackRate = tts.playbackRate;
+          audio.volume = tts.volume;
+          audio.currentTime = Math.max(0, target - accumulated);
+          audioRef.current = audio;
+          audio.onended = () => {
+            void playSegmentRef.current(index + 1);
+          };
+          await audio.play();
+
+          if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
+            navigator.mediaSession.playbackState = "playing";
+          }
+          return;
+        }
+        accumulated = next;
+      }
+    },
+    [clearProgressTimer, stopPlayback, updateElapsed],
+  );
 
   const loadManifestRef = useRef<() => Promise<void>>(async () => {});
 
@@ -313,8 +390,28 @@ export function useStoryAudio({
     clearProgressTimer();
     progressTimerRef.current = setInterval(updateElapsed, 250);
 
+    const totalDurationSeconds = manifestRef.current?.totalDurationSeconds ?? 0;
+    const percent = initialProgressPercentRef.current;
+
+    // Resume from saved progress exactly once per chapter/episode — same
+    // 0-95% window used for restoring text scroll position, so a chapter
+    // that's already finished (>=95%) still starts fresh rather than
+    // re-seeking to the very end.
+    const shouldResumeFromProgress =
+      !initialProgressAppliedRef.current &&
+      percent > 0 &&
+      percent < 95 &&
+      totalDurationSeconds > 0;
+
+    initialProgressAppliedRef.current = true;
+
     try {
-      await playSegment(0);
+      if (shouldResumeFromProgress) {
+        const targetSeconds = (percent / 100) * totalDurationSeconds;
+        await seek(targetSeconds);
+      } else {
+        await playSegment(0);
+      }
     } catch {
       stopPlayback();
     }
@@ -322,6 +419,7 @@ export function useStoryAudio({
     clearProgressTimer,
     loadManifest,
     playSegment,
+    seek,
     stopPlayback,
     updateElapsed,
   ]);
@@ -352,55 +450,11 @@ export function useStoryAudio({
     }
   }, [clearProgressTimer, playSegment, updateElapsed]);
 
-  const seek = useCallback(
-    async (seconds: number) => {
-      const tts = useTTSStore.getState();
-      const segments = segmentsRef.current;
-      const totalDurationSeconds = manifestRef.current?.totalDurationSeconds;
-      if (!segments.length || !totalDurationSeconds) return;
-
-      const target = Math.max(0, Math.min(seconds, totalDurationSeconds));
-      let accumulated = 0;
-
-      for (let index = 0; index < segments.length; index += 1) {
-        const next = accumulated + segments[index].durationSeconds;
-        if (target <= next) {
-          stopPlayback({ report: false });
-          segmentIndexRef.current = index;
-          elapsedOffsetRef.current = accumulated;
-          tts.play();
-          clearProgressTimer();
-          progressTimerRef.current = setInterval(updateElapsed, 250);
-
-          const audio = new Audio(segments[index].url);
-          audio.playbackRate = tts.playbackRate;
-          audio.volume = tts.volume;
-          audio.currentTime = Math.max(0, target - accumulated);
-          audioRef.current = audio;
-          audio.onended = () => {
-            void playSegmentRef.current(index + 1);
-          };
-          await audio.play();
-
-          if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
-            navigator.mediaSession.playbackState = "playing";
-          }
-          return;
-        }
-        accumulated = next;
-      }
-    },
-    [clearProgressTimer, playSegment, stopPlayback, updateElapsed],
-  );
-
   const stopPlaybackRef = useRef(stopPlayback);
   useEffect(() => {
     stopPlaybackRef.current = stopPlayback;
   }, [stopPlayback]);
 
-  // Wire lock-screen / notification action handlers once. These call
-  // through refs so the handlers always see the latest play/pause/etc,
-  // without needing to be re-registered every render.
   const playRef = useRef(play);
   const pauseRef = useRef(pause);
   const resumeRef = useRef(resume);
@@ -439,11 +493,16 @@ export function useStoryAudio({
 
     if (onPreviousTrackRef.current) {
       navigator.mediaSession.setActionHandler("previoustrack", () => {
+        // Flag so the manifest-ready effect below auto-resumes playback
+        // for the new chapter once it loads, instead of leaving the
+        // lock screen showing a paused/stale player.
+        autoplayOnLoadRef.current = true;
         onPreviousTrackRef.current?.();
       });
     }
     if (onNextTrackRef.current) {
       navigator.mediaSession.setActionHandler("nexttrack", () => {
+        autoplayOnLoadRef.current = true;
         onNextTrackRef.current?.();
       });
     }
@@ -456,12 +515,8 @@ export function useStoryAudio({
       navigator.mediaSession.setActionHandler("previoustrack", null);
       navigator.mediaSession.setActionHandler("nexttrack", null);
     };
-    // Only re-register when presence of prev/next changes, not on every
-    // render — the refs above keep the handlers current regardless.
   }, [Boolean(onPreviousTrack), Boolean(onNextTrack)]);
 
-  // Update lock-screen/notification metadata (title, artist, cover art)
-  // whenever the chapter/story identity changes.
   useEffect(() => {
     updateMediaSessionMetadata({
       storyTitle,
@@ -490,6 +545,21 @@ export function useStoryAudio({
       clearPollTimer();
     };
   }, [clearPollTimer, enabled, storyId, chapterId, episodeId, voice]);
+
+  // Auto-resume playback once the new chapter's manifest finishes loading,
+  // but only when the chapter change was triggered by the OS lock-screen
+  // "next"/"previous" controls (see autoplayOnLoadRef above). Keyed on
+  // `manifest` state so it fires only after loadManifest's async fetch
+  // actually resolves — by then playRef.current already reflects the new
+  // chapter's play() closure, since the ref-sync effect above runs earlier
+  // in the same commit that produced this render.
+  useEffect(() => {
+    if (!autoplayOnLoadRef.current) return;
+    if (manifest?.status === "ready" && segmentsRef.current.length > 0) {
+      autoplayOnLoadRef.current = false;
+      void playRef.current();
+    }
+  }, [manifest]);
 
   useEffect(() => {
     if (audioRef.current) {

@@ -21,6 +21,7 @@ import {
   Eye,
   Heart,
   AlertCircle,
+  WifiOff,
 } from "lucide-react";
 import { Magnetik_Regular, Magnetik_Bold } from "@/lib";
 import { cn } from "@/lib";
@@ -86,8 +87,16 @@ interface DownloadPayload {
   updatedAt?: string;
 }
 
+interface OfflineFallback {
+  story: any;
+  chapters: any[];
+  episodes: any[];
+  coverObjectUrl?: string;
+}
+
 const READING_WPM = 200;
 const MIN_CONTENT_LENGTH_TO_SKIP_REFETCH = 100;
+const BATCH_PRESETS = [1, 5, 10, 25];
 
 const formatReadingTime = (seconds: number): string => {
   if (!seconds) return "0m";
@@ -97,13 +106,29 @@ const formatReadingTime = (seconds: number): string => {
   return `${minutes}m`;
 };
 
-/** Strips HTML so we can tell real prose apart from `<p></p>` placeholders. */
 const stripHtml = (html?: string) =>
   (html || "").replace(/<[^>]*>/g, "").trim();
 
+const fetchImageAsBlob = async (url?: string): Promise<Blob | undefined> => {
+  if (!url) return undefined;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return undefined;
+    return await res.blob();
+  } catch (error) {
+    console.error("Failed to fetch cover image for offline storage:", error);
+    return undefined;
+  }
+};
+
+const unitLabel = (structure: Structure, count: number) => {
+  const noun = structure === "chapters" ? "Chapter" : "Episode";
+  return count === 1 ? noun : `${noun}s`;
+};
+
 const SingleStory = ({ storyId }: SingleStoryProps) => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const { story, isLoading } = useStory(storyId);
+  const { story: fetchedStory, isLoading } = useStory(storyId);
   const { likeCount, isLiked, toggleLike } = useStoryLikes(
     storyId,
     isAuthenticated(),
@@ -133,15 +158,114 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
 
   const storyProgress = aggregatedData?.storyProgress;
   const aggregated = aggregatedData?.aggregated;
-
   const { scrollY } = useScroll();
+
+  const {
+    isStoryDownloaded,
+    getOfflineStory,
+    getDownloadedContent,
+    downloadStory,
+    downloadAdditionalContent,
+    deleteOfflineStory,
+    deleteOfflineContent,
+    syncStoryIfNeeded,
+    syncAllChapters,
+    syncAllEpisodes,
+  } = useOfflineStories();
+
+  // --- Offline fallback -----------------------------------------------
+  // The network fetch can fail for reasons that have nothing to do with
+  // whether the device *itself* is online — the backend can be down,
+  // slow, or unreachable while wifi still reports "connected". So we
+  // never gate this on navigator.onLine; we simply check IndexedDB
+  // whenever the network fetch has finished and produced nothing.
+  const [offlineFallback, setOfflineFallback] =
+    useState<OfflineFallback | null>(null);
+  const [offlineCheckDone, setOfflineCheckDone] = useState(false);
+  const [usingOfflineFallback, setUsingOfflineFallback] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    let createdObjectUrl: string | undefined;
+
+    if (isLoading) {
+      setOfflineCheckDone(false);
+      return;
+    }
+
+    if (fetchedStory) {
+      // Network succeeded — no need for the offline record this render.
+      setUsingOfflineFallback(false);
+      setOfflineCheckDone(true);
+      return;
+    }
+
+    if (!storyId) {
+      setOfflineCheckDone(true);
+      return;
+    }
+
+    (async () => {
+      const offline = await getOfflineStory(storyId);
+      if (cancelled) return;
+
+      if (!offline) {
+        setOfflineFallback(null);
+        setUsingOfflineFallback(false);
+        setOfflineCheckDone(true);
+        return;
+      }
+
+      const downloadedContent = await getDownloadedContent(
+        storyId,
+        offline.structure,
+      );
+      if (cancelled) return;
+
+      if (offline.coverImageBlob) {
+        createdObjectUrl = URL.createObjectURL(offline.coverImageBlob);
+      }
+
+      const reconstructed = {
+        id: offline.storyId,
+        title: offline.title,
+        description: offline.description,
+        imageUrl: createdObjectUrl ?? offline.coverImage,
+        author: offline.author,
+        genres: offline.genres,
+        storyStatus: offline.status,
+        chapter: offline.structure === "chapters",
+        episodes:
+          offline.structure === "episodes" ? downloadedContent : undefined,
+        chapters:
+          offline.structure === "chapters" ? downloadedContent : undefined,
+        ...offline.metadata,
+      };
+
+      setOfflineFallback({
+        story: reconstructed,
+        chapters: offline.structure === "chapters" ? downloadedContent : [],
+        episodes: offline.structure === "episodes" ? downloadedContent : [],
+        coverObjectUrl: createdObjectUrl,
+      });
+      setUsingOfflineFallback(true);
+      setOfflineCheckDone(true);
+    })();
+
+    return () => {
+      cancelled = true;
+      if (createdObjectUrl) URL.revokeObjectURL(createdObjectUrl);
+    };
+  }, [isLoading, fetchedStory, storyId, getOfflineStory, getDownloadedContent]);
+
+  const effectiveStory = fetchedStory ?? offlineFallback?.story;
 
   useEffect(() => {
     router.prefetch("/home");
-    story?.genres?.forEach((genre: any) =>
+    effectiveStory?.genres?.forEach((genre: any) =>
       router.prefetch(genreCategoryPath(String(genre))),
     );
-  }, [router, story?.genres]);
+  }, [router, effectiveStory?.genres]);
 
   useEffect(
     () => scrollY.on("change", (latest) => setShowFab(latest > 400)),
@@ -162,8 +286,8 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
       : storeUser
   ) as any;
 
-  const storyData = story as any;
-  const storyAuthorId = storyData?.authorId || story?.author?.id;
+  const storyData = effectiveStory as any;
+  const storyAuthorId = storyData?.authorId || effectiveStory?.author?.id;
   const currentAuthorId = currentUser?.authorId || currentUser?.id;
   const isAuthor =
     currentAuthorId && storyAuthorId && currentAuthorId === storyAuthorId;
@@ -171,10 +295,8 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
   const displayLikeCount = storyData?.likeCount ?? likeCount ?? 0;
   const displayCommentCount = storyData?.commentCount ?? commentCount ?? 0;
 
-  // --- Structure detection (source of truth for the whole component) -----
   const hasEpisodes = storyData?.episodes && storyData.episodes.length > 0;
-  const hasChapters = storyData?.chapter === true; // API returns 'chapter': boolean
-
+  const hasChapters = storyData?.chapter === true;
   const structure: Structure = hasEpisodes
     ? "episodes"
     : hasChapters
@@ -183,9 +305,15 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
   const isSingleStory = structure === "single";
 
   const shouldFetchChapters =
-    structure === "chapters" && !storyData?.chapters?.length && !isLoading;
+    !usingOfflineFallback &&
+    structure === "chapters" &&
+    !storyData?.chapters?.length &&
+    !isLoading;
   const shouldFetchEpisodes =
-    structure === "episodes" && !storyData?.episodes?.length && !isLoading;
+    !usingOfflineFallback &&
+    structure === "episodes" &&
+    !storyData?.episodes?.length &&
+    !isLoading;
 
   const { chapters: fetchedChapters } = useStoryChapters(
     shouldFetchChapters ? storyId : undefined,
@@ -196,25 +324,16 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
 
   const chapters = storyData?.chapters?.length
     ? storyData.chapters
-    : fetchedChapters;
+    : fetchedChapters?.length
+      ? fetchedChapters
+      : (offlineFallback?.chapters ?? []);
   const episodes = storyData?.episodes?.length
     ? storyData.episodes
-    : fetchedEpisodes;
+    : fetchedEpisodes?.length
+      ? fetchedEpisodes
+      : (offlineFallback?.episodes ?? []);
   const contentList = structure === "chapters" ? chapters : episodes;
   const hasContent = contentList && contentList.length > 0;
-
-  // --- Offline ------------------------------------------------------------
-  const {
-    isStoryDownloaded,
-    getDownloadedContent,
-    downloadStory,
-    downloadAdditionalContent,
-    deleteOfflineStory,
-    deleteOfflineContent,
-    syncStoryIfNeeded,
-    syncAllChapters,
-    syncAllEpisodes,
-  } = useOfflineStories();
 
   const [isDownloaded, setIsDownloaded] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -233,7 +352,6 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
   );
 
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
-
   const handleTouchStart = (id: string) => {
     longPressTimer.current = setTimeout(() => {
       if (!isSelectionMode) {
@@ -246,12 +364,36 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
     if (longPressTimer.current) clearTimeout(longPressTimer.current);
   };
 
-  /**
-   * Fetches full content for a chapter/episode when the list-view item only
-   * has a preview/no content, and normalizes it into a save-ready payload.
-   * Returns null if the resolved content is empty — callers must treat that
-   * as a failure, never persist a blank record.
-   */
+  const notDownloadedList = useMemo(() => {
+    if (!contentList) return [];
+    return contentList.filter(
+      (item: any) =>
+        !downloadedContentIds.has(item.id) &&
+        !downloadedContentIds.has(item.chapterId ?? item.episodeId),
+    );
+  }, [contentList, downloadedContentIds]);
+
+  const unreadNotDownloaded = useMemo(() => {
+    return notDownloadedList.filter((item: any) => {
+      const progress =
+        structure === "episodes"
+          ? aggregatedData?.episodeProgress?.find(
+              (ep: any) => ep.episodeId === item.id,
+            )
+          : aggregatedData?.chapterProgress?.find(
+              (ch: any) => ch.chapterId === item.id,
+            );
+      return !progress?.isCompleted;
+    });
+  }, [notDownloadedList, structure, aggregatedData]);
+
+  const availablePresets = BATCH_PRESETS.filter(
+    (n) => notDownloadedList.length >= n,
+  );
+  const remainingCount = notDownloadedList.length;
+  const showAllRemainingOption =
+    remainingCount > 0 && !availablePresets.includes(remainingCount);
+
   const resolveDownloadPayload = useCallback(
     async (
       item: DownloadableItem,
@@ -290,9 +432,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
 
       return {
         id: item.id,
-        title:
-          fullTitle ||
-          `${structure === "chapters" ? "Chapter" : "Episode"} ${index + 1}`,
+        title: fullTitle || `${unitLabel(structure, 1)} ${index + 1}`,
         content: fullContent!,
         number:
           structure === "chapters"
@@ -308,7 +448,8 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
     async (payload: DownloadPayload[]) => {
       const alreadyDownloaded = await isStoryDownloaded(storyId!);
       if (!alreadyDownloaded) {
-        await downloadStory(story, payload, structure);
+        const coverImageBlob = await fetchImageAsBlob(effectiveStory?.imageUrl);
+        await downloadStory(effectiveStory, payload, structure, coverImageBlob);
       } else {
         await downloadAdditionalContent(storyId!, structure, payload);
       }
@@ -318,7 +459,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
       downloadAdditionalContent,
       isStoryDownloaded,
       storyId,
-      story,
+      effectiveStory,
       structure,
     ],
   );
@@ -342,7 +483,6 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
     try {
       const payload = await resolveDownloadPayload(item, index);
       if (!payload) throw new Error("Fetched content is empty");
-
       await persistDownload([payload]);
       setDownloadedContentIds((prev) => new Set(prev).add(item.id));
     } catch (error) {
@@ -355,6 +495,23 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
         return next;
       });
     }
+  };
+
+  const handleDeleteSingleDownload = async (item: DownloadableItem) => {
+    if (!storyId) return;
+    const success = await deleteOfflineContent(
+      storyId,
+      item.id,
+      structure === "chapters" ? "chapter" : "episode",
+    );
+    if (!success) return;
+
+    setDownloadedContentIds((prev) => {
+      const next = new Set(prev);
+      next.delete(item.id);
+      return next;
+    });
+    setIsDownloaded(await isStoryDownloaded(storyId));
   };
 
   const performBatchDownload = async (itemsToDownload: DownloadableItem[]) => {
@@ -414,7 +571,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
   };
 
   const handleDownload = async () => {
-    if (!story || !storyId) return;
+    if (!effectiveStory || !storyId) return;
     if (!isAuthenticated()) return openAuthModal("login");
     if (!requireFeature("offlineDownload")) return;
 
@@ -440,14 +597,13 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
         content = [
           {
             id: storyId,
-            title: story.title || "Untitled",
-            content: story.content || story.description || "",
+            title: effectiveStory.title || "Untitled",
+            content: effectiveStory.content || effectiveStory.description || "",
             number: 1,
           },
         ];
       }
 
-      // Never persist blank chapters/episodes.
       content = content.filter((c) => stripHtml(c.content));
 
       if (content.length === 0) {
@@ -458,7 +614,8 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
         return;
       }
 
-      await downloadStory(story, content, structure);
+      const coverImageBlob = await fetchImageAsBlob(effectiveStory.imageUrl);
+      await downloadStory(effectiveStory, content, structure, coverImageBlob);
       setIsDownloaded(true);
     } catch (error) {
       console.error("Download error:", error);
@@ -472,7 +629,6 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
     if (await deleteOfflineStory(storyId)) setIsDownloaded(false);
   };
 
-  // Check downloaded content status
   useEffect(() => {
     if (!storyId || structure === "single") return;
     (async () => {
@@ -512,39 +668,16 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
     if (!requireFeature("offlineDownload")) return;
     if (!contentList?.length) return;
 
-    let startIndex = 0;
-    if (storyProgress) {
-      const lastRead =
-        structure === "chapters"
-          ? (storyProgress as any).lastReadChapter
-          : (storyProgress as any).lastReadEpisode;
-      if (lastRead) startIndex = lastRead;
-    }
-
     let itemsToDownload: any[] = [];
-    if (key === "unread") {
-      itemsToDownload = contentList.filter((item: any) => {
-        const progress =
-          structure === "episodes"
-            ? aggregatedData?.episodeProgress?.find(
-                (ep: any) => ep.episodeId === item.id,
-              )
-            : aggregatedData?.chapterProgress?.find(
-                (ch: any) => ch.chapterId === item.id,
-              );
-        return !progress?.isCompleted;
-      });
+
+    if (key === "all") {
+      itemsToDownload = notDownloadedList;
+    } else if (key === "unread") {
+      itemsToDownload = unreadNotDownloaded;
     } else {
       const count = parseInt(key.replace("next-", ""));
-      if (!isNaN(count))
-        itemsToDownload = contentList.slice(startIndex, startIndex + count);
+      if (!isNaN(count)) itemsToDownload = notDownloadedList.slice(0, count);
     }
-
-    itemsToDownload = itemsToDownload.filter(
-      (item) =>
-        !downloadedContentIds.has(item.id) &&
-        !downloadedContentIds.has(item.chapterId ?? item.episodeId),
-    );
 
     if (itemsToDownload.length === 0) {
       showToast({ type: "info", message: "No new items to download" });
@@ -617,21 +750,24 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
     }
   };
 
-  // Check downloaded state + sync stale offline content with server
+  // Sync + downloaded-status check — skip entirely when we're already
+  // rendering from the offline fallback (there's nothing fresh to sync
+  // against; the "server" here IS the offline copy).
   useEffect(() => {
-    if (!storyId || !story) return;
+    if (!storyId || !effectiveStory || usingOfflineFallback) return;
     (async () => {
       const downloaded = await isStoryDownloaded(storyId);
       setIsDownloaded(downloaded);
       if (!downloaded) return;
 
-      await syncStoryIfNeeded(storyId, story);
+      await syncStoryIfNeeded(storyId, effectiveStory);
       if (chapters?.length) await syncAllChapters(storyId, chapters);
       else if (episodes?.length) await syncAllEpisodes(storyId, episodes);
     })();
   }, [
     storyId,
-    story,
+    effectiveStory,
+    usingOfflineFallback,
     chapters,
     episodes,
     isStoryDownloaded,
@@ -639,6 +775,38 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
     syncAllChapters,
     syncAllEpisodes,
   ]);
+
+  const downloadMenuItems = useMemo(() => {
+    const items: { key: string; label: string }[] = availablePresets.map(
+      (n) => ({
+        key: `next-${n}`,
+        label: `Next ${n} ${unitLabel(structure, n)}`,
+      }),
+    );
+    if (unreadNotDownloaded.length > 0) {
+      items.push({
+        key: "unread",
+        label: `Download Unread (${unreadNotDownloaded.length})`,
+      });
+    }
+    if (showAllRemainingOption) {
+      items.push({ key: "all", label: `All Remaining (${remainingCount})` });
+    }
+    return items;
+  }, [
+    availablePresets,
+    unreadNotDownloaded.length,
+    showAllRemainingOption,
+    remainingCount,
+    structure,
+  ]);
+
+  // When rendering from the offline fallback, everything we have IS
+  // downloaded — reflect that immediately instead of waiting on the
+  // sync effect above (which we intentionally skip in this mode).
+  useEffect(() => {
+    if (usingOfflineFallback) setIsDownloaded(true);
+  }, [usingOfflineFallback]);
 
   const continueTarget = useMemo(() => {
     if (!contentList?.length) return null;
@@ -739,7 +907,9 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
     }
   };
 
-  if (isLoading) {
+  const stillResolving = isLoading || (!fetchedStory && !offlineCheckDone);
+
+  if (stillResolving) {
     return (
       <div className="relative min-h-screen pb-20 bg-accent-shade-1">
         <div className="relative w-full h-[55vh] min-h-[320px] max-h-[420px] overflow-hidden">
@@ -792,28 +962,33 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
     );
   }
 
-  if (!story) {
+  if (!effectiveStory) {
     return (
       <div className="min-h-screen bg-accent-shade-1">
         <PageHeader backLink="/home" showBackButton />
-        <div className="flex items-center justify-center px-4 py-20">
-          <p className="text-center text-primary">Story not found</p>
+        <div className="flex flex-col items-center justify-center gap-3 px-4 py-20">
+          <WifiOff size={32} className="text-primary/30" />
+          <p className="text-center text-primary">
+            Couldn't reach the server, and this story isn't downloaded yet.
+          </p>
+          <p className="text-center text-sm text-primary/50">
+            Download stories for offline reading so they're always available.
+          </p>
         </div>
       </div>
     );
   }
 
-  type ExtendedAuthorDto = typeof story.author & {
+  type ExtendedAuthorDto = typeof effectiveStory.author & {
     firstName?: string;
     lastName?: string;
     penName?: string;
   };
-  const author = story.author as ExtendedAuthorDto;
-  const displayImage = getStoryCoverSrc(story.imageUrl);
+  const author = effectiveStory.author as ExtendedAuthorDto;
+  const displayImage = getStoryCoverSrc(effectiveStory.imageUrl);
   const status = storyData.storyStatus || "Ongoing";
   const viewCount = storyData.viewCount || 0;
   const popularityScore = storyData.popularityScore || 0;
-
   const starRating =
     popularityScore === 0 ? 0 : Math.min(Math.max(popularityScore / 20, 0), 5);
   const fullStars = Math.floor(starRating);
@@ -822,6 +997,15 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
 
   return (
     <div className="relative min-h-screen pb-20 bg-accent-shade-1">
+      {usingOfflineFallback && (
+        <div className="sticky top-0 z-40 flex items-center justify-center gap-2 py-2 text-xs font-medium text-white bg-amber-600">
+          <WifiOff size={14} />
+          <span>
+            Showing downloaded version... couldn't reach the server...
+          </span>
+        </div>
+      )}
+
       <CollaboratorsModal
         isOpen={isCollaboratorsOpen}
         onOpenChange={onCollaboratorsOpenChange}
@@ -833,14 +1017,14 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
         isOpen={isImagePreviewOpen}
         onOpenChange={onImagePreviewOpenChange}
         imageUrl={displayImage}
-        altText={story.title}
+        altText={effectiveStory.title}
         layoutId={`story-image-${storyId}`}
       />
 
       <div className="relative w-full h-[55vh] min-h-[320px] max-h-[420px] overflow-hidden">
         <StoryCoverImage
-          src={story.imageUrl}
-          alt={story.title}
+          src={effectiveStory.imageUrl}
+          alt={effectiveStory.title}
           fill
           className="object-cover"
           priority
@@ -856,38 +1040,41 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
               <ArrowLeft size={24} className="text-white" />
             </Link>
             <div className="flex items-center gap-2">
-              {!isSingleStory ? (
-                <Dropdown>
-                  <DropdownTrigger>
-                    <button className="p-2 transition-colors rounded-full bg-black/30 backdrop-blur-md hover:bg-black/40">
-                      <Download size={24} className="text-white" />
-                    </button>
-                  </DropdownTrigger>
-                  <DropdownMenu
-                    aria-label="Download Options"
-                    onAction={(key) => handleBatchDownloadAction(key as string)}
+              {usingOfflineFallback ? (
+                <div
+                  className="p-2 rounded-full bg-black/30 backdrop-blur-md flex items-center justify-center"
+                  title="Downloaded"
+                >
+                  <Check size={24} className="text-green-400" />
+                </div>
+              ) : !isSingleStory ? (
+                remainingCount === 0 ? (
+                  <div
+                    className="p-2 rounded-full bg-black/30 backdrop-blur-md flex items-center justify-center"
+                    title="Everything is downloaded"
                   >
-                    <DropdownItem key="next-1">
-                      Next {structure === "chapters" ? "Chapter" : "Episode"}
-                    </DropdownItem>
-                    <DropdownItem key="next-5">
-                      Next 5{" "}
-                      {structure === "chapters" ? "Chapters" : "Episodes"}
-                    </DropdownItem>
-                    <DropdownItem key="next-10">
-                      Next 10{" "}
-                      {structure === "chapters" ? "Chapters" : "Episodes"}
-                    </DropdownItem>
-                    <DropdownItem key="next-25">
-                      Next 25{" "}
-                      {structure === "chapters" ? "Chapters" : "Episodes"}
-                    </DropdownItem>
-                    <DropdownItem key="unread">
-                      Download Unread{" "}
-                      {structure === "chapters" ? "Chapters" : "Episodes"}
-                    </DropdownItem>
-                  </DropdownMenu>
-                </Dropdown>
+                    <Check size={24} className="text-green-400" />
+                  </div>
+                ) : (
+                  <Dropdown>
+                    <DropdownTrigger>
+                      <button className="p-2 transition-colors rounded-full bg-black/30 backdrop-blur-md hover:bg-black/40">
+                        <Download size={24} className="text-white" />
+                      </button>
+                    </DropdownTrigger>
+                    <DropdownMenu
+                      aria-label="Download Options"
+                      items={downloadMenuItems}
+                      onAction={(key) =>
+                        handleBatchDownloadAction(key as string)
+                      }
+                    >
+                      {(item) => (
+                        <DropdownItem key={item.key}>{item.label}</DropdownItem>
+                      )}
+                    </DropdownMenu>
+                  </Dropdown>
+                )
               ) : (
                 <button
                   onClick={isDownloaded ? handleRemoveDownload : handleDownload}
@@ -905,7 +1092,8 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
               )}
               <button
                 onClick={toggleLike}
-                className="p-2 transition-colors rounded-full bg-black/30 backdrop-blur-md hover:bg-black/40"
+                disabled={usingOfflineFallback}
+                className="p-2 transition-colors rounded-full bg-black/30 backdrop-blur-md hover:bg-black/40 disabled:opacity-40"
               >
                 <Heart
                   size={24}
@@ -919,8 +1107,8 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
                 onClick={async () => {
                   const success = await shareStory(
                     storyId || "",
-                    story.title,
-                    story.description,
+                    effectiveStory.title,
+                    effectiveStory.description,
                   );
                   showToast(
                     success
@@ -947,7 +1135,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
               Only on Storytime
             </span>
           )}
-          {story?.trigger && (
+          {effectiveStory?.trigger && (
             <span className="inline-flex items-center gap-1 bg-red-600 text-white text-[10px] font-bold px-2.5 py-1 rounded uppercase tracking-wider shadow-sm">
               18+
             </span>
@@ -971,7 +1159,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
             Magnetik_Bold.className,
           )}
         >
-          {story.title}
+          {effectiveStory.title}
         </h1>
 
         <button
@@ -1031,9 +1219,9 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
               {starRating.toFixed(1)}
             </span>
           </div>
-          {story.genres?.[0] && (
+          {effectiveStory.genres?.[0] && (
             <span className="px-2 py-1 font-medium rounded-md bg-white/50 text-primary">
-              {story.genres[0]}
+              {effectiveStory.genres[0]}
             </span>
           )}
         </div>
@@ -1045,16 +1233,17 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
               Magnetik_Regular.className,
             )}
           >
-            {story.description}
+            {effectiveStory.description}
           </p>
-          {story.description && story.description.length > 100 && (
-            <button
-              onClick={() => setActiveTab("details")}
-              className="mt-1 text-sm font-medium text-complimentary-colour"
-            >
-              More
-            </button>
-          )}
+          {effectiveStory.description &&
+            effectiveStory.description.length > 100 && (
+              <button
+                onClick={() => setActiveTab("details")}
+                className="mt-1 text-sm font-medium text-complimentary-colour"
+              >
+                More
+              </button>
+            )}
         </div>
 
         <button
@@ -1162,6 +1351,17 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
               </div>
             )}
 
+            {downloadedContentIds.size > 0 && !usingOfflineFallback && (
+              <div className="flex items-center gap-2 mb-2 text-xs text-primary/50">
+                <Check size={12} className="text-green-500" />
+                <span>
+                  {downloadedContentIds.size} of {contentList?.length || 0}{" "}
+                  {structure === "chapters" ? "chapters" : "episodes"}{" "}
+                  downloaded
+                </span>
+              </div>
+            )}
+
             <div className="flex items-center justify-between mb-2 text-xs font-medium tracking-wider uppercase text-primary/40">
               <div className="flex items-center gap-4">
                 <span>
@@ -1193,7 +1393,8 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
 
             {contentList?.map((item: any, index: number) => {
               const isSelected = selectedContentIds.has(item.id);
-              const isItemDownloaded = downloadedContentIds.has(item.id);
+              const isItemDownloaded =
+                usingOfflineFallback || downloadedContentIds.has(item.id);
               const isItemDownloading = downloadingItems.has(item.id);
 
               const itemProgress =
@@ -1329,78 +1530,92 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
                     </div>
                   </div>
 
-                  <div className="z-20 flex items-center gap-2">
-                    {isItemDownloaded ? (
-                      <div className="flex items-center justify-center w-8 h-8 text-green-500 rounded-full bg-green-500/10">
-                        <Check size={16} />
-                      </div>
-                    ) : failedDownloads.has(item.id) ? (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleSingleDownload(item, index);
-                        }}
-                        title="Download failed — tap to retry"
-                        className="flex items-center justify-center w-8 h-8 text-red-500 transition-colors border rounded-full border-red-500/30 bg-red-500/10 hover:bg-red-500/20"
-                      >
-                        <AlertCircle size={16} />
-                      </button>
-                    ) : (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleSingleDownload(item, index);
-                        }}
-                        disabled={isItemDownloading}
-                        className="flex items-center justify-center w-8 h-8 transition-colors border rounded-full border-white/10 text-primary/40 hover:text-primary hover:border-primary"
-                      >
-                        {isItemDownloading ? (
-                          <svg className="w-5 h-5 -rotate-90">
-                            <circle
-                              cx="10"
-                              cy="10"
-                              r="8"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              fill="none"
-                              className="text-primary/20"
-                            />
-                            <circle
-                              cx="10"
-                              cy="10"
-                              r="8"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              fill="none"
-                              strokeDasharray="50"
-                              strokeDashoffset="50"
-                              className="text-primary animate-[dash_1.5s_ease-in-out_infinite]"
-                            />
-                            <style jsx>{`
-                              @keyframes dash {
-                                0% {
-                                  stroke-dashoffset: 50;
+                  {!usingOfflineFallback && (
+                    <div className="z-20 flex items-center gap-1.5">
+                      {isItemDownloaded ? (
+                        <>
+                          <div className="flex items-center justify-center w-8 h-8 text-green-500 rounded-full bg-green-500/10">
+                            <Check size={16} />
+                          </div>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteSingleDownload(item);
+                            }}
+                            title="Remove download"
+                            className="flex items-center justify-center w-8 h-8 text-red-500/70 transition-colors border rounded-full border-red-500/20 hover:bg-red-500/10 hover:text-red-500"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </>
+                      ) : failedDownloads.has(item.id) ? (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSingleDownload(item, index);
+                          }}
+                          title="Download failed — tap to retry"
+                          className="flex items-center justify-center w-8 h-8 text-red-500 transition-colors border rounded-full border-red-500/30 bg-red-500/10 hover:bg-red-500/20"
+                        >
+                          <AlertCircle size={16} />
+                        </button>
+                      ) : (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSingleDownload(item, index);
+                          }}
+                          disabled={isItemDownloading}
+                          className="flex items-center justify-center w-8 h-8 transition-colors border rounded-full border-white/10 text-primary/40 hover:text-primary hover:border-primary"
+                        >
+                          {isItemDownloading ? (
+                            <svg className="w-5 h-5 -rotate-90">
+                              <circle
+                                cx="10"
+                                cy="10"
+                                r="8"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                fill="none"
+                                className="text-primary/20"
+                              />
+                              <circle
+                                cx="10"
+                                cy="10"
+                                r="8"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                fill="none"
+                                strokeDasharray="50"
+                                strokeDashoffset="50"
+                                className="text-primary animate-[dash_1.5s_ease-in-out_infinite]"
+                              />
+                              <style jsx>{`
+                                @keyframes dash {
+                                  0% {
+                                    stroke-dashoffset: 50;
+                                  }
+                                  50% {
+                                    stroke-dashoffset: 0;
+                                  }
+                                  100% {
+                                    stroke-dashoffset: -50;
+                                  }
                                 }
-                                50% {
-                                  stroke-dashoffset: 0;
-                                }
-                                100% {
-                                  stroke-dashoffset: -50;
-                                }
-                              }
-                            `}</style>
-                          </svg>
-                        ) : (
-                          <Download size={16} />
-                        )}
-                      </button>
-                    )}
-                    {!isSelectionMode && (
-                      <div className="flex items-center justify-center w-8 h-8 transition-colors border rounded-full border-white/10 text-primary/20 group-hover:border-complimentary-colour/50 group-hover:text-complimentary-colour">
-                        <Play size={12} className="fill-current" />
-                      </div>
-                    )}
-                  </div>
+                              `}</style>
+                            </svg>
+                          ) : (
+                            <Download size={16} />
+                          )}
+                        </button>
+                      )}
+                      {!isSelectionMode && (
+                        <div className="flex items-center justify-center w-8 h-8 transition-colors border rounded-full border-white/10 text-primary/20 group-hover:border-complimentary-colour/50 group-hover:text-complimentary-colour">
+                          <Play size={12} className="fill-current" />
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -1449,14 +1664,14 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
                 About the Story
               </h3>
               <p className="text-sm leading-relaxed whitespace-pre-wrap text-primary/70">
-                {story.description}
+                {effectiveStory.description}
               </p>
             </div>
 
             <div className="space-y-3">
               <h3 className="text-sm font-bold text-primary">Genres</h3>
               <div className="flex flex-wrap gap-2">
-                {story.genres?.map((genre: string) => (
+                {effectiveStory.genres?.map((genre: string) => (
                   <span
                     key={genre}
                     className="px-4 py-1.5 rounded-full bg-primary/5 text-primary/70 text-xs font-medium border border-primary/10"
@@ -1467,7 +1682,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
               </div>
             </div>
 
-            {isAuthor && (
+            {isAuthor && !usingOfflineFallback && (
               <div className="pt-6 border-t border-primary/10">
                 <Link
                   href={`/edit-story/${storyId}`}
@@ -1479,34 +1694,36 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
               </div>
             )}
 
-            <button
-              onClick={isDownloaded ? handleRemoveDownload : handleDownload}
-              disabled={isDownloading}
-              className={cn(
-                "flex items-center justify-center gap-2 w-full py-4 rounded-xl border transition-colors font-medium",
-                isDownloaded
-                  ? "border-green-500/30 text-green-500 bg-green-500/5"
-                  : "border-primary/20 text-primary hover:bg-primary/5",
-              )}
-            >
-              {isDownloading ? (
-                <div className="w-5 h-5 border-2 border-current rounded-full border-t-transparent animate-spin" />
-              ) : isDownloaded ? (
-                <>
-                  <Check size={18} />
-                  <span>Downloaded</span>
-                </>
-              ) : (
-                <>
-                  <Download size={18} />
-                  <span>Download for Offline</span>
-                </>
-              )}
-            </button>
+            {!usingOfflineFallback && (
+              <button
+                onClick={isDownloaded ? handleRemoveDownload : handleDownload}
+                disabled={isDownloading}
+                className={cn(
+                  "flex items-center justify-center gap-2 w-full py-4 rounded-xl border transition-colors font-medium",
+                  isDownloaded
+                    ? "border-green-500/30 text-green-500 bg-green-500/5"
+                    : "border-primary/20 text-primary hover:bg-primary/5",
+                )}
+              >
+                {isDownloading ? (
+                  <div className="w-5 h-5 border-2 border-current rounded-full border-t-transparent animate-spin" />
+                ) : isDownloaded ? (
+                  <>
+                    <Check size={18} />
+                    <span>Downloaded</span>
+                  </>
+                ) : (
+                  <>
+                    <Download size={18} />
+                    <span>Download for Offline</span>
+                  </>
+                )}
+              </button>
+            )}
           </div>
         )}
 
-        {activeTab === "reviews" && (
+        {activeTab === "reviews" && !usingOfflineFallback && (
           <div className="space-y-8">
             <div className="flex items-center gap-4 p-6 mb-6 bg-white/5 rounded-2xl">
               <div className="text-5xl font-bold text-primary">
@@ -1595,6 +1812,15 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
                 }
               />
             </div>
+          </div>
+        )}
+
+        {activeTab === "reviews" && usingOfflineFallback && (
+          <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">
+            <WifiOff size={28} className="text-primary/30" />
+            <p className="text-sm text-primary/50">
+              Reviews aren't available offline
+            </p>
           </div>
         )}
       </div>
