@@ -8,6 +8,8 @@ import {
   searchStories,
 } from "@/src/client";
 import { StoriesListResponseDto } from "@/src/client/types.gen";
+import { getCachedValue } from "@/src/stores/useDataStateCache";
+import { APP_CACHE_KEYS } from "@/src/stores/dataCacheKeys";
 
 interface UseStoryCategoryOptions {
   page?: number;
@@ -24,7 +26,13 @@ interface UseSearchStoriesOptions extends UseStoryCategoryOptions {
 export function usePopularStories(options: UseStoryCategoryOptions = {}) {
   const { limit = 20, genres } = options;
   const [currentPage, setCurrentPage] = React.useState(1);
-  const [allStories, setAllStories] = React.useState<any[]>([]);
+  // Warm-start: seed the accumulated state from the state cache so
+  // the first render after a cold mount shows the previous session's
+  // list synchronously instead of a skeleton.
+  const [allStories, setAllStories] = React.useState<any[]>(() => {
+    if (currentPage !== 1) return [];
+    return getCachedValue<any[]>(APP_CACHE_KEYS.homePopular) ?? [];
+  });
   const [hasMore, setHasMore] = React.useState(true);
 
   const { data, error, isLoading, mutate } = useSWR(
@@ -112,7 +120,10 @@ export function usePopularStories(options: UseStoryCategoryOptions = {}) {
 export function useRecentlyAddedStories(options: UseStoryCategoryOptions = {}) {
   const { limit = 20, genres } = options;
   const [currentPage, setCurrentPage] = React.useState(1);
-  const [allStories, setAllStories] = React.useState<any[]>([]);
+  const [allStories, setAllStories] = React.useState<any[]>(() => {
+    if (currentPage !== 1) return [];
+    return getCachedValue<any[]>(APP_CACHE_KEYS.homeRecent) ?? [];
+  });
   const [hasMore, setHasMore] = React.useState(true);
 
   const { data, error, isLoading, mutate } = useSWR(
@@ -196,7 +207,10 @@ export function useRecentlyAddedStories(options: UseStoryCategoryOptions = {}) {
 export function useTrendingStories(options: UseStoryCategoryOptions = {}) {
   const { limit = 20, genres } = options;
   const [currentPage, setCurrentPage] = React.useState(1);
-  const [allStories, setAllStories] = React.useState<any[]>([]);
+  const [allStories, setAllStories] = React.useState<any[]>(() => {
+    if (currentPage !== 1) return [];
+    return getCachedValue<any[]>(APP_CACHE_KEYS.homeTrending) ?? [];
+  });
   const [hasMore, setHasMore] = React.useState(true);
 
   const { data, error, isLoading, mutate } = useSWR(
@@ -282,7 +296,10 @@ export function useOnlyOnStorytimeStories(
 ) {
   const { limit = 20 } = options;
   const [currentPage, setCurrentPage] = React.useState(1);
-  const [allStories, setAllStories] = React.useState<any[]>([]);
+  const [allStories, setAllStories] = React.useState<any[]>(() => {
+    if (currentPage !== 1) return [];
+    return getCachedValue<any[]>(APP_CACHE_KEYS.homeExclusive) ?? [];
+  });
   const [hasMore, setHasMore] = React.useState(true);
 
   const { data, error, isLoading, mutate } = useSWR(

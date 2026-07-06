@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import { Magnetik_Medium } from "@/lib/font";
 import LoadingOverlay from "@/components/reusables/customUI/loadingOverlay";
 import { GenresPreloader } from "@/components/preloaders/GenresPreloader";
+import { AppDataPreloader } from "@/components/preloaders/AppDataPreloader";
 import { SupportModals } from "@/components/reusables/modals/SupportModals";
 import { OfflineManager } from "@/components/OfflineManager";
 import { PullToRefreshWrapper } from "@/components/PullToRefreshWrapper";
@@ -108,6 +109,13 @@ export default function RootLayout({
     <Providers themeProps={{ attribute: "class", defaultTheme: "light" }}>
       <PWAProvider>
         <GenresPreloader />
+        {/* AppDataPreloader fires the heavy data hooks (profile,
+            achievements, library, reading history, ambassador) on
+            app start and again on auth / connectivity transitions.
+            SWR dedupes with the consumer views, so the user lands
+            on /library, /pen, and /profile with the data already
+            in the SWR + state-cache layer. Renders no UI. */}
+        <AppDataPreloader />
         {/* PullToRefreshWrapper is mounted inside Providers/SWRConfig (it
             uses useSWRConfig) but OUTSIDE all fixed-position overlays so
             the pull-down gesture only drags the page content, not the

@@ -1,6 +1,11 @@
+import { useEffect } from "react";
 import useSWR from "swr";
 import { usersControllerGetShareableAchievements } from "@/src/client/sdk.gen";
 import { useAuthStore } from "@/src/stores/useAuthStore";
+import { dataStateCache, getCachedValue } from "@/src/stores/useDataStateCache";
+import { APP_CACHE_KEYS } from "@/src/stores/dataCacheKeys";
+
+const ACHIEVEMENTS_CACHE_KEY = APP_CACHE_KEYS.userAchievements;
 
 interface Badge {
   id: string;
@@ -29,32 +34,34 @@ interface Achievements {
 // Helper to transform certificate IDs into display objects
 const transformCertificate = (certId: string, url?: string): Certificate => {
   // Clean IDs like "{1_stories_written" or "20_stories_read}"
-  const cleanId = certId.replace(/[{}]/g, '');
-  const parts = cleanId.split('_');
+  const cleanId = certId.replace(/[{}]/g, "");
+  const parts = cleanId.split("_");
   const count = parts[0];
-  const achievement = parts.slice(1).join(' ');
-  
+  const achievement = parts.slice(1).join(" ");
+
   return {
     id: cleanId,
-    name: `${count} ${achievement.replace(/_/g, ' ')}`.replace(/\b\w/g, l => l.toUpperCase()),
-    description: `Awarded for ${achievement.replace(/_/g, ' ')}`,
+    name: `${count} ${achievement.replace(/_/g, " ")}`.replace(/\b\w/g, (l) =>
+      l.toUpperCase(),
+    ),
+    description: `Awarded for ${achievement.replace(/_/g, " ")}`,
     issuedAt: new Date().toISOString(),
-    type: 'achievement',
-    imageUrl: url
+    type: "achievement",
+    imageUrl: url,
   };
 };
 
 // Helper to transform badge IDs into display objects
 const transformBadge = (badgeId: string, url?: string): Badge => {
   // Clean IDs like "{1_stories_read" or "20_stories_read}"
-  const cleanId = badgeId.replace(/[{}]/g, '');
+  const cleanId = badgeId.replace(/[{}]/g, "");
   return {
     id: cleanId,
-    name: cleanId.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-    icon: '⭐',
+    name: cleanId.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase()),
+    icon: "⭐",
     earnedAt: new Date().toISOString(),
-    category: 'general',
-    imageUrl: url
+    category: "general",
+    imageUrl: url,
   };
 };
 
@@ -67,24 +74,28 @@ export function useUserAchievements() {
     isAuthenticated() ? "/users/achievements" : null,
     async () => {
       const response = await usersControllerGetShareableAchievements();
-      const result = (response?.data as any)?.data?.shareableData || (response?.data as any)?.data || response?.data;
-      
+      const result =
+        (response?.data as any)?.data?.shareableData ||
+        (response?.data as any)?.data ||
+        response?.data;
+
       console.log("✅ User achievements fetched:", result);
-      
+
       const badgeIds = result?.badges || [];
       const badgeUrls = result?.badgeUrls || [];
       const certIds = result?.certificates || [];
       const certUrls = result?.certificateUrls || [];
 
       // Transform arrays into proper objects with URLs
-      const badges: Badge[] = badgeIds.map((id: string, index: number) => 
-        transformBadge(id, badgeUrls[index])
+      const badges: Badge[] = badgeIds.map((id: string, index: number) =>
+        transformBadge(id, badgeUrls[index]),
       );
-      
-      const certificates: Certificate[] = certIds.map((id: string, index: number) => 
-        transformCertificate(id, certUrls[index])
+
+      const certificates: Certificate[] = certIds.map(
+        (id: string, index: number) =>
+          transformCertificate(id, certUrls[index]),
       );
-      
+
       return {
         badges,
         certificates,
@@ -93,8 +104,19 @@ export function useUserAchievements() {
     {
       revalidateOnFocus: false,
       revalidateOnReconnect: true,
-    }
+      // Warm-start with the previous session's achievements so the
+      // profile screen renders instantly on cold mount.
+      fallbackData:
+        getCachedValue<Achievements>(ACHIEVEMENTS_CACHE_KEY) ?? undefined,
+    },
   );
+
+  // Mirror live result into the state cache for the next mount.
+  useEffect(() => {
+    if (data) {
+      dataStateCache.set(ACHIEVEMENTS_CACHE_KEY, data);
+    }
+  }, [data]);
 
   return {
     badges: data?.badges || [],

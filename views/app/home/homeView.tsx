@@ -25,14 +25,58 @@ import {
 import { useStories } from "@/src/hooks/useStories";
 import { useOnlineStatus } from "@/src/hooks/useOnlineStatus";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
+import { useStateCachedFetch } from "@/src/hooks/useStateCachedFetch";
+import { useRoutePrefetch } from "@/src/hooks/useStateCachePrefetch";
+import { APP_CACHE_KEYS } from "@/src/stores/dataCacheKeys";
+
+// Stable cache keys for the home-screen lists. Centralised in
+// `@/src/stores/dataCacheKeys` so the global AppDataPreloader and
+// the home view agree on the same keys. Re-exported under the
+// historical name for any external importers.
+export const HOME_CACHE_KEYS = {
+  exclusive: APP_CACHE_KEYS.homeExclusive,
+  recent: APP_CACHE_KEYS.homeRecent,
+  trending: APP_CACHE_KEYS.homeTrending,
+  popular: APP_CACHE_KEYS.homePopular,
+  genres: APP_CACHE_KEYS.homeGenres,
+} as const;
 
 const HomeView = () => {
   const { user } = useUserStore();
   const isOnline = useOnlineStatus();
   const { selectedGenres, toggleGenre } = useStoriesFilterStore();
+
+  // Warm-start caches — they may already have data from a prior
+  // session, in which case the view can render without waiting on
+  // the network. Each hook's SWR call still fires in the background.
+  const exclusiveCache = useStateCachedFetch<any[]>(HOME_CACHE_KEYS.exclusive);
+  const recentCache = useStateCachedFetch<any[]>(HOME_CACHE_KEYS.recent);
+  const trendingCache = useStateCachedFetch<any[]>(HOME_CACHE_KEYS.trending);
+  const popularCache = useStateCachedFetch<any[]>(HOME_CACHE_KEYS.popular);
+  const genresCache = useStateCachedFetch<string[]>(HOME_CACHE_KEYS.genres);
+
+  // Prefetch the most-likely-next routes the user will hit from home.
+  useRoutePrefetch([
+    "/search",
+    "/library",
+    "/pen",
+    "/premium",
+    "/category/popular",
+    "/category/trending",
+    "/category/recently-added",
+  ]);
+
   const { genres: apiGenres, isLoading: genresLoading } = useGenres();
-  // Use API genres or fallback to empty array
-  const genres = apiGenres || [];
+  // Show cached genres immediately while the network fetch is in
+  // flight; once the API returns, prefer the fresh value and write
+  // it back to the cache.
+  useEffect(() => {
+    if (apiGenres && apiGenres.length > 0) genresCache.writeBack(apiGenres);
+  }, [apiGenres, genresCache]);
+  const genres = useMemo(
+    () => apiGenres ?? genresCache.cachedValue ?? [],
+    [apiGenres, genresCache.cachedValue],
+  );
 
   // Clear filters on mount/reload
   useEffect(() => {
@@ -73,10 +117,20 @@ const HomeView = () => {
     limit: 10,
   });
 
-  // Only render stories that are genuinely exclusive to Storytime
+  // Warm-start: keep the cache populated whenever the live fetch
+  // resolves. This way a hard reload / cold start lands on a
+  // populated list instead of a skeleton.
+  useEffect(() => {
+    if (rawExclusiveStories && rawExclusiveStories.length > 0) {
+      exclusiveCache.writeBack(rawExclusiveStories);
+    }
+  }, [rawExclusiveStories, exclusiveCache]);
   const exclusiveStories = useMemo(
-    () => rawExclusiveStories.filter((s: any) => s.onlyOnStorytime === true),
-    [rawExclusiveStories],
+    () =>
+      (rawExclusiveStories ?? exclusiveCache.cachedValue ?? []).filter(
+        (s: any) => s.onlyOnStorytime === true,
+      ),
+    [rawExclusiveStories, exclusiveCache.cachedValue],
   );
   const {
     stories: recentStories,
@@ -87,6 +141,11 @@ const HomeView = () => {
   } = useRecentlyAddedStories({
     limit: 10,
   });
+  useEffect(() => {
+    if (recentStories && recentStories.length > 0) {
+      recentCache.writeBack(recentStories);
+    }
+  }, [recentStories, recentCache]);
   const {
     stories: trendingStories,
     isLoading: trendingLoading,
@@ -96,6 +155,11 @@ const HomeView = () => {
   } = useTrendingStories({
     limit: 10,
   });
+  useEffect(() => {
+    if (trendingStories && trendingStories.length > 0) {
+      trendingCache.writeBack(trendingStories);
+    }
+  }, [trendingStories, trendingCache]);
   const {
     stories: popularStoriesData,
     isLoading: popularLoading,
@@ -105,42 +169,65 @@ const HomeView = () => {
   } = usePopularStories({
     limit: 10,
   });
+  useEffect(() => {
+    if (popularStoriesData && popularStoriesData.length > 0) {
+      popularCache.writeBack(popularStoriesData);
+    }
+  }, [popularStoriesData, popularCache]);
 
   // Sort popular stories by popularityScore descending
   const popularStories = useMemo(() => {
-    if (!popularStoriesData) return [];
-    return [...popularStoriesData].sort(
+    const source = popularStoriesData ?? popularCache.cachedValue ?? [];
+    if (!source.length) return [];
+    return [...source].sort(
       (a: any, b: any) => (b.popularityScore || 0) - (a.popularityScore || 0),
     );
-  }, [popularStoriesData]);
+  }, [popularStoriesData, popularCache.cachedValue]);
 
-  // Loading state
+  // Loading state — only show the skeleton on a TRULY cold start
+  // (no cache, no data). If we have cached data, render it and let
+  // the network call revalidate silently in the background.
+  const hasAnyHomeData =
+    !!genres.length ||
+    !!exclusiveStories.length ||
+    !!(recentStories.length || recentCache.cachedValue?.length) ||
+    !!(trendingStories.length || trendingCache.cachedValue?.length) ||
+    !!(popularStories.length || popularCache.cachedValue?.length);
   const storiesLoading =
-    selectedGenres.length > 0
+    !hasAnyHomeData &&
+    (selectedGenres.length > 0
       ? filteredLoading
-      : exclusiveLoading || recentLoading || trendingLoading || popularLoading;
+      : exclusiveLoading || recentLoading || trendingLoading || popularLoading);
+
+  // Effective lists: live data preferred, cached fallback otherwise.
+  const effectiveRecent = recentStories.length
+    ? recentStories
+    : (recentCache.cachedValue ?? []);
+  const effectiveTrending = trendingStories.length
+    ? trendingStories
+    : (trendingCache.cachedValue ?? []);
 
   // Memoize story sections to prevent whole view re-render
   const RecentStoriesSection = useMemo(() => {
-    if (!recentStories.length) return null;
+    if (!effectiveRecent.length) return null;
     return (
       <StoryGroup
         title="Recently Added Stories"
-        stories={recentStories}
+        stories={effectiveRecent}
         categorySlug="recently-added"
         onLoadMore={loadMoreRecent}
         hasMore={hasMoreRecent}
         isLoadingMore={isLoadingMoreRecent}
       />
     );
-  }, [recentStories, hasMoreRecent, isLoadingMoreRecent, loadMoreRecent]);
+  }, [effectiveRecent, hasMoreRecent, isLoadingMoreRecent, loadMoreRecent]);
 
   const TrendingStoriesSection = useMemo(() => {
-    if (!trendingStories.length) return null;
+    if (!effectiveTrending.length) return null;
     return (
       <StoryGroup
         title="Trending Now"
-        stories={trendingStories}
+        stories={effectiveTrending}
         categorySlug="trending"
         onLoadMore={loadMoreTrending}
         hasMore={hasMoreTrending}
@@ -148,7 +235,7 @@ const HomeView = () => {
       />
     );
   }, [
-    trendingStories,
+    effectiveTrending,
     hasMoreTrending,
     isLoadingMoreTrending,
     loadMoreTrending,

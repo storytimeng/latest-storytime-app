@@ -55,6 +55,7 @@ import { CollaboratorsModal } from "@/components/reusables/modals/CollaboratorsM
 import { ImagePreviewModal } from "@/components/reusables/modals/ImagePreviewModal";
 import { motion, AnimatePresence, useScroll } from "framer-motion";
 import { CommentsSection } from "@/views/app/story/components/CommentsSection";
+import { StoryOfflineEmptyState } from "@/views/app/story/components/StoryOfflineEmptyState";
 import { shareStory } from "@/lib/share";
 import { usePremiumFeatures } from "@/src/hooks/usePremiumFeatures";
 import { usePremiumUpsell } from "@/src/hooks/usePremiumUpsell";
@@ -62,6 +63,7 @@ import { PremiumUpsellModal } from "@/components/reusables/PremiumUpsellModal";
 import PremiumBanner from "@/components/reusables/customUI/PremiumBanner";
 import { canReadExclusiveStory } from "@/src/lib/premiumUpsell";
 import PageHeader from "@/components/reusables/customUI/pageHeader";
+import { usePageInflight } from "@/hooks/usePageInflight";
 
 interface SingleStoryProps {
   storyId?: string;
@@ -109,13 +111,26 @@ const formatReadingTime = (seconds: number): string => {
 const stripHtml = (html?: string) =>
   (html || "").replace(/<[^>]*>/g, "").trim();
 
-const fetchImageAsBlob = async (url?: string): Promise<Blob | undefined> => {
+const fetchImageAsBlob = async (
+  url?: string,
+  signal?: AbortSignal,
+): Promise<Blob | undefined> => {
   if (!url) return undefined;
   try {
-    const res = await fetch(url);
+    const res = await fetch(url, signal ? { signal } : undefined);
     if (!res.ok) return undefined;
     return await res.blob();
   } catch (error) {
+    // Aborted downloads are expected when the user navigates
+    // away mid-fetch; not an error from the consumer's POV.
+    if (
+      error &&
+      typeof error === "object" &&
+      "name" in error &&
+      (error as { name?: string }).name === "AbortError"
+    ) {
+      return undefined;
+    }
     console.error("Failed to fetch cover image for offline storage:", error);
     return undefined;
   }
@@ -127,6 +142,14 @@ const unitLabel = (structure: Structure, count: number) => {
 };
 
 const SingleStory = ({ storyId }: SingleStoryProps) => {
+  // Page-scoped inflight registry. Every cover-image blob
+  // download, batch download, and chunked chapter fetch below
+  // registers its AbortController here, so a user leaving the
+  // page mid-download doesn't leave behind a 3-10 MB blob that
+  // lands in the cache (and the backend logs) after the page
+  // is gone. Auto-cancels on unmount.
+  const inflight = usePageInflight("single-story");
+
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const { story: fetchedStory, isLoading } = useStory(storyId);
   const { likeCount, isLiked, toggleLike } = useStoryLikes(
@@ -448,8 +471,21 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
     async (payload: DownloadPayload[]) => {
       const alreadyDownloaded = await isStoryDownloaded(storyId!);
       if (!alreadyDownloaded) {
-        const coverImageBlob = await fetchImageAsBlob(effectiveStory?.imageUrl);
-        await downloadStory(effectiveStory, payload, structure, coverImageBlob);
+        // Track the cover-image blob fetch so an unmount mid-
+        // download kills it instead of landing 3-10 MB into
+        // IndexedDB after the page is gone.
+        const coverController = new AbortController();
+        inflight.track(coverController);
+        let coverImageBlob: Blob | undefined;
+        try {
+          coverImageBlob = await fetchImageAsBlob(
+            effectiveStory?.imageUrl,
+            coverController.signal,
+          );
+          await downloadStory(effectiveStory, payload, structure, coverImageBlob);
+        } finally {
+          inflight.cleanup(coverController);
+        }
       } else {
         await downloadAdditionalContent(storyId!, structure, payload);
       }
@@ -461,6 +497,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
       storyId,
       effectiveStory,
       structure,
+      inflight,
     ],
   );
 
@@ -614,9 +651,21 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
         return;
       }
 
-      const coverImageBlob = await fetchImageAsBlob(effectiveStory.imageUrl);
-      await downloadStory(effectiveStory, content, structure, coverImageBlob);
-      setIsDownloaded(true);
+      // Track the cover-image blob fetch so an unmount mid-
+      // download kills it instead of landing 3-10 MB into
+      // IndexedDB after the page is gone.
+      const coverController = new AbortController();
+      inflight.track(coverController);
+      try {
+        const coverImageBlob = await fetchImageAsBlob(
+          effectiveStory.imageUrl,
+          coverController.signal,
+        );
+        await downloadStory(effectiveStory, content, structure, coverImageBlob);
+        setIsDownloaded(true);
+      } finally {
+        inflight.cleanup(coverController);
+      }
     } catch (error) {
       console.error("Download error:", error);
     } finally {
@@ -963,20 +1012,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
   }
 
   if (!effectiveStory) {
-    return (
-      <div className="min-h-screen bg-accent-shade-1">
-        <PageHeader backLink="/home" showBackButton />
-        <div className="flex flex-col items-center justify-center gap-3 px-4 py-20">
-          <WifiOff size={32} className="text-primary/30" />
-          <p className="text-center text-primary">
-            Couldn't reach the server, and this story isn't downloaded yet.
-          </p>
-          <p className="text-center text-sm text-primary/50">
-            Download stories for offline reading so they're always available.
-          </p>
-        </div>
-      </div>
-    );
+    return <StoryOfflineEmptyState backLink="/home" />;
   }
 
   type ExtendedAuthorDto = typeof effectiveStory.author & {

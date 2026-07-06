@@ -5,6 +5,8 @@ import {
   forwardRef,
   MouseEvent,
   useCallback,
+  useEffect,
+  useRef,
 } from "react";
 import { useRouter } from "next/navigation";
 import { rewriteForCapacitor } from "@/lib/linkRewrite";
@@ -19,9 +21,40 @@ export interface AppLinkProps
 }
 
 export const Link = forwardRef<HTMLAnchorElement, AppLinkProps>(
-  ({ href, replace = false, scroll = true, onClick, ...props }, ref) => {
+  (
+    {
+      href,
+      replace = false,
+      scroll = true,
+      prefetch = true,
+      onClick,
+      ...props
+    },
+    ref,
+  ) => {
     const router = useRouter();
     const finalHref = IS_ANDROID ? rewriteForCapacitor(href) : href;
+    const hasPrefetchedRef = useRef(false);
+
+    const isExternal =
+      finalHref.startsWith("http://") ||
+      finalHref.startsWith("https://") ||
+      finalHref.startsWith("mailto:") ||
+      finalHref.startsWith("tel:");
+
+    const doPrefetch = useCallback(() => {
+      if (hasPrefetchedRef.current || !prefetch || isExternal) return;
+      hasPrefetchedRef.current = true;
+      router.prefetch(finalHref);
+    }, [finalHref, prefetch, isExternal, router]);
+
+    // Mount-based prefetch — matches next/link's default eagerness.
+    // Comment this block out (and rely on onMouseEnter/onTouchStart below
+    // instead) if you'd rather prefetch lazily for link-heavy views like
+    // the navbar or story-card grids.
+    useEffect(() => {
+      doPrefetch();
+    }, [doPrefetch]);
 
     const handleClick = useCallback(
       (e: MouseEvent<HTMLAnchorElement>) => {
@@ -29,10 +62,7 @@ export const Link = forwardRef<HTMLAnchorElement, AppLinkProps>(
         if (e.defaultPrevented) return;
 
         if (
-          finalHref.startsWith("http://") ||
-          finalHref.startsWith("https://") ||
-          finalHref.startsWith("mailto:") ||
-          finalHref.startsWith("tel:") ||
+          isExternal ||
           e.metaKey ||
           e.ctrlKey ||
           e.shiftKey ||
@@ -56,10 +86,19 @@ export const Link = forwardRef<HTMLAnchorElement, AppLinkProps>(
           router.push(finalHref, { scroll });
         }
       },
-      [finalHref, replace, scroll, router, onClick],
+      [finalHref, replace, scroll, router, onClick, isExternal],
     );
 
-    return <a ref={ref} href={finalHref} onClick={handleClick} {...props} />;
+    return (
+      <a
+        ref={ref}
+        href={finalHref}
+        onClick={handleClick}
+        onMouseEnter={doPrefetch}
+        onTouchStart={doPrefetch}
+        {...props}
+      />
+    );
   },
 );
 

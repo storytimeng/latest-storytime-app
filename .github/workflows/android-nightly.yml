@@ -93,6 +93,20 @@ jobs:
           NEXT_PUBLIC_PROXY=false
           EOF
 
+      # Fail loudly here instead of silently shipping an APK that falls
+      # back to localhost. `${{ vars.X }}` for an unset/misscoped repo
+      # variable resolves to an empty string with no error — this is
+      # the only thing that will actually catch it.
+      - name: Verify required build vars are set
+        run: |
+          echo "── .env.local contents ──"
+          cat .env.local
+          echo "──────────────────────────"
+          if [ -z "${{ vars.NEXT_PUBLIC_API_URL }}" ]; then
+            echo "::error::NEXT_PUBLIC_API_URL repo/org Actions variable is empty or unset. Check Settings → Secrets and variables → Actions → Variables tab (not Secrets), and make sure it isn't scoped to an Environment this workflow doesn't declare."
+            exit 1
+          fi
+
       - name: Build Next.js static export
         run: node scripts/android-build.mjs --no-apk
 

@@ -6,6 +6,7 @@ import React, {
   useEffect,
   useRef,
   useCallback,
+  useMemo,
 } from "react";
 
 import { useSearchParams, useRouter } from "next/navigation";
@@ -67,6 +68,8 @@ import { StoryPartFooter } from "./components/StoryPartFooter";
 
 import { CommentsSection } from "./components/CommentsSection";
 
+import { StoryOfflineEmptyState } from "./components/StoryOfflineEmptyState";
+
 import type { StoryReadingMode } from "./components/StoryHeader";
 
 // Custom hooks
@@ -90,6 +93,10 @@ import { PremiumUpsellModal } from "@/components/reusables/PremiumUpsellModal";
 import { PremiumLockedReadView } from "./components/PremiumLockedReadView";
 
 import { canReadExclusiveStory } from "@/src/lib/premiumUpsell";
+
+import { useLocalReadingProgress } from "@/src/hooks/useLocalReadingProgress";
+
+import { useAbortableRequest } from "@/hooks/useAbortableRequest";
 
 interface ReadStoryViewProps {
   storyId: string;
@@ -162,6 +169,8 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
 
     isContentAvailableOffline,
 
+    isLoaded: offlineCheckDone,
+
     updateLastRead,
   } = useOfflineContent(storyId);
 
@@ -200,6 +209,23 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
   }, [isOnline, storyId, markAsRead]);
 
   // Reading progress tracking
+  //
+  // The previous implementation fired a server PUT every 10 seconds
+  // for the duration of the read session. On a slow connection
+  // each PUT took 200-600ms, and the `await mutate()` after every
+  // PUT triggered a fresh GET, so the user was effectively paying
+  // for one POST + one GET every 10s — wasteful both for the user
+  // (data plan) and the backend (request budget).
+  //
+  // The new flow is:
+  //   1. Compute progress every 5s, locally only.
+  //   2. Accumulate reading time + last percentage in the
+  //      `useLocalReadingProgress` hook (in-memory + sessionStorage
+  //      backstop).
+  //   3. Flush to the server on a long interval (default 10 min)
+  //      AND on unmount.
+  //   4. Abort the in-flight PUT on unmount so we don't ship
+  //      stale data after the user has left.
 
   const contentContainerRef = useRef<HTMLDivElement>(null);
 
@@ -207,36 +233,16 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
 
   const commentsSectionRef = useRef<HTMLDivElement>(null);
 
-  const accumulatedTimeRef = useRef<number>(0); // Track time before current session
-
-  const lastVisibilityChangeRef = useRef<number>(Date.now());
-
   const hasRestoredScrollRef = useRef<boolean>(false);
 
-  // Handle page visibility to track accurate reading time
+  // The in-flight server PUT goes through this. AbortController
+  // is mounted on unmount so a slow PUT doesn't outlive the page.
+  const { run: runAbortable } = useAbortableRequest();
 
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      const now = Date.now();
-
-      if (document.hidden) {
-        // User left: add current session time to accumulated
-
-        accumulatedTimeRef.current +=
-          (now - lastVisibilityChangeRef.current) / 1000;
-      } else {
-        // User returned: reset start time for new session
-
-        lastVisibilityChangeRef.current = now;
-      }
-    };
-
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-    };
-  }, []);
+  // `progressCacheKey` and `localProgress` are declared further
+  // down, right after `hasChapters` / `hasEpisodes` /
+  // `selectedChapterId` come into scope — they depend on all
+  // three and can't be hoisted here.
 
   // Get progress hooks
 
@@ -350,6 +356,24 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
     syncEpisodeIfNeeded,
 
     initialContentId: initialContentId || undefined,
+  });
+
+  // Stable cache key for the per-chapter local accumulator.
+  // Declared here (not earlier) because it depends on
+  // `hasChapters` / `hasEpisodes` (computed just above) and
+  // `selectedChapterId` (returned by `useStoryContent`).
+  // Hoisting it before the variables exist would be a TDZ
+  // violation.
+  const progressCacheKey = useMemo(() => {
+    const part = hasChapters ? "ch" : hasEpisodes ? "ep" : "story";
+    return `progress:${storyId}:${part}:${selectedChapterId ?? "single"}`;
+  }, [storyId, selectedChapterId, hasChapters, hasEpisodes]);
+
+  // Local-only progress tracker. Persists reading time + last
+  // percentage to the state cache so a tab close + reopen within
+  // the same session doesn't lose the count.
+  const localProgress = useLocalReadingProgress({
+    key: progressCacheKey,
   });
 
   // When the user goes offline while reading, record the lastRead timestamp
@@ -654,22 +678,27 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
     }
   };
 
-  // Calculate reading progress based on scroll position
+  // Calculate reading progress based on scroll position. Pure
+  // measurement — no side effects, no server I/O. The local
+  // accumulator is updated separately via `localProgress.tick()`
+  // and `localProgress.updateLocal()`.
 
   const calculateProgress = useCallback(() => {
-    if (!isOnline) return;
+    if (!isOnline) return null;
 
-    // Calculate active reading time
+    // Tick the local accumulator. This both:
+    //   1. Returns the seconds elapsed since the last tick
+    //      (0 when the page is hidden — we never count time the
+    //      user wasn't actually reading).
+    //   2. Adds the elapsed time to the running readingTimeSeconds
+    //      total inside the hook.
+    const elapsed = localProgress.tick();
+    const local = localProgress.getLocal();
 
-    const currentSessionTime = !document.hidden
-      ? (Date.now() - lastVisibilityChangeRef.current) / 1000
-      : 0;
+    const readingTimeSeconds =
+      local.readingTimeSeconds + Math.round(elapsed);
 
-    const readingTimeSeconds = Math.floor(
-      accumulatedTimeRef.current + currentSessionTime,
-    );
-
-    // If we can't measure content, return basic stats
+    // If we can't measure content, return the time-only snapshot.
 
     if (!storyContentRef.current) {
       return {
@@ -720,52 +749,79 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
 
       readingTimeSeconds,
     };
-  }, [totalWords, isOnline]);
+  }, [totalWords, isOnline, localProgress]);
 
-  // Update reading progress - no debounce since interval controls frequency
+  // Flush the current local snapshot to the server. The request is
+  // routed through `runAbortable` so a slow PUT is cancelled the
+  // moment the user leaves the page (or the page is re-mounted on
+  // a different chapter) — instead of resolving into a dead
+  // component and overwriting the next chapter's snapshot.
 
-  const updateReadingProgress = useCallback(async () => {
+  const flushProgressToServer = useCallback(async () => {
     if (!isOnline || !user) return;
 
-    const progressData = calculateProgress();
+    const localState = localProgress.getLocal();
 
-    if (!progressData) return;
+    // We pull the latest percentage/words straight from the
+    // locally tracked state so a navigation right before the
+    // flush doesn't end up sending the *previous* chapter's
+    // scroll position.
+    const payload = {
+      percentageRead: localState.percentageRead,
+      wordsRead: localState.wordsRead,
+      totalWords: localState.totalWords,
+      readingTimeSeconds: localState.readingTimeSeconds,
+    };
 
-    try {
-      // Update chapter/episode progress - story progress is auto-aggregated by backend
-
-      if (hasChapters && selectedChapterId) {
-        await updateChapterProgress(progressData);
-      } else if (hasEpisodes && selectedChapterId) {
-        await updateEpisodeProgress(progressData);
+    await runAbortable(async ({ signal }) => {
+      try {
+        if (hasChapters && selectedChapterId) {
+          await updateChapterProgress(payload, { signal });
+        } else if (hasEpisodes && selectedChapterId) {
+          await updateEpisodeProgress(payload, { signal });
+        } else {
+          await updateStoryProgress(payload, { signal });
+        }
+      } catch (error) {
+        // Aborted requests are no-ops; the unmount path will
+        // try again next time.
+        if (
+          error &&
+          typeof error === "object" &&
+          "name" in error &&
+          (error as { name?: string }).name === "AbortError"
+        ) {
+          return;
+        }
+        console.error("Failed to update reading progress:", error);
       }
-    } catch (error) {
-      console.error("Failed to update reading progress:", error);
-    }
+    });
   }, [
     isOnline,
-
     user,
-
-    calculateProgress,
-
+    localProgress,
     hasChapters,
-
     hasEpisodes,
-
     selectedChapterId,
-
-    currentIndex,
-
     updateChapterProgress,
-
     updateEpisodeProgress,
-
     updateStoryProgress,
+    runAbortable,
   ]);
 
-  // Initialize start time ONCE from saved progress
+  // The locally-tracked progress is updated on every "tick".
+  // We keep this cheap (no server I/O) and run on a short
+  // interval so the audio bar's progress indicator stays fresh.
 
+  const recordLocalProgress = useCallback(() => {
+    if (!isOnline) return;
+    const measured = calculateProgress();
+    if (!measured) return;
+    localProgress.updateLocal(measured);
+  }, [isOnline, calculateProgress, localProgress]);
+
+  // Initialize the local accumulator from the server's last-known
+  // reading time once, and keep that value stable for the session.
   const isTimeInitializedRef = useRef(false);
 
   useEffect(() => {
@@ -774,10 +830,14 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
     const existingReadingTime =
       (currentProgress as any)?.readingTimeSeconds || 0;
 
-    accumulatedTimeRef.current = existingReadingTime;
+    const latest = localProgress.getLocal();
+    localProgress.updateLocal({
+      ...latest,
+      readingTimeSeconds: existingReadingTime,
+    });
 
     isTimeInitializedRef.current = true;
-  }, [currentProgress]);
+  }, [currentProgress, localProgress]);
 
   // Restore scroll position from progress
 
@@ -815,23 +875,54 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
     }
   }, [currentProgress, isContentLoading]);
 
-  // Timer: update progress every 5 seconds
+  // Local-only progress tick loop. We do this on a short interval
+  // (5s) to keep the locally tracked percentage/words fresh for
+  // the audio bar's progress indicator, but we do NOT talk to the
+  // server here — that happens on the 10-minute flush below and
+  // once on unmount. The previous implementation did both in
+  // one loop every 10s, which doubled the server's request
+  // budget for no user-visible benefit.
 
   useEffect(() => {
     if (!isOnline || !user) return;
 
-    const interval = setInterval(() => {
-      updateReadingProgress();
-    }, 10000);
+    const localInterval = setInterval(() => {
+      recordLocalProgress();
+    }, 5000);
 
     return () => {
-      clearInterval(interval);
-
-      // Final progress update on unmount
-
-      updateReadingProgress();
+      clearInterval(localInterval);
     };
-  }, [isOnline, user, updateReadingProgress]);
+  }, [isOnline, user, recordLocalProgress]);
+
+  // Server-flush loop. Runs every 10 minutes (configurable via
+  // `localProgress.flushIntervalMs`) and once on unmount. The
+  // request is routed through `runAbortable`, so a slow PUT is
+  // cancelled the moment the user leaves the page — no
+  // ghost requests land in the backend's logs after the page
+  // has gone away.
+
+  useEffect(() => {
+    if (!isOnline || !user) return;
+
+    const flushEvery = Math.max(
+      60_000,
+      localProgress.flushIntervalMs ?? 10 * 60 * 1000,
+    );
+
+    const serverInterval = setInterval(() => {
+      flushProgressToServer();
+    }, flushEvery);
+
+    return () => {
+      clearInterval(serverInterval);
+      // Final flush on unmount. We don't await — the
+      // `runAbortable` cleanup on unmount will cancel the
+      // request anyway, but firing the flush is what records
+      // the user's last-known reading time on the server.
+      flushProgressToServer();
+    };
+  }, [isOnline, user, flushProgressToServer, localProgress]);
 
   // Reset when chapter/episode changes
 
@@ -839,9 +930,15 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
     hasRestoredScrollRef.current = false;
   }, [selectedChapterId]);
 
-  // Loading state
-
-  if (isStoryLoading && !isUsingOfflineData) {
+  // Loading state — keep the skeleton up until BOTH the network fetch
+  // and the offline (IndexedDB) check have settled. Without the second
+  // clause, an offline user would see a single render of the
+  // "story not found" panel before the offline record arrives, which
+  // was a real flicker on cold start with no network.
+  if (
+    (isStoryLoading && !isUsingOfflineData) ||
+    (!offlineCheckDone && !story)
+  ) {
     return (
       <div className="min-h-screen p-4 space-y-4 bg-accent-shade-1">
         <PageHeader backLink={`/story?id=${storyId}`} showBackButton />
@@ -853,17 +950,28 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
     );
   }
 
-  // Story not found
-
+  // Story not found — use the same shared empty state that the details
+  // view uses, with copy tailored to which branch we hit. The previous
+  // implementation printed a bare "Story not found" / "Story not
+  // available offline" line which gave the user no next step and didn't
+  // tell them they could re-download the story from the details page.
   if (!activeStory) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-accent-shade-1">
-        <PageHeader backLink={`/story?id=${storyId}`} showBackButton />
+    const title = hasOfflineRecord
+      ? "This part isn't downloaded for offline reading."
+      : isOnline
+        ? "Story not found"
+        : "Couldn't reach the server, and this story isn't downloaded yet.";
 
-        <p className="text-primary">
-          {!isOnline ? "Story not available offline" : "Story not found"}
-        </p>
-      </div>
+    return (
+      <StoryOfflineEmptyState
+        backLink={`/story?id=${storyId}`}
+        title={title}
+        hint={
+          hasOfflineRecord
+            ? "Open the story and download this chapter from the chapters list to read it offline."
+            : "Download stories for offline reading so they're always available."
+        }
+      />
     );
   }
 

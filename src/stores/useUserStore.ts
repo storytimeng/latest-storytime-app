@@ -1,6 +1,30 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import {
+  persist,
+  createJSONStorage,
+  type StateStorage,
+} from "zustand/middleware";
 
+const safeLocalStorage: StateStorage = {
+  getItem: (name) => localStorage.getItem(name),
+  setItem: (name, value) => {
+    try {
+      localStorage.setItem(name, value);
+    } catch (e) {
+      if (
+        e instanceof DOMException &&
+        (e.name === "QuotaExceededError" || e.code === 22)
+      ) {
+        console.warn(
+          `localStorage quota exceeded writing "${name}", skipping persist`,
+        );
+        return;
+      }
+      throw e;
+    }
+  },
+  removeItem: (name) => localStorage.removeItem(name),
+};
 export interface UserProfile {
   id: string;
   email: string;
@@ -42,7 +66,22 @@ export const useUserStore = create<UserState>()(
       clearUser: () => set({ user: null }),
     }),
     {
-      name: "user-storage", // unique name for localStorage
-    }
-  )
+      name: "user-storage",
+      storage: createJSONStorage(() => safeLocalStorage),
+      partialize: (state) => ({
+        user: state.user
+          ? {
+              id: state.user.id,
+              email: state.user.email,
+              penName: state.user.penName,
+              firstName: state.user.firstName,
+              lastName: state.user.lastName,
+              avatar: state.user.avatar,
+              profilePicture: state.user.profilePicture,
+              isPremium: state.user.isPremium,
+            }
+          : null,
+      }),
+    },
+  ),
 );

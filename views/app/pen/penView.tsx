@@ -27,6 +27,9 @@ import { rewriteForCapacitor } from "@/lib/linkRewrite";
 import { useUserProfile } from "@/src/hooks/useUserProfile";
 import { useLibrary } from "@/src/hooks/useLibrary";
 import { useDeleteStory } from "@/src/hooks/useStoryMutations";
+import { useStateCachedFetch } from "@/src/hooks/useStateCachedFetch";
+import { useRoutePrefetch } from "@/src/hooks/useStateCachePrefetch";
+import { APP_CACHE_KEYS } from "@/src/stores/dataCacheKeys";
 import type { StoryResponseDto } from "@/src/client/types.gen";
 
 // Locally extend StoryResponseDto for UI needs
@@ -40,6 +43,8 @@ type ExtendedStory = StoryResponseDto & {
 
 type TabKey = "Recent" | "Ongoing" | "Published" | "Drafts";
 
+const PEN_CACHE_KEY = APP_CACHE_KEYS.myLibrary;
+
 const PenView = () => {
   const router = useRouter();
 
@@ -48,6 +53,13 @@ const PenView = () => {
     router.prefetch("/library");
     router.prefetch("/new-story");
   }, [router]);
+
+  // Warm-start cache for the pen/library list of the user's own
+  // stories. Same pattern as the home and library screens: render
+  // the previous session's list synchronously, then let the live
+  // SWR fetch revalidate in the background.
+  const penCache = useStateCachedFetch<any[]>(PEN_CACHE_KEY);
+  useRoutePrefetch(["/", "/library", "/new-story", "/home"]);
 
   const [selectedTab, setSelectedTab] = useState<TabKey>("Recent");
   const [showAllStories, setShowAllStories] = useState(false);
@@ -66,37 +78,53 @@ const PenView = () => {
   // Fetch stories from user's library
   const { stories, isLoading, mutate } = useLibrary();
 
+  // Mirror the live result into the state cache so a hard reload
+  // / cold start lands on a populated list, not a spinner.
+  useEffect(() => {
+    if (stories && stories.length > 0) {
+      penCache.writeBack(stories);
+    }
+  }, [stories, penCache]);
+
+  // Filter stories by tab. Prefer the live fetch; fall back to the
+  // cached value so a cold start renders immediately.
+  const effectiveStories = useMemo(
+    () =>
+      stories && stories.length > 0 ? stories : (penCache.cachedValue ?? []),
+    [stories, penCache.cachedValue],
+  );
+
   // Delete story hook
   const { deleteStory, isDeleting } = useDeleteStory();
 
   // Filter stories by tab
   const filteredStories = useMemo(() => {
-    if (!stories) return [];
+    if (!effectiveStories) return [];
     switch (selectedTab) {
       case "Recent":
-        return [...stories].sort(
+        return [...effectiveStories].sort(
           (a, b) =>
             new Date(b.lastEdited || b.writingDate || b.updatedAt).getTime() -
             new Date(a.lastEdited || a.writingDate || a.updatedAt).getTime(),
         );
       case "Ongoing":
-        return stories.filter(
+        return effectiveStories.filter(
           (story: ExtendedStory) => story.status === "Ongoing",
         );
       case "Published":
-        return stories.filter(
+        return effectiveStories.filter(
           (story: ExtendedStory) =>
             story.status === "Completed" || story.storyStatus === "complete",
         );
       case "Drafts":
-        return stories.filter(
+        return effectiveStories.filter(
           (story: ExtendedStory) =>
             story.status === "Draft" || story.storyStatus === "drafts",
         );
       default:
-        return stories;
+        return effectiveStories;
     }
-  }, [selectedTab, stories]);
+  }, [selectedTab, effectiveStories]);
 
   const hasStories = filteredStories.length > 0;
 
