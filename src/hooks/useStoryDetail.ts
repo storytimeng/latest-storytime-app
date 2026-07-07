@@ -585,13 +585,14 @@ export function useReadingProgress(
     lastReadChapter?: number;
     lastReadEpisode?: number;
     readingTimeSeconds?: number;
-  }) => {
+  }, options?: { signal?: AbortSignal }) => {
     if (!storyId) return;
 
     try {
       const response = await usersControllerUpdateReadingProgress({
         path: { id: storyId },
         body: progressData,
+        ...(options?.signal ? { signal: options.signal } : {}),
       });
 
       // Optimistically update local cache
@@ -599,6 +600,14 @@ export function useReadingProgress(
 
       return response.data;
     } catch (error) {
+      if (
+        error &&
+        typeof error === "object" &&
+        "name" in error &&
+        (error as { name?: string }).name === "AbortError"
+      ) {
+        return null;
+      }
       console.error("Failed to update reading progress:", error);
       throw error;
     }
@@ -664,18 +673,33 @@ export function useChapterProgress(
     wordsRead?: number;
     totalWords?: number;
     readingTimeSeconds?: number;
-  }) => {
+  }, options?: { signal?: AbortSignal }) => {
     if (!storyId || !chapterId) return;
 
     try {
       const response = await usersControllerUpdateChapterProgress({
         path: { storyId, chapterId },
         body: progressData,
+        // Forward the AbortSignal so a parent page's unmount can
+        // cancel an in-flight PUT instead of waiting for the
+        // server to respond. Critical for the read view: it
+        // used to fire every 10s and a slow network meant the
+        // request outlived the page.
+        ...(options?.signal ? { signal: options.signal } : {}),
       });
 
       await mutate();
       return response.data;
     } catch (error) {
+      // Aborted requests aren't errors from the consumer's POV.
+      if (
+        error &&
+        typeof error === "object" &&
+        "name" in error &&
+        (error as { name?: string }).name === "AbortError"
+      ) {
+        return null;
+      }
       console.error("Failed to update chapter progress:", error);
       throw error;
     }
@@ -741,18 +765,27 @@ export function useEpisodeProgress(
     wordsRead?: number;
     totalWords?: number;
     readingTimeSeconds?: number;
-  }) => {
+  }, options?: { signal?: AbortSignal }) => {
     if (!storyId || !episodeId) return;
 
     try {
       const response = await usersControllerUpdateEpisodeProgress({
         path: { storyId, episodeId },
         body: progressData,
+        ...(options?.signal ? { signal: options.signal } : {}),
       });
 
       await mutate();
       return response.data;
     } catch (error) {
+      if (
+        error &&
+        typeof error === "object" &&
+        "name" in error &&
+        (error as { name?: string }).name === "AbortError"
+      ) {
+        return null;
+      }
       console.error("Failed to update episode progress:", error);
       throw error;
     }

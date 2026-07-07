@@ -392,14 +392,6 @@ const StoryForm: React.FC<StoryFormProps> = ({
   const renumberChapters = contentStateHook.renumberChapters;
   const renumberParts = contentStateHook.renumberParts;
 
-  // Tracks the latest HTML from the standalone story editor synchronously.
-  // React state updates are async so formData.content can lag behind the
-  // editor on tablet browsers (iPad Safari / Android Chrome) where onUpdate
-  // doesn't always fire before the Publish button's onClick.
-  // The blur → click event order guarantees this ref is up-to-date by the
-  // time any submit handler reads it.
-  const latestContentRef = useRef<string>("");
-
   // Error modal state
   const [errorModalOpen, setErrorModalOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -775,9 +767,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
     (authorNote: string, giveConsent: boolean) => {
       if (isLoading) return;
 
-      // latestContentRef is always current (refs bypass React batching)
-      const currentContent = latestContentRef.current || formData.content;
-      const finalData = { ...formData, authorNote, giveConsent, content: currentContent };
+      const finalData = { ...formData, authorNote, giveConsent };
 
       // For edit mode, only send edited chapters/episodes and deleted ones
       let contentData: Chapter[] | undefined;
@@ -917,7 +907,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
         label="Story Blurb"
         htmlFor="description"
         id="description"
-        placeholder="Summarize your story in 20–200 words…"
+        placeholder="Summarize your story in 50–100 words…"
         value={formData.description}
         onChange={(value) => handleFieldChange("description", value)}
         isInvalid={!!formErrors.description}
@@ -931,19 +921,26 @@ const StoryForm: React.FC<StoryFormProps> = ({
         className="max-h-[400px]"
       />
 
-      {/* Edit Story Content button — standalone stories in edit mode */}
-      {mode === "edit" &&
-        !storyStructure.hasChapters &&
-        !storyStructure.hasEpisodes && (
-          <Button
-            variant="bordered"
-            size="sm"
-            onClick={() => setCurrentStep("writing")}
-            className="w-full border-dashed border-primary-colour text-primary-colour"
-          >
-            Edit Story Content
-          </Button>
-        )}
+      {/* Content Field */}
+      <TextAreaField
+        label="Story Content"
+        htmlFor="content"
+        id="content"
+        placeholder="Write your story content here..."
+        value={formData.content || ""}
+        onChange={(value) => handleFieldChange("content", value)}
+        isInvalid={!!formErrors.content}
+        errorMessage={formErrors.content || ""}
+        required={!storyStructure.hasChapters && !storyStructure.hasEpisodes}
+        rows={6}
+        className="max-h-[400px]"
+        isRichText={true}
+      />
+      {!storyStructure.hasChapters && !storyStructure.hasEpisodes && (
+        <p className="-mt-4 text-xs text-gray-500">
+          Content is required when your story doesn't have chapters or episodes.
+        </p>
+      )}
 
       {/* Show Chapters/Episodes in Edit Mode */}
       {mode === "edit" &&
@@ -1699,21 +1696,17 @@ const StoryForm: React.FC<StoryFormProps> = ({
             label="Story Content"
             htmlFor="content"
             id="content"
-            isInvalid={!!formErrors.content}
-            errorMessage={formErrors.content || ""}
-            placeholder="Write your full story here. There is no word limit — write as much as your story needs."
+            isInvalid={false}
+            errorMessage=""
+            placeholder="Write your full story here..."
             value={formData.content || ""}
-            onChange={(value) => {
-              latestContentRef.current = value;
-              handleFieldChange("content", value);
-            }}
+            onChange={(value) => handleFieldChange("content", value)}
             rows={20}
             isRichText={true}
           />
           <p className="text-xs text-gray-500">
-            This is your story body — write the full narrative here. The blurb
-            you wrote earlier is just a short summary shown on the story card;
-            your readers will see this content when they open the story.
+            Write your complete story in this field since you selected no
+            chapters or episodes.
           </p>
         </div>
       )}
@@ -1764,33 +1757,8 @@ const StoryForm: React.FC<StoryFormProps> = ({
             className={`flex-1 bg-primary-shade-6 text-universal-white ${Magnetik_Medium.className}`}
             onClick={() => {
               if (isLoading) return;
-              // Use latestContentRef as authoritative source — it's updated
-              // synchronously by the RichTextEditor's onBlur (which fires
-              // before this onClick in browser event order). This fixes a
-              // tablet bug where onUpdate doesn't fire before the click.
-              const currentContent =
-                latestContentRef.current || formData.content || "";
-
-              // Guard: standalone stories must have actual content before proceeding
-              if (!storyStructure.hasChapters && !storyStructure.hasEpisodes) {
-                const plainText = currentContent
-                  .replace(/<[^>]+>/g, "")
-                  .trim();
-                if (plainText.length < 50) {
-                  showToast({
-                    type: "error",
-                    message:
-                      "Please write your story content before publishing. The story body must be at least 50 characters.",
-                  });
-                  return;
-                }
-              }
               if (mode === "edit") {
-                const publishData = {
-                  ...formData,
-                  storyStatus: "Published",
-                  content: currentContent,
-                };
+                const publishData = { ...formData, storyStatus: "Published" };
                 onSubmit(
                   publishData,
                   storyStructure.hasChapters
@@ -1873,9 +1841,8 @@ const StoryForm: React.FC<StoryFormProps> = ({
             isLoading={isLoading}
             onSkip={() => {
               if (isLoading) return;
-              const currentContent = latestContentRef.current || formData.content;
               onSubmit(
-                { ...formData, content: currentContent },
+                formData,
                 storyStructure.hasChapters ? chapters : undefined,
                 !storyStructure.hasChapters ? parts : undefined,
                 undefined, // deletedChapters - not used in create mode

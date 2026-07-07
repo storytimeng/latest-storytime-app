@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { MessageCircle, HardDrive, Trash2 } from "lucide-react";
 import { Magnetik_Bold, Magnetik_Medium, Magnetik_Regular } from "@/lib/font";
-import { StoryCard } from "@/components/reusables";
+import { StoryCard, OfflineAwareStoryCard } from "@/components/reusables";
 import { useReadingHistory } from "@/src/hooks/useReadingHistory";
 import { useOfflineStories } from "@/src/hooks/useOfflineStories";
 import { formatBytes } from "@/lib/offline/db";
@@ -111,12 +111,14 @@ const NewLibraryView = () => {
   });
 
   // Map offline stories to match library story format for StoryCard
+  // Map offline stories to match library story format for StoryCard
   const downloadedStories = offlineStories.map((offline) => ({
     id: offline.id,
     title: offline.title,
     description: offline.description,
     imageUrl: offline.coverImage,
     coverImage: offline.coverImage,
+    coverImageBlob: offline.coverImageBlob, // NEW — carried through for offline rendering
     author: offline.author,
     genres: offline.genres,
     status: offline.status,
@@ -253,11 +255,11 @@ const NewLibraryView = () => {
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {currentStories.map((story: any) => (
                   <div key={story.id} className="relative">
-                    <StoryCard
+                    <OfflineAwareStoryCard
                       story={story}
                       hideStats={activeTab === "library"}
+                      isOffline={activeTab === "downloads" && !isOnline}
                     />
-                    {/* Show delete button for downloads */}
                     {activeTab === "downloads" && (
                       <button
                         onClick={async (e) => {

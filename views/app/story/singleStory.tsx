@@ -1,26 +1,28 @@
 "use client";
 import { Link } from "@/components/AppLink";
 import { useRouter } from "next/navigation";
-import React, { useState, useEffect } from "react";
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+} from "react";
 import {
   ArrowLeft,
   Share2,
   Play,
-  Info,
-  List,
   Star,
   Download,
   Check,
   Edit,
   ChevronRight,
-  Users,
   Trash2,
-  X,
   Eye,
   Heart,
   AlertCircle,
+  WifiOff,
 } from "lucide-react";
-import Image from "next/image";
 import { Magnetik_Regular, Magnetik_Bold } from "@/lib";
 import { cn } from "@/lib";
 import { genreCategoryPath } from "@/lib/genre";
@@ -53,37 +55,103 @@ import { CollaboratorsModal } from "@/components/reusables/modals/CollaboratorsM
 import { ImagePreviewModal } from "@/components/reusables/modals/ImagePreviewModal";
 import { motion, AnimatePresence, useScroll } from "framer-motion";
 import { CommentsSection } from "@/views/app/story/components/CommentsSection";
+import { StoryOfflineEmptyState } from "@/views/app/story/components/StoryOfflineEmptyState";
 import { shareStory } from "@/lib/share";
 import { usePremiumFeatures } from "@/src/hooks/usePremiumFeatures";
 import { usePremiumUpsell } from "@/src/hooks/usePremiumUpsell";
 import { PremiumUpsellModal } from "@/components/reusables/PremiumUpsellModal";
 import PremiumBanner from "@/components/reusables/customUI/PremiumBanner";
-import {
-  canReadExclusiveStory,
-  isExclusiveStory,
-} from "@/src/lib/premiumUpsell";
+import { canReadExclusiveStory } from "@/src/lib/premiumUpsell";
 import PageHeader from "@/components/reusables/customUI/pageHeader";
+import { usePageInflight } from "@/hooks/usePageInflight";
 
 interface SingleStoryProps {
   storyId?: string;
 }
 
 type Tab = "episodes" | "details" | "reviews";
+type Structure = "chapters" | "episodes" | "single";
 
-// Helper function to format reading time
+interface DownloadableItem {
+  id: string;
+  title?: string;
+  content?: string;
+  chapterNumber?: number;
+  episodeNumber?: number;
+  updatedAt?: string;
+}
+
+interface DownloadPayload {
+  id: string;
+  title: string;
+  content: string;
+  number: number;
+  updatedAt?: string;
+}
+
+interface OfflineFallback {
+  story: any;
+  chapters: any[];
+  episodes: any[];
+  coverObjectUrl?: string;
+}
+
+const READING_WPM = 200;
+const MIN_CONTENT_LENGTH_TO_SKIP_REFETCH = 100;
+const BATCH_PRESETS = [1, 5, 10, 25];
+
 const formatReadingTime = (seconds: number): string => {
-  if (!seconds || seconds === 0) return "0m";
+  if (!seconds) return "0m";
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
-  if (hours > 0) {
-    return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
-  }
+  if (hours > 0) return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
   return `${minutes}m`;
 };
 
+const stripHtml = (html?: string) =>
+  (html || "").replace(/<[^>]*>/g, "").trim();
+
+const fetchImageAsBlob = async (
+  url?: string,
+  signal?: AbortSignal,
+): Promise<Blob | undefined> => {
+  if (!url) return undefined;
+  try {
+    const res = await fetch(url, signal ? { signal } : undefined);
+    if (!res.ok) return undefined;
+    return await res.blob();
+  } catch (error) {
+    // Aborted downloads are expected when the user navigates
+    // away mid-fetch; not an error from the consumer's POV.
+    if (
+      error &&
+      typeof error === "object" &&
+      "name" in error &&
+      (error as { name?: string }).name === "AbortError"
+    ) {
+      return undefined;
+    }
+    console.error("Failed to fetch cover image for offline storage:", error);
+    return undefined;
+  }
+};
+
+const unitLabel = (structure: Structure, count: number) => {
+  const noun = structure === "chapters" ? "Chapter" : "Episode";
+  return count === 1 ? noun : `${noun}s`;
+};
+
 const SingleStory = ({ storyId }: SingleStoryProps) => {
+  // Page-scoped inflight registry. Every cover-image blob
+  // download, batch download, and chunked chapter fetch below
+  // registers its AbortController here, so a user leaving the
+  // page mid-download doesn't leave behind a 3-10 MB blob that
+  // lands in the cache (and the backend logs) after the page
+  // is gone. Auto-cancels on unmount.
+  const inflight = usePageInflight("single-story");
+
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const { story, isLoading } = useStory(storyId);
+  const { story: fetchedStory, isLoading } = useStory(storyId);
   const { likeCount, isLiked, toggleLike } = useStoryLikes(
     storyId,
     isAuthenticated(),
@@ -105,110 +173,19 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
   const { checkFeature } = usePremiumFeatures();
   const { requireFeature, upsellReason, closeUpsell, isUpsellOpen } =
     usePremiumUpsell();
+
   const [activeTab, setActiveTab] = useState<Tab>("episodes");
   const [reviewText, setReviewText] = useState("");
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
-
-  // Extract progress data from aggregated response
-  const storyProgress = aggregatedData?.storyProgress;
-  const aggregated = aggregatedData?.aggregated;
-
-  // Debug: Log aggregated data
-  useEffect(() => {
-    if (aggregatedData) {
-      console.log("Aggregated Data:", aggregatedData);
-      console.log("Story Progress:", storyProgress);
-      console.log("Aggregated Stats:", aggregated);
-    }
-  }, [aggregatedData, storyProgress, aggregated]);
-
-  // Scroll animation for FAB
-  const { scrollY } = useScroll();
   const [showFab, setShowFab] = useState(false);
 
-  useEffect(() => {
-    // Prefetch home route
-    router.prefetch("/home");
+  const storyProgress = aggregatedData?.storyProgress;
+  const aggregated = aggregatedData?.aggregated;
+  const { scrollY } = useScroll();
 
-    // Prefetch genre routes if available
-    if (story?.genres) {
-      story.genres.forEach((genre: any) => {
-        router.prefetch(genreCategoryPath(String(genre)));
-      });
-    }
-  }, [router, story?.genres]);
-
-  useEffect(() => {
-    return scrollY.on("change", (latest) => {
-      setShowFab(latest > 400);
-    });
-  }, [scrollY]);
-
-  // Modal state
-  const {
-    isOpen: isCollaboratorsOpen,
-    onOpen: onOpenCollaborators,
-    onOpenChange: onCollaboratorsOpenChange,
-  } = useDisclosure();
-
-  const {
-    isOpen: isImagePreviewOpen,
-    onOpen: onOpenImagePreview,
-    onOpenChange: onImagePreviewOpenChange,
-  } = useDisclosure();
-
-  // Check if current user is the author
-  const currentUser = (
-    storeUser && (storeUser as any).data
-      ? (storeUser as any).data?.user
-      : storeUser
-  ) as any;
-
-  // Handle both author object and authorId field
-  const storyAuthorId = (story as any)?.authorId || story?.author?.id;
-  const currentAuthorId = currentUser?.authorId || currentUser?.id;
-  const isAuthor =
-    currentAuthorId && storyAuthorId && currentAuthorId === storyAuthorId;
-
-  // Use counts from story data if available, otherwise use hook counts
-  const displayLikeCount = (story as any)?.likeCount ?? likeCount ?? 0;
-  const displayCommentCount = (story as any)?.commentCount ?? commentCount ?? 0;
-
-  // Determine story structure and content
-  const storyData = story as any;
-  const hasEpisodes = storyData?.episodes && storyData.episodes.length > 0;
-  const hasChapters = storyData?.chapter === true; // API returns 'chapter': boolean
-
-  let structure = "single";
-  if (hasEpisodes) {
-    structure = "episodes";
-  } else if (hasChapters) {
-    structure = "chapters";
-  }
-
-  // Use data from story object if available, otherwise fall back to hooks
-  const shouldFetchChapters =
-    structure === "chapters" && !storyData?.chapters?.length && !isLoading;
-  const shouldFetchEpisodes =
-    structure === "episodes" && !storyData?.episodes?.length && !isLoading;
-
-  const { chapters: fetchedChapters } = useStoryChapters(
-    shouldFetchChapters ? storyId : undefined,
-  );
-  const { episodes: fetchedEpisodes } = useStoryEpisodes(
-    shouldFetchEpisodes ? storyId : undefined,
-  );
-
-  const chapters = storyData?.chapters?.length
-    ? storyData.chapters
-    : fetchedChapters;
-  const episodes = storyData?.episodes?.length
-    ? storyData.episodes
-    : fetchedEpisodes;
-
-  // Offline functionality
   const {
     isStoryDownloaded,
+    getOfflineStory,
     getDownloadedContent,
     downloadStory,
     downloadAdditionalContent,
@@ -219,18 +196,185 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
     syncAllEpisodes,
   } = useOfflineStories();
 
+  // --- Offline fallback -----------------------------------------------
+  // The network fetch can fail for reasons that have nothing to do with
+  // whether the device *itself* is online — the backend can be down,
+  // slow, or unreachable while wifi still reports "connected". So we
+  // never gate this on navigator.onLine; we simply check IndexedDB
+  // whenever the network fetch has finished and produced nothing.
+  const [offlineFallback, setOfflineFallback] =
+    useState<OfflineFallback | null>(null);
+  const [offlineCheckDone, setOfflineCheckDone] = useState(false);
+  const [usingOfflineFallback, setUsingOfflineFallback] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    let createdObjectUrl: string | undefined;
+
+    if (isLoading) {
+      setOfflineCheckDone(false);
+      return;
+    }
+
+    if (fetchedStory) {
+      // Network succeeded — no need for the offline record this render.
+      setUsingOfflineFallback(false);
+      setOfflineCheckDone(true);
+      return;
+    }
+
+    if (!storyId) {
+      setOfflineCheckDone(true);
+      return;
+    }
+
+    (async () => {
+      const offline = await getOfflineStory(storyId);
+      if (cancelled) return;
+
+      if (!offline) {
+        setOfflineFallback(null);
+        setUsingOfflineFallback(false);
+        setOfflineCheckDone(true);
+        return;
+      }
+
+      const downloadedContent = await getDownloadedContent(
+        storyId,
+        offline.structure,
+      );
+      if (cancelled) return;
+
+      if (offline.coverImageBlob) {
+        createdObjectUrl = URL.createObjectURL(offline.coverImageBlob);
+      }
+
+      const reconstructed = {
+        id: offline.storyId,
+        title: offline.title,
+        description: offline.description,
+        imageUrl: createdObjectUrl ?? offline.coverImage,
+        author: offline.author,
+        genres: offline.genres,
+        storyStatus: offline.status,
+        chapter: offline.structure === "chapters",
+        episodes:
+          offline.structure === "episodes" ? downloadedContent : undefined,
+        chapters:
+          offline.structure === "chapters" ? downloadedContent : undefined,
+        ...offline.metadata,
+      };
+
+      setOfflineFallback({
+        story: reconstructed,
+        chapters: offline.structure === "chapters" ? downloadedContent : [],
+        episodes: offline.structure === "episodes" ? downloadedContent : [],
+        coverObjectUrl: createdObjectUrl,
+      });
+      setUsingOfflineFallback(true);
+      setOfflineCheckDone(true);
+    })();
+
+    return () => {
+      cancelled = true;
+      if (createdObjectUrl) URL.revokeObjectURL(createdObjectUrl);
+    };
+  }, [isLoading, fetchedStory, storyId, getOfflineStory, getDownloadedContent]);
+
+  const effectiveStory = fetchedStory ?? offlineFallback?.story;
+
+  useEffect(() => {
+    router.prefetch("/home");
+    effectiveStory?.genres?.forEach((genre: any) =>
+      router.prefetch(genreCategoryPath(String(genre))),
+    );
+  }, [router, effectiveStory?.genres]);
+
+  useEffect(
+    () => scrollY.on("change", (latest) => setShowFab(latest > 400)),
+    [scrollY],
+  );
+
+  const {
+    isOpen: isCollaboratorsOpen,
+    onOpen: onOpenCollaborators,
+    onOpenChange: onCollaboratorsOpenChange,
+  } = useDisclosure();
+  const { isOpen: isImagePreviewOpen, onOpenChange: onImagePreviewOpenChange } =
+    useDisclosure();
+
+  const currentUser = (
+    storeUser && (storeUser as any).data
+      ? (storeUser as any).data?.user
+      : storeUser
+  ) as any;
+
+  const storyData = effectiveStory as any;
+  const storyAuthorId = storyData?.authorId || effectiveStory?.author?.id;
+  const currentAuthorId = currentUser?.authorId || currentUser?.id;
+  const isAuthor =
+    currentAuthorId && storyAuthorId && currentAuthorId === storyAuthorId;
+
+  const displayLikeCount = storyData?.likeCount ?? likeCount ?? 0;
+  const displayCommentCount = storyData?.commentCount ?? commentCount ?? 0;
+
+  const hasEpisodes = storyData?.episodes && storyData.episodes.length > 0;
+  const hasChapters = storyData?.chapter === true;
+  const structure: Structure = hasEpisodes
+    ? "episodes"
+    : hasChapters
+      ? "chapters"
+      : "single";
+  const isSingleStory = structure === "single";
+
+  const shouldFetchChapters =
+    !usingOfflineFallback &&
+    structure === "chapters" &&
+    !storyData?.chapters?.length &&
+    !isLoading;
+  const shouldFetchEpisodes =
+    !usingOfflineFallback &&
+    structure === "episodes" &&
+    !storyData?.episodes?.length &&
+    !isLoading;
+
+  const { chapters: fetchedChapters } = useStoryChapters(
+    shouldFetchChapters ? storyId : undefined,
+  );
+  const { episodes: fetchedEpisodes } = useStoryEpisodes(
+    shouldFetchEpisodes ? storyId : undefined,
+  );
+
+  const chapters = storyData?.chapters?.length
+    ? storyData.chapters
+    : fetchedChapters?.length
+      ? fetchedChapters
+      : (offlineFallback?.chapters ?? []);
+  const episodes = storyData?.episodes?.length
+    ? storyData.episodes
+    : fetchedEpisodes?.length
+      ? fetchedEpisodes
+      : (offlineFallback?.episodes ?? []);
+  const contentList = structure === "chapters" ? chapters : episodes;
+  const hasContent = contentList && contentList.length > 0;
+
   const [isDownloaded, setIsDownloaded] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadingItems, setDownloadingItems] = useState<Set<string>>(
     new Set(),
   );
-  // Per-item download failure tracking — used to render an inline error
-  // icon on the row instead of a toast (successes are silent).
   const [failedDownloads, setFailedDownloads] = useState<Set<string>>(
     new Set(),
   );
-  const longPressTimer = React.useRef<NodeJS.Timeout | null>(null);
+  const [downloadedContentIds, setDownloadedContentIds] = useState<Set<string>>(
+    new Set(),
+  );
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedContentIds, setSelectedContentIds] = useState<Set<string>>(
+    new Set(),
+  );
 
+  const longPressTimer = useRef<NodeJS.Timeout | null>(null);
   const handleTouchStart = (id: string) => {
     longPressTimer.current = setTimeout(() => {
       if (!isSelectionMode) {
@@ -239,41 +383,52 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
       }
     }, 500);
   };
-
   const handleTouchEnd = () => {
-    if (longPressTimer.current) {
-      clearTimeout(longPressTimer.current);
-    }
+    if (longPressTimer.current) clearTimeout(longPressTimer.current);
   };
 
-  // Handle single item download
-  const handleSingleDownload = async (item: any, index: number) => {
-    if (!isAuthenticated()) {
-      openAuthModal("login");
-      return;
-    }
+  const notDownloadedList = useMemo(() => {
+    if (!contentList) return [];
+    return contentList.filter(
+      (item: any) =>
+        !downloadedContentIds.has(item.id) &&
+        !downloadedContentIds.has(item.chapterId ?? item.episodeId),
+    );
+  }, [contentList, downloadedContentIds]);
 
-    if (!requireFeature("offlineDownload")) {
-      return;
-    }
-
-    if (downloadingItems.has(item.id)) return;
-
-    // Optimistically clear any prior failure indicator for this item so the
-    // user gets immediate visual feedback that we are retrying.
-    setFailedDownloads((prev) => {
-      if (!prev.has(item.id)) return prev;
-      const next = new Set(prev);
-      next.delete(item.id);
-      return next;
+  const unreadNotDownloaded = useMemo(() => {
+    return notDownloadedList.filter((item: any) => {
+      const progress =
+        structure === "episodes"
+          ? aggregatedData?.episodeProgress?.find(
+              (ep: any) => ep.episodeId === item.id,
+            )
+          : aggregatedData?.chapterProgress?.find(
+              (ch: any) => ch.chapterId === item.id,
+            );
+      return !progress?.isCompleted;
     });
+  }, [notDownloadedList, structure, aggregatedData]);
 
-    setDownloadingItems((prev) => new Set(prev).add(item.id));
-    try {
+  const availablePresets = BATCH_PRESETS.filter(
+    (n) => notDownloadedList.length >= n,
+  );
+  const remainingCount = notDownloadedList.length;
+  const showAllRemainingOption =
+    remainingCount > 0 && !availablePresets.includes(remainingCount);
+
+  const resolveDownloadPayload = useCallback(
+    async (
+      item: DownloadableItem,
+      index: number,
+    ): Promise<DownloadPayload | null> => {
       let fullContent = item.content;
+      let fullTitle = item.title;
 
-      // Fetch full content if needed
-      if (!fullContent || fullContent.length < 100) {
+      if (
+        !fullContent ||
+        fullContent.length < MIN_CONTENT_LENGTH_TO_SKIP_REFETCH
+      ) {
         const {
           storiesControllerGetChapterById,
           storiesControllerGetEpisodeById,
@@ -283,45 +438,92 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
           const response = await storiesControllerGetChapterById({
             path: { chapterId: item.id },
           });
-          fullContent = (response.data as any)?.content || item.content;
+          const chapter = (response.data as any)?.data;
+          fullContent = chapter?.content || item.content;
+          fullTitle = item.title || chapter?.title;
         } else {
           const response = await storiesControllerGetEpisodeById({
             path: { episodeId: item.id },
           });
-          fullContent = (response.data as any)?.content || item.content;
+          const episode = (response.data as any)?.data;
+          fullContent = episode?.content || item.content;
+          fullTitle = item.title || episode?.title;
         }
       }
 
-      const contentToDownload = [
-        {
-          id: item.id,
-          title: item.title,
-          content: fullContent,
-          number:
-            structure === "chapters"
-              ? item.chapterNumber || index + 1
-              : item.episodeNumber || index + 1,
-          updatedAt: item.updatedAt,
-        },
-      ];
+      if (!stripHtml(fullContent)) return null;
 
-      // If story metadata isn't downloaded, download it first
-      const isStoryMetaDownloaded = await isStoryDownloaded(storyId!);
-      if (!isStoryMetaDownloaded) {
-        await downloadStory(story, contentToDownload);
+      return {
+        id: item.id,
+        title: fullTitle || `${unitLabel(structure, 1)} ${index + 1}`,
+        content: fullContent!,
+        number:
+          structure === "chapters"
+            ? item.chapterNumber || index + 1
+            : item.episodeNumber || index + 1,
+        updatedAt: item.updatedAt,
+      };
+    },
+    [structure],
+  );
+
+  const persistDownload = useCallback(
+    async (payload: DownloadPayload[]) => {
+      const alreadyDownloaded = await isStoryDownloaded(storyId!);
+      if (!alreadyDownloaded) {
+        // Track the cover-image blob fetch so an unmount mid-
+        // download kills it instead of landing 3-10 MB into
+        // IndexedDB after the page is gone.
+        const coverController = new AbortController();
+        inflight.track(coverController);
+        let coverImageBlob: Blob | undefined;
+        try {
+          coverImageBlob = await fetchImageAsBlob(
+            effectiveStory?.imageUrl,
+            coverController.signal,
+          );
+          await downloadStory(effectiveStory, payload, structure, coverImageBlob);
+        } finally {
+          inflight.cleanup(coverController);
+        }
       } else {
-        await downloadAdditionalContent(
-          storyId!,
-          structure as any,
-          contentToDownload,
-        );
+        await downloadAdditionalContent(storyId!, structure, payload);
       }
+    },
+    [
+      downloadStory,
+      downloadAdditionalContent,
+      isStoryDownloaded,
+      storyId,
+      effectiveStory,
+      structure,
+      inflight,
+    ],
+  );
 
-      // Success: silent — update downloaded state for the row tick.
+  const handleSingleDownload = async (
+    item: DownloadableItem,
+    index: number,
+  ) => {
+    if (!isAuthenticated()) return openAuthModal("login");
+    if (!requireFeature("offlineDownload")) return;
+    if (downloadingItems.has(item.id)) return;
+
+    setFailedDownloads((prev) => {
+      if (!prev.has(item.id)) return prev;
+      const next = new Set(prev);
+      next.delete(item.id);
+      return next;
+    });
+    setDownloadingItems((prev) => new Set(prev).add(item.id));
+
+    try {
+      const payload = await resolveDownloadPayload(item, index);
+      if (!payload) throw new Error("Fetched content is empty");
+      await persistDownload([payload]);
       setDownloadedContentIds((prev) => new Set(prev).add(item.id));
     } catch (error) {
       console.error(`Failed to download item ${item.id}:`, error);
-      // Failure: mark the row inline; no toast.
       setFailedDownloads((prev) => new Set(prev).add(item.id));
     } finally {
       setDownloadingItems((prev) => {
@@ -332,157 +534,72 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
     }
   };
 
-  // Selection Mode State
-  const [isSelectionMode, setIsSelectionMode] = useState(false);
-  const [selectedContentIds, setSelectedContentIds] = useState<Set<string>>(
-    new Set(),
-  );
-  const [downloadedContentIds, setDownloadedContentIds] = useState<Set<string>>(
-    new Set(),
-  );
+  const handleDeleteSingleDownload = async (item: DownloadableItem) => {
+    if (!storyId) return;
+    const success = await deleteOfflineContent(
+      storyId,
+      item.id,
+      structure === "chapters" ? "chapter" : "episode",
+    );
+    if (!success) return;
 
-  // Check downloaded content status
-  useEffect(() => {
-    const checkDownloadedContent = async () => {
-      if (storyId && structure !== "single") {
-        const downloadedItems = await getDownloadedContent(
-          storyId,
-          structure as any,
-        );
-        // The IndexedDB store uses a composite key (`userId_chapterId`) as
-        // the row id, but the UI rows reference the API's `chapterId` /
-        // `episodeId`. Use the canonical id so the membership check works.
-        const ids = new Set(
-          downloadedItems.map((item: any) => item.chapterId ?? item.episodeId),
-        );
-        setDownloadedContentIds(ids);
-      }
-    };
-
-    checkDownloadedContent();
-  }, [storyId, structure, getDownloadedContent, isDownloaded]); // Re-check when story download status changes
-
-  // Toggle selection mode
-  const toggleSelectionMode = () => {
-    setIsSelectionMode(!isSelectionMode);
-    setSelectedContentIds(new Set());
+    setDownloadedContentIds((prev) => {
+      const next = new Set(prev);
+      next.delete(item.id);
+      return next;
+    });
+    setIsDownloaded(await isStoryDownloaded(storyId));
   };
 
-  // Toggle selection of an item
-  const toggleItemSelection = (id: string) => {
-    const newSelected = new Set(selectedContentIds);
-    if (newSelected.has(id)) {
-      newSelected.delete(id);
-    } else {
-      newSelected.add(id);
-    }
-    setSelectedContentIds(newSelected);
-
-    if (!isSelectionMode && newSelected.size > 0) {
-      setIsSelectionMode(true);
-    } else if (isSelectionMode && newSelected.size === 0) {
-      // Optional: Auto-exit selection mode if nothing selected?
-      // User might prefer to stay in mode. Let's keep it manual exit or explicit "Cancel".
-    }
-  };
-
-  // Select/Deselect All
-  const toggleSelectAll = () => {
-    if (!contentList) return;
-
-    if (selectedContentIds.size === contentList.length) {
-      setSelectedContentIds(new Set());
-    } else {
-      const allIds = new Set<string>(contentList.map((item: any) => item.id));
-      setSelectedContentIds(allIds);
-    }
-  };
-
-  // Perform batch download
-  const performBatchDownload = async (itemsToDownload: any[]) => {
+  const performBatchDownload = async (itemsToDownload: DownloadableItem[]) => {
     if (!storyId || itemsToDownload.length === 0) return;
-
     setIsDownloading(true);
+
     try {
-      // Fetch full content for each item by ID
-      const {
-        storiesControllerGetChapterById,
-        storiesControllerGetEpisodeById,
-      } = await import("@/src/client");
-
-      const contentPromises = itemsToDownload.map(
-        async (item: any, idx: number) => {
+      const results = await Promise.all(
+        itemsToDownload.map(async (item, idx) => {
           try {
-            let fullContent = item.content;
-
-            // Fetch full content from API if not already present
-            if (!fullContent || fullContent.length < 100) {
-              if (structure === "chapters") {
-                const response = await storiesControllerGetChapterById({
-                  path: { chapterId: item.id },
-                });
-                // Response.data is the chapter object directly
-                fullContent = (response.data as any)?.content || item.content;
-              } else {
-                const response = await storiesControllerGetEpisodeById({
-                  path: { episodeId: item.id },
-                });
-                // Response.data is the episode object directly
-                fullContent = (response.data as any)?.content || item.content;
-              }
-            }
-
-            return {
-              id: item.id,
-              title: item.title,
-              content: fullContent,
-              number:
-                structure === "chapters"
-                  ? item.chapterNumber || idx + 1
-                  : item.episodeNumber || idx + 1,
-              updatedAt: item.updatedAt,
-            };
+            const payload = await resolveDownloadPayload(item, idx);
+            return payload ?? { failed: true as const, id: item.id };
           } catch (error) {
             console.error(`Failed to fetch content for ${item.id}:`, error);
-            // Fallback to existing content if fetch fails
-            return {
-              id: item.id,
-              title: item.title,
-              content: item.content || "",
-              number:
-                structure === "chapters"
-                  ? item.chapterNumber || idx + 1
-                  : item.episodeNumber || idx + 1,
-              updatedAt: item.updatedAt,
-            };
+            return { failed: true as const, id: item.id };
           }
-        },
+        }),
       );
 
-      const content = await Promise.all(contentPromises);
+      const succeeded = results.filter(
+        (r): r is DownloadPayload => !("failed" in r),
+      );
+      const failedIds = results
+        .filter((r): r is { failed: true; id: string } => "failed" in r)
+        .map((r) => r.id);
 
-      // If story metadata isn't downloaded, download it first
-      const isStoryMetaDownloaded = await isStoryDownloaded(storyId);
-      if (!isStoryMetaDownloaded) {
-        await downloadStory(story, content);
-      } else {
-        await downloadAdditionalContent(storyId, structure as any, content);
+      if (succeeded.length > 0) {
+        await persistDownload(succeeded);
+        setDownloadedContentIds((prev) => {
+          const next = new Set(prev);
+          succeeded.forEach((item) => next.add(item.id));
+          return next;
+        });
+        setIsDownloaded(true);
       }
 
-      // Refresh downloaded status — silent success.
-      const newDownloadedIds = new Set(downloadedContentIds);
-      itemsToDownload.forEach((item) => newDownloadedIds.add(item.id));
-      setDownloadedContentIds(newDownloadedIds);
+      if (failedIds.length > 0) {
+        setFailedDownloads((prev) => {
+          const next = new Set(prev);
+          failedIds.forEach((id) => next.add(id));
+          return next;
+        });
+      }
+
       setIsSelectionMode(false);
       setSelectedContentIds(new Set());
-      setIsDownloaded(true);
     } catch (error) {
       console.error("Bulk download error:", error);
-      // Mark every queued item as failed so the row shows the error icon.
-      // The user can retry by tapping the icon on each row.
       setFailedDownloads((prev) => {
         const next = new Set(prev);
-        itemsToDownload.forEach((item: any) => next.add(item.id));
+        itemsToDownload.forEach((item) => next.add(item.id));
         return next;
       });
     } finally {
@@ -490,56 +607,126 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
     }
   };
 
-  // Handle batch download action from dropdown
+  const handleDownload = async () => {
+    if (!effectiveStory || !storyId) return;
+    if (!isAuthenticated()) return openAuthModal("login");
+    if (!requireFeature("offlineDownload")) return;
+
+    setIsDownloading(true);
+    try {
+      let content: DownloadPayload[] = [];
+
+      if (structure === "chapters" && Array.isArray(chapters)) {
+        content = chapters.map((ch: any, idx: number) => ({
+          id: ch.id,
+          title: ch.title || `Chapter ${idx + 1}`,
+          content: ch.content,
+          number: idx + 1,
+        }));
+      } else if (structure === "episodes" && Array.isArray(episodes)) {
+        content = episodes.map((ep: any, idx: number) => ({
+          id: ep.id,
+          title: ep.title || `Episode ${idx + 1}`,
+          content: ep.content,
+          number: idx + 1,
+        }));
+      } else {
+        content = [
+          {
+            id: storyId,
+            title: effectiveStory.title || "Untitled",
+            content: effectiveStory.content || effectiveStory.description || "",
+            number: 1,
+          },
+        ];
+      }
+
+      content = content.filter((c) => stripHtml(c.content));
+
+      if (content.length === 0) {
+        showToast({
+          type: "warning",
+          message: "No content available to download",
+        });
+        return;
+      }
+
+      // Track the cover-image blob fetch so an unmount mid-
+      // download kills it instead of landing 3-10 MB into
+      // IndexedDB after the page is gone.
+      const coverController = new AbortController();
+      inflight.track(coverController);
+      try {
+        const coverImageBlob = await fetchImageAsBlob(
+          effectiveStory.imageUrl,
+          coverController.signal,
+        );
+        await downloadStory(effectiveStory, content, structure, coverImageBlob);
+        setIsDownloaded(true);
+      } finally {
+        inflight.cleanup(coverController);
+      }
+    } catch (error) {
+      console.error("Download error:", error);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  const handleRemoveDownload = async () => {
+    if (!storyId) return;
+    if (await deleteOfflineStory(storyId)) setIsDownloaded(false);
+  };
+
+  useEffect(() => {
+    if (!storyId || structure === "single") return;
+    (async () => {
+      const downloadedItems = await getDownloadedContent(storyId, structure);
+      const ids = new Set(
+        downloadedItems.map((item: any) => item.chapterId ?? item.episodeId),
+      );
+      setDownloadedContentIds(ids);
+    })();
+  }, [storyId, structure, getDownloadedContent, isDownloaded]);
+
+  const toggleSelectionMode = () => {
+    setIsSelectionMode((v) => !v);
+    setSelectedContentIds(new Set());
+  };
+
+  const toggleItemSelection = (id: string) => {
+    setSelectedContentIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      if (!isSelectionMode && next.size > 0) setIsSelectionMode(true);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (!contentList) return;
+    setSelectedContentIds((prev) =>
+      prev.size === contentList.length
+        ? new Set()
+        : new Set<string>(contentList.map((item: any) => item.id)),
+    );
+  };
+
   const handleBatchDownloadAction = async (key: string) => {
-    if (!isAuthenticated()) {
-      openAuthModal("login");
-      return;
-    }
-
-    if (!requireFeature("offlineDownload")) {
-      return;
-    }
-
-    if (!contentList || contentList.length === 0) return;
-
-    let startIndex = 0;
-    if (storyProgress) {
-      const lastRead =
-        structure === "chapters"
-          ? (storyProgress as any).lastReadChapter
-          : (storyProgress as any).lastReadEpisode;
-      if (lastRead) startIndex = lastRead;
-    }
+    if (!isAuthenticated()) return openAuthModal("login");
+    if (!requireFeature("offlineDownload")) return;
+    if (!contentList?.length) return;
 
     let itemsToDownload: any[] = [];
 
-    if (key === "unread") {
-      itemsToDownload = contentList.filter((item: any) => {
-        const itemProgress =
-          structure === "episodes"
-            ? aggregatedData?.episodeProgress?.find(
-                (ep: any) => ep.episodeId === item.id,
-              )
-            : aggregatedData?.chapterProgress?.find(
-                (ch: any) => ch.chapterId === item.id,
-              );
-        return !itemProgress?.isCompleted;
-      });
+    if (key === "all") {
+      itemsToDownload = notDownloadedList;
+    } else if (key === "unread") {
+      itemsToDownload = unreadNotDownloaded;
     } else {
       const count = parseInt(key.replace("next-", ""));
-      if (!isNaN(count)) {
-        itemsToDownload = contentList.slice(startIndex, startIndex + count);
-      }
+      if (!isNaN(count)) itemsToDownload = notDownloadedList.slice(0, count);
     }
-
-    // Filter out already downloaded — compare against API chapterId /
-    // episodeId, not the composite IndexedDB row id.
-    itemsToDownload = itemsToDownload.filter(
-      (item: any) =>
-        !downloadedContentIds.has(item.id) &&
-        !downloadedContentIds.has(item.chapterId ?? item.episodeId),
-    );
 
     if (itemsToDownload.length === 0) {
       showToast({ type: "info", message: "No new items to download" });
@@ -549,28 +736,17 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
     await performBatchDownload(itemsToDownload);
   };
 
-  // Handle bulk download
   const handleBulkDownload = async () => {
-    if (!isAuthenticated()) {
-      openAuthModal("login");
-      return;
-    }
-
-    if (!requireFeature("offlineDownload")) {
-      return;
-    }
-
+    if (!isAuthenticated()) return openAuthModal("login");
+    if (!requireFeature("offlineDownload")) return;
     if (!storyId || selectedContentIds.size === 0) return;
-    const itemsToDownload = contentList.filter((item: any) =>
-      selectedContentIds.has(item.id),
+    await performBatchDownload(
+      contentList.filter((item: any) => selectedContentIds.has(item.id)),
     );
-    await performBatchDownload(itemsToDownload);
   };
 
-  // Handle bulk delete
   const handleBulkDelete = async () => {
     if (!storyId || selectedContentIds.size === 0) return;
-
     try {
       for (const id of selectedContentIds) {
         await deleteOfflineContent(
@@ -579,89 +755,68 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
           structure === "chapters" ? "chapter" : "episode",
         );
       }
-
-      // Refresh downloaded status
-      const newDownloadedIds = new Set(downloadedContentIds);
-      selectedContentIds.forEach((id) => newDownloadedIds.delete(id));
-      setDownloadedContentIds(newDownloadedIds);
-
+      setDownloadedContentIds((prev) => {
+        const next = new Set(prev);
+        selectedContentIds.forEach((id) => next.delete(id));
+        return next;
+      });
       setIsSelectionMode(false);
       setSelectedContentIds(new Set());
-
-      // Check if anything is left
-      const stillDownloaded = await isStoryDownloaded(storyId);
-      setIsDownloaded(stillDownloaded);
+      setIsDownloaded(await isStoryDownloaded(storyId));
     } catch (error) {
       console.error("Bulk delete error:", error);
     }
   };
 
-  // Handle bulk mark as read
   const handleBulkMarkAsRead = async () => {
     if (!storyId || selectedContentIds.size === 0) return;
-
     try {
       const {
         usersControllerUpdateChapterProgress,
         usersControllerUpdateEpisodeProgress,
       } = await import("@/src/client");
 
-      const promises = Array.from(selectedContentIds).map(async (id) => {
-        const progressData = {
-          percentageRead: 100,
-          isCompleted: true,
-        };
+      await Promise.all(
+        Array.from(selectedContentIds).map((id) => {
+          const body = { percentageRead: 100, isCompleted: true };
+          return structure === "chapters"
+            ? usersControllerUpdateChapterProgress({
+                path: { storyId, chapterId: id },
+                body,
+              })
+            : usersControllerUpdateEpisodeProgress({
+                path: { storyId, episodeId: id },
+                body,
+              });
+        }),
+      );
 
-        if (structure === "chapters") {
-          await usersControllerUpdateChapterProgress({
-            path: { storyId, chapterId: id },
-            body: progressData,
-          });
-        } else {
-          await usersControllerUpdateEpisodeProgress({
-            path: { storyId, episodeId: id },
-            body: progressData,
-          });
-        }
-      });
-
-      await Promise.all(promises);
-
-      // Success — silent. Refresh progress from server.
       setIsSelectionMode(false);
       setSelectedContentIds(new Set());
       mutateProgress();
     } catch (error) {
       console.error("Bulk mark as read error:", error);
-      // No toast — keep failure silent at this layer.
     }
   };
 
-  // Check if story is downloaded and sync if needed
+  // Sync + downloaded-status check — skip entirely when we're already
+  // rendering from the offline fallback (there's nothing fresh to sync
+  // against; the "server" here IS the offline copy).
   useEffect(() => {
-    const checkAndSync = async () => {
-      if (storyId && story) {
-        const downloaded = await isStoryDownloaded(storyId);
-        setIsDownloaded(downloaded);
+    if (!storyId || !effectiveStory || usingOfflineFallback) return;
+    (async () => {
+      const downloaded = await isStoryDownloaded(storyId);
+      setIsDownloaded(downloaded);
+      if (!downloaded) return;
 
-        // If story is downloaded and we have online data, check for updates
-        if (downloaded && story) {
-          await syncStoryIfNeeded(storyId, story);
-
-          // Also sync chapters or episodes if available
-          if (chapters && chapters.length > 0) {
-            await syncAllChapters(storyId, chapters);
-          } else if (episodes && episodes.length > 0) {
-            await syncAllEpisodes(storyId, episodes);
-          }
-        }
-      }
-    };
-
-    checkAndSync();
+      await syncStoryIfNeeded(storyId, effectiveStory);
+      if (chapters?.length) await syncAllChapters(storyId, chapters);
+      else if (episodes?.length) await syncAllEpisodes(storyId, episodes);
+    })();
   }, [
     storyId,
-    story,
+    effectiveStory,
+    usingOfflineFallback,
     chapters,
     episodes,
     isStoryDownloaded,
@@ -670,27 +825,48 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
     syncAllEpisodes,
   ]);
 
-  // Determine content list
-  const contentList = structure === "chapters" ? chapters : episodes;
-  const hasContent = contentList && contentList.length > 0;
-  const isSingleStory = structure === "single";
+  const downloadMenuItems = useMemo(() => {
+    const items: { key: string; label: string }[] = availablePresets.map(
+      (n) => ({
+        key: `next-${n}`,
+        label: `Next ${n} ${unitLabel(structure, n)}`,
+      }),
+    );
+    if (unreadNotDownloaded.length > 0) {
+      items.push({
+        key: "unread",
+        label: `Download Unread (${unreadNotDownloaded.length})`,
+      });
+    }
+    if (showAllRemainingOption) {
+      items.push({ key: "all", label: `All Remaining (${remainingCount})` });
+    }
+    return items;
+  }, [
+    availablePresets,
+    unreadNotDownloaded.length,
+    showAllRemainingOption,
+    remainingCount,
+    structure,
+  ]);
 
-  // Calculate continue target
-  const continueTarget = React.useMemo(() => {
-    if (!contentList || contentList.length === 0) return null;
+  // When rendering from the offline fallback, everything we have IS
+  // downloaded — reflect that immediately instead of waiting on the
+  // sync effect above (which we intentionally skip in this mode).
+  useEffect(() => {
+    if (usingOfflineFallback) setIsDownloaded(true);
+  }, [usingOfflineFallback]);
 
-    // Default to first item
+  const continueTarget = useMemo(() => {
+    if (!contentList?.length) return null;
     if (!storyProgress) return contentList[0];
 
     const lastReadIndex =
       structure === "chapters"
         ? (storyProgress as any).lastReadChapter
         : (storyProgress as any).lastReadEpisode;
-
     if (!lastReadIndex) return contentList[0];
 
-    // Check if the last read item is completed
-    // Note: lastReadIndex is 1-based
     const lastReadItem = contentList[lastReadIndex - 1];
     if (!lastReadItem) return contentList[0];
 
@@ -704,39 +880,32 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
         : p.episodeId === lastReadItem.id,
     );
 
-    if (itemProgress?.isCompleted && lastReadIndex < contentList.length) {
-      return contentList[lastReadIndex]; // Next item
-    }
-
-    return lastReadItem; // Current item
+    return itemProgress?.isCompleted && lastReadIndex < contentList.length
+      ? contentList[lastReadIndex]
+      : lastReadItem;
   }, [storyProgress, contentList, structure, aggregatedData]);
 
-  const isExclusive = Boolean((story as any)?.onlyOnStorytime);
+  const isExclusive = Boolean(storyData?.onlyOnStorytime);
   const isExclusiveLocked =
     isExclusive && !isAuthor && !checkFeature("exclusiveStories");
 
-  const buildReadUrl = React.useCallback(
+  const buildReadUrl = useCallback(
     (contentId?: string) => {
       const targetId =
         contentId ??
         continueTarget?.id ??
         (hasContent ? contentList[0]?.id : undefined);
-
       const rawUrl = targetId
         ? `/story/${storyId}/read?${structure === "chapters" ? "chapterId" : "episodeId"}=${targetId}`
         : `/story/${storyId}/read`;
-
       return IS_ANDROID ? rewriteForCapacitor(rawUrl) : rawUrl;
     },
     [continueTarget?.id, contentList, hasContent, storyId, structure],
   );
 
-  const handleStartReading = React.useCallback(
+  const handleStartReading = useCallback(
     (contentId?: string) => {
-      if (!isAuthenticated()) {
-        openAuthModal("login");
-        return;
-      }
+      if (!isAuthenticated()) return openAuthModal("login");
 
       if (
         isExclusive &&
@@ -767,102 +936,34 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
     ],
   );
 
-  // Set default tab if single story
   useEffect(() => {
-    if (isSingleStory && activeTab === "episodes") {
-      setActiveTab("details");
-    }
+    if (isSingleStory && activeTab === "episodes") setActiveTab("details");
   }, [isSingleStory, activeTab]);
 
-  // Handle download
-  const handleDownload = async () => {
-    if (!story || !storyId) return;
-
-    if (!isAuthenticated()) {
-      openAuthModal("login");
-      return;
-    }
-
-    if (!requireFeature("offlineDownload")) {
-      return;
-    }
-
-    setIsDownloading(true);
-
+  const handleReviewSubmit = async () => {
+    if (!reviewText.trim() || !storyId) return;
+    setIsSubmittingReview(true);
     try {
-      let content: any[] = [];
-
-      // Handle stories with chapters
-      if (structure === "chapters" && chapters && Array.isArray(chapters)) {
-        content = chapters.map((ch: any, idx: number) => ({
-          id: ch.id,
-          title: ch.title,
-          content: ch.content,
-          number: idx + 1,
-        }));
-      }
-      // Handle stories with episodes
-      else if (
-        structure === "episodes" &&
-        episodes &&
-        Array.isArray(episodes)
-      ) {
-        content = episodes.map((ep: any, idx: number) => ({
-          id: ep.id,
-          title: ep.title,
-          content: ep.content,
-          number: idx + 1,
-        }));
-      }
-      // Handle single stories without chapters or episodes
-      else {
-        content = [
-          {
-            id: storyId,
-            title: story.title,
-            content: story.content || "",
-            number: 1,
-          },
-        ];
-      }
-
-      if (content.length === 0 || !content[0].content) {
-        showToast({
-          type: "warning",
-          message: "No content available to download",
-        });
-        return;
-      }
-
-      // Wrap so that "success = silent", "failure = inline state" applies.
-      await downloadStory(story, content);
-      setIsDownloaded(true);
-    } catch (error) {
-      console.error("Download error:", error);
-      // Failure is already reflected in `isDownloaded` state — keep silent.
+      await createComment(reviewText);
+      setReviewText("");
+    } catch (error: any) {
+      showToast({
+        type: "error",
+        message: error?.message || "Failed to post review",
+      });
     } finally {
-      setIsDownloading(false);
+      setIsSubmittingReview(false);
     }
   };
 
-  // Handle remove download
-  const handleRemoveDownload = async () => {
-    if (!storyId) return;
+  const stillResolving = isLoading || (!fetchedStory && !offlineCheckDone);
 
-    const success = await deleteOfflineStory(storyId);
-    if (success) {
-      setIsDownloaded(false);
-    }
-  };
-
-  if (isLoading) {
+  if (stillResolving) {
     return (
       <div className="relative min-h-screen pb-20 bg-accent-shade-1">
-        {/* Hero Skeleton - Full-width image */}
         <div className="relative w-full h-[55vh] min-h-[320px] max-h-[420px] overflow-hidden">
           <Skeleton className="absolute inset-0 w-full h-full" />
           <div className="absolute inset-0 bg-gradient-to-t from-accent-shade-1 via-accent-shade-1/40 to-transparent" />
-          {/* Header buttons skeleton */}
           <div className="absolute top-0 left-0 right-0 z-20 px-4 pt-6">
             <div className="flex items-center justify-between">
               <Skeleton className="w-10 h-10 rounded-full" />
@@ -873,39 +974,27 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
             </div>
           </div>
         </div>
-
-        {/* Content Skeleton - Below hero */}
         <div className="relative z-10 px-4 -mt-16">
-          {/* Badges */}
           <div className="flex gap-2 mb-3">
             <Skeleton className="w-24 h-6 rounded" />
             <Skeleton className="w-20 h-6 rounded" />
           </div>
-          {/* Title */}
           <Skeleton className="w-3/4 h-8 mb-2 rounded-lg" />
-          {/* CTA Button */}
           <Skeleton className="w-full my-4 rounded-full h-14" />
-          {/* Stats Row */}
           <div className="flex gap-2 mb-4">
             <Skeleton className="w-20 h-6 rounded-md" />
             <Skeleton className="w-16 h-6 rounded-md" />
             <Skeleton className="w-16 h-6 rounded-md" />
             <Skeleton className="w-20 h-6 rounded-md" />
           </div>
-          {/* Description */}
           <Skeleton className="w-full h-12 mb-4 rounded-md" />
-          {/* Author */}
           <Skeleton className="w-48 h-5 mb-4 rounded-md" />
         </div>
-
-        {/* Tabs Skeleton */}
         <div className="flex gap-8 px-4 py-4 border-b border-primary/5">
           <Skeleton className="w-20 h-6 rounded-md" />
           <Skeleton className="w-16 h-6 rounded-md" />
           <Skeleton className="w-16 h-6 rounded-md" />
         </div>
-
-        {/* List Skeleton */}
         <div className="px-4 py-6 space-y-4">
           {[1, 2, 3, 4, 5].map((i) => (
             <div key={i} className="flex items-center gap-4">
@@ -922,61 +1011,37 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
     );
   }
 
-  if (!story) {
-    return (
-      <div className="min-h-screen bg-accent-shade-1">
-        <PageHeader backLink="/home" showBackButton />
-        <div className="flex items-center justify-center px-4 py-20">
-          <p className="text-center text-primary">Story not found</p>
-        </div>
-      </div>
-    );
+  if (!effectiveStory) {
+    return <StoryOfflineEmptyState backLink="/home" />;
   }
 
-  // Extend AuthorDto for local use
-  type ExtendedAuthorDto = typeof story.author & {
+  type ExtendedAuthorDto = typeof effectiveStory.author & {
     firstName?: string;
     lastName?: string;
     penName?: string;
   };
-  const author = story.author as ExtendedAuthorDto;
-  const displayImage = getStoryCoverSrc(story.imageUrl);
-  const status = (story as any).storyStatus || "Ongoing";
-  const viewCount = (story as any).viewCount || 0;
-  const popularityScore = (story as any).popularityScore || 0;
-
-  // Calculate star rating from popularity score (0-100 scale to 0-5 stars)
-  const calculateStarRating = (score: number): number => {
-    if (score === 0) return 0; // Default rating
-    // Divide by 20 to convert 0-100 scale to 0-5 stars
-    const stars = score / 20;
-    return Math.min(Math.max(stars, 0), 5); // Clamp between 0 and 5
-  };
-
-  const starRating = calculateStarRating(popularityScore);
+  const author = effectiveStory.author as ExtendedAuthorDto;
+  const displayImage = getStoryCoverSrc(effectiveStory.imageUrl);
+  const status = storyData.storyStatus || "Ongoing";
+  const viewCount = storyData.viewCount || 0;
+  const popularityScore = storyData.popularityScore || 0;
+  const starRating =
+    popularityScore === 0 ? 0 : Math.min(Math.max(popularityScore / 20, 0), 5);
   const fullStars = Math.floor(starRating);
   const hasHalfStar = starRating % 1 >= 0.5;
-
-  // Handle review submission
-  const handleReviewSubmit = async () => {
-    if (!reviewText.trim() || !storyId) return;
-
-    setIsSubmittingReview(true);
-    try {
-      await createComment(reviewText);
-      setReviewText("");
-      // Success — silent.
-    } catch (error: any) {
-      const errorMessage = error?.message || "Failed to post review";
-      showToast({ type: "error", message: errorMessage });
-    } finally {
-      setIsSubmittingReview(false);
-    }
-  };
-  const collaborators = (story as any).collaborate as string[] | null;
+  const collaborators = storyData.collaborate as string[] | null;
 
   return (
     <div className="relative min-h-screen pb-20 bg-accent-shade-1">
+      {usingOfflineFallback && (
+        <div className="sticky top-0 z-40 flex items-center justify-center gap-2 py-2 text-xs font-medium text-white bg-amber-600">
+          <WifiOff size={14} />
+          <span>
+            Showing downloaded version... couldn't reach the server...
+          </span>
+        </div>
+      )}
+
       <CollaboratorsModal
         isOpen={isCollaboratorsOpen}
         onOpenChange={onCollaboratorsOpenChange}
@@ -988,24 +1053,20 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
         isOpen={isImagePreviewOpen}
         onOpenChange={onImagePreviewOpenChange}
         imageUrl={displayImage}
-        altText={story.title}
+        altText={effectiveStory.title}
         layoutId={`story-image-${storyId}`}
       />
 
-      {/* Full-Width Hero Image */}
       <div className="relative w-full h-[55vh] min-h-[320px] max-h-[420px] overflow-hidden">
-        {/* Hero Background Image */}
         <StoryCoverImage
-          src={story.imageUrl}
-          alt={story.title}
+          src={effectiveStory.imageUrl}
+          alt={effectiveStory.title}
           fill
           className="object-cover"
           priority
         />
-        {/* Gradient Overlay - fog at bottom for title area only */}
         <div className="absolute inset-0 bg-gradient-to-t from-accent-shade-1 from-0% via-accent-shade-1/70 via-8% to-transparent to-15%" />
 
-        {/* Header Navigation - Overlaid on image */}
         <div className="absolute top-0 left-0 right-0 z-20 px-4 pt-6">
           <div className="flex items-center justify-between">
             <Link
@@ -1015,38 +1076,41 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
               <ArrowLeft size={24} className="text-white" />
             </Link>
             <div className="flex items-center gap-2">
-              {!isSingleStory ? (
-                <Dropdown>
-                  <DropdownTrigger>
-                    <button className="p-2 transition-colors rounded-full bg-black/30 backdrop-blur-md hover:bg-black/40">
-                      <Download size={24} className="text-white" />
-                    </button>
-                  </DropdownTrigger>
-                  <DropdownMenu
-                    aria-label="Download Options"
-                    onAction={(key) => handleBatchDownloadAction(key as string)}
+              {usingOfflineFallback ? (
+                <div
+                  className="p-2 rounded-full bg-black/30 backdrop-blur-md flex items-center justify-center"
+                  title="Downloaded"
+                >
+                  <Check size={24} className="text-green-400" />
+                </div>
+              ) : !isSingleStory ? (
+                remainingCount === 0 ? (
+                  <div
+                    className="p-2 rounded-full bg-black/30 backdrop-blur-md flex items-center justify-center"
+                    title="Everything is downloaded"
                   >
-                    <DropdownItem key="next-1">
-                      Next {structure === "chapters" ? "Chapter" : "Episode"}
-                    </DropdownItem>
-                    <DropdownItem key="next-5">
-                      Next 5{" "}
-                      {structure === "chapters" ? "Chapters" : "Episodes"}
-                    </DropdownItem>
-                    <DropdownItem key="next-10">
-                      Next 10{" "}
-                      {structure === "chapters" ? "Chapters" : "Episodes"}
-                    </DropdownItem>
-                    <DropdownItem key="next-25">
-                      Next 25{" "}
-                      {structure === "chapters" ? "Chapters" : "Episodes"}
-                    </DropdownItem>
-                    <DropdownItem key="unread">
-                      Download Unread{" "}
-                      {structure === "chapters" ? "Chapters" : "Episodes"}
-                    </DropdownItem>
-                  </DropdownMenu>
-                </Dropdown>
+                    <Check size={24} className="text-green-400" />
+                  </div>
+                ) : (
+                  <Dropdown>
+                    <DropdownTrigger>
+                      <button className="p-2 transition-colors rounded-full bg-black/30 backdrop-blur-md hover:bg-black/40">
+                        <Download size={24} className="text-white" />
+                      </button>
+                    </DropdownTrigger>
+                    <DropdownMenu
+                      aria-label="Download Options"
+                      items={downloadMenuItems}
+                      onAction={(key) =>
+                        handleBatchDownloadAction(key as string)
+                      }
+                    >
+                      {(item) => (
+                        <DropdownItem key={item.key}>{item.label}</DropdownItem>
+                      )}
+                    </DropdownMenu>
+                  </Dropdown>
+                )
               ) : (
                 <button
                   onClick={isDownloaded ? handleRemoveDownload : handleDownload}
@@ -1064,7 +1128,8 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
               )}
               <button
                 onClick={toggleLike}
-                className="p-2 transition-colors rounded-full bg-black/30 backdrop-blur-md hover:bg-black/40"
+                disabled={usingOfflineFallback}
+                className="p-2 transition-colors rounded-full bg-black/30 backdrop-blur-md hover:bg-black/40 disabled:opacity-40"
               >
                 <Heart
                   size={24}
@@ -1078,20 +1143,17 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
                 onClick={async () => {
                   const success = await shareStory(
                     storyId || "",
-                    story.title,
-                    story.description,
+                    effectiveStory.title,
+                    effectiveStory.description,
                   );
-                  if (success) {
-                    showToast({
-                      message: "Link copied to clipboard!",
-                      type: "success",
-                    });
-                  } else {
-                    showToast({
-                      message: "Failed to share story",
-                      type: "error",
-                    });
-                  }
+                  showToast(
+                    success
+                      ? {
+                          message: "Link copied to clipboard!",
+                          type: "success",
+                        }
+                      : { message: "Failed to share story", type: "error" },
+                  );
                 }}
                 className="p-2 transition-colors rounded-full bg-black/30 backdrop-blur-md hover:bg-black/40"
               >
@@ -1102,16 +1164,14 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
         </div>
       </div>
 
-      {/* Content Section - Below Hero */}
       <div className="relative z-10 px-4 -mt-16">
-        {/* Badges Row */}
         <div className="flex flex-wrap items-center gap-2 mb-3">
           {isExclusive && (
             <span className="inline-flex items-center bg-complimentary-colour text-white text-[10px] font-bold px-2.5 py-1 rounded uppercase tracking-wider shadow-sm">
               Only on Storytime
             </span>
           )}
-          {story?.trigger && (
+          {effectiveStory?.trigger && (
             <span className="inline-flex items-center gap-1 bg-red-600 text-white text-[10px] font-bold px-2.5 py-1 rounded uppercase tracking-wider shadow-sm">
               18+
             </span>
@@ -1129,17 +1189,15 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
           </span>
         </div>
 
-        {/* Title */}
         <h1
           className={cn(
-            "text-primary text-2xl font-bold leading-tight mb-2 ",
+            "text-primary text-2xl font-bold leading-tight mb-2",
             Magnetik_Bold.className,
           )}
         >
-          {story.title}
+          {effectiveStory.title}
         </h1>
 
-        {/* CTA Button */}
         <button
           onClick={() => handleStartReading()}
           className="w-full bg-primary hover:bg-primary/90 text-white py-4 rounded-full font-bold text-base flex items-center justify-center gap-2.5 transition-all shadow-lg shadow-primary/25 active:scale-[0.98] my-4"
@@ -1170,7 +1228,6 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
           />
         )}
 
-        {/* Stats Row */}
         <div className="flex flex-wrap items-center gap-2 mb-4 text-xs text-primary/70">
           <div className="flex items-center gap-1.5 bg-white/50 px-2 py-1 rounded-md">
             <Eye size={12} className="text-primary/60" />
@@ -1198,14 +1255,13 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
               {starRating.toFixed(1)}
             </span>
           </div>
-          {story.genres?.[0] && (
+          {effectiveStory.genres?.[0] && (
             <span className="px-2 py-1 font-medium rounded-md bg-white/50 text-primary">
-              {story.genres[0]}
+              {effectiveStory.genres[0]}
             </span>
           )}
         </div>
 
-        {/* Description */}
         <div className="mb-4">
           <p
             className={cn(
@@ -1213,19 +1269,19 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
               Magnetik_Regular.className,
             )}
           >
-            {story.description}
+            {effectiveStory.description}
           </p>
-          {story.description && story.description.length > 100 && (
-            <button
-              onClick={() => setActiveTab("details")}
-              className="mt-1 text-sm font-medium text-complimentary-colour"
-            >
-              More
-            </button>
-          )}
+          {effectiveStory.description &&
+            effectiveStory.description.length > 100 && (
+              <button
+                onClick={() => setActiveTab("details")}
+                className="mt-1 text-sm font-medium text-complimentary-colour"
+              >
+                More
+              </button>
+            )}
         </div>
 
-        {/* Author Section */}
         <button
           onClick={onOpenCollaborators}
           className="flex items-center gap-2 mb-4 text-xs tracking-wider uppercase transition-colors text-primary/50 hover:text-primary/70"
@@ -1241,7 +1297,6 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
         </button>
       </div>
 
-      {/* Tabs */}
       <div className="sticky top-0 z-30 px-4 border-b border-white/5 backdrop-blur-xl bg-accent-shade-1/95">
         <div className="flex items-center gap-8 overflow-x-auto no-scrollbar">
           {!isSingleStory && (
@@ -1288,11 +1343,9 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
         </div>
       </div>
 
-      {/* Tab Content */}
       <div className="px-4 py-6">
         {activeTab === "episodes" && !isSingleStory && (
           <div className="space-y-4">
-            {/* Reading Progress Indicator */}
             {aggregated && aggregated.overallPercentage > 0 && (
               <div className="p-4 mb-6 border rounded-xl bg-complimentary-colour/5 border-complimentary-colour/20">
                 <div className="flex items-center justify-between mb-2">
@@ -1323,14 +1376,25 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
                     </span>
                   )}
                 </div>
-                {storyProgress?.lastReadChapter ||
-                storyProgress?.lastReadEpisode ? (
+                {(storyProgress?.lastReadChapter ||
+                  storyProgress?.lastReadEpisode) && (
                   <div className="mt-1 text-xs text-primary/50">
                     Last: {structure === "chapters" ? "Chapter" : "Episode"}{" "}
                     {storyProgress.lastReadChapter ||
                       storyProgress.lastReadEpisode}
                   </div>
-                ) : null}
+                )}
+              </div>
+            )}
+
+            {downloadedContentIds.size > 0 && !usingOfflineFallback && (
+              <div className="flex items-center gap-2 mb-2 text-xs text-primary/50">
+                <Check size={12} className="text-green-500" />
+                <span>
+                  {downloadedContentIds.size} of {contentList?.length || 0}{" "}
+                  {structure === "chapters" ? "chapters" : "episodes"}{" "}
+                  downloaded
+                </span>
               </div>
             )}
 
@@ -1351,21 +1415,12 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
                 )}
               </div>
               <div className="flex items-center gap-3">
-                {!isSelectionMode ? (
-                  <button
-                    onClick={toggleSelectionMode}
-                    className="transition-colors text-primary hover:text-white"
-                  >
-                    Select
-                  </button>
-                ) : (
-                  <button
-                    onClick={toggleSelectionMode}
-                    className="transition-colors text-primary hover:text-white"
-                  >
-                    Cancel
-                  </button>
-                )}
+                <button
+                  onClick={toggleSelectionMode}
+                  className="transition-colors text-primary hover:text-white"
+                >
+                  {isSelectionMode ? "Cancel" : "Select"}
+                </button>
                 <button className="transition-colors text-complimentary-colour hover:text-complimentary-colour/80">
                   Sort: Oldest
                 </button>
@@ -1374,10 +1429,10 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
 
             {contentList?.map((item: any, index: number) => {
               const isSelected = selectedContentIds.has(item.id);
-              const isItemDownloaded = downloadedContentIds.has(item.id);
+              const isItemDownloaded =
+                usingOfflineFallback || downloadedContentIds.has(item.id);
               const isItemDownloading = downloadingItems.has(item.id);
 
-              // Find progress for this specific episode/chapter
               const itemProgress =
                 structure === "episodes"
                   ? aggregatedData?.episodeProgress?.find(
@@ -1393,6 +1448,13 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
               const readingTime = itemProgress?.readingTimeSeconds || 0;
               const isCompleted = itemProgress?.isCompleted || false;
               const isRead = percentageRead > 0 || isCompleted;
+
+              const content = item.content || item.body;
+              const wordCount =
+                item.totalWords ||
+                (content ? content.trim().split(/\s+/).length : 0);
+              const minsRead =
+                wordCount > 0 ? Math.ceil(wordCount / READING_WPM) : 0;
 
               return (
                 <div
@@ -1468,6 +1530,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
                       </svg>
                     )}
                   </div>
+
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <h3 className="text-sm font-medium truncate transition-colors text-primary group-hover:text-complimentary-colour">
@@ -1483,7 +1546,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
                     <div className="flex items-center gap-2 mt-1 text-xs text-primary/40">
                       <span>
                         {item.createdAt
-                          ? new Date(item?.createdAt).toLocaleDateString()
+                          ? new Date(item.createdAt).toLocaleDateString()
                           : ""}
                       </span>
                       {readingTime > 0 && (
@@ -1494,99 +1557,101 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
                           </span>
                         </>
                       )}
-                      {(() => {
-                        const content = item.content || item.body;
-                        const wordCount =
-                          item.totalWords ||
-                          (content ? content.trim().split(/\s+/).length : 0);
-
-                        if (wordCount > 0) {
-                          const mins = Math.ceil(wordCount / 200);
-                          return (
-                            <>
-                              <span>•</span>
-                              <span>{mins} min read</span>
-                            </>
-                          );
-                        }
-                        return null;
-                      })()}
+                      {minsRead > 0 && (
+                        <>
+                          <span>•</span>
+                          <span>{minsRead} min read</span>
+                        </>
+                      )}
                     </div>
                   </div>
 
-                  <div className="z-20 flex items-center gap-2">
-                    {isItemDownloaded ? (
-                      <div className="flex items-center justify-center w-8 h-8 text-green-500 rounded-full bg-green-500/10">
-                        <Check size={16} />
-                      </div>
-                    ) : failedDownloads.has(item.id) ? (
-                      // Inline failure indicator. Tap to retry; no toast.
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleSingleDownload(item, index);
-                        }}
-                        title="Download failed — tap to retry"
-                        className="flex items-center justify-center w-8 h-8 text-red-500 transition-colors border rounded-full border-red-500/30 bg-red-500/10 hover:bg-red-500/20"
-                      >
-                        <AlertCircle size={16} />
-                      </button>
-                    ) : (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleSingleDownload(item, index);
-                        }}
-                        disabled={isItemDownloading}
-                        className="flex items-center justify-center w-8 h-8 transition-colors border rounded-full border-white/10 text-primary/40 hover:text-primary hover:border-primary"
-                      >
-                        {isItemDownloading ? (
-                          <svg className="w-5 h-5 -rotate-90">
-                            <circle
-                              cx="10"
-                              cy="10"
-                              r="8"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              fill="none"
-                              className="text-primary/20"
-                            />
-                            <circle
-                              cx="10"
-                              cy="10"
-                              r="8"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              fill="none"
-                              strokeDasharray="50"
-                              strokeDashoffset="50"
-                              className="text-primary animate-[dash_1.5s_ease-in-out_infinite]"
-                            />
-                            <style jsx>{`
-                              @keyframes dash {
-                                0% {
-                                  stroke-dashoffset: 50;
+                  {!usingOfflineFallback && (
+                    <div className="z-20 flex items-center gap-1.5">
+                      {isItemDownloaded ? (
+                        <>
+                          <div className="flex items-center justify-center w-8 h-8 text-green-500 rounded-full bg-green-500/10">
+                            <Check size={16} />
+                          </div>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteSingleDownload(item);
+                            }}
+                            title="Remove download"
+                            className="flex items-center justify-center w-8 h-8 text-red-500/70 transition-colors border rounded-full border-red-500/20 hover:bg-red-500/10 hover:text-red-500"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </>
+                      ) : failedDownloads.has(item.id) ? (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSingleDownload(item, index);
+                          }}
+                          title="Download failed — tap to retry"
+                          className="flex items-center justify-center w-8 h-8 text-red-500 transition-colors border rounded-full border-red-500/30 bg-red-500/10 hover:bg-red-500/20"
+                        >
+                          <AlertCircle size={16} />
+                        </button>
+                      ) : (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSingleDownload(item, index);
+                          }}
+                          disabled={isItemDownloading}
+                          className="flex items-center justify-center w-8 h-8 transition-colors border rounded-full border-white/10 text-primary/40 hover:text-primary hover:border-primary"
+                        >
+                          {isItemDownloading ? (
+                            <svg className="w-5 h-5 -rotate-90">
+                              <circle
+                                cx="10"
+                                cy="10"
+                                r="8"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                fill="none"
+                                className="text-primary/20"
+                              />
+                              <circle
+                                cx="10"
+                                cy="10"
+                                r="8"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                fill="none"
+                                strokeDasharray="50"
+                                strokeDashoffset="50"
+                                className="text-primary animate-[dash_1.5s_ease-in-out_infinite]"
+                              />
+                              <style jsx>{`
+                                @keyframes dash {
+                                  0% {
+                                    stroke-dashoffset: 50;
+                                  }
+                                  50% {
+                                    stroke-dashoffset: 0;
+                                  }
+                                  100% {
+                                    stroke-dashoffset: -50;
+                                  }
                                 }
-                                50% {
-                                  stroke-dashoffset: 0;
-                                }
-                                100% {
-                                  stroke-dashoffset: -50;
-                                }
-                              }
-                            `}</style>
-                          </svg>
-                        ) : (
-                          <Download size={16} />
-                        )}
-                      </button>
-                    )}
-                    {!isSelectionMode && (
-                      <div className="flex items-center justify-center w-8 h-8 transition-colors border rounded-full border-white/10 text-primary/20 group-hover:border-complimentary-colour/50 group-hover:text-complimentary-colour">
-                        <Play size={12} className="fill-current" />
-                      </div>
-                    )}
-                  </div>
+                              `}</style>
+                            </svg>
+                          ) : (
+                            <Download size={16} />
+                          )}
+                        </button>
+                      )}
+                      {!isSelectionMode && (
+                        <div className="flex items-center justify-center w-8 h-8 transition-colors border rounded-full border-white/10 text-primary/20 group-hover:border-complimentary-colour/50 group-hover:text-complimentary-colour">
+                          <Play size={12} className="fill-current" />
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -1595,7 +1660,6 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
 
         {activeTab === "details" && (
           <div className="space-y-8">
-            {/* Aggregated Stats */}
             {aggregated && (
               <div className="grid grid-cols-2 gap-4 p-4 border rounded-xl bg-white/5 border-white/10">
                 <div className="space-y-1">
@@ -1636,14 +1700,14 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
                 About the Story
               </h3>
               <p className="text-sm leading-relaxed whitespace-pre-wrap text-primary/70">
-                {story.description}
+                {effectiveStory.description}
               </p>
             </div>
 
             <div className="space-y-3">
               <h3 className="text-sm font-bold text-primary">Genres</h3>
               <div className="flex flex-wrap gap-2">
-                {story.genres?.map((genre: string) => (
+                {effectiveStory.genres?.map((genre: string) => (
                   <span
                     key={genre}
                     className="px-4 py-1.5 rounded-full bg-primary/5 text-primary/70 text-xs font-medium border border-primary/10"
@@ -1654,7 +1718,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
               </div>
             </div>
 
-            {isAuthor && (
+            {isAuthor && !usingOfflineFallback && (
               <div className="pt-6 border-t border-primary/10">
                 <Link
                   href={`/edit-story/${storyId}`}
@@ -1666,34 +1730,36 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
               </div>
             )}
 
-            <button
-              onClick={isDownloaded ? handleRemoveDownload : handleDownload}
-              disabled={isDownloading}
-              className={cn(
-                "flex items-center justify-center gap-2 w-full py-4 rounded-xl border transition-colors font-medium",
-                isDownloaded
-                  ? "border-green-500/30 text-green-500 bg-green-500/5"
-                  : "border-primary/20 text-primary hover:bg-primary/5",
-              )}
-            >
-              {isDownloading ? (
-                <div className="w-5 h-5 border-2 border-current rounded-full border-t-transparent animate-spin" />
-              ) : isDownloaded ? (
-                <>
-                  <Check size={18} />
-                  <span>Downloaded</span>
-                </>
-              ) : (
-                <>
-                  <Download size={18} />
-                  <span>Download for Offline</span>
-                </>
-              )}
-            </button>
+            {!usingOfflineFallback && (
+              <button
+                onClick={isDownloaded ? handleRemoveDownload : handleDownload}
+                disabled={isDownloading}
+                className={cn(
+                  "flex items-center justify-center gap-2 w-full py-4 rounded-xl border transition-colors font-medium",
+                  isDownloaded
+                    ? "border-green-500/30 text-green-500 bg-green-500/5"
+                    : "border-primary/20 text-primary hover:bg-primary/5",
+                )}
+              >
+                {isDownloading ? (
+                  <div className="w-5 h-5 border-2 border-current rounded-full border-t-transparent animate-spin" />
+                ) : isDownloaded ? (
+                  <>
+                    <Check size={18} />
+                    <span>Downloaded</span>
+                  </>
+                ) : (
+                  <>
+                    <Download size={18} />
+                    <span>Download for Offline</span>
+                  </>
+                )}
+              </button>
+            )}
           </div>
         )}
 
-        {activeTab === "reviews" && (
+        {activeTab === "reviews" && !usingOfflineFallback && (
           <div className="space-y-8">
             <div className="flex items-center gap-4 p-6 mb-6 bg-white/5 rounded-2xl">
               <div className="text-5xl font-bold text-primary">
@@ -1702,11 +1768,11 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
               <div className="space-y-2">
                 <div className="flex gap-1 text-yellow-500">
                   {[...Array(5)].map((_, index) => {
-                    if (index < fullStars) {
+                    if (index < fullStars)
                       return (
                         <Star key={index} size={20} className="fill-current" />
                       );
-                    } else if (index === fullStars && hasHalfStar) {
+                    if (index === fullStars && hasHalfStar) {
                       return (
                         <div key={index} className="relative">
                           <Star size={20} className="text-yellow-500/30" />
@@ -1718,15 +1784,14 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
                           </div>
                         </div>
                       );
-                    } else {
-                      return (
-                        <Star
-                          key={index}
-                          size={20}
-                          className="text-yellow-500/30"
-                        />
-                      );
                     }
+                    return (
+                      <Star
+                        key={index}
+                        size={20}
+                        className="text-yellow-500/30"
+                      />
+                    );
                   })}
                 </div>
                 <p className="text-sm font-medium text-primary/40">
@@ -1735,7 +1800,6 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
               </div>
             </div>
 
-            {/* Write a Review Section */}
             <div className="p-6 space-y-4 bg-white/5 rounded-2xl">
               <h3 className="text-lg font-bold text-primary">Write a Review</h3>
               <textarea
@@ -1786,9 +1850,17 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
             </div>
           </div>
         )}
+
+        {activeTab === "reviews" && usingOfflineFallback && (
+          <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">
+            <WifiOff size={28} className="text-primary/30" />
+            <p className="text-sm text-primary/50">
+              Reviews aren't available offline
+            </p>
+          </div>
+        )}
       </div>
 
-      {/* Animated FAB */}
       <AnimatePresence>
         {showFab && (
           <motion.div
@@ -1809,7 +1881,6 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
         )}
       </AnimatePresence>
 
-      {/* Selection Mode Action Bar */}
       <AnimatePresence>
         {isSelectionMode && selectedContentIds.size > 0 && (
           <motion.div

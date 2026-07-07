@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Button } from "@heroui/button";
 import { Search, Filter, BookOpen } from "lucide-react";
 import { Link } from "@/components/AppLink";
@@ -8,6 +8,10 @@ import { Magnetik_Bold, Magnetik_Medium, Magnetik_Regular } from "@/lib/font";
 import { getStoryCoverSrc } from "@/lib/storyCover";
 import { useSearchParams } from "next/navigation";
 import { useReadingHistory } from "@/src/hooks/useReadingHistory";
+import { useReadingHistoryStore } from "@/src/stores/useReadingHistoryStore";
+import { useStateCachedFetch } from "@/src/hooks/useStateCachedFetch";
+import { useRoutePrefetch } from "@/src/hooks/useStateCachePrefetch";
+import { APP_CACHE_KEYS } from "@/src/stores/dataCacheKeys";
 import { PageHeader, StoryCoverImage } from "@/components/reusables";
 
 interface LibraryItem {
@@ -19,6 +23,8 @@ interface LibraryItem {
   status: "Reading" | "Completed" | "Want to Read";
   progress?: number; // Reading progress in percentage
 }
+
+const LIBRARY_CACHE_KEY = APP_CACHE_KEYS.readingHistory;
 
 const LibraryView = () => {
   const searchParams = useSearchParams();
@@ -35,10 +41,36 @@ const LibraryView = () => {
   >(initialTab || "All");
   const [searchQuery, setSearchQuery] = useState("");
 
+  // Warm-start cache: a previous session's reading history can be
+  // rendered on first paint, then the live `useReadingHistory` hook
+  // revalidates in the background.
+  const libraryCache = useStateCachedFetch<any[]>(LIBRARY_CACHE_KEY);
+
+  // Prefetch the most-likely next routes the user will hit.
+  useRoutePrefetch(["/pen", "/home", "/search"]);
+
   const { history, isLoading: isLoadingHistory } = useReadingHistory();
 
+  // Write through to the cache whenever the live fetch resolves.
+  useEffect(() => {
+    if (history && history.length > 0) {
+      libraryCache.writeBack(history);
+    }
+  }, [history, libraryCache]);
+
+  // Prefer the live history; fall back to the cache. The store also
+  // keeps a copy, but we go straight to the state cache so we get
+  // a synchronous read on the first render.
+  const effectiveHistory = useMemo(
+    () =>
+      history && history.length > 0
+        ? history
+        : (libraryCache.cachedValue ?? []),
+    [history, libraryCache.cachedValue],
+  );
+
   // Map history to LibraryItems
-  const libraryItems: LibraryItem[] = history.map((item: any) => {
+  const libraryItems: LibraryItem[] = effectiveHistory.map((item: any) => {
     const story = item.story;
     const progress = 0; // Reading history doesn't include progress
     const status = story.storyStatus === "complete" ? "Completed" : "Reading";

@@ -10,7 +10,6 @@ import {
   storiesControllerCreateMultipleChapters,
   storiesControllerCreateMultipleEpisodes,
 } from "@/src/client";
-import { client } from "@/src/client/client.gen";
 import { showToast } from "@/lib/showNotification";
 import type { CreateStoryDto, UpdateStoryDto } from "@/src/client/types.gen";
 
@@ -51,38 +50,6 @@ export function useDeleteStory() {
     isDeleting,
     error,
   };
-}
-
-export function useRequestStoryDeletion() {
-  const [isRequesting, setIsRequesting] = React.useState(false);
-
-  const requestDeletion = async (storyId: string, reason?: string): Promise<boolean> => {
-    setIsRequesting(true);
-    try {
-      await client.post({
-        url: `/stories/${storyId}/request-deletion`,
-        body: reason ? { reason } : {},
-      });
-      // Invalidate the library cache so the story disappears from the user's
-      // list immediately (backend now excludes pending-deletion stories).
-      await globalMutate("/stories/my-library");
-      showToast({
-        type: "success",
-        message: "Story removed from your library. Our team will review the deletion request.",
-      });
-      return true;
-    } catch {
-      showToast({
-        type: "error",
-        message: "Failed to submit deletion request. Please try again.",
-      });
-      return false;
-    } finally {
-      setIsRequesting(false);
-    }
-  };
-
-  return { requestDeletion, isRequesting };
 }
 
 export function useCreateStory() {

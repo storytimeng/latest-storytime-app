@@ -3,7 +3,6 @@ import { client } from "./client/client.gen";
 import { createClientConfig } from "./heyapi-runtime";
 import { getAuthToken } from "./stores/useAuthStore";
 import { isAuthExemptPath, hasAuthSession } from "@/src/lib/authSession";
-import { useAuthModalStore } from "@/src/stores/useAuthModalStore";
 import {
   refreshTokens,
   ensureValidToken,
@@ -121,17 +120,9 @@ try {
                 const retryOpts: RequestInit = {
                   method: opts.method,
                   headers: new Headers(opts.headers),
-                  body: opts.body != null
-                    ? typeof opts.body === "string"
-                      ? opts.body
-                      : JSON.stringify(opts.body)
-                    : undefined,
+                  body: opts.body,
                   credentials: opts.credentials || "include",
                 };
-                // Ensure Content-Type is set when we have a JSON body
-                if (opts.body != null) {
-                  (retryOpts.headers as Headers).set("Content-Type", "application/json");
-                }
 
                 // Update Authorization header
                 if (newToken) {
@@ -177,18 +168,9 @@ try {
           const retryOpts: RequestInit = {
             method: opts.method,
             headers: new Headers(opts.headers),
-            body: opts.body != null
-              ? typeof opts.body === "string"
-                ? opts.body
-                : JSON.stringify(opts.body)
-              : undefined,
+            body: opts.body,
             credentials: opts.credentials || "include",
           };
-
-          // Ensure Content-Type is set when we have a JSON body
-          if (opts.body != null) {
-            (retryOpts.headers as Headers).set("Content-Type", "application/json");
-          }
 
           (retryOpts.headers as Headers).set(
             "Authorization",
@@ -225,7 +207,6 @@ try {
           if (!onPaymentReturn && hadSession) {
             const { clearAuth } = await import("./stores/useAuthStore");
             clearAuth();
-            useAuthModalStore.getState().openModal("login");
           }
 
           return response;
@@ -244,7 +225,6 @@ try {
         if (!onPaymentReturn && hadSession) {
           const { clearAuth } = await import("./stores/useAuthStore");
           clearAuth();
-          useAuthModalStore.getState().openModal("login");
         }
 
         return response;

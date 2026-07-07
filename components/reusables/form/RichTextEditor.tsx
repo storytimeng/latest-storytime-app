@@ -107,16 +107,6 @@ const RichTextEditor = ({
       lastEmittedHtmlRef.current = html;
       onChange(html);
     },
-    // Tablet safety net: blur fires before click in the browser event order,
-    // so tapping "Publish" will capture the latest content even if onUpdate
-    // didn't fire (common on iPad Safari / some Android tablet browsers).
-    onBlur: ({ editor }) => {
-      const html = editor.getHTML();
-      if (html !== lastEmittedHtmlRef.current) {
-        lastEmittedHtmlRef.current = html;
-        onChange(html);
-      }
-    },
   });
 
   // Sync external value changes (e.g. async chapter load) without clobbering active edits.

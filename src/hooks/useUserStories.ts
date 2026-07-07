@@ -25,10 +25,9 @@ interface Story {
  * Uses the /library endpoint which already filters by current user
  */
 export function useUserStories() {
-  const token = useAuthStore((state) => state.token);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const { data, error, isLoading, mutate } = useSWR(
-    token || isAuthenticated() ? "/stories/my-library" : null,
+    isAuthenticated() ? "/stories/my-library" : null,
     async () => {
       const response = await storiesControllerGetMyLibrary();
       const result = (response?.data as any)?.data || response?.data;

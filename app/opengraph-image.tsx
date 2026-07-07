@@ -6,8 +6,14 @@ export const alt = `${APP_CONFIG.name} - ${APP_CONFIG.shortDescription}`;
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-export const dynamic = "force-dynamic";
+const IS_ANDROID = process.env.NEXT_PUBLIC_PLATFORM === "android";
+export const dynamic = IS_ANDROID ? "force-static" : "force-dynamic";
 export default function OgImage() {
+  if (IS_ANDROID) {
+    return new Response(null, {
+      status: 404,
+    }) as never;
+  }
   return new ImageResponse(
     (
       <div

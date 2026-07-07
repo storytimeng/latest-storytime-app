@@ -4,3 +4,4 @@ export { StoryContent } from "./StoryContent";
 export { InteractionSection } from "./InteractionSection";
 export { CommentsSection } from "./CommentsSection";
 export { NavigationBar } from "./NavigationBar";
+export { StoryOfflineEmptyState } from "./StoryOfflineEmptyState";

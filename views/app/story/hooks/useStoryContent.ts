@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { preload } from "swr";
+
 import {
   useChapter,
   useEpisode,
@@ -74,6 +75,10 @@ export function useStoryContent({
   syncEpisodeIfNeeded,
   initialContentId,
 }: UseStoryContentProps) {
+  // ============================================================
+  // Stage 1: state + refs + simple constants.
+  // Hoisted so every later derivation can read them safely.
+  // ============================================================
   const [selectedChapterId, setSelectedChapterId] = useState<string | null>(
     initialContentId || null,
   );
@@ -81,20 +86,111 @@ export function useStoryContent({
     {},
   );
 
-  // Recomputed against the CURRENT selectedChapterId, not just the initial
-  // one from the URL — so switching chapters while offline correctly
-  // re-evaluates whether the new chapter is actually available locally,
-  // instead of freezing the offline/online decision at mount time.
-  const isUsingOfflineData =
-    !isOnline && isContentAvailableOffline(selectedChapterId);
-
-  const activeStory = isUsingOfflineData ? offlineStory : story;
-  const activeChapters = isUsingOfflineData ? offlineContent : chapters;
-  const activeEpisodes = isUsingOfflineData ? offlineContent : episodes;
+  // Tracks which content IDs we've actually attempted a network fetch
+  // for, so "no content yet" during the brief moment before a fetch
+  // starts doesn't get misread as "network fetch failed" and cause a
+  // flash to offline data before the request even had a chance to run.
+  const attemptedNetworkIdsRef = useRef<Set<string>>(new Set());
 
   const isChapterMode = structure === "chapters";
   const isEpisodeMode = structure === "episodes";
   const partLabel = isEpisodeMode ? "Episode" : "Chapter";
+
+  // ============================================================
+  // Stage 2: network hooks.
+  // The old code passed `!isUsingOfflineData` here, but that value
+  // is itself derived from the hook's *result* — a TDZ cycle. We
+  // break it with a conservative "should we even try the network?"
+  // flag that only depends on `isOnline` + offline availability.
+  // On the first render it's identical to the old expression; on
+  // later renders we may keep the hook "live" after a failed fetch,
+  // but the UI is gated on the real `isUsingOfflineData` further
+  // down, so nothing user-visible changes.
+  // ============================================================
+  const wouldPreferOfflineInitially =
+    !isOnline && isContentAvailableOffline(selectedChapterId);
+
+  const {
+    chapter: fetchedChapter,
+    comments: chapterComments,
+    isLoading: isChapterLoading,
+  } = useChapter(
+    !wouldPreferOfflineInitially && isChapterMode && selectedChapterId
+      ? selectedChapterId
+      : undefined,
+  );
+
+  const {
+    episode: fetchedEpisode,
+    comments: episodeComments,
+    isLoading: isEpisodeLoading,
+  } = useEpisode(
+    !wouldPreferOfflineInitially && isEpisodeMode && selectedChapterId
+      ? selectedChapterId
+      : undefined,
+  );
+
+  // Mark IDs we've actually issued a network request for. Runs after
+  // the hooks settle into the `loading` state.
+  useEffect(() => {
+    if (!selectedChapterId) return;
+    if (
+      (isChapterMode && isChapterLoading) ||
+      (isEpisodeMode && isEpisodeLoading)
+    ) {
+      attemptedNetworkIdsRef.current.add(selectedChapterId);
+    }
+  }, [
+    selectedChapterId,
+    isChapterLoading,
+    isEpisodeLoading,
+    isChapterMode,
+    isEpisodeMode,
+  ]);
+
+  // ============================================================
+  // Stage 3: derived state.
+  // ============================================================
+  const networkHasCurrentContent = isChapterMode
+    ? Boolean(
+        fetchedChapter &&
+          (fetchedChapter as { id?: string }).id === selectedChapterId,
+      )
+    : isEpisodeMode
+      ? Boolean(
+          fetchedEpisode &&
+            (fetchedEpisode as { id?: string }).id === selectedChapterId,
+        )
+      : Boolean(story);
+
+  const hasAttemptedNetwork =
+    !!selectedChapterId &&
+    attemptedNetworkIdsRef.current.has(selectedChapterId);
+
+  // True once we've actually tried the network for this specific
+  // chapter/episode and it settled without giving us matching
+  // content — covers a dead/unreachable backend just as well as a
+  // real offline device, since neither navigator.onLine nor a
+  // generic "isOnline" flag can be trusted to reflect whether
+  // *our* server is reachable.
+  const networkFetchFailed =
+    !!selectedChapterId &&
+    hasAttemptedNetwork &&
+    ((isChapterMode && !isChapterLoading && !networkHasCurrentContent) ||
+      (isEpisodeMode && !isEpisodeLoading && !networkHasCurrentContent));
+
+  // Recomputed against the CURRENT selectedChapterId, not just the
+  // initial one from the URL — so switching chapters while offline
+  // correctly re-evaluates whether the new chapter is actually
+  // available locally, instead of freezing the offline/online
+  // decision at mount time.
+  const isUsingOfflineData =
+    (!isOnline || networkFetchFailed) &&
+    isContentAvailableOffline(selectedChapterId);
+
+  const activeStory = isUsingOfflineData ? offlineStory : story;
+  const activeChapters = isUsingOfflineData ? offlineContent : chapters;
+  const activeEpisodes = isUsingOfflineData ? offlineContent : episodes;
 
   const navigationList = useMemo(() => {
     if (isChapterMode) {
@@ -110,26 +206,10 @@ export function useStoryContent({
     return [];
   }, [activeChapters, activeEpisodes, isChapterMode, isEpisodeMode]);
 
-  const {
-    chapter: fetchedChapter,
-    comments: chapterComments,
-    isLoading: isChapterLoading,
-  } = useChapter(
-    !isUsingOfflineData && isChapterMode && selectedChapterId
-      ? selectedChapterId
-      : undefined,
-  );
-
-  const {
-    episode: fetchedEpisode,
-    comments: episodeComments,
-    isLoading: isEpisodeLoading,
-  } = useEpisode(
-    !isUsingOfflineData && isEpisodeMode && selectedChapterId
-      ? selectedChapterId
-      : undefined,
-  );
-
+  // ============================================================
+  // Stage 4: side-effects (parts cache, initial selection,
+  // neighbour prefetch, offline sync).
+  // ============================================================
   useEffect(() => {
     if (
       isChapterMode &&
@@ -243,6 +323,9 @@ export function useStoryContent({
     syncEpisodeIfNeeded,
   ]);
 
+  // ============================================================
+  // Stage 5: derived view-model values.
+  // ============================================================
   const cachedPart = selectedChapterId ? partsCache[selectedChapterId] : null;
 
   const resolvedPart = useMemo(() => {
@@ -278,16 +361,21 @@ export function useStoryContent({
     selectedChapterId,
   ]);
 
+  const currentOfflinePart = isUsingOfflineData
+    ? offlineContent.find(
+        (c: { chapterId?: string; episodeId?: string }) =>
+          (c.chapterId ?? c.episodeId) === selectedChapterId,
+      )
+    : null;
+
   const currentContent = isUsingOfflineData
-    ? offlineContent.find((c: { id?: string }) => c.id === selectedChapterId)
-        ?.content || ""
+    ? currentOfflinePart?.content || ""
     : isChapterMode || isEpisodeMode
       ? resolvedPart?.content || ""
-      : activeStory?.content || "";
+      : activeStory?.content || activeStory?.description || "";
 
   const currentTitle = isUsingOfflineData
-    ? offlineContent.find((c: { id?: string }) => c.id === selectedChapterId)
-        ?.title || activeStory?.title
+    ? currentOfflinePart?.title || activeStory?.title
     : isChapterMode || isEpisodeMode
       ? resolvedPart?.title || activeStory?.title || ""
       : activeStory?.title || "";
@@ -310,6 +398,9 @@ export function useStoryContent({
     !resolvedPart?.content &&
     isPartLoading;
 
+  // ============================================================
+  // Stage 6: navigation handlers.
+  // ============================================================
   const handleChapterChange = useCallback((chapterId: string) => {
     setSelectedChapterId(chapterId);
     window.scrollTo(0, 0);
@@ -339,6 +430,9 @@ export function useStoryContent({
     }
   }, [navigationList, selectedChapterId]);
 
+  // ============================================================
+  // Stage 7: return.
+  // ============================================================
   const hasNavigation = navigationList.length > 1;
   const currentIndex = navigationList.findIndex(
     (item: { id: string }) => item.id === selectedChapterId,

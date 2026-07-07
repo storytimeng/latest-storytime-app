@@ -1,6 +1,30 @@
 import { create } from "zustand";
-import { persist, createJSONStorage } from "zustand/middleware";
+import {
+  persist,
+  createJSONStorage,
+  type StateStorage,
+} from "zustand/middleware";
 
+const safeLocalStorage: StateStorage = {
+  getItem: (name) => localStorage.getItem(name),
+  setItem: (name, value) => {
+    try {
+      localStorage.setItem(name, value);
+    } catch (e) {
+      if (
+        e instanceof DOMException &&
+        (e.name === "QuotaExceededError" || e.code === 22)
+      ) {
+        console.warn(
+          `localStorage quota exceeded writing "${name}", skipping persist`,
+        );
+        return;
+      }
+      throw e;
+    }
+  },
+  removeItem: (name) => localStorage.removeItem(name),
+};
 export interface UserProfile {
   id: string;
   email: string;
@@ -30,20 +54,6 @@ interface UserState {
   clearUser: () => void;
 }
 
-// Safe localStorage wrapper — swallows QuotaExceededError so a large avatar
-// or profile payload doesn't crash the whole app.
-const safeLocalStorage = {
-  getItem: (name: string) => {
-    try { return localStorage.getItem(name); } catch { return null; }
-  },
-  setItem: (name: string, value: string) => {
-    try { localStorage.setItem(name, value); } catch { /* quota exceeded — skip */ }
-  },
-  removeItem: (name: string) => {
-    try { localStorage.removeItem(name); } catch { /* ignore */ }
-  },
-};
-
 export const useUserStore = create<UserState>()(
   persist(
     (set) => ({
@@ -58,24 +68,20 @@ export const useUserStore = create<UserState>()(
     {
       name: "user-storage",
       storage: createJSONStorage(() => safeLocalStorage),
-      // Only persist the lightweight identity fields — exclude avatar/profilePicture
-      // (may be base64 data URLs) which can exceed the ~5 MB localStorage quota.
       partialize: (state) => ({
         user: state.user
           ? {
               id: state.user.id,
               email: state.user.email,
+              penName: state.user.penName,
               firstName: state.user.firstName,
               lastName: state.user.lastName,
-              penName: state.user.penName,
-              authorId: state.user.authorId,
-              readerId: state.user.readerId,
-              isEmailVerified: state.user.isEmailVerified,
+              avatar: state.user.avatar,
+              profilePicture: state.user.profilePicture,
               isPremium: state.user.isPremium,
-              premiumExpiresAt: state.user.premiumExpiresAt,
             }
           : null,
       }),
-    }
-  )
+    },
+  ),
 );

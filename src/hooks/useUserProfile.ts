@@ -3,12 +3,15 @@ import { useEffect } from "react";
 import { usersControllerGetProfile } from "../client/sdk.gen";
 import { useUserStore, type UserProfile } from "../stores/useUserStore";
 import { useAuthStore } from "../stores/useAuthStore";
+import { dataStateCache, getCachedValue } from "@/src/stores/useDataStateCache";
+import { APP_CACHE_KEYS } from "@/src/stores/dataCacheKeys";
+
+const PROFILE_CACHE_KEY = APP_CACHE_KEYS.userProfile;
 
 export function useUserProfile() {
-  const token = useAuthStore((state) => state.token);
   const { isAuthenticated } = useAuthStore();
   const { setUser } = useUserStore();
-  const isLoggedIn = !!(token || isAuthenticated());
+  const isLoggedIn = isAuthenticated();
 
   const { data, error, isLoading, mutate } = useSWR(
     isLoggedIn ? "profile" : null,
@@ -19,14 +22,17 @@ export function useUserProfile() {
       }
       // Unwrap nested payload: { data: { user: {...} } }
       const payload = response?.data as any;
-      const user =  payload?.data?.user ?? payload?.user ;
+      const user = payload?.data?.user ?? payload?.user;
       console.log("useUserProfile: unwrapped user:", user);
       return user as UserProfile;
     },
     {
       revalidateOnFocus: false,
       shouldRetryOnError: false,
-    }
+      // Render the previous session's profile instantly so the
+      // profile screen never shows a skeleton on cold mount.
+      fallbackData: getCachedValue<UserProfile>(PROFILE_CACHE_KEY) ?? undefined,
+    },
   );
 
   // Sync SWR data with Zustand store
@@ -34,6 +40,9 @@ export function useUserProfile() {
     if (data) {
       console.log("useUserProfile: setting store user:", data);
       setUser(data);
+      // Write through to the state cache so the next mount — and
+      // the global AppDataPreloader — can read it synchronously.
+      dataStateCache.set(PROFILE_CACHE_KEY, data);
     }
   }, [data, setUser]);
 
