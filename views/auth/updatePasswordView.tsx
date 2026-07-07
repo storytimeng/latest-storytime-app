@@ -246,6 +246,8 @@ export default function UpdatePasswordView() {
               placeholderText="Current Password"
               passwordError={errors.currentPassword || ""}
               value={formData.currentPassword || ""}
+              name="current-password"
+              autoComplete="current-password"
               handlePasswordChange={(value: string) =>
                 handleInputChange("currentPassword", value)
               }
@@ -262,6 +264,8 @@ export default function UpdatePasswordView() {
             placeholderText="New Password"
             passwordError={errors.newPassword || ""}
             value={formData.newPassword}
+            name="new-password"
+            autoComplete="new-password"
             handlePasswordChange={(value: string) =>
               handleInputChange("newPassword", value)
             }
@@ -277,6 +281,8 @@ export default function UpdatePasswordView() {
             placeholderText="Confirm Password"
             passwordError={errors.confirmPassword || ""}
             value={formData.confirmPassword}
+            name="confirm-password"
+            autoComplete="new-password"
             handlePasswordChange={(value: string) =>
               handleInputChange("confirmPassword", value)
             }

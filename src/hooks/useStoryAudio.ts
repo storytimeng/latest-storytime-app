@@ -8,6 +8,13 @@ import {
   type StoryAudioSegment,
 } from "@/src/lib/storyAudio";
 import { useTTSStore, formatDuration } from "@/src/stores/useTTSStore";
+import {
+  clearMediaSessionActionHandlers,
+  setMediaSessionActionHandler,
+  setMediaSessionMetadata,
+  setMediaSessionPlaybackState,
+  setMediaSessionPosition,
+} from "@/lib/mediaSession";
 
 interface UseStoryAudioOptions {
   storyId: string;
@@ -25,37 +32,6 @@ interface UseStoryAudioOptions {
   // episode. Used to resume narration where the reader left off instead
   // of always starting a chapter's audio from 0:00.
   initialProgressPercent?: number;
-}
-
-function updateMediaSessionMetadata({
-  storyTitle,
-  partTitle,
-  authorName,
-  artworkUrl,
-}: {
-  storyTitle?: string;
-  partTitle?: string;
-  authorName?: string;
-  artworkUrl?: string;
-}) {
-  if (typeof navigator === "undefined" || !("mediaSession" in navigator)) {
-    return;
-  }
-
-  const artwork = artworkUrl
-    ? [
-        { src: artworkUrl, sizes: "96x96", type: "image/jpeg" },
-        { src: artworkUrl, sizes: "192x192", type: "image/jpeg" },
-        { src: artworkUrl, sizes: "512x512", type: "image/jpeg" },
-      ]
-    : [];
-
-  navigator.mediaSession.metadata = new MediaMetadata({
-    title: partTitle || storyTitle || "Storytime",
-    artist: authorName || "Storytime",
-    album: storyTitle || "",
-    artwork,
-  });
 }
 
 export function useStoryAudio({
@@ -138,20 +114,12 @@ export function useStoryAudio({
 
     tts.setElapsedSeconds(Math.floor(elapsed));
 
-    if (
-      typeof navigator !== "undefined" &&
-      "mediaSession" in navigator &&
-      totalDurationSeconds
-    ) {
-      try {
-        navigator.mediaSession.setPositionState({
-          duration: totalDurationSeconds,
-          playbackRate: audio?.playbackRate ?? 1,
-          position: Math.min(elapsed, totalDurationSeconds),
-        });
-      } catch {
-        // Some browsers throw if called before metadata/duration is valid — safe to ignore.
-      }
+    if (totalDurationSeconds) {
+      void setMediaSessionPosition({
+        duration: totalDurationSeconds,
+        playbackRate: audio?.playbackRate ?? 1,
+        position: Math.min(elapsed, totalDurationSeconds),
+      });
     }
 
     if (currentSegment && totalDurationSeconds) {
@@ -210,17 +178,8 @@ export function useStoryAudio({
       tts.stop();
       tts.setElapsedSeconds(0);
 
-      if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
-        navigator.mediaSession.playbackState = "none";
-        // Clear the lock-screen scrubber immediately rather than leaving
-        // the previous chapter's stale position/duration displayed until
-        // the next updateElapsed tick fires for whatever plays next.
-        try {
-          navigator.mediaSession.setPositionState();
-        } catch {
-          // Not all browsers support clearing with no args — safe to ignore.
-        }
-      }
+      void setMediaSessionPlaybackState("none");
+      void setMediaSessionPosition(null);
     },
     [clearProgressTimer, reportListen],
   );
@@ -245,9 +204,7 @@ export function useStoryAudio({
       audio.volume = tts.volume;
       audioRef.current = audio;
 
-      if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
-        navigator.mediaSession.playbackState = "playing";
-      }
+      void setMediaSessionPlaybackState("playing");
 
       await new Promise<void>((resolve, reject) => {
         audio.onended = () => resolve();
@@ -308,9 +265,7 @@ export function useStoryAudio({
           };
           await audio.play();
 
-          if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
-            navigator.mediaSession.playbackState = "playing";
-          }
+          void setMediaSessionPlaybackState("playing");
           return;
         }
         accumulated = next;
@@ -429,9 +384,7 @@ export function useStoryAudio({
     useTTSStore.getState().pause();
     clearProgressTimer();
 
-    if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
-      navigator.mediaSession.playbackState = "paused";
-    }
+    void setMediaSessionPlaybackState("paused");
   }, [clearProgressTimer]);
 
   const resume = useCallback(async () => {
@@ -445,9 +398,7 @@ export function useStoryAudio({
     clearProgressTimer();
     progressTimerRef.current = setInterval(updateElapsed, 250);
 
-    if (typeof navigator !== "undefined" && "mediaSession" in navigator) {
-      navigator.mediaSession.playbackState = "playing";
-    }
+    void setMediaSessionPlaybackState("playing");
   }, [clearProgressTimer, playSegment, updateElapsed]);
 
   const stopPlaybackRef = useRef(stopPlayback);
@@ -472,53 +423,41 @@ export function useStoryAudio({
   }, [play, pause, resume, seek, onPreviousTrack, onNextTrack]);
 
   useEffect(() => {
-    if (typeof navigator === "undefined" || !("mediaSession" in navigator)) {
-      return;
-    }
-
-    navigator.mediaSession.setActionHandler("play", () => {
+    void setMediaSessionActionHandler("play", () => {
       void resumeRef.current();
     });
-    navigator.mediaSession.setActionHandler("pause", () => {
+    void setMediaSessionActionHandler("pause", () => {
       pauseRef.current();
     });
-    navigator.mediaSession.setActionHandler("stop", () => {
+    void setMediaSessionActionHandler("stop", () => {
       stopPlaybackRef.current();
     });
-    navigator.mediaSession.setActionHandler("seekto", (details) => {
+    void setMediaSessionActionHandler("seekto", (details) => {
       if (typeof details.seekTime === "number") {
         void seekRef.current(details.seekTime);
       }
     });
 
     if (onPreviousTrackRef.current) {
-      navigator.mediaSession.setActionHandler("previoustrack", () => {
-        // Flag so the manifest-ready effect below auto-resumes playback
-        // for the new chapter once it loads, instead of leaving the
-        // lock screen showing a paused/stale player.
+      void setMediaSessionActionHandler("previoustrack", () => {
         autoplayOnLoadRef.current = true;
         onPreviousTrackRef.current?.();
       });
     }
     if (onNextTrackRef.current) {
-      navigator.mediaSession.setActionHandler("nexttrack", () => {
+      void setMediaSessionActionHandler("nexttrack", () => {
         autoplayOnLoadRef.current = true;
         onNextTrackRef.current?.();
       });
     }
 
     return () => {
-      navigator.mediaSession.setActionHandler("play", null);
-      navigator.mediaSession.setActionHandler("pause", null);
-      navigator.mediaSession.setActionHandler("stop", null);
-      navigator.mediaSession.setActionHandler("seekto", null);
-      navigator.mediaSession.setActionHandler("previoustrack", null);
-      navigator.mediaSession.setActionHandler("nexttrack", null);
+      void clearMediaSessionActionHandlers();
     };
   }, [Boolean(onPreviousTrack), Boolean(onNextTrack)]);
 
   useEffect(() => {
-    updateMediaSessionMetadata({
+    void setMediaSessionMetadata({
       storyTitle,
       partTitle,
       authorName,

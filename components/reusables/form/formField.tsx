@@ -24,6 +24,8 @@ interface FormFieldProps {
   color?: "danger" | "success" | "default";
   className?: string;
   classNames?: InputProps["classNames"] | undefined;
+  autoComplete?: string;
+  name?: string;
 }
 
 const FormField: React.FC<FormFieldProps> = (props) => {
@@ -47,6 +49,8 @@ const FormField: React.FC<FormFieldProps> = (props) => {
     variant,
     className,
     classNames,
+    autoComplete,
+    name,
   } = props;
 
   // Auto-detect icon based on field type and id
@@ -91,6 +95,8 @@ const FormField: React.FC<FormFieldProps> = (props) => {
         labelPlacement={"outside"}
         type={type}
         id={id}
+        name={name ?? id}
+        autoComplete={autoComplete}
         variant={variant || "bordered"}
         className={cn("w-full", className)}
         classNames={{

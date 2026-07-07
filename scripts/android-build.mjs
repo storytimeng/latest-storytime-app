@@ -15,6 +15,7 @@ const require = createRequire(import.meta.url);
 const args = process.argv.slice(2);
 const RELEASE = args.includes("--release");
 const NO_APK = args.includes("--no-apk");
+const RESTORE_ONLY = args.includes("--restore-only");
 const GRADLE_TASK = RELEASE ? "assembleRelease" : "assembleDebug";
 
 // ─── Environment auto-detection ────────────────────────────────────────────
@@ -387,9 +388,91 @@ function restore() {
   }
 }
 
+/**
+ * Best-effort restore for leftover backups from a previous crashed run.
+ * This does NOT rely on the in-memory `hidden`/`restructured` arrays, so it
+ * can be safely called at the start of a fresh process or via --restore-only.
+ */
+function restoreStaleBackups() {
+  if (!fs.existsSync(".android-temp")) return;
+
+  console.warn(
+    "\n⚠  Detected leftover .android-temp from a previous Android build. " +
+      "Attempting to restore hidden files before continuing...\n",
+  );
+
+  for (const entry of fs.readdirSync(".android-temp")) {
+    const backup = path.join(".android-temp", entry);
+    const original = entry.replace(/__/g, path.sep);
+    const originalDir = path.dirname(original);
+    if (!fs.existsSync(originalDir)) {
+      fs.mkdirSync(originalDir, { recursive: true });
+    }
+    if (!fs.existsSync(original)) {
+      fs.renameSync(backup, original);
+      console.log(`  ↩  Restored stale backup: ${original}`);
+    } else {
+      // If the original already exists, discard the stale backup.
+      fs.rmSync(backup, { recursive: true, force: true });
+      console.log(`  🗑  Removed stale backup (original exists): ${original}`);
+    }
+  }
+
+  fs.rmSync(".android-temp", { recursive: true, force: true });
+  console.log("\n✓ Stale Android build backups restored.\n");
+}
+
+// Defensive cleanup on unexpected termination.
+process.on("SIGINT", () => {
+  console.warn("\n⚠  Received SIGINT. Attempting to restore files before exit...");
+  try {
+    restore();
+  } finally {
+    process.exit(1);
+  }
+});
+
+process.on("SIGTERM", () => {
+  console.warn("\n⚠  Received SIGTERM. Attempting to restore files before exit...");
+  try {
+    restore();
+  } finally {
+    process.exit(1);
+  }
+});
+
+process.on("uncaughtException", (err) => {
+  console.error("\n❌ Uncaught exception in Android build script:", err);
+  try {
+    restore();
+  } finally {
+    process.exit(1);
+  }
+});
+
+process.on("unhandledRejection", (reason) => {
+  console.error("\n❌ Unhandled promise rejection in Android build script:", reason);
+  try {
+    restore();
+  } finally {
+    process.exit(1);
+  }
+});
+
 // ─── Main ─────────────────────────────────────────────────────────────────
 
 try {
+  // If the user only wants to recover from a previous crashed run, do that
+  // first and exit without attempting a new build.
+  if (RESTORE_ONLY) {
+    restoreStaleBackups();
+    process.exit(0);
+  }
+
+  // If a previous run left .android-temp on disk (e.g. hard crash before
+  // finally/restore), clean that up before we start hiding files again.
+  restoreStaleBackups();
+
   console.log("\n📱 Storytime Android Build\n");
   console.log(
     `Mode: ${RELEASE ? "RELEASE" : "DEBUG"}${NO_APK ? " (export + sync only)" : ""}\n`,

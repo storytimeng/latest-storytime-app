@@ -18,6 +18,7 @@ import LoadingOverlay from "@/components/reusables/customUI/loadingOverlay";
 import { GenresPreloader } from "@/components/preloaders/GenresPreloader";
 import { AppDataPreloader } from "@/components/preloaders/AppDataPreloader";
 import { SupportModals } from "@/components/reusables/modals/SupportModals";
+import { TabRoutePreloader } from "@/components/preloaders/TabRoutePreloader";
 import { OfflineManager } from "@/components/OfflineManager";
 import { PullToRefreshWrapper } from "@/components/PullToRefreshWrapper";
 
@@ -116,6 +117,7 @@ export default function RootLayout({
             on /library, /pen, and /profile with the data already
             in the SWR + state-cache layer. Renders no UI. */}
         <AppDataPreloader />
+        <TabRoutePreloader />
         {/* PullToRefreshWrapper is mounted inside Providers/SWRConfig (it
             uses useSWRConfig) but OUTSIDE all fixed-position overlays so
             the pull-down gesture only drags the page content, not the

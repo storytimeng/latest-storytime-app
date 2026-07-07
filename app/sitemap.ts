@@ -1,10 +1,6 @@
 import { MetadataRoute } from "next";
 import { APP_CONFIG } from "@/config/app";
 
-// Regenerate sitemap at most every 30 minutes in production.
-// On-demand revalidation via /api/revalidate will also purge this immediately.
-export const revalidate = 1800;
-
 const BASE = APP_CONFIG.url;
 
 const staticRoutes: MetadataRoute.Sitemap = [
