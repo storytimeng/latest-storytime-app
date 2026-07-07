@@ -17,6 +17,8 @@ const RELEASE = args.includes("--release");
 const NO_APK = args.includes("--no-apk");
 const RESTORE_ONLY = args.includes("--restore-only");
 const GRADLE_TASK = RELEASE ? "assembleRelease" : "assembleDebug";
+const NEXT_BUILD_WAIT_MS = 2 * 60 * 1000;
+const NEXT_BUILD_MAX_WAIT_MS = 10 * 60 * 1000;
 
 // ─── Environment auto-detection ────────────────────────────────────────────
 
@@ -422,6 +424,50 @@ function restoreStaleBackups() {
   console.log("\n✓ Stale Android build backups restored.\n");
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function hasNextBuildLock() {
+  const possibleLocks = [
+    path.join(".next", "build", "lock"),
+    path.join(".next", "build.lock"),
+  ];
+  return possibleLocks.find((lockPath) => fs.existsSync(lockPath)) ?? null;
+}
+
+async function waitForNextBuildLock() {
+  const startedAt = Date.now();
+  let warned = false;
+
+  while (true) {
+    const lockPath = hasNextBuildLock();
+    if (!lockPath) return;
+
+    const waitedMs = Date.now() - startedAt;
+    if (waitedMs >= NEXT_BUILD_MAX_WAIT_MS) {
+      throw new Error(
+        `Another Next.js build appears to still hold a lock at ${lockPath}. ` +
+          `Waited ${Math.round(waitedMs / 1000)}s and aborting so the Android build does not proceed in a broken state.`,
+      );
+    }
+
+    if (!warned) {
+      console.warn(
+        `\n⚠  Detected an existing Next.js build lock at ${lockPath}. ` +
+          `Waiting up to ${Math.round(NEXT_BUILD_MAX_WAIT_MS / 60000)} minutes, checking every ${Math.round(NEXT_BUILD_WAIT_MS / 60000)} minutes...\n`,
+      );
+      warned = true;
+    } else {
+      console.warn(
+        `⚠  Next.js build lock still present at ${lockPath}. Rechecking in ${Math.round(NEXT_BUILD_WAIT_MS / 60000)} minutes...`,
+      );
+    }
+
+    await sleep(NEXT_BUILD_WAIT_MS);
+  }
+}
+
 // Defensive cleanup on unexpected termination.
 process.on("SIGINT", () => {
   console.warn("\n⚠  Received SIGINT. Attempting to restore files before exit...");
@@ -521,6 +567,7 @@ try {
 
   // ── 3. Next.js static export ─────────────────────────────────────────────
   console.log("\nStep 3: Building Next.js static export...\n");
+  await waitForNextBuildLock();
   // Invoke Next.js' bin script directly via node, not via a bare
   // `next build` shell command. CI runners don't put node_modules/.bin
   // on PATH for shells spawned by execSync, so `next` isn't found
