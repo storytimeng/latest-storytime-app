@@ -77,7 +77,13 @@ export function useOfflineContent(storyId: string) {
   const isContentAvailableOffline = useCallback(
     (contentId: string | null | undefined) => {
       if (!contentId || !hasOfflineRecord) return false;
-      return offlineContent.some((c: any) => c.id === contentId);
+      // OfflineChapter/OfflineEpisode rows use a composite `id` of
+      // `${userId}_${chapterId}` — the raw ID we're matching against
+      // (from the URL / navigation list) lives in chapterId/episodeId,
+      // not `id`. Matching on `id` here always failed silently.
+      return offlineContent.some(
+        (c: any) => (c.chapterId ?? c.episodeId) === contentId,
+      );
     },
     [hasOfflineRecord, offlineContent],
   );

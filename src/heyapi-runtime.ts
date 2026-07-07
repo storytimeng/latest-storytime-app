@@ -5,5 +5,6 @@ export const createClientConfig: CreateClientConfig = (config) => ({
   baseUrl:
     process.env.NEXT_PUBLIC_PROXY === "true"
       ? "/api/proxy"
-      : process.env.NEXT_PUBLIC_API_URL || "http://end.digitalcoresystem.com/api",
+      : process.env.NEXT_PUBLIC_API_URL ||
+        "https://storytime-backend-1-0.onrender.com",
 });

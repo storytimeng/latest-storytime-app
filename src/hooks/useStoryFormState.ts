@@ -142,13 +142,12 @@ export function useStoryFormState({
   const validateForm = useCallback((): boolean => {
     const errors: Partial<Record<keyof StoryFormData, string>> = {};
 
-    // Supports ASCII, Latin Extended (A-D), and Latin Extended Additional — covers Yoruba, Igbo, and other African scripts
-    const titleRegex = /^[a-zA-Z0-9À-ɏḀ-ỿ\s\-'",.!?()?]+$/;
+    const titleRegex = /^[a-zA-Z0-9\s.,'?!-]+$/;
     if (!formData.title.trim()) {
       errors.title = "Story title is required";
     } else if (!titleRegex.test(formData.title)) {
       errors.title =
-        "Title contains invalid characters. Only letters (including accented characters), numbers, spaces, and basic punctuation are allowed.";
+        "Title contains invalid characters. Only letters, numbers, spaces, and basic punctuation are allowed.";
     }
 
     // Description: 50-100 words
@@ -157,17 +156,42 @@ export function useStoryFormState({
       errors.description = blurbError;
     }
 
+    // Content validation: required when no chapters/episodes
+    if (
+      !storyStructure.hasChapters &&
+      !storyStructure.hasEpisodes &&
+      !formData.content?.trim()
+    ) {
+      errors.content =
+        "Story content is required when not using chapters or episodes.";
+    }
+
     if (formData.selectedGenres.length === 0) {
       errors.selectedGenres = "Please select at least one genre";
     }
 
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
-  }, [formData]);
+  }, [formData, storyStructure]);
 
   // Handle story structure selection
   const handleStructureNext = useCallback(
     (structure: StoryStructure) => {
+      // If user selected no chapters and no episodes, they must have content
+      if (
+        !structure.hasChapters &&
+        !structure.hasEpisodes &&
+        !formData.content?.trim()
+      ) {
+        const { showToast } = require("@/lib/showNotification");
+        showToast({
+          type: "error",
+          message:
+            "You must write story content if you're not using chapters or episodes.",
+        });
+        return;
+      }
+
       setStoryStructure(structure);
       // Update formData with mutually exclusive chapter/episodes flags
       setFormData((prev) => ({

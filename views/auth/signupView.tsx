@@ -286,6 +286,8 @@ export default function SignupView({
               label="First Name"
               type="text"
               id="firstName"
+              name="given-name"
+              autoComplete="given-name"
               size="lg"
               value={formData.firstName}
               onValueChange={(value: string) =>
@@ -302,6 +304,8 @@ export default function SignupView({
               label="Last Name"
               type="text"
               id="lastName"
+              name="family-name"
+              autoComplete="family-name"
               size="lg"
               value={formData.lastName}
               onValueChange={(value: string) =>
@@ -321,6 +325,8 @@ export default function SignupView({
             label="Email Address"
             type="email"
             id="email"
+            name="email"
+            autoComplete="email"
             size="lg"
             value={formData.email}
             onValueChange={(value: string) => handleInputChange("email", value)}
@@ -338,6 +344,8 @@ export default function SignupView({
             placeholderText="Password"
             passwordError={errors.password || ""}
             value={formData.password}
+            name="new-password"
+            autoComplete="new-password"
             handlePasswordChange={(value: string) =>
               handleInputChange("password", value)
             }

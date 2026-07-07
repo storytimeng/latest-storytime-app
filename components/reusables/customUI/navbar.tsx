@@ -23,10 +23,22 @@ const Navbar = () => {
   ];
 
   const isActive = (path: string) => {
-    if (pathname === "/" && path === "/home") return true;
-
-    if (path === "/home") return pathname === "/home";
-    return pathname.startsWith(path);
+    // The Home tab is mounted at both `/` (root) and `/home`
+    // (the (tabs) route group), so both URLs — and any direct
+    // sub-paths like `/home/featured` — should light up the
+    // Home icon.
+    if (path === "/home") {
+      return (
+        pathname === "/" ||
+        pathname === "/home" ||
+        pathname.startsWith("/home/")
+      );
+    }
+    // For the other tabs, light up on the exact path or any
+    // direct sub-path. The `path + "/"` guard prevents a future
+    // route like `/library-archive` from wrongly lighting up
+    // the Library tab.
+    return pathname === path || pathname.startsWith(path + "/");
   };
 
   const notificationActive = pathname.startsWith("/notification");

@@ -22,6 +22,8 @@ interface PasswordInputProps {
     | "success"
     | "warning"
     | "danger";
+  autoComplete?: string;
+  name?: string;
 }
 
 const PasswordField: React.FC<PasswordInputProps> = ({
@@ -36,6 +38,8 @@ const PasswordField: React.FC<PasswordInputProps> = ({
   size = "lg",
   variant = "bordered",
   color = "default",
+  autoComplete = "current-password",
+  name = "password",
 }) => {
   const [isVisible, setIsVisible] = useState(false);
 
@@ -70,6 +74,9 @@ const PasswordField: React.FC<PasswordInputProps> = ({
           isInvalid={!!passwordError}
           onValueChange={handlePasswordChange}
           type={isVisible ? "text" : "password"}
+          id={name}
+          name={name}
+          autoComplete={autoComplete}
           classNames={{
             label: "mb-2 text-sm body-text-small-medium-auto text-grey-2",
             input: "text-grey-2 placeholder:text-grey-1",

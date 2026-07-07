@@ -1,6 +1,9 @@
+import { useEffect } from "react";
 import useSWR from "swr";
 import { usersControllerGetStats } from "@/src/client/sdk.gen";
 import { useAuthStore } from "@/src/stores/useAuthStore";
+import { dataStateCache, getCachedValue } from "@/src/stores/useDataStateCache";
+import { APP_CACHE_KEYS } from "@/src/stores/dataCacheKeys";
 
 interface ReadingProgress {
   totalStoriesInProgress?: number;
@@ -36,10 +39,13 @@ export function useApiUserStats() {
     async () => {
       const response = await usersControllerGetStats();
       // Extract from nested structure: response.data.data.stats
-      const result = (response?.data as any)?.data?.stats || (response?.data as any)?.stats || response?.data;
-      
+      const result =
+        (response?.data as any)?.data?.stats ||
+        (response?.data as any)?.stats ||
+        response?.data;
+
       console.log("✅ User stats fetched:", result);
-      
+
       // Transform the data to include computed properties
       const stats: UserStats = {
         ...result,
@@ -49,17 +55,27 @@ export function useApiUserStats() {
         readingStreak: 0, // Not provided by API yet
         writingStreak: 0, // Not provided by API yet
       };
-      
+
       return stats;
     },
     {
       revalidateOnFocus: false,
       revalidateOnReconnect: true,
-    }
+      // Warm-start with the previous session's stats so the profile
+      // screen never flashes a skeleton on cold mount.
+      fallbackData: getCachedValue<UserStats>("/users/stats") ?? undefined,
+    },
   );
 
+  // Mirror live result into the state cache for the next mount.
+  useEffect(() => {
+    if (data) {
+      dataStateCache.set(APP_CACHE_KEYS.userStats, data);
+    }
+  }, [data]);
+
   return {
-    stats: data || {} as UserStats,
+    stats: data || ({} as UserStats),
     isLoading,
     error,
     mutate,

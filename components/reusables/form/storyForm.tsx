@@ -396,7 +396,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
   // React state updates are async so formData.content can lag behind the
   // editor on tablet browsers (iPad Safari / Android Chrome) where onUpdate
   // doesn't always fire before the Publish button's onClick.
-  // The blur → click event order guarantees this ref is up-to-date by the
+  // The blur -> click event order guarantees this ref is up-to-date by the
   // time any submit handler reads it.
   const latestContentRef = useRef<string>("");
 
@@ -777,7 +777,12 @@ const StoryForm: React.FC<StoryFormProps> = ({
 
       // latestContentRef is always current (refs bypass React batching)
       const currentContent = latestContentRef.current || formData.content;
-      const finalData = { ...formData, authorNote, giveConsent, content: currentContent };
+      const finalData = {
+        ...formData,
+        authorNote,
+        giveConsent,
+        content: currentContent,
+      };
 
       // For edit mode, only send edited chapters/episodes and deleted ones
       let contentData: Chapter[] | undefined;
@@ -917,7 +922,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
         label="Story Blurb"
         htmlFor="description"
         id="description"
-        placeholder="Summarize your story in 20–200 words…"
+        placeholder="Summarize your story in 50–100 words…"
         value={formData.description}
         onChange={(value) => handleFieldChange("description", value)}
         isInvalid={!!formErrors.description}
@@ -931,19 +936,26 @@ const StoryForm: React.FC<StoryFormProps> = ({
         className="max-h-[400px]"
       />
 
-      {/* Edit Story Content button — standalone stories in edit mode */}
-      {mode === "edit" &&
-        !storyStructure.hasChapters &&
-        !storyStructure.hasEpisodes && (
-          <Button
-            variant="bordered"
-            size="sm"
-            onClick={() => setCurrentStep("writing")}
-            className="w-full border-dashed border-primary-colour text-primary-colour"
-          >
-            Edit Story Content
-          </Button>
-        )}
+      {/* Content Field */}
+      <TextAreaField
+        label="Story Content"
+        htmlFor="content"
+        id="content"
+        placeholder="Write your story content here..."
+        value={formData.content || ""}
+        onChange={(value) => handleFieldChange("content", value)}
+        isInvalid={!!formErrors.content}
+        errorMessage={formErrors.content || ""}
+        required={!storyStructure.hasChapters && !storyStructure.hasEpisodes}
+        rows={6}
+        className="max-h-[400px]"
+        isRichText={true}
+      />
+      {!storyStructure.hasChapters && !storyStructure.hasEpisodes && (
+        <p className="-mt-4 text-xs text-gray-500">
+          Content is required when your story doesn't have chapters or episodes.
+        </p>
+      )}
 
       {/* Show Chapters/Episodes in Edit Mode */}
       {mode === "edit" &&
@@ -1730,7 +1742,13 @@ const StoryForm: React.FC<StoryFormProps> = ({
             className={`flex-1 border-light-grey-2 text-primary-colour ${Magnetik_Regular.className}`}
             onClick={() => {
               if (isLoading) return;
-              const draftData = { ...formData, storyStatus: "Draft" };
+              const currentContent =
+                latestContentRef.current || formData.content || "";
+              const draftData = {
+                ...formData,
+                storyStatus: "Draft",
+                content: currentContent,
+              };
               const chaptersToDraft = (items: typeof chapters) =>
                 items.map((ch) => ({ ...ch, isDraft: true }));
               const partsToDraft = (items: typeof parts) =>
@@ -1773,9 +1791,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
 
               // Guard: standalone stories must have actual content before proceeding
               if (!storyStructure.hasChapters && !storyStructure.hasEpisodes) {
-                const plainText = currentContent
-                  .replace(/<[^>]+>/g, "")
-                  .trim();
+                const plainText = currentContent.replace(/<[^>]+>/g, "").trim();
                 if (plainText.length < 50) {
                   showToast({
                     type: "error",

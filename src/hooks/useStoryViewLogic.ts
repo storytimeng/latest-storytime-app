@@ -1,5 +1,4 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
-import { mutate as globalMutate } from "swr";
 import { useRouter } from "next/navigation";
 import {
   useCreateStory,
@@ -8,7 +7,6 @@ import {
   useCreateMultipleChapters,
   useCreateMultipleEpisodes,
 } from "@/src/hooks/useStoryMutations";
-import { storiesControllerRemove } from "@/src/client";
 import { useUpdateMultipleChapters } from "@/src/hooks/useUpdateChapter";
 import { useUpdateMultipleEpisodes } from "@/src/hooks/useUpdateEpisode";
 import { useDeleteMultipleChapters } from "@/src/hooks/useDeleteChapter";
@@ -408,19 +406,6 @@ export function useStoryViewLogic({
             const errorMsg =
               result?.error ||
               "Failed to publish. Your work is saved in cache.";
-
-            // Clean up the orphaned story so the author doesn't end up with
-            // a chapter/episode story that has no content attached.
-            try {
-              await storiesControllerRemove({ path: { id: createdStoryId } });
-              setCreatedStoryId(null);
-            } catch (cleanupErr) {
-              console.warn(
-                "[useStoryViewLogic] Orphaned story cleanup failed:",
-                cleanupErr,
-              );
-            }
-
             showToast({
               type: "error",
               message: errorMsg,
@@ -468,11 +453,7 @@ export function useStoryViewLogic({
         }
 
         // Content validation for stories without chapters/episodes
-        // Strip HTML tags before checking — TipTap's empty state is "<p><br></p>", not ""
-        const contentPlainText = (formData.content || "")
-          .replace(/<[^>]+>/g, "")
-          .trim();
-        if (!hasChapters && !hasEpisodes && !contentPlainText) {
+        if (!hasChapters && !hasEpisodes && !formData.content?.trim()) {
           showToast({
             type: "error",
             message:
@@ -485,12 +466,12 @@ export function useStoryViewLogic({
         // The API integration below looks correct
 
         // Content logic:
-        // - For stories WITH chapters/episodes: the body is added per-chapter/episode, not here
+        // - For stories WITH chapters/episodes: content can be description (for CREATE) or empty
         // - For stories WITHOUT chapters/episodes: content is the actual story text from formData.content
-        // - description (blurb) must NEVER be used as a fallback for content — they are separate fields
+        // - Description and content are SEPARATE fields and should not be mixed in updates
         const contentText =
           hasChapters || hasEpisodes
-            ? formData.content || ""
+            ? formData.content || formData.description || "" // Use description as fallback for CREATE
             : formData.content ||
               (_parts && _parts.length > 0
                 ? _parts.map((p) => `${p.title}\n${p.body}`).join("\n\n")
@@ -795,35 +776,7 @@ export function useStoryViewLogic({
               type: "success",
               message,
             });
-
             if (storyId) {
-              // Bust every SWR cache entry that could hold stale story data.
-              // updateStory already calls globalMutate('/stories/${storyId}') but
-              // chapter/episode list and individual chapter keys are missed.
-              const cacheKeys: Promise<any>[] = [
-                globalMutate(`/stories/${storyId}`),
-                globalMutate(`/stories/${storyId}/chapters`),
-                globalMutate(`/stories/${storyId}/episodes`),
-              ];
-
-              // Invalidate individual chapter caches for each modified chapter
-              (_chapters || []).forEach((ch) => {
-                if (ch.uuid) cacheKeys.push(globalMutate(`/stories/chapters/${ch.uuid}`));
-              });
-
-              // Invalidate individual episode caches for each modified episode
-              (_parts || []).forEach((p) => {
-                if (p.uuid) cacheKeys.push(globalMutate(`/stories/episodes/${p.uuid}`));
-              });
-
-              await Promise.all(cacheKeys);
-
-              // Clear IndexedDB story cache so stale offline data doesn't surface
-              const userId = storeUser?.id;
-              if (userId) {
-                clearStoryCache(storyId, userId).catch(() => {});
-              }
-
               router.push(routes.story(storyId));
             }
           } else if (storyUpdateSuccess && !contentUpdateSuccess) {

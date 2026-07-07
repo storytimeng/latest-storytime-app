@@ -181,8 +181,10 @@ export default function LoginView({ onSuccess, onSwitchView }: LoginViewProps) {
         <div data-error={!!errors.email}>
           <FormField
             label="Email Address or Pen Name"
-            type="email"
+            type="text"
             id="email"
+            name="email"
+            autoComplete="username"
             size="lg"
             value={formData.email || ""}
             onValueChange={(value: string) => handleInputChange("email", value)}
@@ -200,6 +202,8 @@ export default function LoginView({ onSuccess, onSwitchView }: LoginViewProps) {
             placeholderText="Password"
             passwordError={errors.password || ""}
             value={formData.password}
+            name="password"
+            autoComplete="current-password"
             handlePasswordChange={(value: string) =>
               handleInputChange("password", value)
             }

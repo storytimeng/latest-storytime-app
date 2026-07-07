@@ -35,17 +35,18 @@ jobs:
     env:
       NODE_VERSION: "22"
       JAVA_VERSION: "21"
-      PNPM_VERSION: "10"
       IS_RELEASE: ${{ github.event.inputs.build_type == 'release' || startsWith(github.ref, 'refs/tags/v') }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # Install pnpm using the version declared in package.json's
+      # "packageManager" field (single source of truth). Do NOT also pass
+      # `version:` here — action-setup v4 errors if both are set, even when
+      # the values match.
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -78,16 +79,38 @@ jobs:
       - name: Create .env.local for build
         run: |
           cat > .env.local << EOF
-          NEXT_PUBLIC_API_URL=${{ secrets.NEXT_PUBLIC_API_URL }}
-          NEXT_PUBLIC_BACKEND_URL=${{ secrets.NEXT_PUBLIC_BACKEND_URL }}
+          NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}
+          NEXT_PUBLIC_BACKEND_URL=${{vars.NEXT_PUBLIC_API_URL}}
           NEXT_PUBLIC_PLATFORM=android
           ANDROID_KEYSTORE_BASE64=${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           ANDROID_KEYSTORE_PASSWORD=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          ANDROID_KEY_ALIAS=${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_ALIAS=${{ vars.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD=${{ secrets.ANDROID_KEY_PASSWORD }}
           NEXT_PUBLIC_DEBUG_PROXY=false
           NEXT_PUBLIC_PROXY=false
           EOF
+          # Belt-and-braces: also export to the shell so the spawned
+          # `next build` and the Gradle steps below inherit them even
+          # if anything ever moves .env.local out of the way.
+          echo "NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}" >> $GITHUB_ENV
+          echo "NEXT_PUBLIC_BACKEND_URL=${{ vars.NEXT_PUBLIC_API_URL }}" >> $GITHUB_ENV
+          echo "NEXT_PUBLIC_PLATFORM=android" >> $GITHUB_ENV
+          echo "NEXT_PUBLIC_DEBUG_PROXY=false" >> $GITHUB_ENV
+          echo "NEXT_PUBLIC_PROXY=false" >> $GITHUB_ENV
+
+      # Fail loudly here instead of silently shipping an APK that falls
+      # back to localhost. `${{ vars.X }}` for an unset/misscoped repo
+      # variable resolves to an empty string with no error — this is
+      # the only thing that will actually catch it.
+      - name: Verify required build vars are set
+        run: |
+          echo "── .env.local contents (secrets redacted below) ──"
+          grep -v -E 'PASSWORD|BASE64' .env.local || true
+          echo "──────────────────────────"
+          if [ -z "${{ vars.NEXT_PUBLIC_API_URL }}" ]; then
+            echo "::error::NEXT_PUBLIC_API_URL repo/org Actions variable is empty or unset. Check Settings → Secrets and variables → Actions → Variables tab (not Secrets), and make sure it isn't scoped to an Environment this workflow doesn't declare."
+            exit 1
+          fi
 
       - name: Build Next.js static export
         run: node scripts/android-build.mjs --no-apk

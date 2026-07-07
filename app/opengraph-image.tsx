@@ -5,8 +5,6 @@ export const runtime = "edge";
 export const alt = `${APP_CONFIG.name} - ${APP_CONFIG.shortDescription}`;
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
-
-export const dynamic = "force-dynamic";
 export default function OgImage() {
   return new ImageResponse(
     (

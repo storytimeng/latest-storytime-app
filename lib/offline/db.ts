@@ -32,6 +32,8 @@ export const STORES = {
 } as const;
 
 // Database schema
+// Database schema — REMOVE the stray `coverImageBlob?: Blob;` line that
+// was sitting at the top level of this interface. It's not a store.
 interface StorytimeDB extends DBSchema {
   stories: {
     key: string;
@@ -107,6 +109,7 @@ interface StorytimeDB extends DBSchema {
   };
 }
 
+// This is where coverImageBlob actually belongs — on the story record.
 export interface OfflineStory {
   id: string;
   storyId: string;
@@ -114,6 +117,7 @@ export interface OfflineStory {
   title: string;
   description: string;
   coverImage: string;
+  coverImageBlob?: Blob; // fetched once at download time, stored natively — no base64
   author: any;
   genres: string[];
   status: string;

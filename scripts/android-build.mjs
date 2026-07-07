@@ -6,12 +6,16 @@ import { execSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
+import { createRequire } from "node:module";
+
+const require = createRequire(import.meta.url);
 
 // ─── CLI flags ────────────────────────────────────────────────────────────
 
 const args = process.argv.slice(2);
 const RELEASE = args.includes("--release");
 const NO_APK = args.includes("--no-apk");
+const RESTORE_ONLY = args.includes("--restore-only");
 const GRADLE_TASK = RELEASE ? "assembleRelease" : "assembleDebug";
 
 // ─── Environment auto-detection ────────────────────────────────────────────
@@ -147,6 +151,76 @@ const buildEnv = {
   }),
   ...(JAVA_HOME && { JAVA_HOME }),
 };
+
+/**
+ * If the spawned Next.js process can't see NEXT_PUBLIC_API_URL (e.g. on
+ * a machine where .env.local is missing and the GitHub workflow hasn't
+ * pre-populated the env), the audio player and every other consumer of
+ * that var fall back to localhost. The CI workflow DOES write a fresh
+ * .env.local before invoking us, but local dev machines sometimes
+ * don't have one — parse the existing file (if any) and inject any
+ * NEXT_PUBLIC_* keys we don't already have.
+ */
+function loadEnvFileIntoBuildEnv(filePath) {
+  if (!fs.existsSync(filePath)) return;
+  try {
+    const contents = fs.readFileSync(filePath, "utf8");
+    for (const rawLine of contents.split(/\r?\n/)) {
+      const line = rawLine.trim();
+      if (!line || line.startsWith("#")) continue;
+      const eq = line.indexOf("=");
+      if (eq < 0) continue;
+      const key = line.slice(0, eq).trim();
+      let value = line.slice(eq + 1).trim();
+      // Strip surrounding quotes if present.
+      if (
+        (value.startsWith('"') && value.endsWith('"')) ||
+        (value.startsWith("'") && value.endsWith("'"))
+      ) {
+        value = value.slice(1, -1);
+      }
+      // Only seed vars that aren't already in process.env — explicit
+      // env wins over file contents, which is what the user expects.
+      if (key && process.env[key] === undefined) {
+        buildEnv[key] = value;
+      }
+    }
+  } catch (err) {
+    console.warn(`⚠  Could not read ${filePath}:`, err.message);
+  }
+}
+loadEnvFileIntoBuildEnv(".env.local");
+loadEnvFileIntoBuildEnv(".env");
+
+/**
+ * Fail fast if NEXT_PUBLIC_API_URL is missing. This is a compile-time
+ * inlined value — if it's blank when `next build` runs, every consumer
+ * (audio player, API client, etc.) silently falls back to localhost in
+ * the shipped APK, and there's no way to fix it after the fact since
+ * Capacitor just serves the static bundle with no env to read at
+ * runtime. Better to hard-fail here than ship a broken build.
+ */
+function checkRequiredPublicEnv() {
+  const required = ["NEXT_PUBLIC_API_URL"];
+  const missing = required.filter((key) => !buildEnv[key]);
+  if (missing.length > 0) {
+    console.error(
+      `\n❌ Missing required env var(s): ${missing.join(", ")}\n` +
+        "   These are inlined into the JS bundle at build time — if they're\n" +
+        "   blank, the app silently falls back to localhost at runtime and\n" +
+        "   there's no way to fix it after the APK is built.\n\n" +
+        "   Local dev: set them in .env.local at the repo root.\n" +
+        "   CI: check the repo's Actions → Variables tab (not Secrets) —\n" +
+        "   an unset `vars.X` reference resolves to an empty string\n" +
+        "   silently, it does not fail the workflow.\n",
+    );
+    process.exit(1);
+  }
+  for (const key of required) {
+    console.log(`✓ ${key}:`, buildEnv[key]);
+  }
+}
+checkRequiredPublicEnv();
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -314,9 +388,91 @@ function restore() {
   }
 }
 
+/**
+ * Best-effort restore for leftover backups from a previous crashed run.
+ * This does NOT rely on the in-memory `hidden`/`restructured` arrays, so it
+ * can be safely called at the start of a fresh process or via --restore-only.
+ */
+function restoreStaleBackups() {
+  if (!fs.existsSync(".android-temp")) return;
+
+  console.warn(
+    "\n⚠  Detected leftover .android-temp from a previous Android build. " +
+      "Attempting to restore hidden files before continuing...\n",
+  );
+
+  for (const entry of fs.readdirSync(".android-temp")) {
+    const backup = path.join(".android-temp", entry);
+    const original = entry.replace(/__/g, path.sep);
+    const originalDir = path.dirname(original);
+    if (!fs.existsSync(originalDir)) {
+      fs.mkdirSync(originalDir, { recursive: true });
+    }
+    if (!fs.existsSync(original)) {
+      fs.renameSync(backup, original);
+      console.log(`  ↩  Restored stale backup: ${original}`);
+    } else {
+      // If the original already exists, discard the stale backup.
+      fs.rmSync(backup, { recursive: true, force: true });
+      console.log(`  🗑  Removed stale backup (original exists): ${original}`);
+    }
+  }
+
+  fs.rmSync(".android-temp", { recursive: true, force: true });
+  console.log("\n✓ Stale Android build backups restored.\n");
+}
+
+// Defensive cleanup on unexpected termination.
+process.on("SIGINT", () => {
+  console.warn("\n⚠  Received SIGINT. Attempting to restore files before exit...");
+  try {
+    restore();
+  } finally {
+    process.exit(1);
+  }
+});
+
+process.on("SIGTERM", () => {
+  console.warn("\n⚠  Received SIGTERM. Attempting to restore files before exit...");
+  try {
+    restore();
+  } finally {
+    process.exit(1);
+  }
+});
+
+process.on("uncaughtException", (err) => {
+  console.error("\n❌ Uncaught exception in Android build script:", err);
+  try {
+    restore();
+  } finally {
+    process.exit(1);
+  }
+});
+
+process.on("unhandledRejection", (reason) => {
+  console.error("\n❌ Unhandled promise rejection in Android build script:", reason);
+  try {
+    restore();
+  } finally {
+    process.exit(1);
+  }
+});
+
 // ─── Main ─────────────────────────────────────────────────────────────────
 
 try {
+  // If the user only wants to recover from a previous crashed run, do that
+  // first and exit without attempting a new build.
+  if (RESTORE_ONLY) {
+    restoreStaleBackups();
+    process.exit(0);
+  }
+
+  // If a previous run left .android-temp on disk (e.g. hard crash before
+  // finally/restore), clean that up before we start hiding files again.
+  restoreStaleBackups();
+
   console.log("\n📱 Storytime Android Build\n");
   console.log(
     `Mode: ${RELEASE ? "RELEASE" : "DEBUG"}${NO_APK ? " (export + sync only)" : ""}\n`,
@@ -328,7 +484,14 @@ try {
   hide("app/api");
   hide("app/robots.ts");
   hide("app/sitemap.ts");
-  hide(".env.local");
+  // NOTE: do NOT hide .env.local here. The release workflow writes
+  // NEXT_PUBLIC_API_URL (and friends) into .env.local right before
+  // invoking this script. Next.js reads .env.local at build time to
+  // inline NEXT_PUBLIC_* values into the bundle. If we move it away
+  // before `next build`, the audio player and every other consumer
+  // of NEXT_PUBLIC_API_URL fall back to the default (localhost) and
+  // the release build ships with a broken API base URL. The env file
+  // doesn't need to be hidden — Capacitor/Cordova don't read it.
 
   // ── 2. Flatten/exclude dynamic-segment routes for static export ─────────
   // story/page.tsx, all-genres/page.tsx, edit-story/page.tsx, and
@@ -358,7 +521,14 @@ try {
 
   // ── 3. Next.js static export ─────────────────────────────────────────────
   console.log("\nStep 3: Building Next.js static export...\n");
-  execSync("next build", { stdio: "inherit", env: buildEnv });
+  // Invoke Next.js' bin script directly via node, not via a bare
+  // `next build` shell command. CI runners don't put node_modules/.bin
+  // on PATH for shells spawned by execSync, so `next` isn't found
+  // there even though pnpm just installed it. Resolving the script
+  // via the package itself also sidesteps the .cmd-vs-shell-script
+  // shim differences between Windows and Linux.
+  const nextBin = require.resolve("next/dist/bin/next");
+  execSync(`node "${nextBin}" build`, { stdio: "inherit", env: buildEnv });
 
   // ── 4. Capacitor sync ─────────────────────────────────────────────────────
   console.log("\nStep 4: Running cap sync android...\n");
