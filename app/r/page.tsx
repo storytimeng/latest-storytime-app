@@ -1,6 +1,6 @@
 "use client";
 
-import ReferralClient from "./[slug]/client";
+import ReferralClient from "./client";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 
