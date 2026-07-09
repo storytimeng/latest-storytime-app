@@ -193,6 +193,47 @@ function loadEnvFileIntoBuildEnv(filePath) {
 }
 loadEnvFileIntoBuildEnv(".env.local");
 loadEnvFileIntoBuildEnv(".env");
+loadEnvFileIntoBuildEnv(".env.android");
+
+/**
+ * Resolve `NEXT_PUBLIC_BILLING_REVEAL_AT` from `NEXT_PUBLIC_BILLING_REVEAL_DAYS`
+ * (or accept an explicit ISO timestamp). Baked into the JS bundle so the
+ * `lib/billingMode.ts` resolver can use it as a build-time clock — the
+ * backend `/app-config` endpoint can still override it remotely via
+ * `force: true`.
+ *
+ * Always uses build time (not install time) as the anchor so a user
+ * clearing app data doesn't reset the clock.
+ */
+function resolveBillingRevealDate() {
+  if (buildEnv.NEXT_PUBLIC_BILLING_REVEAL_AT) {
+    // explicit ISO timestamp wins
+    const parsed = new Date(buildEnv.NEXT_PUBLIC_BILLING_REVEAL_AT);
+    if (!Number.isNaN(parsed.getTime())) {
+      console.log(
+        `✓ NEXT_PUBLIC_BILLING_REVEAL_AT: ${parsed.toISOString()} (explicit)`,
+      );
+      return;
+    }
+  }
+  const days = Number(buildEnv.NEXT_PUBLIC_BILLING_REVEAL_DAYS ?? 30);
+  if (!Number.isFinite(days) || days < 0) {
+    console.warn(
+      "⚠  NEXT_PUBLIC_BILLING_REVEAL_DAYS is not a non-negative number; defaulting to 30.",
+    );
+    buildEnv.NEXT_PUBLIC_BILLING_REVEAL_AT = new Date(
+      Date.now() + 30 * 86400_000,
+    ).toISOString();
+  } else {
+    buildEnv.NEXT_PUBLIC_BILLING_REVEAL_AT = new Date(
+      Date.now() + days * 86400_000,
+    ).toISOString();
+  }
+  console.log(
+    `✓ NEXT_PUBLIC_BILLING_REVEAL_AT: ${buildEnv.NEXT_PUBLIC_BILLING_REVEAL_AT} (${days} days from build)`,
+  );
+}
+resolveBillingRevealDate();
 
 /**
  * Fail fast if NEXT_PUBLIC_API_URL is missing. This is a compile-time
@@ -470,7 +511,9 @@ async function waitForNextBuildLock() {
 
 // Defensive cleanup on unexpected termination.
 process.on("SIGINT", () => {
-  console.warn("\n⚠  Received SIGINT. Attempting to restore files before exit...");
+  console.warn(
+    "\n⚠  Received SIGINT. Attempting to restore files before exit...",
+  );
   try {
     restore();
   } finally {
@@ -479,7 +522,9 @@ process.on("SIGINT", () => {
 });
 
 process.on("SIGTERM", () => {
-  console.warn("\n⚠  Received SIGTERM. Attempting to restore files before exit...");
+  console.warn(
+    "\n⚠  Received SIGTERM. Attempting to restore files before exit...",
+  );
   try {
     restore();
   } finally {
@@ -497,7 +542,10 @@ process.on("uncaughtException", (err) => {
 });
 
 process.on("unhandledRejection", (reason) => {
-  console.error("\n❌ Unhandled promise rejection in Android build script:", reason);
+  console.error(
+    "\n❌ Unhandled promise rejection in Android build script:",
+    reason,
+  );
   try {
     restore();
   } finally {

@@ -1,6 +1,6 @@
 import { Metadata } from "next";
-import { PremiumView } from "@/views";
 import { APP_CONFIG } from "@/config/app";
+import PremiumPageBody from "./PremiumPageBody";
 
 export const metadata: Metadata = {
   title: "Storytime Premium",
@@ -33,7 +33,7 @@ export const metadata: Metadata = {
 };
 
 const PremiumPage = () => {
-  return <PremiumView />;
+  return <PremiumPageBody />;
 };
 
 export default PremiumPage;
