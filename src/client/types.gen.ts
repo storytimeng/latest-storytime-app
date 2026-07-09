@@ -4149,6 +4149,17 @@ export type AdminEmailTemplatesControllerGetDeliveryLogsResponses = {
     200: unknown;
 };
 
+export type AdminEmailTemplatesControllerBulkToggleData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/admin/email-templates/bulk-toggle';
+};
+
+export type AdminEmailTemplatesControllerBulkToggleResponses = {
+    200: unknown;
+};
+
 export type AdminEmailTemplatesControllerGetTemplateData = {
     body?: never;
     path: {
@@ -5623,6 +5634,61 @@ export type AdminControllerGetOverviewReportResponses = {
     /**
      * Overview report retrieved successfully
      */
+    200: unknown;
+};
+
+export type AdminControllerStartDatabaseMigrationData = {
+    body: {
+        /**
+         * Full PostgreSQL connection string for the target (destination) database
+         */
+        targetUrl: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/admin/database/migrate';
+};
+
+export type AdminControllerStartDatabaseMigrationErrors = {
+    /**
+     * Validation error or migration already in progress/completed
+     */
+    400: unknown;
+    /**
+     * MIGRATION_ENABLED is not set to true in env
+     */
+    403: unknown;
+};
+
+export type AdminControllerStartDatabaseMigrationResponses = {
+    /**
+     * Migration started in background
+     */
+    202: unknown;
+};
+
+export type AdminControllerGetDatabaseMigrationStatusData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/admin/database/migrate/status';
+};
+
+export type AdminControllerGetDatabaseMigrationStatusResponses = {
+    /**
+     * Migration state
+     */
+    200: unknown;
+};
+
+export type AdminControllerResetDatabaseMigrationData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/admin/database/migrate/reset';
+};
+
+export type AdminControllerResetDatabaseMigrationResponses = {
     200: unknown;
 };
 
