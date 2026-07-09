@@ -1156,6 +1156,36 @@ export type AdminUpgradeSubscriptionDto = {
     planCode: string;
 };
 
+export type AppConfigResponseDto = {
+    /**
+     * Internal row id
+     */
+    id: string;
+    /**
+     * Active billing mode for the mobile app
+     */
+    mode: 'reader' | 'playbilling';
+    /**
+     * Whether the backend mode overrides the build-time reveal date
+     */
+    force: boolean;
+    /**
+     * Last update timestamp (ISO 8601)
+     */
+    updatedAt: string;
+};
+
+export type UpdateAppConfigDto = {
+    /**
+     * Which billing UI the Android app should show. `reader` = Reader App (no in-app pricing, no in-app purchase); `playbilling` = Google Play Billing.
+     */
+    mode: 'reader' | 'playbilling';
+    /**
+     * When true, this setting always wins over the APK's build-time reveal date. Set `false` to fall back to the build-time clock.
+     */
+    force?: boolean;
+};
+
 export type UsersControllerCheckPenNameAvailabilityData = {
     body?: never;
     path?: never;
@@ -6464,3 +6494,42 @@ export type AdminSubscriptionsControllerUpgradeSubscriptionData = {
 export type AdminSubscriptionsControllerUpgradeSubscriptionResponses = {
     201: unknown;
 };
+
+export type AppConfigControllerGetConfigData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/app-config';
+};
+
+export type AppConfigControllerGetConfigResponses = {
+    /**
+     * Current app config
+     */
+    200: AppConfigResponseDto;
+};
+
+export type AppConfigControllerGetConfigResponse = AppConfigControllerGetConfigResponses[keyof AppConfigControllerGetConfigResponses];
+
+export type AppConfigControllerUpdateConfigData = {
+    body: UpdateAppConfigDto;
+    path?: never;
+    query?: never;
+    url: '/app-config';
+};
+
+export type AppConfigControllerUpdateConfigErrors = {
+    /**
+     * Unauthorized - Admin authentication required
+     */
+    401: unknown;
+};
+
+export type AppConfigControllerUpdateConfigResponses = {
+    /**
+     * Updated app config
+     */
+    200: AppConfigResponseDto;
+};
+
+export type AppConfigControllerUpdateConfigResponse = AppConfigControllerUpdateConfigResponses[keyof AppConfigControllerUpdateConfigResponses];
