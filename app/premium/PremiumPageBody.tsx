@@ -15,7 +15,7 @@ import { PremiumView } from "@/views";
  * compliant — no in-app prices, no in-app subscribe button.
  */
 export default function PremiumPageBody() {
-  const { mode, ready, revealPassed } = useBillingMode();
+  const { mode, source, ready, revealPassed } = useBillingMode();
 
   if (!ready) {
     return (
@@ -27,15 +27,17 @@ export default function PremiumPageBody() {
     );
   }
 
+  // Web users always get the full PremiumView (Stripe checkout).
+  // Google Play policy only applies to Android builds.
+  if (source === "web") {
+    return <PremiumView />;
+  }
+
+  // Android: Play Billing UI once the reveal date has passed (or admin forced it).
   if (mode === "playbilling" && revealPassed) {
     return <PlayBillingPlans />;
   }
 
-  // On web (IS_ANDROID=false), the hook returns mode=playbilling with
-  // revealPassed=true, so we fall through to the full PremiumView.
-  if (mode === "playbilling") {
-    return <PremiumView />;
-  }
-
+  // Android: Reader App mode — hide in-app pricing to stay Play-policy compliant.
   return <AndroidPricingNotice />;
 }

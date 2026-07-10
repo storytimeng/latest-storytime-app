@@ -6,5 +6,5 @@ export const createClientConfig: CreateClientConfig = (config) => ({
     process.env.NEXT_PUBLIC_PROXY === "true"
       ? "/api/proxy"
       : process.env.NEXT_PUBLIC_API_URL ||
-        "https://storytime-backend-1-0.onrender.com",
+        "https://back.storytime.ng",
 });

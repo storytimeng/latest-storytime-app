@@ -17,7 +17,7 @@ import { PlayBillingPlans } from "@/components/premium/PlayBillingPlans";
  * metadata — this client component just takes over the body.
  */
 export default function PricingPageBody() {
-  const { mode, ready, revealPassed } = useBillingMode();
+  const { source, mode, ready, revealPassed } = useBillingMode();
 
   if (!ready) {
     return (
@@ -29,9 +29,14 @@ export default function PricingPageBody() {
     );
   }
 
+  // Web users: no Android billing components apply here.
+  if (source === "web") return null;
+
+  // Android: Play Billing UI once the reveal date has passed (or admin forced it).
   if (mode === "playbilling" && revealPassed) {
     return <PlayBillingPlans />;
   }
 
+  // Android: Reader App mode — direct users to subscribe on the web.
   return <AndroidPricingNotice />;
 }
