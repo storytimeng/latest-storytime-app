@@ -1,0 +1,46 @@
+name: Keep Capgo.onrender.com Alive
+
+
+on:
+
+  # Render free tier spins down after 15 min of no inbound traffic.
+
+  # GitHub Actions cron can drift by 5-15 min under load, so */7 is a safe interval.
+
+  schedule:
+
+    - cron: "*/7 * * * *"
+
+  workflow_dispatch:
+
+
+jobs:
+
+  ping:
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Ping Capgo on Render
+
+        run: |
+
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+
+            "https://capgo.onrender.com/" \
+
+            --max-time 30)
+
+          echo "Capgo responded with HTTP $STATUS"
+
+          if [ "$STATUS" = "200" ]; then
+
+            echo "Capgo is alive"
+
+          else
+
+            echo "Capgo returned $STATUS — may be waking up (cold start can take 30-60s)"
+
+          fi
+
