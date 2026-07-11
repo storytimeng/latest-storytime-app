@@ -3,7 +3,7 @@
 # dependencies
 /node_modules
 
-
+storytime.code-workspace
 
 # testing
 /coverage
