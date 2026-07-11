@@ -26,23 +26,5 @@ jobs:
 
       - name: Ping Supabase Auth health endpoint
 
-        run: |
-
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-
-            "https://xssneissyscmaibeoojq.supabase.co/auth/v1/health" \
-
-            --max-time 30)
-
-          echo "Supabase responded with HTTP $STATUS"
-
-          if [ "$STATUS" = "200" ]; then
-
-            echo "Supabase is alive"
-
-          else
-
-            echo "Supabase returned $STATUS — project may be paused. Restore from https://supabase.com/dashboard"
-
-          fi
+        run: STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "https://xssneissyscmaibeoojq.supabase.co/auth/v1/health") && echo "Supabase responded with HTTP $STATUS" && if [ "$STATUS" = "200" ]; then echo "Supabase is alive"; else echo "Supabase returned $STATUS - project may be paused. Restore from https://supabase.com/dashboard"; fi
 
