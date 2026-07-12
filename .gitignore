@@ -28,6 +28,27 @@ yarn-error.log*
 .env*.local
 .env*
 
+# Examples and templates for local env files (must NOT match .env* above)
+!.env.capgo.example
+!.env.android.example
+
+# ── Capgo / Android signing secrets (NEVER commit) ──
+# Local-only cheat sheet for the GitHub Actions secrets the workflows need.
+.github/workflow-secrets.local.env
+# The keystore / passwords that powers the release builds.
+.env.android
+android/app/upload-keystore.jks
+android/app/*.keystore
+android/keystore.properties
+keystore-base64.txt
+tmp-keystore-*
+
+# Supabase CLI local link state (created by `supabase link`)
+supabase/
+
+# Build-time artifacts from scripts/android-build.mjs
+app/r/client.tsx
+
 # vercel
 .vercel
 

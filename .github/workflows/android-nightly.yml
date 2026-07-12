@@ -1,18 +1,26 @@
 name: Android Nightly Debug
 
 # ─── What this does ────────────────────────────────────────────────────────
-# Builds a fresh debug APK on every push to `android` and on a nightly
-# schedule, publishes it as a GitHub pre-release, and uploads the same
-# APK as a workflow artifact (retained 30 days).
+# Builds a fresh debug APK on every push to `main` or `android`, on a
+# nightly cron, and on manual dispatch. Publishes it as a GitHub
+# pre-release, uploads the APK as a workflow artifact (retained 30
+# days), AND pushes the web bundle to the Capgo `dev` channel.
 #
-# The existing `android-build.yml` is the heavyweight, manual, optionally
-# release-signed build. This workflow is the lightweight, always-on
-# feedback loop — every commit gets a shareable APK without anyone
-# having to click "Run workflow".
+# ─── Capgo channel mapping ────────────────────────────────────────────────
+# This workflow ALWAYS pushes to the Capgo `dev` channel. It is
+# intentionally the lightweight, always-on feedback loop — a broken
+# build here can never reach the `production` channel.
+#
+# The companion `android-build.yml` workflow handles:
+#   • main / android branch pushes  → dev
+#   • v* tag pushes                 → production
+#   • manual release dispatch       → production
+# ─────────────────────────────────────────────────────────────────────────
 
 on:
   push:
     branches:
+      - main
       - android
   # Catch any commit that didn't trigger a push (e.g. a force-push that
   # rewrote a ref, or a tag move) and run once a day so a release is
@@ -85,26 +93,24 @@ jobs:
 
       - name: Create .env.local for build
         run: |
+          # Fall back to https://back.storytime.ng if the GitHub variable
+          # is unset/misscoped. Same fallback lives in heyapi-runtime.ts.
+          API_URL="${{ vars.NEXT_PUBLIC_API_URL || 'https://back.storytime.ng' }}"
           cat > .env.local << EOF
-          NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}
-          NEXT_PUBLIC_BACKEND_URL=${{ vars.NEXT_PUBLIC_API_URL }}
+          NEXT_PUBLIC_API_URL=${API_URL}
+          NEXT_PUBLIC_BACKEND_URL=${API_URL}
           NEXT_PUBLIC_PLATFORM=android
           NEXT_PUBLIC_DEBUG_PROXY=false
           NEXT_PUBLIC_PROXY=false
           EOF
 
-      # Fail loudly here instead of silently shipping an APK that falls
-      # back to localhost. `${{ vars.X }}` for an unset/misscoped repo
-      # variable resolves to an empty string with no error — this is
-      # the only thing that will actually catch it.
       - name: Verify required build vars are set
         run: |
           echo "── .env.local contents ──"
           cat .env.local
           echo "──────────────────────────"
           if [ -z "${{ vars.NEXT_PUBLIC_API_URL }}" ]; then
-            echo "::error::NEXT_PUBLIC_API_URL repo/org Actions variable is empty or unset. Check Settings → Secrets and variables → Actions → Variables tab (not Secrets), and make sure it isn't scoped to an Environment this workflow doesn't declare."
-            exit 1
+            echo "::warning::NEXT_PUBLIC_API_URL repo/org Actions variable is empty or unset. Falling back to https://back.storytime.ng for this build."
           fi
 
       - name: Build Next.js static export
@@ -112,6 +118,28 @@ jobs:
 
       - name: Make gradlew executable
         run: chmod +x android/gradlew
+
+      # ── Capgo OTA upload (always → `dev` channel) ──────────────────────
+      # Nightlies (push, cron, or manual) go to `dev` only, so a bad
+      # build can never reach real users on `production`. Use
+      # `android-build.yml` with a `v*` tag or manual release for
+      # production pushes.
+      - name: Upload web bundle to Capgo (dev channel)
+        if: ${{ secrets.CAPGO_API_KEY != '' }}
+        env:
+          CAPGO_API_KEY:  ${{ secrets.CAPGO_API_KEY }}
+          CAPGO_API_HOST:  ${{ secrets.CAPGO_API_HOST }}
+        run: |
+          echo "::notice::Capgo channel: dev (nightly build #${{ github.run_number }} on ${{ github.ref_name }})"
+          npx --yes @capgo/cli@latest bundle upload \
+            com.storytimeng \
+            --apikey "$CAPGO_API_KEY" \
+            --channel dev \
+            --path out \
+            --s3-region auto \
+            --s3-apikey "$CAPGO_API_KEY" \
+            --no-code-check \
+            --comment "Nightly build #${{ github.run_number }} on ${{ github.ref_name }}"
 
       - name: Build Debug APK
         run: |

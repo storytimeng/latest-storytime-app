@@ -11,6 +11,7 @@ import Cookies from "js-cookie";
 import { ToastProvider } from "@heroui/toast";
 import { AuthModal } from "@/components/reusables/modals/AuthModal";
 import { AuthGuard } from "@/components/AuthGuard";
+import { CapacitorUpdater } from "@capgo/capacitor-updater";
 
 // Hey-API client setup (runs immediately)
 import "../src/setup";
@@ -39,6 +40,27 @@ export function Providers({ children, themeProps }: ProvidersProps) {
 
   React.useEffect(() => {
     hydrateAuthFromCookies();
+  }, []);
+
+  // Tell Capgo the web bundle is fully booted and ready to install any
+  // downloaded OTA update. Runs only on a real device (Capacitor), and
+  // only on Android/iOS where the updater plugin is registered. A
+  // failure here is non-fatal — the user just won't get the new bundle
+  // until next launch.
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    const cap = (window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } })
+      .Capacitor;
+    if (!cap?.isNativePlatform?.()) return;
+    CapacitorUpdater.notifyAppReady()
+      .then(() => {
+        // eslint-disable-next-line no-console
+        console.log("[capgo] notifyAppReady ok");
+      })
+      .catch((err: unknown) => {
+        // eslint-disable-next-line no-console
+        console.warn("[capgo] notifyAppReady failed", err);
+      });
   }, []);
 
   return (

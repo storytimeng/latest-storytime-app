@@ -15,13 +15,18 @@
     "android:gradle:debug": "node scripts/android-gradle-only.mjs",
     "android:gradle:release": "node scripts/android-gradle-only.mjs --release",
     "start": "next start",
-    "lint": "eslint --fix"
+    "lint": "eslint --fix",
+    "capgo:dev":    "node scripts/capgo-deploy.mjs",
+    "capgo:prod":   "node scripts/capgo-deploy.mjs --prod",
+    "capgo:dry":    "node scripts/capgo-deploy.mjs --dry",
+    "capgo:doctor": "capgo doctor"
   },
   "dependencies": {
     "@capacitor/android": "^8.4.1",
     "@capacitor/app": "^8.1.0",
     "@capacitor/core": "^8.4.1",
     "@capgo/capacitor-media-session": "^8.0.28",
+    "@capgo/capacitor-updater": "^8.50.2",
     "@heroui/accordion": "2.2.24",
     "@heroui/alert": "2.2.27",
     "@heroui/autocomplete": "2.3.29",

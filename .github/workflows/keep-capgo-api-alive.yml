@@ -1,0 +1,34 @@
+name: Keep Capgo API Alive
+
+on:
+  # Supabase + Render free tiers can sleep. The dashboard ping (kept by
+  # capgo.onrender.com.yml) is not enough — the API is at the Supabase
+  # functions host. Ping it every 5 days to keep it warm.
+  schedule:
+    - cron: "0 3 */5 * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase RPC used by capgo CLI auth
+        run: |
+          # A 401 here is fine (we're not passing a real key) — what we
+          # need is the endpoint to respond at all, which proves the
+          # Edge Function and the public schema are awake.
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 \
+            -X POST \
+            -H "apikey: ${{ secrets.CAPGO_SUPA_ANON }}" \
+            -H "authorization: Bearer ${{ secrets.CAPGO_SUPA_ANON }}" \
+            -H "content-type: application/json" \
+            --data '{"apikey":"__ping__"}' \
+            "${{ secrets.CAPGO_API_HOST }}/rpc/get_user_id")
+          echo "Capgo API responded with HTTP $STATUS"
+          if [ "$STATUS" = "401" ] || [ "$STATUS" = "400" ]; then
+            echo "Capgo API is alive (auth rejected as expected for a ping)"
+          elif [ "$STATUS" = "200" ]; then
+            echo "Capgo API is alive and responding"
+          else
+            echo "::warning::Capgo API returned $STATUS — Supabase functions or the schema may be cold. Restore from https://supabase.com/dashboard"
+          fi

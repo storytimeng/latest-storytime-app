@@ -1,13 +1,24 @@
 name: Android Build
 
+# ── Channel mapping (Capgo) ──────────────────────────────────────────────
+# push to main     → debug APK  → Capgo channel: dev
+# push to android  → debug APK  → Capgo channel: dev
+# push tag v*      → release    → Capgo channel: production
+# workflow_dispatch with build_type=release → Capgo channel: production
+# pull_request (any branch) → debug APK, upload step is skipped in forks
+#                              because secrets are not exposed there.
+# ─────────────────────────────────────────────────────────────────────────
+
 on:
   push:
     branches:
+      - main
       - android
     tags:
       - "v*"
   pull_request:
     branches:
+      - main
       - android
   workflow_dispatch:
     inputs:
@@ -78,9 +89,14 @@ jobs:
 
       - name: Create .env.local for build
         run: |
+          # Fall back to https://back.storytime.ng if the GitHub variable
+          # is unset/misscoped. The web app's heyapi-runtime.ts has the
+          # same fallback, but baking it into the build env means the
+          # resulting JS bundle is correct even on a misconfigured run.
+          API_URL="${{ vars.NEXT_PUBLIC_API_URL || 'https://back.storytime.ng' }}"
           cat > .env.local << EOF
-          NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}
-          NEXT_PUBLIC_BACKEND_URL=${{vars.NEXT_PUBLIC_API_URL}}
+          NEXT_PUBLIC_API_URL=${API_URL}
+          NEXT_PUBLIC_BACKEND_URL=${API_URL}
           NEXT_PUBLIC_PLATFORM=android
           ANDROID_KEYSTORE_BASE64=${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           ANDROID_KEYSTORE_PASSWORD=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -92,24 +108,23 @@ jobs:
           # Belt-and-braces: also export to the shell so the spawned
           # `next build` and the Gradle steps below inherit them even
           # if anything ever moves .env.local out of the way.
-          echo "NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}" >> $GITHUB_ENV
-          echo "NEXT_PUBLIC_BACKEND_URL=${{ vars.NEXT_PUBLIC_API_URL }}" >> $GITHUB_ENV
+          echo "NEXT_PUBLIC_API_URL=${API_URL}" >> $GITHUB_ENV
+          echo "NEXT_PUBLIC_BACKEND_URL=${API_URL}" >> $GITHUB_ENV
           echo "NEXT_PUBLIC_PLATFORM=android" >> $GITHUB_ENV
           echo "NEXT_PUBLIC_DEBUG_PROXY=false" >> $GITHUB_ENV
           echo "NEXT_PUBLIC_PROXY=false" >> $GITHUB_ENV
 
-      # Fail loudly here instead of silently shipping an APK that falls
-      # back to localhost. `${{ vars.X }}` for an unset/misscoped repo
-      # variable resolves to an empty string with no error — this is
-      # the only thing that will actually catch it.
+      # Warn (not fail) if NEXT_PUBLIC_API_URL is empty — the build still
+      # proceeds with the back.storytime.ng fallback. If you want a hard
+      # failure, change this back to `exit 1` and remove the `||` in the
+      # env step above.
       - name: Verify required build vars are set
         run: |
           echo "── .env.local contents (secrets redacted below) ──"
           grep -v -E 'PASSWORD|BASE64' .env.local || true
           echo "──────────────────────────"
           if [ -z "${{ vars.NEXT_PUBLIC_API_URL }}" ]; then
-            echo "::error::NEXT_PUBLIC_API_URL repo/org Actions variable is empty or unset. Check Settings → Secrets and variables → Actions → Variables tab (not Secrets), and make sure it isn't scoped to an Environment this workflow doesn't declare."
-            exit 1
+            echo "::warning::NEXT_PUBLIC_API_URL repo/org Actions variable is empty or unset. Falling back to https://back.storytime.ng for this build."
           fi
 
       - name: Build Next.js static export
@@ -117,6 +132,48 @@ jobs:
 
       - name: Make gradlew executable
         run: chmod +x android/gradlew
+
+      # ── Capgo OTA upload ─────────────────────────────────────────────
+      # Runs after the web build (so `out/` exists) and BEFORE the APK
+      # assemble, so the APK can pull the freshly uploaded bundle on
+      # first launch. Channel mapping (see top-of-file comment):
+      #   • `main` or `android` branch push → dev
+      #   • tag `v*` push                   → production
+      #   • workflow_dispatch (release)     → production
+      # The upload step is gated on CAPGO_API_KEY being set so fork
+      # PRs (where secrets are not exposed) don't fail the build.
+      - name: Determine Capgo channel
+        id: capgo_channel
+        run: |
+          # IS_RELEASE is already set from the workflow-level env and is
+          # true for: tag pushes (refs/tags/v*) OR manual build_type=release.
+          if [ "${{ env.IS_RELEASE }}" = "true" ]; then
+            echo "channel=production" >> "$GITHUB_OUTPUT"
+            echo "::notice::Capgo channel: production (release / tag build)"
+          else
+            echo "channel=dev" >> "$GITHUB_OUTPUT"
+            echo "::notice::Capgo channel: dev (debug build on ${{ github.ref_name }})"
+          fi
+
+      - name: Upload web bundle to Capgo
+        if: ${{ secrets.CAPGO_API_KEY != '' }}
+        env:
+          # CAPGO_API_HOST tells the CLI where the self-hosted API lives
+          # (your Supabase functions URL). The Supabase anon key + host
+          # are read from capacitor.config.ts (CapacitorUpdater plugin
+          # block), so we don't need to pass them here.
+          CAPGO_API_KEY:  ${{ secrets.CAPGO_API_KEY }}
+          CAPGO_API_HOST:  ${{ secrets.CAPGO_API_HOST }}
+        run: |
+          npx --yes @capgo/cli@latest bundle upload \
+            com.storytimeng \
+            --apikey "$CAPGO_API_KEY" \
+            --channel "${{ steps.capgo_channel.outputs.channel }}" \
+            --path out \
+            --s3-region auto \
+            --s3-apikey "$CAPGO_API_KEY" \
+            --no-code-check \
+            --comment "GitHub Actions build #${{ github.run_number }} on ${{ github.ref_name }}"
 
       # ── Decode keystore BEFORE gradle build, so signing config can find it ──
       - name: Decode keystore
