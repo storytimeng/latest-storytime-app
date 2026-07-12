@@ -126,7 +126,11 @@ if (DRY) {
   process.exit(0);
 }
 
-// ── 4. upload to Capgo (TUS via Supabase Storage) ────────────────────────
+// ── 4. upload to Capgo (direct S3, R2-compatible) ────────────────────────
+// We upload directly to whatever S3-compatible backend the Render service
+// is configured to use. By default that's Cloudflare R2 (the fork's
+// production backend). If you switch backends, just update the S3_* env
+// vars in `.env.capgo.local`.
 banner("3/3 — upload to Capgo");
 run(
   [
@@ -139,7 +143,13 @@ run(
     "--apikey", process.env.CAPGO_API_KEY,
     "--channel", CHANNEL,
     "--path", "out",
-    "--tus",
+    "--s3-endpoint",  process.env.S3_ENDPOINT,
+    "--s3-region",     process.env.S3_REGION || "auto",
+    "--s3-bucket-name", process.env.S3_BUCKET || "capgo",
+    "--s3-apikey",     process.env.S3_ACCESS_KEY_ID,
+    "--s3-apisecret",  process.env.S3_SECRET_ACCESS_KEY,
+    "--s3-port",       process.env.S3_PORT || "443",
+    "--no-s3-ssl",     process.env.S3_SSL === "false" ? true : false,
     "--no-code-check",
     "--bundle", BUNDLE,
     "--comment", `Laptop deploy @ ${new Date().toISOString()}`,
@@ -148,6 +158,9 @@ run(
   {
     env: {
       ...process.env,
+      // The CLI still needs to know where the Capgo *API* is (Supabase
+      // functions host in our case) for auth and metadata calls. This is
+      // separate from where the bundle *bytes* go (R2).
       CAPGO_API_HOST: process.env.CAPGO_API_HOST,
       CAPGO_SUPA_HOST: process.env.CAPGO_SUPA_HOST || "https://xssneissyscmaibeoojq.supabase.co",
       CAPGO_SUPA_ANON: process.env.CAPGO_SUPA_ANON || "sb_publishable_wMAICJbQ1OYszQudDGg3sA_rMm1jFpC",
