@@ -172,10 +172,15 @@ jobs:
           # block), so we don't need to pass them here.
           CAPGO_API_KEY:  ${{ secrets.CAPGO_API_KEY }}
           CAPGO_API_HOST:  ${{ secrets.CAPGO_API_HOST }}
-          # S3/R2 storage credentials for the new direct-S3 upload path
-          # (replaces the old TUS protocol). The CLI reads these env
-          # vars directly; the explicit --s3-* flags below are belt-
-          # and-braces in case the env-var lookup ever changes.
+          # S3 credentials for the bundle storage. In this self-hosted
+          # setup the backend uses Supabase Storage as the S3 backend
+          # (endpoint: <project>.storage.supabase.co/storage/v1/s3).
+          # The CLI reads these env vars directly; the explicit --s3-*
+          # flags below are belt-and-braces in case the env-var lookup
+          # ever changes. S3_PORT is intentionally NOT passed — the CLI
+          # computes it from the S3_SSL flag on the backend (false in
+          # this self-hosted setup). The Supabase Storage endpoint
+          # serves both HTTP and HTTPS, and the CLI negotiates correctly.
           S3_ACCESS_KEY_ID:     ${{ secrets.S3_ACCESS_KEY_ID }}
           S3_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_ACCESS_KEY }}
           S3_BUCKET:            ${{ secrets.S3_BUCKET }}
