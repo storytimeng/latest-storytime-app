@@ -172,15 +172,20 @@ jobs:
           # block), so we don't need to pass them here.
           CAPGO_API_KEY:  ${{ secrets.CAPGO_API_KEY }}
           CAPGO_API_HOST:  ${{ secrets.CAPGO_API_HOST }}
-          # S3 credentials for the bundle storage. In this self-hosted
-          # setup the backend uses Supabase Storage as the S3 backend
-          # (endpoint: <project>.storage.supabase.co/storage/v1/s3).
-          # The CLI reads these env vars directly; the explicit --s3-*
-          # flags below are belt-and-braces in case the env-var lookup
-          # ever changes. S3_PORT is intentionally NOT passed — the CLI
-          # computes it from the S3_SSL flag on the backend (false in
-          # this self-hosted setup). The Supabase Storage endpoint
-          # serves both HTTP and HTTPS, and the CLI negotiates correctly.
+          # S3 credentials for direct S3 upload to Supabase Storage.
+          # Required because the self-hosted Capgo "files" backend
+          # (the part of Capgo that handles TUS / multipart bundle
+          # uploads) is NOT deployed — the self-hosted setup at
+          # capgo.onrender.com is the dashboard frontend only, while
+          # the actual functions live at xssneissyscmaibeoojq.supabase.co.
+          # Without these S3 flags, the CLI falls back to the default
+          # files API (files.capgo.app) which then fails the upload.
+          # With these flags, the CLI uploads the zip directly to
+          # Supabase Storage and the device plugin downloads it
+          # directly from there (via the external_url field). The
+          # dashboard shows "No zip bundle" because the zip is in
+          # your storage, not in Capgo's R2 — this is expected and
+          # harmless; the auto-updater still works end-to-end.
           S3_ACCESS_KEY_ID:     ${{ secrets.S3_ACCESS_KEY_ID }}
           S3_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_ACCESS_KEY }}
           S3_BUCKET:            ${{ secrets.S3_BUCKET }}
