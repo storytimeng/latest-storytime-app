@@ -170,15 +170,13 @@ jobs:
           fi
 
       - name: Upload web bundle to Capgo
-        if: secrets.CAPGO_API_KEY != ''
         env:
           CAPGO_API_KEY: ${{ secrets.CAPGO_API_KEY }}
         run: |
-          # --no-code-check is ONLY applied to dev-channel uploads so
-          # debug nightlies can ship a new web bundle without bumping
-          # the native version. Production uploads (tag pushes /
-          # manual release) MUST run the compatibility check, otherwise
-          # a broken bundle can reach real users.
+          if [ -z "$CAPGO_API_KEY" ]; then
+            echo "::notice::CAPGO_API_KEY not set (likely a fork PR) — skipping Capgo upload."
+            exit 0
+          fi
           NO_CODE_CHECK=""
           if [ "${{ steps.capgo_channel.outputs.channel }}" = "dev" ]; then
             NO_CODE_CHECK="--no-code-check"
@@ -191,7 +189,6 @@ jobs:
             $NO_CODE_CHECK \
             --bundle "0.0.1-$(date -u +%Y%m%d%H%M%S)" \
             --comment "GitHub Actions build #${{ github.run_number }} on ${{ github.ref_name }}"
-
       # ── Decode keystore BEFORE gradle build, so signing config can find it ──
       - name: Decode keystore
         if: env.IS_RELEASE == 'true'

@@ -131,10 +131,13 @@ jobs:
       # + `localApiFiles`, which routes the upload through our Supabase
       # edge functions. See capacitor.config.ts for the self-hosted config.
       - name: Upload web bundle to Capgo (dev channel)
-        if: secrets.CAPGO_API_KEY != ''
         env:
           CAPGO_API_KEY: ${{ secrets.CAPGO_API_KEY }}
         run: |
+          if [ -z "$CAPGO_API_KEY" ]; then
+            echo "::notice::CAPGO_API_KEY not set (likely a fork PR) — skipping Capgo upload."
+            exit 0
+          fi
           echo "::notice::Capgo channel: dev (nightly build #${{ github.run_number }} on ${{ github.ref_name }})"
           npx --yes @capgo/cli@latest bundle upload \
             com.storytimeng \
@@ -144,7 +147,6 @@ jobs:
             --no-code-check \
             --bundle "0.0.1-$(date -u +%Y%m%d%H%M%S)" \
             --comment "Nightly build #${{ github.run_number }} on ${{ github.ref_name }}"
-
       - name: Build Debug APK
         run: |
           cd android
