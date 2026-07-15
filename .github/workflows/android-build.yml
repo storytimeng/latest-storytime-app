@@ -172,6 +172,15 @@ jobs:
           # block), so we don't need to pass them here.
           CAPGO_API_KEY:  ${{ secrets.CAPGO_API_KEY }}
           CAPGO_API_HOST:  ${{ secrets.CAPGO_API_HOST }}
+          # S3/R2 storage credentials for the new direct-S3 upload path
+          # (replaces the old TUS protocol). The CLI reads these env
+          # vars directly; the explicit --s3-* flags below are belt-
+          # and-braces in case the env-var lookup ever changes.
+          S3_ACCESS_KEY_ID:     ${{ secrets.S3_ACCESS_KEY_ID }}
+          S3_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_ACCESS_KEY }}
+          S3_BUCKET:            ${{ secrets.S3_BUCKET }}
+          S3_ENDPOINT:          ${{ secrets.S3_ENDPOINT }}
+          S3_REGION:            ${{ secrets.S3_REGION }}
         run: |
           # --no-code-check is ONLY applied to dev-channel uploads so
           # debug nightlies can ship a new web bundle without bumping
@@ -187,8 +196,11 @@ jobs:
             --apikey "$CAPGO_API_KEY" \
             --channel "${{ steps.capgo_channel.outputs.channel }}" \
             --path out \
-            --s3-region auto \
-            --s3-apikey "$CAPGO_API_KEY" \
+            --s3-apikey "$S3_ACCESS_KEY_ID" \
+            --s3-apisecret "$S3_SECRET_ACCESS_KEY" \
+            --s3-bucket-name "$S3_BUCKET" \
+            --s3-endpoint "$S3_ENDPOINT" \
+            --s3-region "$S3_REGION" \
             $NO_CODE_CHECK \
             --comment "GitHub Actions build #${{ github.run_number }} on ${{ github.ref_name }}"
 
