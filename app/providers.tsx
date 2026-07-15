@@ -11,7 +11,6 @@ import Cookies from "js-cookie";
 import { ToastProvider } from "@heroui/toast";
 import { AuthModal } from "@/components/reusables/modals/AuthModal";
 import { AuthGuard } from "@/components/AuthGuard";
-import { CapacitorUpdater } from "@capgo/capacitor-updater";
 
 // Hey-API client setup (runs immediately)
 import "../src/setup";
@@ -46,20 +45,29 @@ export function Providers({ children, themeProps }: ProvidersProps) {
   // downloaded OTA update. Runs only on a real device (Capacitor), and
   // only on Android/iOS where the updater plugin is registered. A
   // failure here is non-fatal — the user just won't get the new bundle
-  // until next launch.
+  // until next launch. The plugin module is dynamically imported so it
+  // (and the capgo native bridge) is not part of the web bundle on
+  // web/PWA sessions.
   React.useEffect(() => {
     if (typeof window === "undefined") return;
     const cap = (window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } })
       .Capacitor;
     if (!cap?.isNativePlatform?.()) return;
-    CapacitorUpdater.notifyAppReady()
-      .then(() => {
-        // eslint-disable-next-line no-console
-        console.log("[capgo] notifyAppReady ok");
-      })
+    void import("@capgo/capacitor-updater")
+      .then(({ CapacitorUpdater }) =>
+        CapacitorUpdater.notifyAppReady()
+          .then(() => {
+            // eslint-disable-next-line no-console
+            console.log("[capgo] notifyAppReady ok");
+          })
+          .catch((err: unknown) => {
+            // eslint-disable-next-line no-console
+            console.warn("[capgo] notifyAppReady failed", err);
+          }),
+      )
       .catch((err: unknown) => {
         // eslint-disable-next-line no-console
-        console.warn("[capgo] notifyAppReady failed", err);
+        console.warn("[capgo] failed to load updater plugin", err);
       });
   }, []);
 

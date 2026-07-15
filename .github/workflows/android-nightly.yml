@@ -125,7 +125,7 @@ jobs:
       # `android-build.yml` with a `v*` tag or manual release for
       # production pushes.
       - name: Upload web bundle to Capgo (dev channel)
-        if: ${{ secrets.CAPGO_API_KEY != '' }}
+        if: secrets.CAPGO_API_KEY != ''
         env:
           CAPGO_API_KEY:  ${{ secrets.CAPGO_API_KEY }}
           CAPGO_API_HOST:  ${{ secrets.CAPGO_API_HOST }}

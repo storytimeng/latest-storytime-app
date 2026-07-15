@@ -93,6 +93,14 @@ jobs:
           # is unset/misscoped. The web app's heyapi-runtime.ts has the
           # same fallback, but baking it into the build env means the
           # resulting JS bundle is correct even on a misconfigured run.
+          #
+          # ANDROID_KEY_ALIAS is a vars (not a secret) — the alias is the
+          # least-sensitive piece of signing material (just a label for
+          # the key inside the .jks), and android/app/build.gradle
+          # already falls back to android/keystore.properties
+          # (keyAlias=storytime) when the env var is empty, so a missing
+          # vars is non-fatal. The release build step below MUST read
+          # from the same source as this line.
           API_URL="${{ vars.NEXT_PUBLIC_API_URL || 'https://back.storytime.ng' }}"
           cat > .env.local << EOF
           NEXT_PUBLIC_API_URL=${API_URL}
@@ -156,7 +164,7 @@ jobs:
           fi
 
       - name: Upload web bundle to Capgo
-        if: ${{ secrets.CAPGO_API_KEY != '' }}
+        if: secrets.CAPGO_API_KEY != ''
         env:
           # CAPGO_API_HOST tells the CLI where the self-hosted API lives
           # (your Supabase functions URL). The Supabase anon key + host
@@ -165,6 +173,15 @@ jobs:
           CAPGO_API_KEY:  ${{ secrets.CAPGO_API_KEY }}
           CAPGO_API_HOST:  ${{ secrets.CAPGO_API_HOST }}
         run: |
+          # --no-code-check is ONLY applied to dev-channel uploads so
+          # debug nightlies can ship a new web bundle without bumping
+          # the native version. Production uploads (tag pushes /
+          # manual release) MUST run the compatibility check, otherwise
+          # a broken bundle can reach real users.
+          NO_CODE_CHECK=""
+          if [ "${{ steps.capgo_channel.outputs.channel }}" = "dev" ]; then
+            NO_CODE_CHECK="--no-code-check"
+          fi
           npx --yes @capgo/cli@latest bundle upload \
             com.storytimeng \
             --apikey "$CAPGO_API_KEY" \
@@ -172,33 +189,37 @@ jobs:
             --path out \
             --s3-region auto \
             --s3-apikey "$CAPGO_API_KEY" \
-            --no-code-check \
+            $NO_CODE_CHECK \
             --comment "GitHub Actions build #${{ github.run_number }} on ${{ github.ref_name }}"
 
       # ── Decode keystore BEFORE gradle build, so signing config can find it ──
       - name: Decode keystore
-        if: ${{ env.IS_RELEASE == 'true' }}
+        if: env.IS_RELEASE == 'true'
         run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > ${{ runner.temp }}/keystore.jks
 
       - name: Build Debug APK
-        if: ${{ env.IS_RELEASE != 'true' }}
+        if: env.IS_RELEASE != 'true'
         run: |
           cd android
           ./gradlew assembleDebug --no-daemon
 
       - name: Build Release APK
-        if: ${{ env.IS_RELEASE == 'true' }}
+        if: env.IS_RELEASE == 'true'
         run: |
           cd android
           ./gradlew assembleRelease --no-daemon
         env:
           ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/keystore.jks
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          # ANDROID_KEY_ALIAS is a vars (not a secret) — must match the
+          # .env.local step above. build.gradle falls back to
+          # keystore.properties when this is empty, so a missing vars
+          # is non-fatal.
+          ANDROID_KEY_ALIAS: ${{ vars.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
 
       - name: Upload Debug APK
-        if: ${{ env.IS_RELEASE != 'true' }}
+        if: env.IS_RELEASE != 'true'
         uses: actions/upload-artifact@v4
         with:
           name: storytime-debug-${{ github.run_number }}
@@ -206,7 +227,7 @@ jobs:
           retention-days: 14
 
       - name: Upload Release APK
-        if: ${{ env.IS_RELEASE == 'true' }}
+        if: env.IS_RELEASE == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: storytime-release-${{ github.run_number }}
@@ -215,7 +236,7 @@ jobs:
 
       # ── Only creates an actual GitHub Release on a version tag push ────────
       - name: Create GitHub Release
-        if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+        if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
           files: android/app/build/outputs/apk/release/*.apk
