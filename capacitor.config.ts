@@ -38,7 +38,9 @@ const config: CapacitorConfig = {
       // to "production" before `npx cap sync` (e.g. via a separate
       // capacitor.config.prod.ts or a build-time sed), otherwise
       // end users will receive dev-only bundles.
+      autoUpdate: true,
       defaultChannel: "dev",
+      directUpdate: "atInstall",
     },
   },
 };
