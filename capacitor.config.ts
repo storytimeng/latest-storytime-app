@@ -32,10 +32,13 @@ const config: CapacitorConfig = {
       appId: "com.storytimeng",
       localHost: "https://capgo.onrender.com",
       localWebHost: "https://capgo.onrender.com",
-      // Pin the install to the production channel by default; debug
-      // builds and nightlies override this via the `defaultChannel`
-      // env var before `npx cap sync` is run.
-      defaultChannel: "production",
+      // Default install channel. Set to "dev" so the auto-updater
+      // picks up the next push-to-main bundle (CI uploads `dev`).
+      // Production app-store / Play Store builds MUST override this
+      // to "production" before `npx cap sync` (e.g. via a separate
+      // capacitor.config.prod.ts or a build-time sed), otherwise
+      // end users will receive dev-only bundles.
+      defaultChannel: "dev",
     },
   },
 };
