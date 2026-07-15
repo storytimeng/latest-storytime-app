@@ -16,9 +16,9 @@
     "android:gradle:release": "node scripts/android-gradle-only.mjs --release",
     "start": "next start",
     "lint": "eslint --fix",
-    "capgo:dev":    "node scripts/capgo-deploy.mjs",
-    "capgo:prod":   "node scripts/capgo-deploy.mjs --prod",
-    "capgo:dry":    "node scripts/capgo-deploy.mjs --dry",
+    "capgo:dev": "node scripts/capgo-deploy.mjs",
+    "capgo:prod": "node scripts/capgo-deploy.mjs --prod",
+    "capgo:dry": "node scripts/capgo-deploy.mjs --dry",
     "capgo:doctor": "capgo doctor"
   },
   "dependencies": {

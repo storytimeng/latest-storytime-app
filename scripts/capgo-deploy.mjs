@@ -55,19 +55,28 @@ const PROD = args.includes("--prod");
 const VERBOSE = args.includes("--verbose");
 
 const CHANNEL = process.env.CAPGO_CHANNEL || (PROD ? "production" : "dev");
-const BUNDLE = process.env.CAPGO_BUNDLE || `0.0.1-${new Date().toISOString().replace(/[-:.TZ]/g, "").slice(0, 14)}`;
+const BUNDLE =
+  process.env.CAPGO_BUNDLE ||
+  `0.0.1-${new Date()
+    .toISOString()
+    .replace(/[-:.TZ]/g, "")
+    .slice(0, 14)}`;
 
 // ── helpers ───────────────────────────────────────────────────────────────
 function run(cmd, opts = {}) {
   const display = Array.isArray(cmd) ? cmd.join(" ") : cmd;
   console.log(`\n▸ ${display}`);
-  const r = spawnSync(cmd, { stdio: "inherit", shell: true, cwd: ROOT, ...opts });
+  const r = spawnSync(display, {
+    stdio: "inherit",
+    shell: true,
+    cwd: ROOT,
+    ...opts,
+  });
   if (r.status !== 0) {
     console.error(`✗ ${display} exited with code ${r.status}`);
     process.exit(r.status ?? 1);
   }
 }
-
 function need(name) {
   const v = process.env[name];
   if (!v) {
@@ -140,34 +149,26 @@ run(
     "bundle",
     "upload",
     "com.storytimeng",
-    "--apikey", process.env.CAPGO_API_KEY,
-    "--channel", CHANNEL,
-    "--path", "out",
-    "--s3-endpoint",  process.env.S3_ENDPOINT,
-    "--s3-region",     process.env.S3_REGION || "auto",
-    "--s3-bucket-name", process.env.S3_BUCKET || "capgo",
-    "--s3-apikey",     process.env.S3_ACCESS_KEY_ID,
-    "--s3-apisecret",  process.env.S3_SECRET_ACCESS_KEY,
-    "--s3-port",       process.env.S3_PORT || "443",
-    "--no-s3-ssl",     process.env.S3_SSL === "false" ? true : false,
+    "--apikey",
+    process.env.CAPGO_API_KEY,
+    "--channel",
+    CHANNEL,
+    "--path",
+    "out",
     "--no-code-check",
-    "--bundle", BUNDLE,
-    "--comment", `Laptop deploy @ ${new Date().toISOString()}`,
+    "--bundle",
+    BUNDLE,
+    "--comment",
+    `"Laptop deploy ${new Date().toISOString()}"`,
     ...(VERBOSE ? ["--verbose"] : []),
   ],
   {
-    env: {
-      ...process.env,
-      // The CLI still needs to know where the Capgo *API* is (Supabase
-      // functions host in our case) for auth and metadata calls. This is
-      // separate from where the bundle *bytes* go (R2).
-      CAPGO_API_HOST: process.env.CAPGO_API_HOST,
-      CAPGO_SUPA_HOST: process.env.CAPGO_SUPA_HOST || "https://xssneissyscmaibeoojq.supabase.co",
-      CAPGO_SUPA_ANON: process.env.CAPGO_SUPA_ANON || "sb_publishable_wMAICJbQ1OYszQudDGg3sA_rMm1jFpC",
-    },
-  }
+    env: { ...process.env },
+  },
 );
 
 banner("Done ✓");
 console.log(`Bundle ${BUNDLE} pushed to channel '${CHANNEL}'.`);
-console.log("Open the Capgo dashboard → Devices to see it delivered to your dev app.\n");
+console.log(
+  "Open the Capgo dashboard → Devices to see it delivered to your dev app.\n",
+);

@@ -124,16 +124,16 @@ jobs:
       # build can never reach real users on `production`. Use
       # `android-build.yml` with a `v*` tag or manual release for
       # production pushes.
+      #
+      # NOTE: no --s3-* flags here. The CLI's generic S3 client doesn't
+      # work against Supabase's S3-compatible storage endpoint (throws
+      # "Invalid port"). Instead, capacitor.config.ts sets `localS3: true`
+      # + `localApiFiles`, which routes the upload through our Supabase
+      # edge functions. See capacitor.config.ts for the self-hosted config.
       - name: Upload web bundle to Capgo (dev channel)
         if: secrets.CAPGO_API_KEY != ''
         env:
-          CAPGO_API_KEY:  ${{ secrets.CAPGO_API_KEY }}
-          CAPGO_API_HOST:  ${{ secrets.CAPGO_API_HOST }}
-          S3_ACCESS_KEY_ID:     ${{ secrets.S3_ACCESS_KEY_ID }}
-          S3_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_ACCESS_KEY }}
-          S3_BUCKET:            ${{ secrets.S3_BUCKET }}
-          S3_ENDPOINT:          ${{ secrets.S3_ENDPOINT }}
-          S3_REGION:            ${{ secrets.S3_REGION }}
+          CAPGO_API_KEY: ${{ secrets.CAPGO_API_KEY }}
         run: |
           echo "::notice::Capgo channel: dev (nightly build #${{ github.run_number }} on ${{ github.ref_name }})"
           npx --yes @capgo/cli@latest bundle upload \
@@ -141,12 +141,8 @@ jobs:
             --apikey "$CAPGO_API_KEY" \
             --channel dev \
             --path out \
-            --s3-apikey "$S3_ACCESS_KEY_ID" \
-            --s3-apisecret "$S3_SECRET_ACCESS_KEY" \
-            --s3-bucket-name "$S3_BUCKET" \
-            --s3-endpoint "$S3_ENDPOINT" \
-            --s3-region "$S3_REGION" \
             --no-code-check \
+            --bundle "0.0.1-$(date -u +%Y%m%d%H%M%S)" \
             --comment "Nightly build #${{ github.run_number }} on ${{ github.ref_name }}"
 
       - name: Build Debug APK

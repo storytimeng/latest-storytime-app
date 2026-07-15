@@ -50,8 +50,9 @@ export function Providers({ children, themeProps }: ProvidersProps) {
   // web/PWA sessions.
   React.useEffect(() => {
     if (typeof window === "undefined") return;
-    const cap = (window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } })
-      .Capacitor;
+    const cap = (
+      window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }
+    ).Capacitor;
     if (!cap?.isNativePlatform?.()) return;
     void import("@capgo/capacitor-updater")
       .then(({ CapacitorUpdater }) =>
@@ -82,9 +83,10 @@ export function Providers({ children, themeProps }: ProvidersProps) {
             fetcher: async (resource: string, init?: RequestInit) => {
               const headers = new Headers(init?.headers);
               const validToken = await prepareAuthSession();
-              const rawToken = !validToken && !isTokenExpired()
-                ? (getAuthToken() || Cookies.get("authToken"))
-                : null;
+              const rawToken =
+                !validToken && !isTokenExpired()
+                  ? getAuthToken() || Cookies.get("authToken")
+                  : null;
               const token = validToken || rawToken;
               if (token) headers.set("Authorization", `Bearer ${token}`);
               const res = await fetch(resource, { ...init, headers });

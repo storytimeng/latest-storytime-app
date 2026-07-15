@@ -25,8 +25,8 @@ const config: CapacitorConfig = {
         "https://xssneissyscmaibeoojq.supabase.co/functions/v1/channel_self",
       updateUrl:
         "https://xssneissyscmaibeoojq.supabase.co/functions/v1/updates",
-      //    localApiFiles: 'https://xssneissyscmaibeoojq.supabase.co/functions/v1',
-      //   localS3: true,
+      localApiFiles: "https://xssneissyscmaibeoojq.supabase.co/functions/v1",
+      localS3: true,
       localSupa: "https://xssneissyscmaibeoojq.supabase.co",
       localSupaAnon: "sb_publishable_wMAICJbQ1OYszQudDGg3sA_rMm1jFpC",
       appId: "com.storytimeng",
