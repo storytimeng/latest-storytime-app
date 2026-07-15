@@ -4,7 +4,7 @@ name: Keep Capgo.onrender.com Alive
 # GitHub Actions cron can drift by 5-15 min under load, so */7 is a safe interval.
 on:
   schedule:
-    - cron: "*/7 * * * *"
+    - cron: "*/4 * * * *"
   workflow_dispatch:
 
 jobs:
