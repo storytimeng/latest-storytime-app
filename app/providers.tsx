@@ -11,6 +11,7 @@ import Cookies from "js-cookie";
 import { ToastProvider } from "@heroui/toast";
 import { AuthModal } from "@/components/reusables/modals/AuthModal";
 import { AuthGuard } from "@/components/AuthGuard";
+import { showToast } from "@/lib/showNotification";
 
 // Hey-API client setup (runs immediately)
 import "../src/setup";
@@ -41,21 +42,22 @@ export function Providers({ children, themeProps }: ProvidersProps) {
     hydrateAuthFromCookies();
   }, []);
 
-  // Tell Capgo the web bundle is fully booted and ready to install any
-  // downloaded OTA update. Runs only on a real device (Capacitor), and
-  // only on Android/iOS where the updater plugin is registered. A
-  // failure here is non-fatal — the user just won't get the new bundle
-  // until next launch. The plugin module is dynamically imported so it
-  // (and the capgo native bridge) is not part of the web bundle on
-  // web/PWA sessions.
+  // ── Capgo live updates ────────────────────────────────────────────────
+  // Notify the native layer that the JS bundle booted OK, listen for update
+  // lifecycle events so the user sees toast notifications, and retry failed
+  // downloads after a delay. Only runs on Android/iOS native (not web/PWA).
   React.useEffect(() => {
     if (typeof window === "undefined") return;
     const cap = (
       window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }
     ).Capacitor;
     if (!cap?.isNativePlatform?.()) return;
+
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+
     void import("@capgo/capacitor-updater")
-      .then(({ CapacitorUpdater }) =>
+      .then(({ CapacitorUpdater }) => {
+        // ── Notify native that the JS bundle is alive ──
         CapacitorUpdater.notifyAppReady()
           .then(() => {
             // eslint-disable-next-line no-console
@@ -64,12 +66,79 @@ export function Providers({ children, themeProps }: ProvidersProps) {
           .catch((err: unknown) => {
             // eslint-disable-next-line no-console
             console.warn("[capgo] notifyAppReady failed", err);
-          }),
-      )
+          });
+
+        // ── Download started ──
+        CapacitorUpdater.addListener("download", (event) => {
+          if (event.percent === 0) {
+            showToast({
+              type: "info",
+              message: "📥 Update downloading…",
+              duration: 3000,
+            });
+          }
+        });
+
+        // ── Download complete → success toast ──
+        CapacitorUpdater.addListener("downloadComplete", () => {
+          showToast({
+            type: "success",
+            message: "✅ Update downloaded! Installing soon…",
+            duration: 3000,
+          });
+        });
+
+        // ── Download failed → error toast + retry after 30 s ──
+        CapacitorUpdater.addListener("downloadFailed", () => {
+          showToast({
+            type: "error",
+            message: "❌ Update download failed. Will retry shortly…",
+            duration: 4000,
+          });
+          retryTimer = setTimeout(() => {
+            CapacitorUpdater.triggerUpdateCheck().catch(() => {});
+          }, 30_000);
+        });
+
+        // ── Update failed to install → error toast + retry next launch ──
+        CapacitorUpdater.addListener("updateFailed", () => {
+          showToast({
+            type: "error",
+            message: "⚠️ Update couldn't install. Will try again on next launch.",
+            duration: 4000,
+          });
+        });
+
+        // ── Bundle applied successfully → success toast ──
+        CapacitorUpdater.addListener("set", (event) => {
+          showToast({
+            type: "success",
+            message: `✨ Updated to v${event.bundle.version}!`,
+            duration: 3000,
+          });
+        });
+
+        // ── App ready after a reload → success toast ──
+        CapacitorUpdater.addListener("appReady", (event) => {
+          showToast({
+            type: "success",
+            message: `🚀 Running v${event.bundle.version}`,
+            duration: 2500,
+          });
+        });
+      })
       .catch((err: unknown) => {
         // eslint-disable-next-line no-console
         console.warn("[capgo] failed to load updater plugin", err);
       });
+
+    return () => {
+      if (retryTimer) clearTimeout(retryTimer);
+      void import("@capgo/capacitor-updater").then(
+        ({ CapacitorUpdater }) => CapacitorUpdater.removeAllListeners(),
+        () => {},
+      );
+    };
   }, []);
 
   return (
