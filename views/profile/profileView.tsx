@@ -26,6 +26,7 @@ import {
   BecomeAmbassadorModal,
   AmbassadorDeclinedModal,
   DefaultModal,
+  CheckUpdateModal,
 } from "@/components/reusables/customUI";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Shield, Award } from "lucide-react";
@@ -227,6 +228,8 @@ const ProfileView = () => {
         return <EditGenresModal />;
       case "leaderboard":
         return <LeaderboardModal />;
+      case "check-update":
+        return <CheckUpdateModal />;
       case "ambassador":
         return <BecomeAmbassadorModal />;
       case "ambassador-declined":
@@ -375,6 +378,17 @@ const ProfileView = () => {
               subtitle="Subscribe to unlock advanced voices, playback controls, and more"
               className="mb-8"
             />
+
+            {/* Check Update */}
+            <button
+              onClick={() =>
+                router.push("?modal=check-update", { scroll: false })
+              }
+              className="w-full flex items-center gap-3 px-4 py-3 bg-white rounded-lg text-primary-colour hover:bg-grey-5 transition-colors mb-3"
+            >
+              <span className="text-lg">🔄</span>
+              <span className="body-text-small-regular-auto">Check for Updates</span>
+            </button>
 
             {/* Log Out */}
             <button
