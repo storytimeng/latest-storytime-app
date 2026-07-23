@@ -26,7 +26,6 @@ import {
   BecomeAmbassadorModal,
   AmbassadorDeclinedModal,
   DefaultModal,
-  CheckUpdateModal,
 } from "@/components/reusables/customUI";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Shield, Award } from "lucide-react";
@@ -37,11 +36,13 @@ import { useOnlineStatus } from "@/src/hooks/useOnlineStatus";
 import { useGenres } from "@/src/hooks/useGenres";
 import { useAmbassadorOverview } from "@/src/hooks/useAmbassador";
 import { getAmbassadorEntryPath } from "@/src/lib/ambassadors";
+import { useAuthGate } from "@/src/hooks/useAuthGate";
 import { Tooltip } from "@heroui/tooltip";
 import { cn } from "@/lib";
 import { genreCategoryPath } from "@/lib/genre";
 
 const ProfileView = () => {
+  useAuthGate(true);
   const router = useRouter();
   const searchParams = useSearchParams();
   const isOnline = useOnlineStatus();
@@ -200,9 +201,9 @@ const ProfileView = () => {
     router.push(`?${params.toString()}`, { scroll: false });
   };
 
-  // Back button: if a modal is open, close it first; otherwise always go
-  // home. This avoids taking the user back to whatever URL produced the
-  // modal (e.g. ?modal=check-update), which would just re-open the modal.
+  // Back button: if a modal is open, close it first; otherwise go home.
+  // This avoids taking the user back to whatever URL produced the modal
+  // (e.g. ?modal=check-update), which would re-open the modal.
   const handleBackPress = () => {
     if (activeModal) {
       handleModalClose();
@@ -239,8 +240,6 @@ const ProfileView = () => {
         return <EditGenresModal />;
       case "leaderboard":
         return <LeaderboardModal />;
-      case "check-update":
-        return <CheckUpdateModal />;
       case "ambassador":
         return <BecomeAmbassadorModal />;
       case "ambassador-declined":
@@ -390,16 +389,6 @@ const ProfileView = () => {
               subtitle="Subscribe to unlock advanced voices, playback controls, and more"
               className="mb-8"
             />
-
-            {/* Check Update */}
-            <button
-              onClick={() =>
-                router.push("?modal=check-update", { scroll: false })
-              }
-              className="w-full flex items-center gap-3 px-4 py-3 bg-white rounded-lg text-primary-colour hover:bg-grey-5 transition-colors mb-3"
-            >
-              <span className="body-text-small-regular-auto">Check for Updates</span>
-            </button>
 
             {/* Log Out */}
             <button

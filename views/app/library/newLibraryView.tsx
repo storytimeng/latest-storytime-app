@@ -10,9 +10,11 @@ import { formatBytes } from "@/lib/offline/db";
 import { usersControllerGetAllReadingProgress } from "@/src/client/sdk.gen";
 import { useSearchParams } from "next/navigation";
 import { useOnlineStatus } from "@/src/hooks/useOnlineStatus";
+import { useAuthGate } from "@/src/hooks/useAuthGate";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
 
 const NewLibraryView = () => {
+  useAuthGate(true);
   const isOnline = useOnlineStatus();
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");

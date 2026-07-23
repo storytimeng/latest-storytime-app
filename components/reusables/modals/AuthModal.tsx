@@ -54,10 +54,14 @@ export const AuthModal = () => {
 
   return (
     <div
+      data-auth-modal
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm sm:p-4 overflow-y-auto"
       onClick={(e) => e.stopPropagation()}
     >
-      <div className="bg-white rounded-t-3xl sm:rounded-2xl w-full max-w-md p-6 pb-8 sm:pb-6 shadow-xl relative animate-in slide-in-from-bottom sm:fade-in sm:zoom-in duration-300 sm:my-8 max-h-[95vh] sm:max-h-[90vh] overflow-y-auto no-scrollbar">
+      <div
+        data-auth-allow
+        className="bg-white rounded-t-3xl sm:rounded-2xl w-full max-w-md p-6 pb-8 sm:pb-6 shadow-xl relative animate-in slide-in-from-bottom sm:fade-in sm:zoom-in duration-300 sm:my-8 max-h-[95vh] sm:max-h-[90vh] overflow-y-auto no-scrollbar"
+      >
         {renderView()}
       </div>
     </div>

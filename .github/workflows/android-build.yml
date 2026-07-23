@@ -167,6 +167,24 @@ jobs:
             echo "::notice::Capgo channel: dev (debug build on ${{ github.ref_name }})"
           fi
 
+      # Pick the version: latest `v*.*.*` tag if available, else fall back
+      # to package.json version, else 0.0.0+timestamp. This way, pushing a
+      # git tag like `v0.1.1` makes the next Capgo bundle show up as 0.1.1
+      # in the dashboard. No tag = same version as the previous build.
+      - name: Resolve Capgo bundle version
+        id: capgo_version
+        run: |
+          TAG=$(git tag -l "v*.*.*" --sort=-v:refname | head -n 1 || true)
+          if [ -n "$TAG" ]; then
+            VERSION="${TAG#v}"
+            echo "::notice::Using version from latest git tag: $VERSION"
+          else
+            VERSION=$(node -p "require('./package.json').version" 2>/dev/null || echo "0.0.0")
+            echo "::notice::No v*.*.* tag found, falling back to package.json version: $VERSION"
+          fi
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "version=${VERSION}" >> "$GITHUB_ENV"
+
       - name: Upload web bundle to Capgo
         env:
           CAPGO_API_KEY: ${{ secrets.CAPGO_API_KEY }}
@@ -185,8 +203,8 @@ jobs:
             --channel "${{ steps.capgo_channel.outputs.channel }}" \
             --path out \
             $NO_CODE_CHECK \
-            --bundle "0.0.1-$(date -u +%Y%m%d%H%M%S)" \
-            --comment "GitHub Actions build #${{ github.run_number }} on ${{ github.ref_name }}"
+            --bundle "${{ steps.capgo_version.outputs.version }}" \
+            --comment "GitHub Actions build #${{ github.run_number }} on ${{ github.ref_name }} (v${{ steps.capgo_version.outputs.version }})"
       # ── Decode keystore BEFORE gradle build, so signing config can find it ──
       - name: Decode keystore
         if: env.IS_RELEASE == 'true'
