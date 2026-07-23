@@ -68,15 +68,12 @@ export function Providers({ children, themeProps }: ProvidersProps) {
             console.warn("[capgo] notifyAppReady failed", err);
           });
 
-        // ── Download started ──
-        CapacitorUpdater.addListener("download", (event) => {
-          if (event.percent === 0) {
-            showToast({
-              type: "info",
-              message: "📥 Update downloading…",
-              duration: 3000,
-            });
-          }
+        // ── Download started (silent, only emit info toast on actual progress) ──
+        // We intentionally don't show a toast on percent === 0 anymore — that
+        // fires on every cold start because Capgo rechecks for updates, and
+        // users were seeing the same "downloading" toast repeatedly.
+        CapacitorUpdater.addListener("download", (_event) => {
+          /* no-op: only downloadComplete is shown to the user */
         });
 
         // ── Download complete → success toast ──
@@ -92,7 +89,7 @@ export function Providers({ children, themeProps }: ProvidersProps) {
         CapacitorUpdater.addListener("downloadFailed", () => {
           showToast({
             type: "error",
-            message: "❌ Update download failed. Will retry shortly…",
+            message: "Update download failed. Will retry shortly…",
             duration: 4000,
           });
           retryTimer = setTimeout(() => {
@@ -100,16 +97,17 @@ export function Providers({ children, themeProps }: ProvidersProps) {
           }, 30_000);
         });
 
-        // ── Update failed to install → error toast + retry next launch ──
+        // ── Update failed to install → error toast (silent retry on next launch) ──
         CapacitorUpdater.addListener("updateFailed", () => {
           showToast({
             type: "error",
-            message: "⚠️ Update couldn't install. Will try again on next launch.",
+            message: "Update couldn't install. Will try again on next launch.",
             duration: 4000,
           });
         });
 
-        // ── Bundle applied successfully → success toast ──
+        // ── Bundle applied successfully → success toast (only fires when
+        //    a new bundle has actually been installed in this session) ──
         CapacitorUpdater.addListener("set", (event) => {
           showToast({
             type: "success",
@@ -118,14 +116,10 @@ export function Providers({ children, themeProps }: ProvidersProps) {
           });
         });
 
-        // ── App ready after a reload → success toast ──
-        CapacitorUpdater.addListener("appReady", (event) => {
-          showToast({
-            type: "success",
-            message: `🚀 Running v${event.bundle.version}`,
-            duration: 2500,
-          });
-        });
+        // NOTE: we intentionally do NOT listen to `appReady` for toasts.
+        // `appReady` fires on every cold start (after JS bundle boots), so
+        // showing "Running v0.1.0" on every app open is just noise.
+        // Users see the version only on a real update via the `set` event.
       })
       .catch((err: unknown) => {
         // eslint-disable-next-line no-console

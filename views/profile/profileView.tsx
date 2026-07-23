@@ -200,6 +200,17 @@ const ProfileView = () => {
     router.push(`?${params.toString()}`, { scroll: false });
   };
 
+  // Back button: if a modal is open, close it first; otherwise always go
+  // home. This avoids taking the user back to whatever URL produced the
+  // modal (e.g. ?modal=check-update), which would just re-open the modal.
+  const handleBackPress = () => {
+    if (activeModal) {
+      handleModalClose();
+    } else {
+      router.push("/home");
+    }
+  };
+
   const renderModalContent = () => {
     // Use activeModal if present, otherwise use lastActiveModal (for exit animation)
     const modalToRender = activeModal || lastActiveModal;
@@ -258,6 +269,7 @@ const ProfileView = () => {
             titleClassName="text-lg font-medium text-white"
             backButtonClassName="text-white"
             showBackButton={true}
+            onBackPress={handleBackPress}
           />
 
           {/* Profile Section */}
@@ -386,7 +398,6 @@ const ProfileView = () => {
               }
               className="w-full flex items-center gap-3 px-4 py-3 bg-white rounded-lg text-primary-colour hover:bg-grey-5 transition-colors mb-3"
             >
-              <span className="text-lg">🔄</span>
               <span className="body-text-small-regular-auto">Check for Updates</span>
             </button>
 
