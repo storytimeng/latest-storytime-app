@@ -36,13 +36,11 @@ import { useOnlineStatus } from "@/src/hooks/useOnlineStatus";
 import { useGenres } from "@/src/hooks/useGenres";
 import { useAmbassadorOverview } from "@/src/hooks/useAmbassador";
 import { getAmbassadorEntryPath } from "@/src/lib/ambassadors";
-import { useAuthGate } from "@/src/hooks/useAuthGate";
 import { Tooltip } from "@heroui/tooltip";
 import { cn } from "@/lib";
 import { genreCategoryPath } from "@/lib/genre";
 
 const ProfileView = () => {
-  useAuthGate(true);
   const router = useRouter();
   const searchParams = useSearchParams();
   const isOnline = useOnlineStatus();

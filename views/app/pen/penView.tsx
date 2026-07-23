@@ -28,7 +28,6 @@ import { useUserProfile } from "@/src/hooks/useUserProfile";
 import { useLibrary } from "@/src/hooks/useLibrary";
 import { useDeleteStory } from "@/src/hooks/useStoryMutations";
 import { useStateCachedFetch } from "@/src/hooks/useStateCachedFetch";
-import { useAuthGate } from "@/src/hooks/useAuthGate";
 import { useRoutePrefetch } from "@/src/hooks/useStateCachePrefetch";
 import { APP_CACHE_KEYS } from "@/src/stores/dataCacheKeys";
 import type { StoryResponseDto } from "@/src/client/types.gen";
@@ -47,7 +46,6 @@ type TabKey = "Recent" | "Ongoing" | "Published" | "Drafts";
 const PEN_CACHE_KEY = APP_CACHE_KEYS.myLibrary;
 
 const PenView = () => {
-  useAuthGate(true);
   const router = useRouter();
 
   useEffect(() => {

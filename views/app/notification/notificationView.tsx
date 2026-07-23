@@ -19,7 +19,6 @@ import {
 } from "@/lib/sanitizeRichHtml";
 import { useNotifications } from "@/src/hooks/useNotifications";
 import { useOnlineStatus } from "@/src/hooks/useOnlineStatus";
-import { useAuthGate } from "@/src/hooks/useAuthGate";
 import { cn } from "@/lib/utils";
 
 interface Notification {
@@ -34,7 +33,6 @@ interface Notification {
 }
 
 const NotificationView = () => {
-  useAuthGate(true);
   const {
     notifications,
     isLoading,
