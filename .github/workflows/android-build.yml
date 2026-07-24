@@ -1,14 +1,23 @@
 name: Android Build
 
+# ── Channel mapping (Capgo) ──────────────────────────────────────────────
+# push to main     → debug APK  → Capgo channel: dev
+# push to android  → debug APK  → Capgo channel: dev
+# push tag v*      → release    → Capgo channel: production
+# workflow_dispatch with build_type=release → Capgo channel: production
+# pull_request (any branch) → debug APK, upload step is skipped in forks
+#                              because secrets are not exposed there.
+# ─────────────────────────────────────────────────────────────────────────
+
 on:
   push:
     branches:
-      - android
+      - main
     tags:
       - "v*"
   pull_request:
     branches:
-      - android
+      - main
   workflow_dispatch:
     inputs:
       build_type:
@@ -78,9 +87,22 @@ jobs:
 
       - name: Create .env.local for build
         run: |
+          # Fall back to https://back.storytime.ng if the GitHub variable
+          # is unset/misscoped. The web app's heyapi-runtime.ts has the
+          # same fallback, but baking it into the build env means the
+          # resulting JS bundle is correct even on a misconfigured run.
+          #
+          # ANDROID_KEY_ALIAS is a vars (not a secret) — the alias is the
+          # least-sensitive piece of signing material (just a label for
+          # the key inside the .jks), and android/app/build.gradle
+          # already falls back to android/keystore.properties
+          # (keyAlias=storytime) when the env var is empty, so a missing
+          # vars is non-fatal. The release build step below MUST read
+          # from the same source as this line.
+          API_URL="${{ vars.NEXT_PUBLIC_API_URL || 'https://back.storytime.ng' }}"
           cat > .env.local << EOF
-          NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}
-          NEXT_PUBLIC_BACKEND_URL=${{vars.NEXT_PUBLIC_API_URL}}
+          NEXT_PUBLIC_API_URL=${API_URL}
+          NEXT_PUBLIC_BACKEND_URL=${API_URL}
           NEXT_PUBLIC_PLATFORM=android
           ANDROID_KEYSTORE_BASE64=${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           ANDROID_KEYSTORE_PASSWORD=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -92,24 +114,23 @@ jobs:
           # Belt-and-braces: also export to the shell so the spawned
           # `next build` and the Gradle steps below inherit them even
           # if anything ever moves .env.local out of the way.
-          echo "NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}" >> $GITHUB_ENV
-          echo "NEXT_PUBLIC_BACKEND_URL=${{ vars.NEXT_PUBLIC_API_URL }}" >> $GITHUB_ENV
+          echo "NEXT_PUBLIC_API_URL=${API_URL}" >> $GITHUB_ENV
+          echo "NEXT_PUBLIC_BACKEND_URL=${API_URL}" >> $GITHUB_ENV
           echo "NEXT_PUBLIC_PLATFORM=android" >> $GITHUB_ENV
           echo "NEXT_PUBLIC_DEBUG_PROXY=false" >> $GITHUB_ENV
           echo "NEXT_PUBLIC_PROXY=false" >> $GITHUB_ENV
 
-      # Fail loudly here instead of silently shipping an APK that falls
-      # back to localhost. `${{ vars.X }}` for an unset/misscoped repo
-      # variable resolves to an empty string with no error — this is
-      # the only thing that will actually catch it.
+      # Warn (not fail) if NEXT_PUBLIC_API_URL is empty — the build still
+      # proceeds with the back.storytime.ng fallback. If you want a hard
+      # failure, change this back to `exit 1` and remove the `||` in the
+      # env step above.
       - name: Verify required build vars are set
         run: |
           echo "── .env.local contents (secrets redacted below) ──"
           grep -v -E 'PASSWORD|BASE64' .env.local || true
           echo "──────────────────────────"
           if [ -z "${{ vars.NEXT_PUBLIC_API_URL }}" ]; then
-            echo "::error::NEXT_PUBLIC_API_URL repo/org Actions variable is empty or unset. Check Settings → Secrets and variables → Actions → Variables tab (not Secrets), and make sure it isn't scoped to an Environment this workflow doesn't declare."
-            exit 1
+            echo "::warning::NEXT_PUBLIC_API_URL repo/org Actions variable is empty or unset. Falling back to https://back.storytime.ng for this build."
           fi
 
       - name: Build Next.js static export
@@ -118,30 +139,82 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x android/gradlew
 
+      # ── Capgo OTA upload ─────────────────────────────────────────────
+      # Runs after the web build (so `out/` exists) and BEFORE the APK
+      # assemble, so the APK can pull the freshly uploaded bundle on
+      # first launch. Channel mapping (see top-of-file comment):
+      #   • `main` or `android` branch push → dev
+      #   • tag `v*` push                   → production
+      #   • workflow_dispatch (release)     → production
+      # The upload step is gated on CAPGO_API_KEY being set so fork
+      # PRs (where secrets are not exposed) don't fail the build.
+      #
+      # NOTE: no --s3-* flags here. The CLI's generic S3 client doesn't
+      # work against Supabase's S3-compatible storage endpoint (throws
+      # "Invalid port"). Instead, capacitor.config.ts sets `localS3: true`
+      # + `localApiFiles`, which routes the upload through our Supabase
+      # edge functions. See capacitor.config.ts for the self-hosted config.
+      - name: Determine Capgo channel
+        id: capgo_channel
+        run: |
+          # IS_RELEASE is already set from the workflow-level env and is
+          # true for: tag pushes (refs/tags/v*) OR manual build_type=release.
+          if [ "${{ env.IS_RELEASE }}" = "true" ]; then
+            echo "channel=production" >> "$GITHUB_OUTPUT"
+            echo "::notice::Capgo channel: production (release / tag build)"
+          else
+            echo "channel=dev" >> "$GITHUB_OUTPUT"
+            echo "::notice::Capgo channel: dev (debug build on ${{ github.ref_name }})"
+          fi
+
+      - name: Upload web bundle to Capgo
+        env:
+          CAPGO_API_KEY: ${{ secrets.CAPGO_API_KEY }}
+        run: |
+          if [ -z "$CAPGO_API_KEY" ]; then
+            echo "::notice::CAPGO_API_KEY not set (likely a fork PR) — skipping Capgo upload."
+            exit 0
+          fi
+          NO_CODE_CHECK=""
+          if [ "${{ steps.capgo_channel.outputs.channel }}" = "dev" ]; then
+            NO_CODE_CHECK="--no-code-check"
+          fi
+          npx --yes @capgo/cli@latest bundle upload \
+            com.storytimeng \
+            --apikey "$CAPGO_API_KEY" \
+            --channel "${{ steps.capgo_channel.outputs.channel }}" \
+            --path out \
+            $NO_CODE_CHECK \
+            --bundle "0.0.1-$(date -u +%Y%m%d%H%M%S)" \
+            --comment "GitHub Actions build #${{ github.run_number }} on ${{ github.ref_name }}"
       # ── Decode keystore BEFORE gradle build, so signing config can find it ──
       - name: Decode keystore
-        if: ${{ env.IS_RELEASE == 'true' }}
+        if: env.IS_RELEASE == 'true'
         run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > ${{ runner.temp }}/keystore.jks
 
       - name: Build Debug APK
-        if: ${{ env.IS_RELEASE != 'true' }}
+        if: env.IS_RELEASE != 'true'
         run: |
           cd android
           ./gradlew assembleDebug --no-daemon
 
       - name: Build Release APK
-        if: ${{ env.IS_RELEASE == 'true' }}
+        if: env.IS_RELEASE == 'true'
         run: |
           cd android
           ./gradlew assembleRelease --no-daemon
         env:
           ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/keystore.jks
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          # ANDROID_KEY_ALIAS is a vars (not a secret) — must match the
+          # .env.local step above. build.gradle falls back to
+          # keystore.properties when this is empty, so a missing vars
+          # is non-fatal.
+          ANDROID_KEY_ALIAS: ${{ vars.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
 
       - name: Upload Debug APK
-        if: ${{ env.IS_RELEASE != 'true' }}
+        if: env.IS_RELEASE != 'true'
         uses: actions/upload-artifact@v4
         with:
           name: storytime-debug-${{ github.run_number }}
@@ -149,7 +222,7 @@ jobs:
           retention-days: 14
 
       - name: Upload Release APK
-        if: ${{ env.IS_RELEASE == 'true' }}
+        if: env.IS_RELEASE == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: storytime-release-${{ github.run_number }}
@@ -158,7 +231,7 @@ jobs:
 
       # ── Only creates an actual GitHub Release on a version tag push ────────
       - name: Create GitHub Release
-        if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+        if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
           files: android/app/build/outputs/apk/release/*.apk

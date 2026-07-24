@@ -7,3 +7,6 @@ project(':capacitor-app').projectDir = new File('../node_modules/.pnpm/@capacito
 
 include ':capgo-capacitor-media-session'
 project(':capgo-capacitor-media-session').projectDir = new File('../node_modules/.pnpm/@capgo+capacitor-media-session@8.0.28_@capacitor+core@8.4.1/node_modules/@capgo/capacitor-media-session/android')
+
+include ':capgo-capacitor-updater'
+project(':capgo-capacitor-updater').projectDir = new File('../node_modules/.pnpm/@capgo+capacitor-updater@8.50.2_@capacitor+core@8.4.1/node_modules/@capgo/capacitor-updater/android')
