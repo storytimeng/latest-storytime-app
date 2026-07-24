@@ -49,6 +49,11 @@ NEXT_PUBLIC_CACHE_EXPIRY_DAYS=30
 # API Configuration
 NEXT_PUBLIC_API_URL=https://storytime-backend-1-0.onrender.com
 NEXT_PUBLIC_PROXY=true
+
+# Argus error tracking (https://docs.arguserror.xyz) — create a React project at https://app.argus.dev
+# Leave unset to disable locally.
+NEXT_PUBLIC_ARGUS_DSN=
+# NEXT_PUBLIC_ARGUS_RELEASE=0.0.1
 ```
 
 See `.env.local.example` for a complete list of environment variables.

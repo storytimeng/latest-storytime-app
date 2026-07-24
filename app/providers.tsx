@@ -11,6 +11,7 @@ import Cookies from "js-cookie";
 import { ToastProvider } from "@heroui/toast";
 import { AuthModal } from "@/components/reusables/modals/AuthModal";
 import { AuthGuard } from "@/components/AuthGuard";
+import { ArgusProvider } from "@/components/ArgusProvider";
 
 // Hey-API client setup (runs immediately)
 import "../src/setup";
@@ -42,59 +43,62 @@ export function Providers({ children, themeProps }: ProvidersProps) {
   }, []);
 
   return (
-    <HeroUIProvider navigate={router.push}>
-      <NextThemesProvider {...themeProps}>
-        <ToastProvider placement="top-center" />
-        <AuthGuard />
-        <AuthModal />
-        <SWRConfig
-          value={{
-            fetcher: async (resource: string, init?: RequestInit) => {
-              const headers = new Headers(init?.headers);
-              const validToken = await prepareAuthSession();
-              const rawToken = !validToken && !isTokenExpired()
-                ? (getAuthToken() || Cookies.get("authToken"))
-                : null;
-              const token = validToken || rawToken;
-              if (token) headers.set("Authorization", `Bearer ${token}`);
-              const res = await fetch(resource, { ...init, headers });
-              if (!res.ok) {
-                if (res.status === 401) {
-                  const refreshed = await refreshTokens();
-                  if (refreshed?.token) {
-                    headers.set("Authorization", `Bearer ${refreshed.token}`);
-                    const retryRes = await fetch(resource, {
-                      ...init,
-                      headers,
-                    });
-                    if (retryRes.ok) {
-                      const retryType =
-                        retryRes.headers.get("content-type") || "";
-                      if (retryType.includes("application/json")) {
-                        return retryRes.json();
+    <ArgusProvider>
+      <HeroUIProvider navigate={router.push}>
+        <NextThemesProvider {...themeProps}>
+          <ToastProvider placement="top-center" />
+          <AuthGuard />
+          <AuthModal />
+          <SWRConfig
+            value={{
+              fetcher: async (resource: string, init?: RequestInit) => {
+                const headers = new Headers(init?.headers);
+                const validToken = await prepareAuthSession();
+                const rawToken =
+                  !validToken && !isTokenExpired()
+                    ? getAuthToken() || Cookies.get("authToken")
+                    : null;
+                const token = validToken || rawToken;
+                if (token) headers.set("Authorization", `Bearer ${token}`);
+                const res = await fetch(resource, { ...init, headers });
+                if (!res.ok) {
+                  if (res.status === 401) {
+                    const refreshed = await refreshTokens();
+                    if (refreshed?.token) {
+                      headers.set("Authorization", `Bearer ${refreshed.token}`);
+                      const retryRes = await fetch(resource, {
+                        ...init,
+                        headers,
+                      });
+                      if (retryRes.ok) {
+                        const retryType =
+                          retryRes.headers.get("content-type") || "";
+                        if (retryType.includes("application/json")) {
+                          return retryRes.json();
+                        }
+                        return retryRes.text();
                       }
-                      return retryRes.text();
                     }
                   }
-                }
 
-                const text = await res.text();
-                const err = new Error(text || res.statusText);
-                // @ts-ignore
-                err.status = res.status;
-                throw err;
-              }
-              const contentType = res.headers.get("content-type") || "";
-              if (contentType.includes("application/json")) return res.json();
-              return res.text();
-            },
-            shouldRetryOnError: false,
-            revalidateOnFocus: false,
-          }}
-        >
-          {children}
-        </SWRConfig>
-      </NextThemesProvider>
-    </HeroUIProvider>
+                  const text = await res.text();
+                  const err = new Error(text || res.statusText);
+                  // @ts-ignore
+                  err.status = res.status;
+                  throw err;
+                }
+                const contentType = res.headers.get("content-type") || "";
+                if (contentType.includes("application/json")) return res.json();
+                return res.text();
+              },
+              shouldRetryOnError: false,
+              revalidateOnFocus: false,
+            }}
+          >
+            {children}
+          </SWRConfig>
+        </NextThemesProvider>
+      </HeroUIProvider>
+    </ArgusProvider>
   );
 }
