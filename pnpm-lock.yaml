@@ -30,6 +30,9 @@ importers:
 
   .:
     dependencies:
+      '@argusdev/sdk-react':
+        specifier: ^0.2.1
+        version: 0.2.1(react@18.3.1)
       '@capacitor/android':
         specifier: ^8.4.1
         version: 8.4.1(@capacitor/core@8.4.1)
@@ -407,6 +410,17 @@ packages:
   '@ampproject/remapping@2.3.0':
     resolution: {integrity: sha512-30iZtAPgz+LTIYoeivqYo853f02jBYSd5uGnGpkFV0M3xOt9aN73erkgYAmZU43x4VfqcnLxW9Kpg3R5LC4YYw==}
     engines: {node: '>=6.0.0'}
+
+  '@argusdev/sdk-browser@0.2.1':
+    resolution: {integrity: sha512-MpMLEpw6OujiyhIP35XeXWrhPu9JkWOHSNX0svp1l6OgXLqc1Lm6AbkAHUeKnkFeY9CmULuGSqWdBRHKEtH5YA==}
+
+  '@argusdev/sdk-core@0.2.1':
+    resolution: {integrity: sha512-BMMJb6lzZl4Fr+DRLairhKWPK6OesqGXQcz03/gFcYMS/g3wrX4j98agRG9ABfBWNK/Meo4ckmB0ah6TpQ08CQ==}
+
+  '@argusdev/sdk-react@0.2.1':
+    resolution: {integrity: sha512-iFyJf5rXdQ5QULiMFVCESLOiWH0gpAMVWuF4kKidRLluOsijAKH53gkKcY8rSVYcJGCGg6kgfzYk9jl9uu4qkQ==}
+    peerDependencies:
+      react: '>=18'
 
   '@babel/code-frame@7.29.7':
     resolution: {integrity: sha512-Aup7aUOfpbAUg2ROOJN6Iw5f9DMBlzu0mIkm/malLQFN/YQgO48wCj0Kxa3sEHJvPVFg7siR+qRInwXd2qhQKw==}
@@ -6220,6 +6234,18 @@ snapshots:
     dependencies:
       '@jridgewell/gen-mapping': 0.3.13
       '@jridgewell/trace-mapping': 0.3.31
+
+  '@argusdev/sdk-browser@0.2.1':
+    dependencies:
+      '@argusdev/sdk-core': 0.2.1
+
+  '@argusdev/sdk-core@0.2.1': {}
+
+  '@argusdev/sdk-react@0.2.1(react@18.3.1)':
+    dependencies:
+      '@argusdev/sdk-browser': 0.2.1
+      '@argusdev/sdk-core': 0.2.1
+      react: 18.3.1
 
   '@babel/code-frame@7.29.7':
     dependencies:

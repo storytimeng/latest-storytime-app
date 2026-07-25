@@ -5,6 +5,10 @@ allowBuilds:
   esbuild: true
   sharp: true
   unrs-resolver: true
+minimumReleaseAgeExclude:
+  - '@argusdev/sdk-browser@0.2.1'
+  - '@argusdev/sdk-core@0.2.1'
+  - '@argusdev/sdk-react@0.2.1'
 overrides:
   '@eslint/plugin-kit@<0.3.4': '>=0.3.4'
   next@>=10.0.0 <15.5.10: '>=15.5.10'
