@@ -553,6 +553,9 @@ export function useStoryViewLogic({
 
           if (apiStatus !== initialStatus) {
             updatePayload.storyStatus = apiStatus as any;
+          } else if (updatePayload.content !== undefined) {
+            // Include status with content so draft length rules apply on the API
+            updatePayload.storyStatus = apiStatus as any;
           }
 
           // Update story metadata (excludes chapters/episodes)
@@ -570,13 +573,7 @@ export function useStoryViewLogic({
             );
 
             if (!storyUpdateSuccess) {
-              const errorMessage =
-                updateError?.message ||
-                "Failed to update story. Please try again.";
-              showToast({
-                type: "error",
-                message: errorMessage,
-              });
+              // updateStory already surfaced the API error via toast
               return;
             }
           }
@@ -918,10 +915,8 @@ export function useStoryViewLogic({
               }
             }
           } else {
-            showToast({
-              type: "error",
-              message: "Failed to create story. Please try again.",
-            });
+            // createStory already surfaced the API error via toast
+            return;
           }
         }
       } catch (error: any) {

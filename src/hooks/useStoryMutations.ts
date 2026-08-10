@@ -10,6 +10,7 @@ import {
   storiesControllerCreateMultipleChapters,
   storiesControllerCreateMultipleEpisodes,
 } from "@/src/client";
+import { getApiErrorMessage } from "@/lib/apiError";
 import { showToast } from "@/lib/showNotification";
 import type { CreateStoryDto, UpdateStoryDto } from "@/src/client/types.gen";
 
@@ -57,8 +58,8 @@ export function useCreateStory() {
   const [error, setError] = React.useState<Error | null>(null);
 
   const createStory = async (
-    storyData: CreateStoryDto
-  ): Promise<{ success: boolean; id?: string }> => {
+    storyData: CreateStoryDto,
+  ): Promise<{ success: boolean; id?: string; message?: string }> => {
     setIsCreating(true);
     setError(null);
 
@@ -67,20 +68,45 @@ export function useCreateStory() {
         body: storyData,
       });
 
+      if (response.error) {
+        const message = getApiErrorMessage(
+          response.error,
+          "Failed to create story. Please try again.",
+        );
+        const error = new Error(message);
+        setError(error);
+        showToast({
+          type: "error",
+          message,
+        });
+        return { success: false, message };
+      }
+
       const result = (response?.data as any)?.data || response?.data;
+      const id = result?.id || result?._id;
+      if (!id) {
+        const message = "Failed to create story. Please try again.";
+        setError(new Error(message));
+        showToast({ type: "error", message });
+        return { success: false, message };
+      }
+
       return {
         success: true,
-        id: result?.id || result?._id,
+        id,
       };
     } catch (err) {
-      const error =
-        err instanceof Error ? err : new Error("Failed to create story");
+      const message = getApiErrorMessage(
+        err,
+        "Failed to create story. Please try again.",
+      );
+      const error = err instanceof Error ? err : new Error(message);
       setError(error);
       showToast({
         type: "error",
-        message: "Failed to create story. Please try again.",
+        message,
       });
-      return { success: false };
+      return { success: false, message };
     } finally {
       setIsCreating(false);
     }
@@ -99,16 +125,29 @@ export function useUpdateStory() {
 
   const updateStory = async (
     storyId: string,
-    storyData: UpdateStoryDto & { storyStatus?: string }
+    storyData: UpdateStoryDto & { storyStatus?: string },
   ): Promise<boolean> => {
     setIsUpdating(true);
     setError(null);
 
     try {
-      await storiesControllerUpdate({
+      const response = await storiesControllerUpdate({
         path: { id: storyId },
         body: storyData,
       });
+
+      if (response.error) {
+        const message = getApiErrorMessage(
+          response.error,
+          "Failed to update story. Please try again.",
+        );
+        setError(new Error(message));
+        showToast({
+          type: "error",
+          message,
+        });
+        return false;
+      }
 
       // Revalidate all SWR caches that contain this story so the UI reflects
       // the update immediately without requiring a page refresh.
@@ -116,12 +155,15 @@ export function useUpdateStory() {
 
       return true;
     } catch (err) {
-      const error =
-        err instanceof Error ? err : new Error("Failed to update story");
+      const message = getApiErrorMessage(
+        err,
+        "Failed to update story. Please try again.",
+      );
+      const error = err instanceof Error ? err : new Error(message);
       setError(error);
       showToast({
         type: "error",
-        message: "Failed to update story. Please try again.",
+        message,
       });
       return false;
     } finally {
@@ -181,7 +223,7 @@ export function useCreateChapter() {
 
   const createChapter = async (
     storyId: string,
-    chapterData: any
+    chapterData: any,
   ): Promise<{ success: boolean; id?: string }> => {
     setIsCreating(true);
     setError(null);
@@ -234,7 +276,7 @@ export function useCreateMultipleChapters() {
 
   const createMultipleChapters = async (
     storyId: string,
-    chapters: any[]
+    chapters: any[],
   ): Promise<{ success: boolean; count?: number; error?: string }> => {
     setIsCreating(true);
     setError(null);
@@ -263,13 +305,16 @@ export function useCreateMultipleChapters() {
         count: chapters.length,
       };
     } catch (err: any) {
-      const errorMsg = err?.response?.data?.message || err?.message || "Failed to create multiple chapters";
+      const errorMsg =
+        err?.response?.data?.message ||
+        err?.message ||
+        "Failed to create multiple chapters";
       const error = new Error(errorMsg);
       console.error("❌ Failed to create multiple chapters:", error);
       setError(error);
-      return { 
+      return {
         success: false,
-        error: errorMsg
+        error: errorMsg,
       };
     } finally {
       setIsCreating(false);
@@ -290,7 +335,7 @@ export function useCreateEpisode() {
   const createEpisode = async (
     storyId: string,
     chapterId: string, // Kept for backward compatibility if needed, but might be unused for direct episodes
-    episodeData: any
+    episodeData: any,
   ): Promise<{ success: boolean; id?: string }> => {
     setIsCreating(true);
     setError(null);
@@ -350,7 +395,7 @@ export function useCreateMultipleEpisodes() {
 
   const createMultipleEpisodes = async (
     storyId: string,
-    episodes: any[]
+    episodes: any[],
   ): Promise<{ success: boolean; count?: number; error?: string }> => {
     setIsCreating(true);
     setError(null);
@@ -379,13 +424,16 @@ export function useCreateMultipleEpisodes() {
         count: episodes.length,
       };
     } catch (err: any) {
-      const errorMsg = err?.response?.data?.message || err?.message || "Failed to create multiple episodes";
+      const errorMsg =
+        err?.response?.data?.message ||
+        err?.message ||
+        "Failed to create multiple episodes";
       const error = new Error(errorMsg);
       console.error("❌ Failed to create multiple episodes:", error);
       setError(error);
-      return { 
+      return {
         success: false,
-        error: errorMsg
+        error: errorMsg,
       };
     } finally {
       setIsCreating(false);
