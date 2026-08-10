@@ -48,6 +48,23 @@ function tabFromQuery(value: string | null): TabKey {
   }
 }
 
+function queryFromTab(tab: TabKey): string {
+  switch (tab) {
+    case "Drafts":
+      return "drafts";
+    case "Ongoing":
+      return "ongoing";
+    case "Published":
+      return "published";
+    case "Recent":
+      return "recent";
+    default: {
+      const _exhaustive: never = tab;
+      return _exhaustive;
+    }
+  }
+}
+
 function storyStatusKind(story: ExtendedStory) {
   return normalizeStoryStatus(story.storyStatus || story.status);
 }
@@ -55,9 +72,7 @@ function storyStatusKind(story: ExtendedStory) {
 const MyStoriesView = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [selectedTab, setSelectedTab] = useState<TabKey>(() =>
-    tabFromQuery(searchParams.get("tab")),
-  );
+  const selectedTab = tabFromQuery(searchParams.get("tab"));
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [storyToDelete, setStoryToDelete] = useState<{
     id: string | number;
@@ -74,10 +89,15 @@ const MyStoriesView = () => {
   // Delete story hook
   const { deleteStory, isDeleting } = useDeleteStory();
 
-  // Keep tab in sync when navigating with ?tab=
-  React.useEffect(() => {
-    setSelectedTab(tabFromQuery(searchParams.get("tab")));
-  }, [searchParams]);
+  const handleTabChange = (key: React.Key) => {
+    const tab = key as TabKey;
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", queryFromTab(tab));
+    const query = params.toString();
+    router.replace(
+      rewriteForCapacitor(query ? `/my-stories?${query}` : "/my-stories"),
+    );
+  };
 
   // Filter stories by tab
   const filteredStories = useMemo(() => {
@@ -186,9 +206,7 @@ const MyStoriesView = () => {
         <div className="w-full mb-6">
           <Tabs
             selectedKey={selectedTab}
-            onSelectionChange={(key: React.Key) =>
-              setSelectedTab(key as TabKey)
-            }
+            onSelectionChange={handleTabChange}
             variant="underlined"
             classNames={{
               tabList:
