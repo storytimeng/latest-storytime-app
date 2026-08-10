@@ -27,6 +27,7 @@ type ExtendedStory = StoryResponseDto & {
   writingDate?: string;
   updatedAt?: string;
   status?: string;
+  storyStatus?: string;
 };
 
 type TabKey = "Recent" | "Ongoing" | "Published" | "Drafts";
