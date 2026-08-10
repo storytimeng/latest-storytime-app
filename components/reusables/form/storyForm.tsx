@@ -1735,44 +1735,103 @@ const StoryForm: React.FC<StoryFormProps> = ({
   // Render action buttons
   const renderActionButtons = () => {
     if (currentStep === "writing") {
+      const isDraftStatus = formData.storyStatus === "Draft";
+
+      const submitAsDraft = () => {
+        if (isLoading) return;
+        const currentContent =
+          latestContentRef.current || formData.content || "";
+        const draftData = {
+          ...formData,
+          storyStatus: "Draft" as const,
+          content: currentContent,
+        };
+        const chaptersToDraft = (items: typeof chapters) =>
+          items.map((ch) => ({ ...ch, isDraft: true }));
+        const partsToDraft = (items: typeof parts) =>
+          items.map((p) => ({ ...p, isDraft: true }));
+        onSubmit(
+          draftData,
+          mode === "edit" && storyStructure.hasChapters
+            ? chaptersToDraft(getAllModifiedChapters())
+            : storyStructure.hasChapters
+              ? chaptersToDraft(chapters)
+              : undefined,
+          mode === "edit" && !storyStructure.hasChapters
+            ? partsToDraft(getAllModifiedParts())
+            : !storyStructure.hasChapters
+              ? partsToDraft(parts)
+              : undefined,
+          mode === "edit" && storyStructure.hasChapters
+            ? getDeletedChapters()
+            : undefined,
+          mode === "edit" && !storyStructure.hasChapters
+            ? getDeletedParts()
+            : undefined,
+        );
+      };
+
+      const submitPublish = () => {
+        if (isLoading) return;
+        // Use latestContentRef as authoritative source — it's updated
+        // synchronously by the RichTextEditor's onBlur (which fires
+        // before this onClick in browser event order). This fixes a
+        // tablet bug where onUpdate doesn't fire before the click.
+        const currentContent =
+          latestContentRef.current || formData.content || "";
+
+        // Guard: standalone stories must have actual content before proceeding
+        if (!storyStructure.hasChapters && !storyStructure.hasEpisodes) {
+          const plainText = currentContent.replace(/<[^>]+>/g, "").trim();
+          if (plainText.length < 50) {
+            showToast({
+              type: "error",
+              message:
+                "Please write your story content before publishing. The story body must be at least 50 characters.",
+            });
+            return;
+          }
+        }
+        if (mode === "edit") {
+          const publishData = {
+            ...formData,
+            storyStatus: "Published" as const,
+            content: currentContent,
+          };
+          onSubmit(
+            publishData,
+            storyStructure.hasChapters ? getAllModifiedChapters() : undefined,
+            !storyStructure.hasChapters ? getAllModifiedParts() : undefined,
+            storyStructure.hasChapters ? getDeletedChapters() : undefined,
+            !storyStructure.hasChapters ? getDeletedParts() : undefined,
+          );
+        } else {
+          setCurrentStep("additional");
+        }
+      };
+
+      // Draft status: one primary Save action (no publish split)
+      if (isDraftStatus) {
+        return (
+          <div className="flex gap-3">
+            <Button
+              className={`flex-1 bg-primary-shade-6 text-universal-white ${Magnetik_Medium.className}`}
+              onClick={submitAsDraft}
+              disabled={isLoading}
+              isLoading={isLoading}
+            >
+              {isLoading ? "Saving..." : "Save"}
+            </Button>
+          </div>
+        );
+      }
+
       return (
         <div className="flex gap-3">
           <Button
             variant="bordered"
             className={`flex-1 border-light-grey-2 text-primary-colour ${Magnetik_Regular.className}`}
-            onClick={() => {
-              if (isLoading) return;
-              const currentContent =
-                latestContentRef.current || formData.content || "";
-              const draftData = {
-                ...formData,
-                storyStatus: "Draft",
-                content: currentContent,
-              };
-              const chaptersToDraft = (items: typeof chapters) =>
-                items.map((ch) => ({ ...ch, isDraft: true }));
-              const partsToDraft = (items: typeof parts) =>
-                items.map((p) => ({ ...p, isDraft: true }));
-              onSubmit(
-                draftData,
-                mode === "edit" && storyStructure.hasChapters
-                  ? chaptersToDraft(getAllModifiedChapters())
-                  : storyStructure.hasChapters
-                    ? chaptersToDraft(chapters)
-                    : undefined,
-                mode === "edit" && !storyStructure.hasChapters
-                  ? partsToDraft(getAllModifiedParts())
-                  : !storyStructure.hasChapters
-                    ? partsToDraft(parts)
-                    : undefined,
-                mode === "edit" && storyStructure.hasChapters
-                  ? getDeletedChapters()
-                  : undefined,
-                mode === "edit" && !storyStructure.hasChapters
-                  ? getDeletedParts()
-                  : undefined,
-              );
-            }}
+            onClick={submitAsDraft}
             disabled={isLoading}
             isLoading={isLoading}
           >
@@ -1780,48 +1839,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
           </Button>
           <Button
             className={`flex-1 bg-primary-shade-6 text-universal-white ${Magnetik_Medium.className}`}
-            onClick={() => {
-              if (isLoading) return;
-              // Use latestContentRef as authoritative source — it's updated
-              // synchronously by the RichTextEditor's onBlur (which fires
-              // before this onClick in browser event order). This fixes a
-              // tablet bug where onUpdate doesn't fire before the click.
-              const currentContent =
-                latestContentRef.current || formData.content || "";
-
-              // Guard: standalone stories must have actual content before proceeding
-              if (!storyStructure.hasChapters && !storyStructure.hasEpisodes) {
-                const plainText = currentContent.replace(/<[^>]+>/g, "").trim();
-                if (plainText.length < 50) {
-                  showToast({
-                    type: "error",
-                    message:
-                      "Please write your story content before publishing. The story body must be at least 50 characters.",
-                  });
-                  return;
-                }
-              }
-              if (mode === "edit") {
-                const publishData = {
-                  ...formData,
-                  storyStatus: "Published",
-                  content: currentContent,
-                };
-                onSubmit(
-                  publishData,
-                  storyStructure.hasChapters
-                    ? getAllModifiedChapters()
-                    : undefined,
-                  !storyStructure.hasChapters
-                    ? getAllModifiedParts()
-                    : undefined,
-                  storyStructure.hasChapters ? getDeletedChapters() : undefined,
-                  !storyStructure.hasChapters ? getDeletedParts() : undefined,
-                );
-              } else {
-                setCurrentStep("additional");
-              }
-            }}
+            onClick={submitPublish}
             disabled={isLoading}
             isLoading={isLoading && mode === "edit"}
           >
@@ -1889,7 +1907,8 @@ const StoryForm: React.FC<StoryFormProps> = ({
             isLoading={isLoading}
             onSkip={() => {
               if (isLoading) return;
-              const currentContent = latestContentRef.current || formData.content;
+              const currentContent =
+                latestContentRef.current || formData.content;
               onSubmit(
                 { ...formData, content: currentContent },
                 storyStructure.hasChapters ? chapters : undefined,
