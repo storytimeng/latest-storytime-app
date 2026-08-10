@@ -8,13 +8,13 @@ import { useUserStories } from "@/src/hooks/useUserStories";
 import { Skeleton } from "@heroui/skeleton";
 import { Link } from "@/components/AppLink";
 import { Edit } from "lucide-react";
+import { normalizeStoryStatus } from "@/components/reusables/customUI/StoryStatusIcon";
 
 export const DraftsModal = () => {
   const { stories, isLoading, error } = useUserStories();
   const drafts = Array.isArray(stories)
     ? stories.filter(
-        (story) =>
-          story.storyStatus === "Draft" || story.storyStatus === "draft"
+        (story) => normalizeStoryStatus(story.storyStatus) === "draft",
       )
     : [];
 

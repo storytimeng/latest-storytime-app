@@ -1,7 +1,12 @@
+import { Suspense } from "react";
 import { MyStoriesView } from "@/views";
 
 const MyStoriesPage = () => {
-  return <MyStoriesView />;
+  return (
+    <Suspense fallback={null}>
+      <MyStoriesView />
+    </Suspense>
+  );
 };
 
 export default MyStoriesPage;

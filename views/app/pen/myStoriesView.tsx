@@ -11,11 +11,12 @@ import {
 import { Tabs, Tab } from "@heroui/tabs";
 import { Button } from "@heroui/button";
 import { ArrowLeft, X, BookOpen } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { rewriteForCapacitor } from "@/lib/linkRewrite";
 import PageHeader from "@/components/reusables/customUI/pageHeader";
 import { Magnetik_Bold, Magnetik_Medium, Magnetik_Regular } from "@/lib/font";
 import { StoryCard } from "@/components/reusables/customUI";
+import { normalizeStoryStatus } from "@/components/reusables/customUI/StoryStatusIcon";
 import { useLibrary } from "@/src/hooks/useLibrary";
 import { useDeleteStory } from "@/src/hooks/useStoryMutations";
 import type { StoryResponseDto } from "@/src/client/types.gen";
@@ -30,9 +31,33 @@ type ExtendedStory = StoryResponseDto & {
 
 type TabKey = "Recent" | "Ongoing" | "Published" | "Drafts";
 
+function tabFromQuery(value: string | null): TabKey {
+  switch ((value || "").toLowerCase()) {
+    case "drafts":
+    case "draft":
+      return "Drafts";
+    case "ongoing":
+      return "Ongoing";
+    case "published":
+    case "completed":
+    case "complete":
+      return "Published";
+    case "recent":
+    default:
+      return "Recent";
+  }
+}
+
+function storyStatusKind(story: ExtendedStory) {
+  return normalizeStoryStatus(story.storyStatus || story.status);
+}
+
 const MyStoriesView = () => {
   const router = useRouter();
-  const [selectedTab, setSelectedTab] = useState<TabKey>("Recent");
+  const searchParams = useSearchParams();
+  const [selectedTab, setSelectedTab] = useState<TabKey>(() =>
+    tabFromQuery(searchParams.get("tab")),
+  );
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [storyToDelete, setStoryToDelete] = useState<{
     id: string | number;
@@ -49,6 +74,11 @@ const MyStoriesView = () => {
   // Delete story hook
   const { deleteStory, isDeleting } = useDeleteStory();
 
+  // Keep tab in sync when navigating with ?tab=
+  React.useEffect(() => {
+    setSelectedTab(tabFromQuery(searchParams.get("tab")));
+  }, [searchParams]);
+
   // Filter stories by tab
   const filteredStories = useMemo(() => {
     if (!stories) return [];
@@ -61,15 +91,15 @@ const MyStoriesView = () => {
         );
       case "Ongoing":
         return stories.filter(
-          (story: ExtendedStory) => story.status === "Ongoing",
+          (story: ExtendedStory) => storyStatusKind(story) === "ongoing",
         );
       case "Published":
         return stories.filter(
-          (story: ExtendedStory) => story.status === "Completed",
+          (story: ExtendedStory) => storyStatusKind(story) === "completed",
         );
       case "Drafts":
         return stories.filter(
-          (story: ExtendedStory) => story.status === "Draft",
+          (story: ExtendedStory) => storyStatusKind(story) === "draft",
         );
       default:
         return stories;

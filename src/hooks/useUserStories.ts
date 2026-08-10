@@ -1,6 +1,7 @@
 import useSWR from "swr";
 import { storiesControllerGetMyLibrary } from "@/src/client/sdk.gen";
 import { useAuthStore } from "@/src/stores/useAuthStore";
+import { normalizeStoryStatus } from "@/components/reusables/customUI/StoryStatusIcon";
 
 interface Story {
   id: string;
@@ -38,7 +39,7 @@ export function useUserStories() {
     {
       revalidateOnFocus: false,
       revalidateOnReconnect: false,
-    }
+    },
   );
 
   return {
@@ -57,8 +58,12 @@ export function useUserStats() {
 
   const stats = {
     totalStories: stories.length,
-    publishedStories: stories.filter((s) => s.storyStatus === "Published").length,
-    draftStories: stories.filter((s) => s.storyStatus === "Draft").length,
+    publishedStories: stories.filter(
+      (s) => normalizeStoryStatus(s.storyStatus) === "completed",
+    ).length,
+    draftStories: stories.filter(
+      (s) => normalizeStoryStatus(s.storyStatus) === "draft",
+    ).length,
     totalLikes: stories.reduce((sum, s) => sum + (s.likeCount || 0), 0),
     totalComments: stories.reduce((sum, s) => sum + (s.commentCount || 0), 0),
   };

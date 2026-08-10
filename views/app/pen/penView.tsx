@@ -21,6 +21,7 @@ import {
 
 import { Magnetik_Bold, Magnetik_Medium, Magnetik_Regular } from "@/lib/font";
 import { StoryCard } from "@/components/reusables/customUI";
+import { normalizeStoryStatus } from "@/components/reusables/customUI/StoryStatusIcon";
 import { useRouter } from "next/navigation";
 import { rewriteForCapacitor } from "@/lib/linkRewrite";
 
@@ -42,6 +43,10 @@ type ExtendedStory = StoryResponseDto & {
 };
 
 type TabKey = "Recent" | "Ongoing" | "Published" | "Drafts";
+
+function storyStatusKind(story: ExtendedStory) {
+  return normalizeStoryStatus(story.storyStatus || story.status);
+}
 
 const PEN_CACHE_KEY = APP_CACHE_KEYS.myLibrary;
 
@@ -109,17 +114,15 @@ const PenView = () => {
         );
       case "Ongoing":
         return effectiveStories.filter(
-          (story: ExtendedStory) => story.status === "Ongoing",
+          (story: ExtendedStory) => storyStatusKind(story) === "ongoing",
         );
       case "Published":
         return effectiveStories.filter(
-          (story: ExtendedStory) =>
-            story.status === "Completed" || story.storyStatus === "complete",
+          (story: ExtendedStory) => storyStatusKind(story) === "completed",
         );
       case "Drafts":
         return effectiveStories.filter(
-          (story: ExtendedStory) =>
-            story.status === "Draft" || story.storyStatus === "drafts",
+          (story: ExtendedStory) => storyStatusKind(story) === "draft",
         );
       default:
         return effectiveStories;
