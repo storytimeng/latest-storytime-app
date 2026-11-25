@@ -1,14 +1,30 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useLoadingStore } from "@/src/stores/useLoadingStore";
 
 export default function LoadingOverlay() {
-  const { isVisible, message } = useLoadingStore();
+  const router = useRouter();
+  const { isVisible, message, cancellable, cancelLabel, onCancel, hide } =
+    useLoadingStore();
 
   if (!isVisible) return null;
 
+  const handleCancel = () => {
+    onCancel?.();
+    hide();
+  };
+
+  const handleBack = () => {
+    onCancel?.();
+    hide();
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
+    }
+  };
+
   return (
-    <div className="fixed inset-0 bg-[#101010CC] flex flex-col items-center justify-center z-50">
+    <div className="fixed inset-0 bg-[#101010CC] flex flex-col items-center justify-center z-50 px-6">
       {/* Spinner */}
       <div className="w-8 h-8 mb-4">
         <svg
@@ -34,9 +50,28 @@ export default function LoadingOverlay() {
       </div>
 
       {/* Message */}
-      <p className="body-text-small-bold-auto text-universal-white text-center">
+      <p className="body-text-small-bold-auto text-universal-white text-center mb-5">
         {message}
       </p>
+
+      {cancellable && (
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={handleCancel}
+            className="px-4 py-2 rounded-full border border-universal-white/40 text-xs text-universal-white hover:bg-universal-white/10 transition-colors"
+          >
+            {cancelLabel || "Cancel"}
+          </button>
+          <button
+            type="button"
+            onClick={handleBack}
+            className="px-4 py-2 rounded-full bg-universal-white/15 text-xs text-universal-white hover:bg-universal-white/25 transition-colors"
+          >
+            Back
+          </button>
+        </div>
+      )}
     </div>
   );
 }

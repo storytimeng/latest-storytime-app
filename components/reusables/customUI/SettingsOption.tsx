@@ -46,7 +46,7 @@ const SettingsOption: React.FC<SettingsOptionProps> = ({
           </span>
         </div>
         <Switch
-          defaultSelected={option.isEnabled}
+          isSelected={option.isEnabled}
           onValueChange={option.onToggle}
           color="warning"
           size="sm"

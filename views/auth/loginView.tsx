@@ -9,7 +9,15 @@ import { z } from "zod";
 import { showToast } from "@/lib/showNotification";
 import { useLogin } from "@/src/hooks/useAuth";
 import { useLoadingStore } from "@/src/stores/useLoadingStore";
-import { getRememberMePreference } from "@/src/stores/useAuthStore";
+import {
+  getRememberMePreference,
+  setRememberMePreference,
+  setAuthToken,
+} from "@/src/stores/useAuthStore";
+
+const API_BASE = (
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"
+).replace(/\/+$/, "");
 
 interface LoginFormData {
   email: string;
@@ -38,6 +46,8 @@ export default function LoginView({ onSuccess, onSwitchView }: LoginViewProps) {
     rememberMe: false,
   });
   const [errors, setErrors] = useState<Partial<LoginFormData>>({});
+  const [twoFactorEmail, setTwoFactorEmail] = useState<string | null>(null);
+  const [twoFactorOtp, setTwoFactorOtp] = useState("");
 
   useEffect(() => {
     router.prefetch("/home");
@@ -106,55 +116,100 @@ export default function LoginView({ onSuccess, onSwitchView }: LoginViewProps) {
     error: loginError,
   } = useLogin();
 
+  const completeLoginSession = async () => {
+    try {
+      const { usersControllerGetProfile } = await import(
+        "@/src/client/sdk.gen"
+      );
+      const { useUserStore } = await import("@/src/stores/useUserStore");
+      const profileResponse = await usersControllerGetProfile();
+      if (profileResponse.data) {
+        const payload = profileResponse.data as any;
+        const user = payload?.user ?? payload?.data?.user;
+        if (user) {
+          useUserStore.getState().setUser(user);
+        }
+      }
+    } catch (profileError) {
+      console.error("Failed to fetch profile:", profileError);
+    }
+
+    showToast({ type: "success", message: "Signed in", duration: 1500 });
+    if (onSuccess) {
+      onSuccess();
+    } else {
+      router.push("/home");
+    }
+  };
+
+  const handleVerifyTwoFactor = async () => {
+    if (!twoFactorEmail || !twoFactorOtp.trim()) {
+      showToast({ type: "error", message: "Enter the 6-digit code sent to your email" });
+      return;
+    }
+
+    showLoading("Verifying code...", {
+      cancellable: true,
+      onCancel: () => hideLoading(),
+    });
+    try {
+      const res = await fetch(`${API_BASE}/auth/verify-2fa`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          email: twoFactorEmail,
+          otp: twoFactorOtp.trim(),
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json?.message || "Invalid verification code");
+      }
+      const payload = json?.data ?? json;
+      if (payload?.accessToken) {
+        setRememberMePreference(Boolean(formData.rememberMe));
+        setAuthToken(payload.accessToken, payload.refreshToken);
+      }
+      await completeLoginSession();
+    } catch (err: any) {
+      showToast({
+        type: "error",
+        message: err?.message || "Verification failed",
+        duration: 3000,
+      });
+    } finally {
+      hideLoading();
+    }
+  };
+
   const handleSubmit = async () => {
     const isValid = validateForm();
     if (!isValid) return;
 
-    showLoading("Logging you in...");
+    showLoading("Logging you in...", {
+      cancellable: true,
+      onCancel: () => hideLoading(),
+    });
     try {
-      const data = await loginTrigger({
+      const data: any = await loginTrigger({
         emailOrPenName: formData.email,
         password: formData.password,
         remember: formData.rememberMe,
       });
 
-      // Fetch and store user profile
-      try {
-        const { usersControllerGetProfile } = await import(
-          "@/src/client/sdk.gen"
-        );
-        const { useUserStore } = await import("@/src/stores/useUserStore");
-        console.log("Fetching user profile...");
-        const profileResponse = await usersControllerGetProfile();
-        console.log("Profile response:", profileResponse);
-
-        if (profileResponse.data) {
-          // Extract the actual user object from the nested response structure
-          // API returns: { data: { data: { user: {...} } } }
-          const payload = profileResponse.data as any;
-          const user = payload?.user ?? payload?.data?.user;
-
-          if (user) {
-            console.log("Setting user profile in store:", user);
-            useUserStore.getState().setUser(user);
-          } else {
-            console.warn("Could not extract user from profile response");
-          }
-        } else {
-          console.warn("Profile response has no data");
-        }
-      } catch (profileError) {
-        console.error("Failed to fetch profile:", profileError);
-        // Continue to home even if profile fetch fails,
-        // the useUserProfile hook will try again later
+      const payload = data?.data ?? data;
+      if (payload?.requiresTwoFactor && payload?.email) {
+        setTwoFactorEmail(payload.email);
+        showToast({
+          type: "info",
+          message: "Enter the 6-digit verification code sent to your email",
+          duration: 4000,
+        });
+        return;
       }
 
-      showToast({ type: "success", message: "Signed in", duration: 1500 });
-      if (onSuccess) {
-        onSuccess();
-      } else {
-        router.push("/home");
-      }
+      await completeLoginSession();
     } catch (err: any) {
       hideLoading();
 
@@ -169,6 +224,43 @@ export default function LoginView({ onSuccess, onSwitchView }: LoginViewProps) {
       hideLoading();
     }
   };
+
+  if (twoFactorEmail) {
+    return (
+      <div className="w-full max-w-md mx-auto space-y-6">
+        <div className="text-center text-primary-colour body-text-big-bold-auto">
+          Two-Factor Verification
+        </div>
+        <p className="text-center text-sm text-grey-2">
+          Enter the 6-digit code sent to <span className="font-medium text-primary-colour">{twoFactorEmail}</span>
+        </p>
+        <FormField
+          label="Verification Code"
+          type="text"
+          id="twoFactorOtp"
+          name="twoFactorOtp"
+          size="lg"
+          value={twoFactorOtp}
+          onValueChange={(value: string) => setTwoFactorOtp(value)}
+          placeholder="123456"
+          isRequired={true}
+        />
+        <Button variant="large" onPress={handleVerifyTwoFactor} type="button">
+          Verify & Continue
+        </Button>
+        <button
+          type="button"
+          onClick={() => {
+            setTwoFactorEmail(null);
+            setTwoFactorOtp("");
+          }}
+          className="w-full text-center text-sm text-primary-colour hover:underline"
+        >
+          Back to Login
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-md mx-auto">

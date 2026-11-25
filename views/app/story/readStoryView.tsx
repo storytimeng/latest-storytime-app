@@ -991,12 +991,12 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
     (!offlineCheckDone && !story)
   ) {
     return (
-      <div className="min-h-screen p-4 space-y-4 bg-accent-shade-1">
+      <div className="space-y-4 p-4 min-h-screen bg-accent-shade-1">
         <PageHeader backLink={`/story?id=${storyId}`} showBackButton />
 
-        <Skeleton className="w-full h-12 rounded-lg" />
+        <Skeleton className="rounded-lg w-full h-12" />
 
-        <Skeleton className="w-full rounded-lg h-96" />
+        <Skeleton className="rounded-lg w-full h-96" />
       </div>
     );
   }
@@ -1073,7 +1073,7 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
     <TTSProvider>
       <div
         ref={contentContainerRef}
-        className="min-h-screen bg-accent-shade-1 relative max-w-[28rem] md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto"
+        className="relative mx-auto max-w-[28rem] md:max-w-3xl lg:max-w-5xl xl:max-w-6xl min-h-screen bg-accent-shade-1"
       >
         {/* Story Header */}
 
@@ -1111,24 +1111,24 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
 
         {isContentLoading && !currentContent ? (
           <div className={`px-4 ${hasNavigation ? "pt-44" : "pt-32"} pb-8`}>
-            <Skeleton className="w-full rounded-lg h-96" />
+            <Skeleton className="rounded-lg w-full h-96" />
           </div>
         ) : isPartLoading && !currentContent ? (
           <div
             className={`px-4 ${hasNavigation ? "pt-44" : "pt-32"} pb-8 space-y-4`}
           >
-            <div className="w-full h-1 overflow-hidden rounded-full bg-light-grey-2">
-              <div className="w-1/3 h-full rounded-full animate-pulse bg-complimentary-colour" />
+            <div className="bg-light-grey-2 rounded-full w-full h-1 overflow-hidden">
+              <div className="bg-complimentary-colour rounded-full w-1/3 h-full animate-pulse" />
             </div>
 
-            <Skeleton className="w-full h-64 rounded-lg" />
+            <Skeleton className="rounded-lg w-full h-64" />
           </div>
         ) : (
           <React.Fragment>
             {isPartLoading ? (
-              <div className="sticky z-30 px-4 top-28">
-                <div className="w-full h-1 overflow-hidden rounded-full bg-light-grey-2">
-                  <div className="w-1/3 h-full rounded-full animate-pulse bg-complimentary-colour" />
+              <div className="top-28 z-30 sticky px-4">
+                <div className="bg-light-grey-2 rounded-full w-full h-1 overflow-hidden">
+                  <div className="bg-complimentary-colour rounded-full w-1/3 h-full animate-pulse" />
                 </div>
               </div>
             ) : null}
@@ -1152,7 +1152,7 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
               <div
                 className={`px-4 ${hasNavigation ? "pt-44" : "pt-32"} pb-12 text-center md:px-12 lg:px-24 xl:px-32`}
               >
-                <p className="text-sm text-primary-colour/60">
+                <p className="text-primary-colour/60 text-sm">
                   No content available for this{" "}
                   {hasNavigation ? partLabel.toLowerCase() : "story"} yet.
                 </p>
@@ -1175,7 +1175,7 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
               {/* Interaction Section (only when online) */}
 
               {isOnline && (
-                <div className="px-4 pb-6 md:px-12 lg:px-24 xl:px-32">
+                <div className="px-4 md:px-12 lg:px-24 xl:px-32 pb-6">
                   <InteractionSection
                     likeCount={displayLikeCount}
                     commentCount={displayCommentCount}
@@ -1191,7 +1191,7 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
                     <Suspense
                       fallback={
                         <div className="py-4">
-                          <Skeleton className="w-full h-20 rounded-lg" />
+                          <Skeleton className="rounded-lg w-full h-20" />
                         </div>
                       }
                     >

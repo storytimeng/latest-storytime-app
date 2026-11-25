@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import useSWR from "swr";
 import { MessageCircle, HardDrive, Trash2 } from "lucide-react";
 import { Magnetik_Bold, Magnetik_Medium, Magnetik_Regular } from "@/lib/font";
 import { StoryCard, OfflineAwareStoryCard } from "@/components/reusables";
@@ -12,6 +13,20 @@ import { useSearchParams } from "next/navigation";
 import { useOnlineStatus } from "@/src/hooks/useOnlineStatus";
 import { useAuthGate } from "@/src/hooks/useAuthGate";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
+import { ensureValidToken } from "@/src/lib/tokenManager";
+
+const API_BASE = (
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"
+).replace(/\/+$/, "");
+
+type LibraryTab = "library" | "liked" | "downloads";
+
+function resolveTabParam(tabParam: string | null): LibraryTab {
+  const normalized = tabParam?.trim().toLowerCase();
+  if (normalized === "downloads") return "downloads";
+  if (normalized === "liked") return "liked";
+  return "library";
+}
 
 const NewLibraryView = () => {
   useAuthGate(true);
@@ -19,57 +34,65 @@ const NewLibraryView = () => {
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
 
-  const [activeTab, setActiveTab] = useState<"library" | "downloads">(
-    tabParam === "downloads" ? "downloads" : "library",
+  const [activeTab, setActiveTab] = useState<LibraryTab>(() =>
+    resolveTabParam(tabParam),
   );
   const [page, setPage] = useState(1);
-  const [readingProgress, setReadingProgress] = useState<
-    Record<string, number>
-  >({});
   const observerTarget = useRef<HTMLDivElement>(null);
 
   // Update tab if URL param changes
   useEffect(() => {
-    if (tabParam === "downloads") {
-      setActiveTab("downloads");
-    }
+    setActiveTab(resolveTabParam(tabParam));
   }, [tabParam]);
 
   // Fetch reading history with pagination
   const { history, isLoading, totalPages } = useReadingHistory(page, 20);
 
-  // Fetch reading progress for all stories
-  useEffect(() => {
-    const fetchProgress = async () => {
-      try {
-        const response = await usersControllerGetAllReadingProgress({
-          query: { page: 1, limit: 100 },
-        });
-
-        if (!response.error && response.data) {
-          // @ts-ignore
-          const progressData = response.data?.data || response.data;
-          const progressMap: Record<string, number> = {};
-
-          if (Array.isArray(progressData)) {
-            progressData.forEach((item: any) => {
-              if (item.storyId && item.percentageRead !== undefined) {
-                progressMap[item.storyId] = item.percentageRead;
-              }
-            });
+  // Fetch reading progress once via SWR (deduped) and unwrap { progress: [...] }
+  const { data: readingProgress = {} } = useSWR<Record<string, number>>(
+    activeTab === "library" && isOnline ? "/users/reading-progress?limit=100" : null,
+    async () => {
+      const response = await usersControllerGetAllReadingProgress({
+        query: { page: 1, limit: 100 },
+      });
+      if (response.error || !response.data) return {};
+      const raw = response.data as any;
+      const list =
+        raw?.data?.progress ??
+        raw?.progress ??
+        (Array.isArray(raw?.data) ? raw.data : Array.isArray(raw) ? raw : []);
+      const map: Record<string, number> = {};
+      if (Array.isArray(list)) {
+        for (const item of list) {
+          if (item?.storyId && item?.percentageRead !== undefined) {
+            map[item.storyId] = Number(item.percentageRead) || 0;
           }
-
-          setReadingProgress(progressMap);
         }
-      } catch (error) {
-        console.error("Error fetching reading progress:", error);
       }
-    };
+      return map;
+    },
+    { revalidateOnFocus: false },
+  );
 
-    if (activeTab === "library" && history.length > 0) {
-      fetchProgress();
-    }
-  }, [activeTab, history]);
+  // Fetch liked stories when Liked tab is active
+  const { data: likedStoriesData = [], isLoading: isLoadingLiked } = useSWR<any[]>(
+    activeTab === "liked" && isOnline ? "/users/liked-stories" : null,
+    async () => {
+      const token = await ensureValidToken();
+      if (!token) return [];
+      const res = await fetch(
+        `${API_BASE}/users/liked-stories?page=1&limit=50`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+      if (!res.ok) return [];
+      const json = await res.json();
+      const stories = json?.data?.stories ?? json?.stories ?? [];
+      return Array.isArray(stories) ? stories : [];
+    },
+    { revalidateOnFocus: false },
+  );
 
   // Fetch downloaded stories from IndexedDB
   const {
@@ -127,8 +150,28 @@ const NewLibraryView = () => {
     ...offline.metadata,
   }));
 
+  const likedStories = useMemo(
+    () =>
+      likedStoriesData.map((story: any) => ({
+        id: story.id,
+        title: story.title,
+        description: story.description,
+        imageUrl: story.imageUrl,
+        coverImage: story.imageUrl,
+        author: story.author,
+        genres: story.genres || [],
+        status: story.storyStatus,
+        progress: readingProgress[story.id] || 0,
+      })),
+    [likedStoriesData, readingProgress],
+  );
+
   const currentStories =
-    activeTab === "library" ? libraryStories : downloadedStories;
+    activeTab === "library"
+      ? libraryStories
+      : activeTab === "liked"
+        ? likedStories
+        : downloadedStories;
 
   // Infinite scroll handler
   const handleObserver = useCallback(
@@ -172,6 +215,19 @@ const NewLibraryView = () => {
             )}
           </button>
           <button
+            onClick={() => setActiveTab("liked")}
+            className={`pb-3 text-sm relative ${
+              activeTab === "liked"
+                ? `text-complimentary-colour ${Magnetik_Bold.className}`
+                : `text-primary-shade-3 ${Magnetik_Regular.className}`
+            }`}
+          >
+            Liked
+            {activeTab === "liked" && (
+              <div className="absolute bottom-0 left-0 right-0 h-1 bg-complimentary-colour rounded-full" />
+            )}
+          </button>
+          <button
             onClick={() => setActiveTab("downloads")}
             className={`pb-3 text-sm relative ${
               activeTab === "downloads"
@@ -187,8 +243,8 @@ const NewLibraryView = () => {
         </div>
       </div>
 
-      {/* Offline Indicator for Library Tab */}
-      {activeTab === "library" && !isOnline && (
+      {/* Offline Indicator for Library / Liked Tabs */}
+      {(activeTab === "library" || activeTab === "liked") && !isOnline && (
         <div className="px-4">
           <OfflineIndicator />
         </div>
@@ -196,6 +252,7 @@ const NewLibraryView = () => {
 
       {/* Loading State */}
       {((isLoading && activeTab === "library" && page === 1 && isOnline) ||
+        (isLoadingLiked && activeTab === "liked" && isOnline) ||
         (isLoadingOffline && activeTab === "downloads")) && (
         <div className="px-4">
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -248,8 +305,9 @@ const NewLibraryView = () => {
         )}
 
       {/* Stories Grid */}
-      {/* Show grid when: (library tab + online + not loading) OR (downloads tab + not loading offline) */}
+      {/* Show grid when: (library/liked tab + online + not loading) OR (downloads tab + not loading offline) */}
       {((activeTab === "library" && isOnline && !(isLoading && page === 1)) ||
+        (activeTab === "liked" && isOnline && !isLoadingLiked) ||
         (activeTab === "downloads" && !isLoadingOffline)) && (
         <div className="px-4">
           {currentStories.length > 0 ? (
@@ -296,14 +354,18 @@ const NewLibraryView = () => {
               >
                 {activeTab === "library"
                   ? "No stories in library"
-                  : "No downloaded stories"}
+                  : activeTab === "liked"
+                    ? "No liked stories yet"
+                    : "No downloaded stories"}
               </h3>
               <p
                 className={`text-xs text-primary-shade-4 text-center mb-6 ${Magnetik_Regular.className}`}
               >
                 {activeTab === "library"
                   ? "Start reading stories to build your library!"
-                  : "Download stories to read them offline anytime!"}
+                  : activeTab === "liked"
+                    ? "Stories you like will appear here!"
+                    : "Download stories to read them offline anytime!"}
               </p>
             </div>
           )}

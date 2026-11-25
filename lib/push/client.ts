@@ -10,17 +10,37 @@
  *   - GET  {API_BASE}/push/vapid-public - optionally return public key from server
  */
 
+import { ensureValidToken } from "@/src/lib/tokenManager";
+
 export type PushPermissionState =
   | "unsupported"
   | "default"
   | "granted"
   | "denied";
 
-/** Read the public VAPID key from the build-time env var. */
-export function getVapidPublicKey(): string | null {
+function resolveApiBase(apiBase?: string): string {
+  return (
+    apiBase ||
+    process.env.NEXT_PUBLIC_API_URL ||
+    "http://localhost:3001"
+  ).replace(/\/+$/, "");
+}
+
+/** Read the public VAPID key from env or fetch it from the backend. */
+export async function getVapidPublicKey(apiBase?: string): Promise<string | null> {
   const key = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-  if (!key || key.length === 0) return null;
-  return key;
+  if (key && key.length > 0) return key;
+
+  try {
+    const res = await fetch(
+      `${resolveApiBase(apiBase)}/notifications/push/vapid-public`,
+    );
+    if (!res.ok) return null;
+    const json = await res.json();
+    return json?.data?.publicKey || json?.publicKey || null;
+  } catch {
+    return null;
+  }
 }
 
 /** Convert a base64url string to a Uint8Array (required by `applicationServerKey`). */
@@ -75,10 +95,10 @@ export async function subscribeToPush(
     throw new Error(`Notification permission ${perm}`);
   }
 
-  const vapidKey = getVapidPublicKey();
+  const vapidKey = await getVapidPublicKey(opts.apiBase);
   if (!vapidKey) {
     throw new Error(
-      "Missing NEXT_PUBLIC_VAPID_PUBLIC_KEY - set it in .env.local before enabling push.",
+      "Unable to retrieve VAPID public key for push notifications.",
     );
   }
 
@@ -88,22 +108,28 @@ export async function subscribeToPush(
     applicationServerKey: urlBase64ToUint8Array(vapidKey),
   });
 
-  // Send to backend. Best-effort: if it fails, the SW subscription is still
-  // valid but the server won't push to it until the user retries.
-  const apiBase = opts.apiBase ?? "/api";
+  const apiBase = resolveApiBase(opts.apiBase);
+  const token = await ensureValidToken();
   const json = subscription.toJSON();
-  await fetch(`${apiBase}/push/subscribe`, {
+  const res = await fetch(`${apiBase}/notifications/push/subscribe`, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: {
+      "content-type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
     body: JSON.stringify({
       endpoint: subscription.endpoint,
       keys: {
         p256dh: json.keys?.p256dh,
         auth: json.keys?.auth,
       },
-      userId: opts.userId ?? null,
+      userAgent: typeof navigator !== "undefined" ? navigator.userAgent : undefined,
     }),
   });
+
+  if (!res.ok) {
+    throw new Error(`Failed to save push subscription (${res.status})`);
+  }
 
   return subscription;
 }
@@ -115,16 +141,19 @@ export async function unsubscribeFromPush(
   const sub = await getExistingSubscription();
   if (!sub) return false;
 
-  const apiBase = opts.apiBase ?? "/api";
+  const apiBase = resolveApiBase(opts.apiBase);
+  const token = await ensureValidToken();
   try {
-    await fetch(`${apiBase}/push/subscribe`, {
+    await fetch(`${apiBase}/notifications/push/subscribe`, {
       method: "DELETE",
-      headers: { "content-type": "application/json" },
+      headers: {
+        "content-type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
       body: JSON.stringify({ endpoint: sub.endpoint }),
     });
   } catch {
-    // Continue with the local unsubscribe even if the backend is unreachable.
+    // Still unsubscribe locally even if backend fails
   }
-
   return sub.unsubscribe();
 }
