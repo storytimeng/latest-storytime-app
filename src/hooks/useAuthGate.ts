@@ -58,9 +58,8 @@ export function useAuthGate(
 ) {
   const opts: UseAuthGateOptions =
     typeof optionsOrEnabled === "boolean" ? {} : optionsOrEnabled;
-  const enabled = typeof optionsOrEnabled === "boolean"
-    ? optionsOrEnabled
-    : true;
+  const enabled =
+    typeof optionsOrEnabled === "boolean" ? optionsOrEnabled : true;
 
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const openModal = useAuthModalStore((s) => s.openModal);
@@ -109,7 +108,15 @@ export function useAuthGate(
     if (fallback) {
       router.replace(fallback);
     }
-  }, [enabled, isAuthenticated, pathname, modalIsOpen, openModal, router, fallback]);
+  }, [
+    enabled,
+    isAuthenticated,
+    pathname,
+    modalIsOpen,
+    openModal,
+    router,
+    fallback,
+  ]);
 
   // Global click blocker: intercept clicks on links that would navigate
   // to a restricted route while logged out. Captures phase so we win

@@ -7,7 +7,13 @@ import { Magnetik_Bold, Magnetik_Regular } from "@/lib/font";
 import { showToast } from "@/lib/showNotification";
 
 interface UpdateInfo {
-  kind: "loading" | "not-native" | "up-to-date" | "available" | "blocked" | "error";
+  kind:
+    | "loading"
+    | "not-native"
+    | "up-to-date"
+    | "available"
+    | "blocked"
+    | "error";
   currentVersion?: string;
   latestVersion?: string;
   message?: string;
@@ -25,7 +31,9 @@ export const CheckUpdateModal: React.FC = () => {
   }, []);
 
   const checkForUpdate = async () => {
-    const cap = (window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor;
+    const cap = (
+      window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }
+    ).Capacitor;
     if (!cap?.isNativePlatform?.()) {
       setUpdateInfo({
         kind: "not-native",
@@ -51,7 +59,8 @@ export const CheckUpdateModal: React.FC = () => {
           currentVersion: current.bundle.version,
           latestVersion: latest.version,
           message:
-            latest.message || "A breaking update is available. Please update from the app store.",
+            latest.message ||
+            "A breaking update is available. Please update from the app store.",
         });
       } else {
         setUpdateInfo({
@@ -95,7 +104,9 @@ export const CheckUpdateModal: React.FC = () => {
   return (
     <>
       <ModalHeader className="flex flex-col gap-1">
-        <h2 className={`text-xl ${Magnetik_Bold.className}`}>Check for Updates</h2>
+        <h2 className={`text-xl ${Magnetik_Bold.className}`}>
+          Check for Updates
+        </h2>
       </ModalHeader>
       <ModalBody className="pb-6">
         <div className="py-6 text-center">
@@ -120,15 +131,21 @@ export const CheckUpdateModal: React.FC = () => {
           {updateInfo.kind === "up-to-date" && (
             <div className="flex flex-col items-center gap-3">
               <span className="text-5xl">✅</span>
-              <p className={`text-lg ${Magnetik_Bold.className} text-primary-colour`}>
+              <p
+                className={`text-lg ${Magnetik_Bold.className} text-primary-colour`}
+              >
                 You&apos;re up to date!
               </p>
               {updateInfo.currentVersion && (
-                <p className={`text-sm text-grey-3 ${Magnetik_Regular.className}`}>
+                <p
+                  className={`text-sm text-grey-3 ${Magnetik_Regular.className}`}
+                >
                   Version {updateInfo.currentVersion}
                 </p>
               )}
-              <p className={`text-sm text-grey-3 mt-1 ${Magnetik_Regular.className}`}>
+              <p
+                className={`text-sm text-grey-3 mt-1 ${Magnetik_Regular.className}`}
+              >
                 {updateInfo.message}
               </p>
             </div>
@@ -137,19 +154,27 @@ export const CheckUpdateModal: React.FC = () => {
           {updateInfo.kind === "available" && (
             <div className="flex flex-col items-center gap-3">
               <span className="text-5xl">📦</span>
-              <p className={`text-lg ${Magnetik_Bold.className} text-primary-colour`}>
+              <p
+                className={`text-lg ${Magnetik_Bold.className} text-primary-colour`}
+              >
                 Update Available
               </p>
               <div className="space-y-1">
-                <p className={`text-sm text-grey-3 ${Magnetik_Regular.className}`}>
+                <p
+                  className={`text-sm text-grey-3 ${Magnetik_Regular.className}`}
+                >
                   Current: v{updateInfo.currentVersion}
                 </p>
-                <p className={`text-sm font-semibold text-primary-colour ${Magnetik_Regular.className}`}>
+                <p
+                  className={`text-sm font-semibold text-primary-colour ${Magnetik_Regular.className}`}
+                >
                   Latest: v{updateInfo.latestVersion}
                 </p>
               </div>
               {updateInfo.message && (
-                <p className={`text-sm text-grey-3 ${Magnetik_Regular.className}`}>
+                <p
+                  className={`text-sm text-grey-3 ${Magnetik_Regular.className}`}
+                >
                   {updateInfo.message}
                 </p>
               )}
@@ -167,15 +192,21 @@ export const CheckUpdateModal: React.FC = () => {
           {updateInfo.kind === "blocked" && (
             <div className="flex flex-col items-center gap-3">
               <span className="text-5xl">🚧</span>
-              <p className={`text-lg ${Magnetik_Bold.className} text-primary-colour`}>
+              <p
+                className={`text-lg ${Magnetik_Bold.className} text-primary-colour`}
+              >
                 Major Update Required
               </p>
               {updateInfo.latestVersion && (
-                <p className={`text-sm text-grey-3 ${Magnetik_Regular.className}`}>
+                <p
+                  className={`text-sm text-grey-3 ${Magnetik_Regular.className}`}
+                >
                   v{updateInfo.latestVersion} is available
                 </p>
               )}
-              <p className={`text-sm text-grey-3 ${Magnetik_Regular.className}`}>
+              <p
+                className={`text-sm text-grey-3 ${Magnetik_Regular.className}`}
+              >
                 {updateInfo.message}
               </p>
             </div>

@@ -17,13 +17,7 @@
  *     so this screen does not block them.
  */
 
-import {
-  Mail,
-  Copy,
-  Check,
-  ShieldCheck,
-  Smartphone,
-} from "lucide-react";
+import { Mail, Copy, Check, ShieldCheck, Smartphone } from "lucide-react";
 import { useState } from "react";
 import { showToast } from "@/lib/showNotification";
 
@@ -69,9 +63,9 @@ export function AndroidPricingNotice() {
           </h1>
           <p className="text-base text-muted-foreground leading-relaxed">
             Premium subscriptions are managed on our website. Copy the link
-            below, open it in your phone or computer browser to view plans
-            and subscribe — once you do, your account will unlock premium
-            stories in this app automatically.
+            below, open it in your phone or computer browser to view plans and
+            subscribe — once you do, your account will unlock premium stories in
+            this app automatically.
           </p>
         </div>
 
@@ -121,8 +115,8 @@ export function AndroidPricingNotice() {
         <div className="flex items-start gap-3 rounded-lg bg-muted/40 px-4 py-3 text-left text-xs text-muted-foreground">
           <ShieldCheck className="w-4 h-4 mt-0.5 shrink-0 text-primary" />
           <p>
-            Already subscribed on the web? Sign in with the same email —
-            premium content will unlock in this app right away.
+            Already subscribed on the web? Sign in with the same email — premium
+            content will unlock in this app right away.
           </p>
         </div>
       </div>
