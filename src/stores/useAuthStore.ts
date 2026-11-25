@@ -105,11 +105,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         );
       }
 
-      if (refreshToken) {
+      if (refreshToken && getRememberMePreference()) {
         Cookies.set(REFRESH_TOKEN_KEY, refreshToken, {
           ...baseCookieOptions(),
           expires: PERSISTENT_LOGIN_DAYS,
         });
+      } else if (!getRememberMePreference()) {
+        Cookies.remove(REFRESH_TOKEN_KEY);
       }
 
       // Non-sensitive flag so isAuthenticated() knows a server session exists
@@ -117,13 +119,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       Cookies.set(SESSION_FLAG_KEY, "1", getStorageCookieOptions(token));
     } else {
       Cookies.remove(AUTH_TOKEN_KEY);
+      Cookies.remove(REFRESH_TOKEN_KEY);
       Cookies.remove(TOKEN_EXPIRY_KEY);
       Cookies.remove(SESSION_FLAG_KEY);
     }
 
+    const persistRefresh = getRememberMePreference();
     set((state) => ({
       token,
-      refreshToken: token ? (refreshToken ?? state.refreshToken) : undefined,
+      refreshToken:
+        token && persistRefresh
+          ? (refreshToken ?? state.refreshToken)
+          : undefined,
     }));
   },
   setReset: (email?: string, otp?: string) => {

@@ -1,5 +1,9 @@
 import Cookies from "js-cookie";
-import { getRefreshToken, useAuthStore } from "../stores/useAuthStore";
+import {
+  getRefreshToken,
+  getRememberMePreference,
+  useAuthStore,
+} from "../stores/useAuthStore";
 
 // Singleton: prevent concurrent refresh races
 let _refreshPromise: Promise<{
@@ -60,6 +64,11 @@ export async function refreshTokens(): Promise<{
   token?: string;
   refreshToken?: string;
 } | null> {
+  // Auto-refresh is only enabled when "Keep me logged in" (rememberMe) was checked
+  if (!getRememberMePreference()) {
+    return null;
+  }
+
   if (_refreshPromise) {
     return _refreshPromise;
   }
@@ -135,6 +144,7 @@ export async function ensureValidToken(): Promise<string | null> {
     useAuthStore.getState().token || Cookies.get(AUTH_TOKEN_KEY);
 
   if (!currentToken) {
+    if (!getRememberMePreference()) return null;
     // Only attempt silent refresh if a session flag or refresh token exists;
     // otherwise guest page loads would fire unnecessary 400 /auth/refresh calls.
     const hasSession = Boolean(
@@ -148,6 +158,10 @@ export async function ensureValidToken(): Promise<string | null> {
   // Check if token needs refresh
   if (!shouldRefreshToken()) {
     return currentToken;
+  }
+
+  if (!getRememberMePreference()) {
+    return null;
   }
 
   console.log(

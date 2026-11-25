@@ -1,7 +1,12 @@
 import Cookies from "js-cookie";
 import { client } from "./client/client.gen";
 import { createClientConfig } from "./heyapi-runtime";
-import { getAuthToken } from "./stores/useAuthStore";
+import {
+  getAuthToken,
+  getRefreshToken,
+  getRememberMePreference,
+  setAuthToken,
+} from "./stores/useAuthStore";
 import { isAuthExemptPath, hasAuthSession } from "@/src/lib/authSession";
 import {
   refreshTokens,
@@ -36,7 +41,20 @@ try {
     },
   });
 
-  // Response Interceptor: Automatically refresh token on 401 and retry request
+  // Request Interceptor: Attach x-refresh-token header when Remember Me is enabled
+  client.interceptors.request.use((options: any) => {
+    if (getRememberMePreference()) {
+      const refresh = getRefreshToken();
+      if (refresh) {
+        const headers = new Headers(options?.headers);
+        headers.set("x-refresh-token", refresh);
+        options.headers = headers;
+      }
+    }
+    return options;
+  });
+
+  // Response Interceptor: Seamlessly apply backend-refreshed tokens & handle 401
   let isRefreshing = false;
   let failedQueue: Array<{
     resolve: (value?: any) => void;
@@ -56,6 +74,16 @@ try {
   };
 
   client.interceptors.response.use(async (response: Response, opts: any) => {
+    // Apply seamless header-based token refresh emitted by backend guards
+    const newAccessToken = response.headers.get("x-new-access-token");
+    const newRefreshToken = response.headers.get("x-new-refresh-token");
+    if (newAccessToken) {
+      setAuthToken(newAccessToken, newRefreshToken ?? undefined);
+      client.setConfig({
+        auth: async () => newAccessToken,
+      });
+    }
+
     // If response is OK, return it as-is
     if (response.ok) {
       return response;
@@ -74,6 +102,13 @@ try {
 
       if (!hasAuthSession() && !Cookies.get("refreshToken")) {
         console.log("[Interceptor] 401 for anonymous user, skipping refresh");
+        return response;
+      }
+
+      // Only auto-refresh when "Keep me logged in" (rememberMe) was checked
+      if (!getRememberMePreference()) {
+        const { clearAuth } = await import("./stores/useAuthStore");
+        clearAuth();
         return response;
       }
 
