@@ -104,7 +104,7 @@ export function useAuthGate(
     if (!isAuthRestrictedPath(pathname)) return;
     if (modalIsOpen) return;
 
-    openModal("signup");
+    openModal("choice");
     if (fallback) {
       router.replace(fallback);
     }
@@ -158,7 +158,7 @@ export function useAuthGate(
           (e as any).stopImmediatePropagation();
         }
         if (!modalOpenRef.current) {
-          openModal("signup");
+          openModal("choice");
         }
       }
     };

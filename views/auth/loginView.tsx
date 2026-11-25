@@ -227,11 +227,11 @@ export default function LoginView({ onSuccess, onSwitchView }: LoginViewProps) {
 
   if (twoFactorEmail) {
     return (
-      <div className="w-full max-w-md mx-auto space-y-6">
-        <div className="text-center text-primary-colour body-text-big-bold-auto">
+      <div className="space-y-6 mx-auto w-full max-w-md">
+        <div className="body-text-big-bold-auto text-primary-colour text-center">
           Two-Factor Verification
         </div>
-        <p className="text-center text-sm text-grey-2">
+        <p className="text-grey-2 text-sm text-center">
           Enter the 6-digit code sent to <span className="font-medium text-primary-colour">{twoFactorEmail}</span>
         </p>
         <FormField
@@ -254,7 +254,7 @@ export default function LoginView({ onSuccess, onSwitchView }: LoginViewProps) {
             setTwoFactorEmail(null);
             setTwoFactorOtp("");
           }}
-          className="w-full text-center text-sm text-primary-colour hover:underline"
+          className="w-full text-primary-colour text-sm text-center hover:underline"
         >
           Back to Login
         </button>
@@ -263,8 +263,8 @@ export default function LoginView({ onSuccess, onSwitchView }: LoginViewProps) {
   }
 
   return (
-    <div className="w-full max-w-md mx-auto">
-      <div className="text-center text-primary-colour body-text-big-bold-auto mb-[4.125rem]">
+    <div className="mx-auto w-full max-w-md">
+      <div className="mb-[4.125rem] body-text-big-bold-auto text-primary-colour text-center">
         Login to continue to Storytime
       </div>
       {/* Form */}
@@ -305,7 +305,7 @@ export default function LoginView({ onSuccess, onSwitchView }: LoginViewProps) {
         </div>
 
         {/* Remember Me and Forgot Password */}
-        <div className="flex items-center justify-between mt-2.5">
+        <div className="flex justify-between items-center mt-2.5">
           <div className="flex items-center space-x-2">
             <input
               type="checkbox"
@@ -314,7 +314,7 @@ export default function LoginView({ onSuccess, onSwitchView }: LoginViewProps) {
               onChange={(e) =>
                 handleInputChange("rememberMe", e.target.checked)
               }
-              className="w-4 h-4 rounded text-primary-colour checked:bg-primary-colour bg-universal-white border-light-grey-2 focus:ring-primary-colour focus:ring-2"
+              className="bg-universal-white checked:bg-primary-colour border-light-grey-2 rounded focus:ring-2 focus:ring-primary-colour w-4 h-4 text-primary-colour"
             />
             <label
               htmlFor="rememberMe"
@@ -327,14 +327,14 @@ export default function LoginView({ onSuccess, onSwitchView }: LoginViewProps) {
             <button
               type="button"
               onClick={() => onSwitchView("forgot-password")}
-              className="text-sm hover:text-grey-1 body-text-small-medium-auto transition-transform-colors text-primary-colour hover:underline"
+              className="body-text-small-medium-auto text-primary-colour hover:text-grey-1 text-sm hover:underline transition-transform-colors"
             >
               Forgot password?
             </button>
           ) : (
             <Link
               href="/auth/forgot-password"
-              className="text-sm hover:text-grey-1 body-text-small-medium-auto transition-transform-colors text-primary-colour hover:underline"
+              className="body-text-small-medium-auto text-primary-colour hover:text-grey-1 text-sm hover:underline transition-transform-colors"
             >
               Forgot password?
             </Link>
@@ -342,18 +342,18 @@ export default function LoginView({ onSuccess, onSwitchView }: LoginViewProps) {
         </div>
       </form>
 
-      <div className="flex items-center invisible my-5">
-        <div className="flex-1 border-t border-accent-color"></div>
-        <div className="px-4 body-text-small-regular text-[#708090] body-text-small-auto-regular">
+      <div className="invisible flex items-center my-5">
+        <div className="flex-1 border-accent-color border-t"></div>
+        <div className="px-4 body-text-small-auto-regular body-text-small-regular text-[#708090]">
           or
         </div>
-        <div className="flex-1 border-t border-accent-color"></div>
+        <div className="flex-1 border-accent-color border-t"></div>
       </div>
 
       <div className="space-y-3">
         <Button
           variant="google"
-          startContent={<div className="w-5 h-5 rounded bg-grey-1"></div>}
+          startContent={<div className="bg-grey-1 rounded w-5 h-5"></div>}
           className="invisible"
         >
           Continue with Google
@@ -374,19 +374,19 @@ export default function LoginView({ onSuccess, onSwitchView }: LoginViewProps) {
 
       {/* Signup Link */}
       <div className="mt-4 text-center">
-        <p className="body-text-small-medium-auto ">
+        <p className="body-text-small-medium-auto">
           Have an account?{" "}
           {onSwitchView ? (
             <button
               onClick={() => onSwitchView("signup")}
-              className="font-medium text-primary-colour hover:underline body-text-small-regular-auto"
+              className="font-medium body-text-small-regular-auto text-primary-colour hover:underline"
             >
               Sign Up
             </button>
           ) : (
             <Link
               href="/auth/signup"
-              className="font-medium text-primary-colour hover:underline body-text-small-regular-auto"
+              className="font-medium body-text-small-regular-auto text-primary-colour hover:underline"
             >
               Sign Up
             </Link>
@@ -395,21 +395,21 @@ export default function LoginView({ onSuccess, onSwitchView }: LoginViewProps) {
       </div>
 
       {/* Terms and Privacy Footer */}
-      <div className="mt-8 flex items-center justify-center gap-4 text-[10px] text-primary-colour/40">
+      <div className="flex justify-center items-center gap-4 mt-8 text-[10px] text-primary-colour/40">
         <Link
           href="/terms"
           target="_blank"
           rel="noopener noreferrer"
-          className="hover:text-primary-colour transition-colors underline-offset-2 hover:underline"
+          className="hover:text-primary-colour hover:underline underline-offset-2 transition-colors"
         >
           Terms of Service
         </Link>
-        <div className="w-1 h-1 rounded-full bg-primary-colour/20" />
+        <div className="bg-primary-colour/20 rounded-full w-1 h-1" />
         <Link
           href="/privacy"
           target="_blank"
           rel="noopener noreferrer"
-          className="hover:text-primary-colour transition-colors underline-offset-2 hover:underline"
+          className="hover:text-primary-colour hover:underline underline-offset-2 transition-colors"
         >
           Privacy Policy
         </Link>

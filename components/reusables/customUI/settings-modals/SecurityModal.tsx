@@ -93,7 +93,7 @@ const SecurityModal = () => {
           <p className={`text-grey-2 ${Magnetik_Regular.className}`}>
             Manage your security settings and privacy preferences.
           </p>
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex justify-between items-center gap-4">
             <div>
               <span className={`block ${Magnetik_Medium.className}`}>
                 Two-Factor Authentication (Email OTP)
@@ -113,7 +113,7 @@ const SecurityModal = () => {
               }}
             />
           </div>
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex justify-between items-center gap-4">
             <div>
               <span className={`block ${Magnetik_Medium.className}`}>
                 Login Notifications

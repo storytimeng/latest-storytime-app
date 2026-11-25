@@ -1,5 +1,5 @@
 import Cookies from "js-cookie";
-import { useAuthStore } from "../stores/useAuthStore";
+import { getRefreshToken, useAuthStore } from "../stores/useAuthStore";
 
 // Singleton: prevent concurrent refresh races
 let _refreshPromise: Promise<{
@@ -85,11 +85,14 @@ async function _doRefresh(): Promise<{
           process.env.NEXT_PUBLIC_BACKEND_URL ||
           "";
 
+    const storedRefreshToken = getRefreshToken();
     const res = await fetch(`${baseUrl}/auth/refresh`, {
       method: "POST",
       credentials: "include", // sends the httpOnly refreshToken cookie
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({}), // body required by DTO validation; cookie carries the token
+      body: JSON.stringify(
+        storedRefreshToken ? { refreshToken: storedRefreshToken } : {},
+      ),
     });
 
     if (!res.ok) {
@@ -106,16 +109,17 @@ async function _doRefresh(): Promise<{
     }
 
     const token = payload?.accessToken;
+    const rotatedRefresh = payload?.refreshToken;
 
     if (!token) {
       console.error("No access token in refresh response");
       return null;
     }
 
-    // Store new access token; refresh token is managed server-side via httpOnly cookie
-    useAuthStore.getState().setToken(token, undefined);
+    // Store new access token and rotated refresh token
+    useAuthStore.getState().setToken(token, rotatedRefresh);
 
-    return { token };
+    return { token, refreshToken: rotatedRefresh };
   } catch (e) {
     console.error("❌ Token refresh failed", e);
     return null;
@@ -131,8 +135,12 @@ export async function ensureValidToken(): Promise<string | null> {
     useAuthStore.getState().token || Cookies.get(AUTH_TOKEN_KEY);
 
   if (!currentToken) {
-    // No access token - attempt silent refresh using the httpOnly cookie
-    // (browser sends it automatically with credentials: 'include')
+    // Only attempt silent refresh if a session flag or refresh token exists;
+    // otherwise guest page loads would fire unnecessary 400 /auth/refresh calls.
+    const hasSession = Boolean(
+      Cookies.get("hasSession") || getRefreshToken(),
+    );
+    if (!hasSession) return null;
     const result = await refreshTokens();
     return result?.token ?? null;
   }
