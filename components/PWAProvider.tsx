@@ -19,6 +19,12 @@ export const PWAProvider = ({ children }: PWAProviderProps) => {
   useEffect(() => {
     if (!IS_ANDROID) return;
 
+    // Tell @capgo/capacitor-updater that the current bundle booted cleanly so
+    // it does not roll back OTA updates on the next app restart.
+    import("@capgo/capacitor-updater")
+      .then(({ CapacitorUpdater }) => CapacitorUpdater.notifyAppReady())
+      .catch(() => {});
+
     let backButtonListener: any;
 
     const setupBackButton = async () => {
