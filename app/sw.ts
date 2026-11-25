@@ -2,8 +2,35 @@
 
 import { defaultCache } from "@serwist/turbopack/worker";
 import type { PrecacheEntry, SerwistGlobalConfig } from "serwist";
-import { Serwist } from "serwist";
-import { NetworkFirst } from "serwist";
+import {
+  CacheFirst,
+  CacheableResponsePlugin,
+  ExpirationPlugin,
+  NetworkFirst,
+  Serwist,
+} from "serwist";
+
+const staticFontsHandler = new CacheFirst({
+  cacheName: "static-fonts-v1",
+  plugins: [
+    new CacheableResponsePlugin({ statuses: [0, 200] }),
+    new ExpirationPlugin({
+      maxEntries: 32,
+      maxAgeSeconds: 365 * 24 * 60 * 60,
+    }),
+  ],
+});
+
+const staticStylesHandler = new CacheFirst({
+  cacheName: "static-css-v1",
+  plugins: [
+    new CacheableResponsePlugin({ statuses: [0, 200] }),
+    new ExpirationPlugin({
+      maxEntries: 64,
+      maxAgeSeconds: 365 * 24 * 60 * 60,
+    }),
+  ],
+});
 
 const readerPagesHandler = new NetworkFirst({
   cacheName: "reader-pages",
@@ -72,6 +99,23 @@ const serwist = new Serwist({
         /\/story\/[^/]+\/read$/.test(url.pathname),
       handler: readerShellHandler,
     },
+    {
+      matcher: ({ request, url }: { request: Request; url: URL }) =>
+        request.destination === "font" ||
+        /\.(?:woff2?|otf|ttf|eot)$/i.test(url.pathname),
+      handler: staticFontsHandler,
+    },
+    ...(process.env.NODE_ENV === "production"
+      ? [
+          {
+            matcher: ({ request, url }: { request: Request; url: URL }) =>
+              url.pathname.startsWith("/_next/static/css/") ||
+              (request.destination === "style" &&
+                url.pathname.startsWith("/_next/static/")),
+            handler: staticStylesHandler,
+          },
+        ]
+      : []),
     ...defaultCache,
   ],
   // When a navigation request fails, serve /~offline (registered as an
