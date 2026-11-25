@@ -17,6 +17,8 @@ import { useAuthStore } from "@/src/stores/useAuthStore";
 import { useAuthModalStore } from "@/src/stores/useAuthModalStore";
 import CancelPremiumModal from "@/components/reusables/customUI/CancelPremiumModal";
 import SubscriptionUpgradePanel from "@/components/reusables/customUI/SubscriptionUpgradePanel";
+import { AndroidPricingNotice } from "@/components/premium/AndroidPricingNotice";
+import { isNativeAndroid } from "@/lib/platform";
 import { showToast } from "@/lib/showNotification";
 
 const features = [
@@ -46,6 +48,10 @@ function formatExpiryDate(isoDate: string): string {
 }
 
 const PremiumView = () => {
+  if (isNativeAndroid()) {
+    return <AndroidPricingNotice />;
+  }
+
   const { isAuthenticated } = useAuthStore();
   const openAuthModal = useAuthModalStore((state) => state.openModal);
   const {

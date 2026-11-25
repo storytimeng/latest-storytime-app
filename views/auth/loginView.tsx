@@ -14,10 +14,7 @@ import {
   setRememberMePreference,
   setAuthToken,
 } from "@/src/stores/useAuthStore";
-
-const API_BASE = (
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"
-).replace(/\/+$/, "");
+import { getApiBaseUrl } from "@/src/lib/apiBase";
 
 interface LoginFormData {
   email: string;
@@ -153,7 +150,7 @@ export default function LoginView({ onSuccess, onSwitchView }: LoginViewProps) {
       onCancel: () => hideLoading(),
     });
     try {
-      const res = await fetch(`${API_BASE}/auth/verify-2fa`, {
+      const res = await fetch(`${getApiBaseUrl()}/auth/verify-2fa`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

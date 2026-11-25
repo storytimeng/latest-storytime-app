@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "generate:client": "node scripts/generate-client.js",
-    "dev": "npm run generate:client && node scripts/dev.mjs",
+    "dev": "node scripts/dev.mjs",
     "build": "next build",
     "build:android": "node scripts/android-build.mjs",
     "build:android:release": "node scripts/android-build.mjs --release",

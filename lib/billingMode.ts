@@ -18,7 +18,7 @@
  *      security-safe default — the same posture a Reader App requires to
  *      stay Play-Store-compliant.
  */
-import { IS_ANDROID } from "@/lib/platform";
+import { isNativeAndroid } from "@/lib/platform";
 import type { AppBillingMode, AppConfigDto } from "@/src/appConfigClient";
 
 export interface ResolvedBilling {
@@ -58,8 +58,8 @@ export function isRevealDatePassed(): boolean {
 export function resolveBillingMode(
   remote: AppConfigDto | null | undefined,
 ): ResolvedBilling {
-  // 1. Non-Android = always show full pricing.
-  if (!IS_ANDROID) {
+  // 1. Non-Android = always show full web pricing.
+  if (!isNativeAndroid()) {
     return {
       mode: "playbilling",
       source: "web",

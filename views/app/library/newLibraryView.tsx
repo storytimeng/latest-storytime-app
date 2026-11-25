@@ -14,10 +14,7 @@ import { useOnlineStatus } from "@/src/hooks/useOnlineStatus";
 import { useAuthGate } from "@/src/hooks/useAuthGate";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
 import { ensureValidToken } from "@/src/lib/tokenManager";
-
-const API_BASE = (
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"
-).replace(/\/+$/, "");
+import { getApiBaseUrl } from "@/src/lib/apiBase";
 
 type LibraryTab = "library" | "liked" | "downloads";
 
@@ -81,7 +78,7 @@ const NewLibraryView = () => {
       const token = await ensureValidToken();
       if (!token) return [];
       const res = await fetch(
-        `${API_BASE}/users/liked-stories?page=1&limit=50`,
+        `${getApiBaseUrl()}/users/liked-stories?page=1&limit=50`,
         {
           headers: { Authorization: `Bearer ${token}` },
         },

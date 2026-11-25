@@ -29,10 +29,7 @@ import { fetchPaymentHistory } from "@/src/lib/subscriptions";
 import { showToast } from "@/lib/showNotification";
 import { usePushSubscription } from "@/src/hooks/usePushSubscription";
 import { ensureValidToken } from "@/src/lib/tokenManager";
-
-const API_BASE = (
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"
-).replace(/\/+$/, "");
+import { getApiBaseUrl } from "@/src/lib/apiBase";
 
 const SettingsView = () => {
   const { isOpen, activeModal, openModal, closeModal } = useModalNavigation();
@@ -73,7 +70,7 @@ const SettingsView = () => {
         }
         const token = await ensureValidToken();
         if (token) {
-          await fetch(`${API_BASE}/users/preferences`, {
+          await fetch(`${getApiBaseUrl()}/users/preferences`, {
             method: "PATCH",
             headers: {
               "Content-Type": "application/json",

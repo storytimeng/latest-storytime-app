@@ -5,11 +5,8 @@ import { ModalHeader, ModalBody } from "@heroui/modal";
 import { Switch } from "@heroui/switch";
 import { Magnetik_Bold, Magnetik_Medium, Magnetik_Regular } from "@/lib/font";
 import { ensureValidToken } from "@/src/lib/tokenManager";
+import { getApiBaseUrl } from "@/src/lib/apiBase";
 import { showToast } from "@/lib/showNotification";
-
-const API_BASE = (
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"
-).replace(/\/+$/, "");
 
 const SecurityModal = () => {
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
@@ -24,7 +21,7 @@ const SecurityModal = () => {
       try {
         const token = await ensureValidToken();
         if (!token) return;
-        const res = await fetch(`${API_BASE}/users/preferences`, {
+        const res = await fetch(`${getApiBaseUrl()}/users/preferences`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) return;
@@ -57,7 +54,7 @@ const SecurityModal = () => {
     try {
       const token = await ensureValidToken();
       if (!token) throw new Error("Please log in again");
-      const res = await fetch(`${API_BASE}/users/preferences`, {
+      const res = await fetch(`${getApiBaseUrl()}/users/preferences`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",

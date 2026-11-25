@@ -11,6 +11,7 @@
  */
 
 import { ensureValidToken } from "@/src/lib/tokenManager";
+import { getApiBaseUrl } from "@/src/lib/apiBase";
 
 export type PushPermissionState =
   | "unsupported"
@@ -19,11 +20,7 @@ export type PushPermissionState =
   | "denied";
 
 function resolveApiBase(apiBase?: string): string {
-  return (
-    apiBase ||
-    process.env.NEXT_PUBLIC_API_URL ||
-    "http://localhost:3001"
-  ).replace(/\/+$/, "");
+  return (apiBase || getApiBaseUrl()).replace(/\/+$/, "");
 }
 
 /** Read the public VAPID key from env or fetch it from the backend. */
