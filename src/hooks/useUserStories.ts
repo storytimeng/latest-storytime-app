@@ -1,6 +1,8 @@
 import useSWR from "swr";
 import { storiesControllerGetMyLibrary } from "@/src/client/sdk.gen";
 import { useAuthStore } from "@/src/stores/useAuthStore";
+import { getCachedValue } from "@/src/stores/useDataStateCache";
+import { APP_CACHE_KEYS } from "@/src/stores/dataCacheKeys";
 
 interface Story {
   id: string;
@@ -32,17 +34,17 @@ export function useUserStories() {
       const response = await storiesControllerGetMyLibrary();
       const result = (response?.data as any)?.data || response?.data;
 
-      console.log("✅ User stories fetched successfully:", result);
-      return result?.stories || [];
+      return result;
     },
     {
       revalidateOnFocus: false,
       revalidateOnReconnect: false,
-    }
+      fallbackData: getCachedValue<any>(APP_CACHE_KEYS.myLibrary) ?? undefined,
+    },
   );
 
   return {
-    stories: (data || []) as Story[],
+    stories: (data?.stories || []) as Story[],
     isLoading,
     error,
     mutate,

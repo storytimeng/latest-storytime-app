@@ -55,7 +55,7 @@ export const AuthModal = () => {
   return (
     <div
       data-auth-modal
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm sm:p-4 overflow-y-auto"
+      className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm sm:p-4 overflow-y-auto"
       onClick={(e) => e.stopPropagation()}
     >
       <div

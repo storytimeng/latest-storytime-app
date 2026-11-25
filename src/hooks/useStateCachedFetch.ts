@@ -34,6 +34,8 @@ import {
 export function useStateCachedFetch<T>(key: string) {
   const { value, set, storedAt, hasFresh } = useDataStateCache<T>(key);
   const hasWrittenRef = useRef(false);
+  const valueRef = useRef(value);
+  valueRef.current = value;
 
   // Compute "is fresh?" against the fresh window. Exposed so callers
   // can decide whether to skip the network on initial mount.
@@ -47,7 +49,7 @@ export function useStateCachedFetch<T>(key: string) {
       writeBack: (next: T) => {
         // Guard against accidental identity thrash that would otherwise
         // notify every subscriber on every parent re-render.
-        if (hasWrittenRef.current && value === next) return;
+        if (hasWrittenRef.current && valueRef.current === next) return;
         hasWrittenRef.current = true;
         set(next);
       },

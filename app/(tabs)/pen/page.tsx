@@ -1,6 +1,6 @@
 import { Metadata } from "next";
-import { PenView } from "@/views";
-import { TabLayout } from "@/views";
+import PenView from "@/views/app/pen/penView";
+import TabLayout from "@/views/app/TabLayout";
 import { APP_CONFIG } from "@/config/app";
 
 export const metadata: Metadata = {

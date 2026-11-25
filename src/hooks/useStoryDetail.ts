@@ -146,10 +146,16 @@ export function useStoryLikes(
     try {
       if (targetState) {
         // User wants to like
-        await storiesControllerLikeStory({ path: { id: storyId } });
+        await storiesControllerLikeStory({
+          path: { id: storyId },
+          throwOnError: true,
+        });
       } else {
         // User wants to unlike
-        await storiesControllerUnlikeStory({ path: { id: storyId } });
+        await storiesControllerUnlikeStory({
+          path: { id: storyId },
+          throwOnError: true,
+        });
       }
 
       // Revalidate to get accurate counts from server
@@ -226,6 +232,7 @@ export function useStoryComments(storyId: string | undefined) {
           content: content.trim(),
           parentCommentId,
         },
+        throwOnError: true,
       });
 
       // Revalidate comments and count
@@ -245,6 +252,7 @@ export function useStoryComments(storyId: string | undefined) {
       await storiesControllerUpdateComment({
         path: { id },
         body: { content: content.trim() },
+        throwOnError: true,
       });
       await mutate();
     } catch (error) {
@@ -257,6 +265,7 @@ export function useStoryComments(storyId: string | undefined) {
     try {
       await storiesControllerDeleteComment({
         path: { id },
+        throwOnError: true,
       });
       await Promise.all([mutate(), mutateCommentCount()]);
     } catch (error) {
@@ -410,6 +419,7 @@ export function useChapterComments(chapterId: string | undefined) {
       const response = await storiesControllerCreateChapterComment({
         path: { chapterId },
         body: { content, parentCommentId } as any,
+        throwOnError: true,
       });
 
       // Revalidate comments
@@ -429,6 +439,7 @@ export function useChapterComments(chapterId: string | undefined) {
       await storiesControllerUpdateChapterComment({
         path: { commentId },
         body: { content: content.trim() } as any,
+        throwOnError: true,
       });
       await mutate();
     } catch (error) {
@@ -441,6 +452,7 @@ export function useChapterComments(chapterId: string | undefined) {
     try {
       await storiesControllerDeleteChapterComment({
         path: { commentId },
+        throwOnError: true,
       });
       await mutate();
     } catch (error) {
@@ -485,6 +497,7 @@ export function useEpisodeComments(episodeId: string | undefined) {
       const response = await storiesControllerCreateEpisodeComment({
         path: { episodeId },
         body: { content, parentCommentId } as any,
+        throwOnError: true,
       });
 
       await mutate();
@@ -503,6 +516,7 @@ export function useEpisodeComments(episodeId: string | undefined) {
       await storiesControllerUpdateEpisodeComment({
         path: { commentId },
         body: { content: content.trim() } as any,
+        throwOnError: true,
       });
       await mutate();
     } catch (error) {
@@ -515,6 +529,7 @@ export function useEpisodeComments(episodeId: string | undefined) {
     try {
       await storiesControllerDeleteEpisodeComment({
         path: { commentId },
+        throwOnError: true,
       });
       await mutate();
     } catch (error) {

@@ -69,7 +69,7 @@ const Navbar = () => {
   return (
     <>
       {/* ── Mobile bottom navbar (hidden on md+) ─────────────────────────── */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-[#f8f7f7] border-t border-[#AFAFAF] w-full sm:max-w-md sm:mx-auto rounded-t-xl z-50 safe-area-bottom">
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-[#f8f7f7] border-t border-[#AFAFAF] w-full sm:max-w-md sm:mx-auto rounded-t-xl z-40 safe-area-bottom">
         <nav
           className="flex items-center justify-around px-1 py-2 sm:py-3 sm:px-2"
           aria-label="Main navigation"
@@ -143,7 +143,7 @@ const Navbar = () => {
       </div>
 
       {/* ── Tablet / desktop top navbar (hidden below md) ────────────────── */}
-      <header className="hidden md:flex sticky top-0 z-50 w-full bg-[#f8f7f7] border-b border-[#AFAFAF] shadow-sm">
+      <header className="hidden md:flex sticky top-0 z-40 w-full bg-[#f8f7f7] border-b border-[#AFAFAF] shadow-sm">
         <div className="flex items-center justify-between w-full max-w-3xl px-6 mx-auto lg:max-w-5xl xl:max-w-6xl lg:px-8 h-14">
           {/* Brand */}
           <Link

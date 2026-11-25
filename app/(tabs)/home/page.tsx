@@ -1,10 +1,12 @@
 import React, { Suspense, lazy } from "react";
 import { Skeleton } from "@heroui/skeleton";
-import { TabLayout } from "@/views";
+import TabLayout from "@/views/app/TabLayout";
 
-// Lazy load HomeView for better initial load performance
+// Lazy load HomeView directly (avoid @/views barrel bundle)
 const HomeView = lazy(() =>
-  import("@/views").then((mod) => ({ default: mod.HomeView })),
+  import("@/views/app/home/homeView").then((mod) => ({
+    default: mod.default,
+  })),
 );
 
 const HomePage = () => {

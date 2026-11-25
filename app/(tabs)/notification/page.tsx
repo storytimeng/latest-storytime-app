@@ -1,6 +1,6 @@
-import { NotificationView } from "@/views";
+import NotificationView from "@/views/app/notification/notificationView";
 import React from "react";
-import { TabLayout } from "@/views";
+import TabLayout from "@/views/app/TabLayout";
 const NotificationPage = () => {
   return (
     <TabLayout>

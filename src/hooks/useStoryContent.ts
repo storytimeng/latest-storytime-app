@@ -120,6 +120,11 @@ export function useStoryContent({
     // Use initialChapters if provided
     if (initialChapters && initialChapters.length > 0) {
       hasInitializedChapters.current = true;
+      const initialMap = new Map<number, Chapter>();
+      initialChapters.forEach((ch) => {
+        initialMap.set(ch.id, { ...ch });
+      });
+      initialChaptersData.current = initialMap;
       return initialChapters;
     }
     // Only create default chapter if story has chapters
@@ -148,6 +153,11 @@ export function useStoryContent({
         initialParts,
       );
       hasInitializedParts.current = true;
+      const initialMap = new Map<number, Part>();
+      initialParts.forEach((pt) => {
+        initialMap.set(pt.id, { ...pt });
+      });
+      initialPartsData.current = initialMap;
       return initialParts;
     }
     // Only create default part/episode if story has episodes but no chapters
@@ -419,9 +429,9 @@ export function useStoryContent({
       if (field === "chapterNumber" || field === "isDraft") {
         setEditedChapterIds((prev) => new Set(prev).add(id));
       } else {
-        // Mark as edited if changed from initial
+        // Mark as edited if no initial snapshot exists or value changed from initial
         const initial = initialChaptersData.current.get(id);
-        if (initial && (initial as any)[field] !== value) {
+        if (!initial || (initial as any)[field] !== value) {
           setEditedChapterIds((prev) => new Set(prev).add(id));
         }
       }
@@ -454,9 +464,9 @@ export function useStoryContent({
       if (field === "episodeNumber" || field === "isDraft") {
         setEditedPartIds((prev) => new Set(prev).add(id));
       } else {
-        // Mark as edited if changed from initial
+        // Mark as edited if no initial snapshot exists or value changed from initial
         const initial = initialPartsData.current.get(id);
-        if (initial && (initial as any)[field] !== value) {
+        if (!initial || (initial as any)[field] !== value) {
           setEditedPartIds((prev) => new Set(prev).add(id));
         }
       }
@@ -590,14 +600,16 @@ export function useStoryContent({
       const deleted = prev.filter((ch) => deletedChapterIds.has(ch.id));
       const nonDeleted = prev.filter((ch) => !deletedChapterIds.has(ch.id));
 
-      // Sort non-deleted by createdAt (oldest first), fallback to current order
+      // Sort non-deleted by chapterNumber first (preserving user-edited order), then createdAt
       nonDeleted.sort((a, b) => {
+        const numDiff = (a.chapterNumber ?? a.id) - (b.chapterNumber ?? b.id);
+        if (numDiff !== 0) return numDiff;
         if (a.createdAt && b.createdAt) {
           return (
             new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
           );
         }
-        return 0; // Keep original order if no timestamps
+        return 0;
       });
 
       // Renumber non-deleted chapters sequentially
@@ -629,14 +641,16 @@ export function useStoryContent({
       const deleted = prev.filter((p) => deletedPartIds.has(p.id));
       const nonDeleted = prev.filter((p) => !deletedPartIds.has(p.id));
 
-      // Sort non-deleted by createdAt (oldest first), fallback to current order
+      // Sort non-deleted by episodeNumber first (preserving user-edited order), then createdAt
       nonDeleted.sort((a, b) => {
+        const numDiff = (a.episodeNumber ?? a.id) - (b.episodeNumber ?? b.id);
+        if (numDiff !== 0) return numDiff;
         if (a.createdAt && b.createdAt) {
           return (
             new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
           );
         }
-        return 0; // Keep original order if no timestamps
+        return 0;
       });
 
       // Renumber non-deleted episodes sequentially

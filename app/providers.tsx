@@ -185,6 +185,10 @@ export function Providers({ children, themeProps }: ProvidersProps) {
             },
             shouldRetryOnError: false,
             revalidateOnFocus: false,
+            revalidateOnReconnect: true,
+            dedupingInterval: 60_000,
+            focusThrottleInterval: 60_000,
+            keepPreviousData: true,
           }}
         >
           {children}
