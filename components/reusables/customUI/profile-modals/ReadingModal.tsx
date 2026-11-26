@@ -8,6 +8,7 @@ import { TimePicker } from "../TimePicker";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useUpdateProfile } from "@/src/hooks/useUpdateProfile";
 import { useUserProfile } from "@/src/hooks/useUserProfile";
+import { PushNotificationPrompt } from "@/components/reusables/PushNotificationPrompt";
 
 export const ReadingModal = () => {
   const router = useRouter();
@@ -147,6 +148,12 @@ export const ReadingModal = () => {
               Note: You will always get a daily reminder
             </p>
           </div>
+
+          <PushNotificationPrompt
+            forceShow
+            title="Turn on reading reminders"
+            description={`Allow browser notifications so we can remind you to read at ${formatTime(time)}.`}
+          />
 
           {/* Action Buttons */}
           <div className="flex gap-3">

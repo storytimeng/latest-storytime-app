@@ -20,6 +20,7 @@ import {
 import { useNotifications } from "@/src/hooks/useNotifications";
 import { useOnlineStatus } from "@/src/hooks/useOnlineStatus";
 import { cn } from "@/lib/utils";
+import { PushNotificationPrompt } from "@/components/reusables/PushNotificationPrompt";
 
 interface Notification {
   id: string;
@@ -138,6 +139,12 @@ const NotificationView = () => {
 
       {/* Notifications List */}
       <div className="space-y-3">
+        <PushNotificationPrompt
+          forceShow
+          title="Enable push notifications"
+          description="Receive instant alerts for story updates, comments, and daily reminders."
+          className="mb-3"
+        />
         {isLoading ? (
           Array(5)
             .fill(0)

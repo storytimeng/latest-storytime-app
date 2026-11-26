@@ -62,6 +62,14 @@ const SettingsView = () => {
     async (enabled: boolean) => {
       try {
         if (enabled) {
+          if (pushPermission === "denied") {
+            showToast({
+              type: "error",
+              message:
+                "Notifications are blocked in your browser settings. Please allow them for this site first.",
+            });
+            return;
+          }
           if (pushPermission !== "unsupported") {
             await subscribePush();
           }

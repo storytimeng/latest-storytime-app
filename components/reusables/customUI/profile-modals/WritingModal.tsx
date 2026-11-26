@@ -10,6 +10,7 @@ import { ChevronRight } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useUpdateProfile } from "@/src/hooks/useUpdateProfile";
 import { useUserProfile } from "@/src/hooks/useUserProfile";
+import { PushNotificationPrompt } from "@/components/reusables/PushNotificationPrompt";
 
 const DAYS = [
   { id: "mon", label: "Monday", short: "Mon" },
@@ -392,6 +393,12 @@ export const WritingModal = () => {
               Note: You will always get a reminder
             </p>
           </div>
+
+          <PushNotificationPrompt
+            forceShow
+            title="Turn on writing reminders"
+            description={`Allow browser notifications so we can remind you to write (${formatSchedule()}).`}
+          />
 
           {/* Action Buttons */}
           <div className="flex gap-3 mb-5">

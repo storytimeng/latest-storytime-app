@@ -2,6 +2,7 @@
 
 import { Navbar } from "@/components/reusables";
 import { useAuthGate } from "@/src/hooks/useAuthGate";
+import { PushNotificationPrompt } from "@/components/reusables/PushNotificationPrompt";
 
 export default function RootLayout({
   children,
@@ -16,6 +17,9 @@ export default function RootLayout({
   return (
     <section className="bg-accent-shade-1 min-h-screen">
       <Navbar />
+      <div className="max-w-6xl mx-auto px-4 pt-3">
+        <PushNotificationPrompt />
+      </div>
       <div className="md:pt-0">{children}</div>
     </section>
   );
