@@ -1146,6 +1146,24 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
                   hasNavigation={hasNavigation}
                   description={activeStory.description}
                   listenMode={readingMode === "listen"}
+                  onPlayFromSentence={(sentenceIndex) => {
+                    if (readingMode !== "listen") return;
+                    const totalSentences = Math.max(
+                      useTTSStore.getState().totalSentences,
+                      1,
+                    );
+                    const totalDuration =
+                      storyAudio.manifest?.totalDurationSeconds ||
+                      useTTSStore.getState().estimatedDurationSeconds ||
+                      0;
+                    if (totalDuration > 0) {
+                      const targetSeconds =
+                        (sentenceIndex / totalSentences) * totalDuration;
+                      void storyAudio.seek(targetSeconds);
+                    } else {
+                      void storyAudio.play();
+                    }
+                  }}
                 />
               </div>
             ) : (
@@ -1243,16 +1261,20 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
                 />
               )}
 
-              {/* Browser TTS navigation - read mode with multi-part stories */}
+              {/* Browser TTS navigation - read mode */}
 
-              {readingMode === "read" && hasNavigation && navigationList && (
+              {readingMode === "read" && (
                 <NavigationBar
-                  currentIndex={currentIndex}
-                  total={navigationList.length}
+                  currentIndex={hasNavigation ? currentIndex : 0}
+                  total={
+                    hasNavigation && navigationList
+                      ? navigationList.length
+                      : 1
+                  }
                   onPrevious={handlePreviousWithUrl}
                   onNext={handleNextWithUrl}
                   isVisible={isNavVisible}
-                  navigationList={navigationList}
+                  navigationList={navigationList || []}
                   selectedChapterId={selectedChapterId}
                   partLabel={structure === "episodes" ? "Episode" : "Chapter"}
                   onTtsLocked={() => requireFeature("audioNarration")}

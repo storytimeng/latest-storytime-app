@@ -22,7 +22,8 @@ import {
 import { Magnetik_Bold, Magnetik_Medium, Magnetik_Regular } from "@/lib/font";
 import { StoryCard } from "@/components/reusables/customUI";
 import { normalizeStoryStatus } from "@/components/reusables/customUI/StoryStatusIcon";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Skeleton } from "@heroui/skeleton";
 import { rewriteForCapacitor } from "@/lib/linkRewrite";
 
 import { useUserProfile } from "@/src/hooks/useUserProfile";
@@ -50,8 +51,11 @@ function storyStatusKind(story: ExtendedStory) {
 
 const PEN_CACHE_KEY = APP_CACHE_KEYS.myLibrary;
 
+const VALID_TABS: TabKey[] = ["Recent", "Ongoing", "Published", "Drafts"];
+
 const PenView = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   useEffect(() => {
     router.prefetch("/");
@@ -59,15 +63,44 @@ const PenView = () => {
     router.prefetch("/new-story");
   }, [router]);
 
-  // Warm-start cache for the pen/library list of the user's own
-  // stories. Same pattern as the home and library screens: render
-  // the previous session's list synchronously, then let the live
-  // SWR fetch revalidate in the background.
   const penCache = useStateCachedFetch<any[]>(PEN_CACHE_KEY);
   useRoutePrefetch(["/", "/library", "/new-story", "/home"]);
 
-  const [selectedTab, setSelectedTab] = useState<TabKey>("Recent");
-  const [showAllStories, setShowAllStories] = useState(false);
+  const urlTab = searchParams.get("tab") as TabKey | null;
+  const urlView = searchParams.get("view");
+  const initialTab: TabKey =
+    urlTab && VALID_TABS.includes(urlTab) ? urlTab : "Recent";
+
+  const [selectedTab, setSelectedTab] = useState<TabKey>(initialTab);
+  const [showAllStories, setShowAllStories] = useState(
+    urlView === "all" || Boolean(urlTab && VALID_TABS.includes(urlTab)),
+  );
+
+  useEffect(() => {
+    const t = searchParams.get("tab") as TabKey | null;
+    const v = searchParams.get("view");
+    if (t && VALID_TABS.includes(t)) {
+      setSelectedTab(t);
+      setShowAllStories(true);
+    } else if (v === "all") {
+      setShowAllStories(true);
+    } else if (!v && !t) {
+      setShowAllStories(false);
+    }
+  }, [searchParams]);
+
+  const updatePenUrl = (viewAll: boolean, tab: TabKey = selectedTab) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (viewAll) {
+      params.set("view", "all");
+      params.set("tab", tab);
+    } else {
+      params.delete("view");
+      params.delete("tab");
+    }
+    const qs = params.toString();
+    router.replace(qs ? `/pen?${qs}` : "/pen", { scroll: false });
+  };
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [storyToDelete, setStoryToDelete] = useState<{
     id: string | number;
@@ -199,9 +232,9 @@ const PenView = () => {
 
   // Empty State Component (when user has no stories at all)
   const EmptyState = () => (
-    <div className="min-h-screen bg-accent-shade-1 max-w-[28rem] md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto relative">
+    <div className="relative mx-auto max-w-[28rem] md:max-w-3xl lg:max-w-5xl xl:max-w-6xl min-h-screen bg-accent-shade-1">
       {/* Library Button */}
-      <div className="absolute z-10 top-4 right-4">
+      <div className="top-4 right-4 z-10 absolute">
         <Button
           className={`bg-primary-shade-6 text-universal-white px-4 rounded-full text-[10px] ${Magnetik_Regular.className}`}
           size="sm"
@@ -213,9 +246,9 @@ const PenView = () => {
       </div>
 
       {/* Main Content */}
-      <div className="flex flex-col items-center justify-center min-h-screen px-4">
+      <div className="flex flex-col justify-center items-center px-4 min-h-screen">
         {/* Illustration */}
-        <div className="flex items-center justify-center w-32 h-32 mb-8 bg-complimentary-colour/10 rounded-2xl">
+        <div className="flex justify-center items-center bg-complimentary-colour/10 mb-8 rounded-2xl w-32 h-32">
           <BookOpen className="w-20 h-20 text-complimentary-colour" />
         </div>
 
@@ -230,7 +263,7 @@ const PenView = () => {
 
         <Button
           variant="bordered"
-          className="w-full py-4 bg-transparent border-dashed border-primary-colour text-primary-colour hover:bg-primary-colour/5"
+          className="bg-transparent hover:bg-primary-colour/5 py-4 border-primary-colour border-dashed w-full text-primary-colour"
           onPress={() => router.push("/new-story")}
         >
           <div className="flex items-center gap-2">
@@ -251,7 +284,7 @@ const PenView = () => {
       <div className="pt-8">
         <Button
           variant="bordered"
-          className="w-full bg-transparent border-2 border-dashed border-complimentary-colour text-complimentary-colour hover:bg-complimentary-colour/5"
+          className="bg-transparent hover:bg-complimentary-colour/5 border-2 border-complimentary-colour border-dashed w-full text-complimentary-colour"
           onPress={() => router.push("/new-story")}
         >
           <div className="flex items-center gap-2 my-4">
@@ -277,21 +310,24 @@ const PenView = () => {
 
       {/* My Stories Section */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex justify-between items-center">
           <h2 className={`body-text-small-medium-auto text-primary-colour`}>
             My Stories
           </h2>
           <Button
             variant="light"
-            className="h-auto p-0 text-grey-2 body-text-smallest-medium-auto"
-            onPress={() => setShowAllStories(true)}
+            className="p-0 h-auto body-text-smallest-medium-auto text-grey-2"
+            onPress={() => {
+              setShowAllStories(true);
+              updatePenUrl(true, selectedTab);
+            }}
           >
             See all
           </Button>
         </div>
 
         {/* Stories Grid - Show first 4 stories */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="gap-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
           {filteredStories
             .slice(0, 4)
             .map((story: ExtendedStory, idx: number) => (
@@ -309,32 +345,36 @@ const PenView = () => {
     </div>
   );
 
-  // Full Stories List Component (when "See all" is clicked - with tabs)
+  // Full Stories List Component (when "See all" is clicked - with library-style underline tabs)
   const AllStoriesView = () => (
     <div className="space-y-6">
       {/* Tabs */}
-      <div className="w-full">
-        <Tabs
-          selectedKey={selectedTab}
-          onSelectionChange={(key: React.Key) => setSelectedTab(key as TabKey)}
-          variant="underlined"
-          classNames={{
-            tabList: "w-full relative rounded-none p-0 border-b border-divider",
-            cursor: "w-full bg-complimentary-colour",
-            tab: "max-w-fit px-0 h-12",
-            tabContent: `group-data-[selected=true]:text-complimentary-colour ${Magnetik_Medium.className}`,
-          }}
-        >
-          <Tab key="Recent" title="Recent" />
-          <Tab key="Ongoing" title="Ongoing" />
-          <Tab key="Published" title="Published" />
-          <Tab key="Drafts" title="Drafts" />
-        </Tabs>
+      <div className="flex gap-6 border-light-grey-2 border-b overflow-x-auto no-scrollbar">
+        {VALID_TABS.map((tab) => (
+          <button
+            key={tab}
+            type="button"
+            onClick={() => {
+              setSelectedTab(tab);
+              updatePenUrl(true, tab);
+            }}
+            className={`pb-3 text-sm relative whitespace-nowrap transition-colors ${
+              selectedTab === tab
+                ? `text-complimentary-colour ${Magnetik_Bold.className}`
+                : `text-primary-shade-3 ${Magnetik_Regular.className}`
+            }`}
+          >
+            {tab}
+            {selectedTab === tab && (
+              <div className="right-0 bottom-0 left-0 absolute bg-complimentary-colour rounded-full h-1" />
+            )}
+          </button>
+        ))}
       </div>
 
       {/* Stories Grid */}
       {filteredStories.length > 0 ? (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="gap-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
           {filteredStories.map((story: ExtendedStory, idx: number) => (
             <StoryCard
               key={(story as ExtendedStory).id ?? idx}
@@ -347,8 +387,8 @@ const PenView = () => {
           ))}
         </div>
       ) : (
-        <div className="flex flex-col items-center justify-center py-12">
-          <div className="flex items-center justify-center w-16 h-16 mb-4 rounded-full bg-light-grey-2">
+        <div className="flex flex-col justify-center items-center py-12">
+          <div className="flex justify-center items-center bg-light-grey-2 mb-4 rounded-full w-16 h-16">
             <BookOpen className="w-8 h-8 text-gray-400" />
           </div>
           <p
@@ -361,7 +401,20 @@ const PenView = () => {
     </div>
   );
 
-  // Render appropriate view based on state
+  // Render appropriate view based on state — never flash EmptyState while loading
+  if (isLoading && !hasStories) {
+    return (
+      <div className="space-y-4 mx-auto px-4 md:px-6 lg:px-8 pt-6 max-w-[28rem] md:max-w-3xl lg:max-w-5xl xl:max-w-6xl min-h-screen bg-accent-shade-1">
+        <Skeleton className="rounded-xl w-full h-14" />
+        <div className="gap-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+          {[...Array(4)].map((_, i) => (
+            <Skeleton key={i} className="rounded-lg w-full h-48" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   if (!hasStories) {
     return <EmptyState />;
   }
@@ -369,12 +422,15 @@ const PenView = () => {
   if (showAllStories) {
     return (
       <>
-        <div className="min-h-screen bg-accent-shade-1 max-w-[28rem] md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto px-4 md:px-6 lg:px-8 pb-20 md:pb-6">
+        <div className="mx-auto px-4 md:px-6 lg:px-8 pb-20 md:pb-6 max-w-[28rem] md:max-w-3xl lg:max-w-5xl xl:max-w-6xl min-h-screen bg-accent-shade-1">
           {/* Custom Header for All Stories View */}
-          <div className="relative flex items-center justify-center pt-4 mb-6">
+          <div className="relative flex justify-center items-center mb-6 pt-4">
             <button
-              onClick={() => setShowAllStories(false)}
-              className="absolute left-0 text-primary-colour"
+              onClick={() => {
+                setShowAllStories(false);
+                updatePenUrl(false);
+              }}
+              className="left-0 absolute text-primary-colour"
             >
               <ArrowLeft size={18} />
             </button>
@@ -397,11 +453,11 @@ const PenView = () => {
           }}
         >
           <ModalContent>
-            <ModalHeader className="flex items-center justify-between px-6 pt-6 pb-4">
+            <ModalHeader className="flex justify-between items-center px-6 pt-6 pb-4">
               <button onClick={cancelDelete} className="text-primary-colour">
                 <ArrowLeft size={20} />
               </button>
-              <h2 className="flex-1 text-center body-text-small-medium-auto text-primary-colour">
+              <h2 className="flex-1 body-text-small-medium-auto text-primary-colour text-center">
                 Delete Story
               </h2>
               <button onClick={cancelDelete} className="text-primary-colour">
@@ -410,7 +466,7 @@ const PenView = () => {
             </ModalHeader>
 
             <ModalBody className="px-6 py-8">
-              <p className="text-center body-text-small-medium-auto text-primary-colour">
+              <p className="body-text-small-medium-auto text-primary-colour text-center">
                 Are you sure you want to delete &ldquo;{storyToDelete?.title}
                 &rdquo;
               </p>
@@ -419,13 +475,13 @@ const PenView = () => {
             <ModalFooter className="flex gap-4 px-6 pt-0 pb-6">
               <Button
                 onPress={cancelDelete}
-                className="flex-1 py-6 bg-transparent border-2 rounded-full border-primary-colour text-primary-colour body-text-small-medium-auto"
+                className="flex-1 bg-transparent py-6 border-2 border-primary-colour rounded-full body-text-small-medium-auto text-primary-colour"
               >
                 No
               </Button>
               <Button
                 onPress={confirmDelete}
-                className="flex-1 py-6 rounded-full bg-primary-shade-6 text-universal-white body-text-small-medium-auto"
+                className="flex-1 bg-primary-shade-6 py-6 rounded-full body-text-small-medium-auto text-universal-white"
               >
                 Yes
               </Button>
@@ -438,7 +494,7 @@ const PenView = () => {
 
   return (
     <>
-      <div className="min-h-screen bg-accent-shade-1 max-w-[28rem] md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto px-4 md:px-6 lg:px-8 pb-20 md:pb-6">
+      <div className="mx-auto px-4 md:px-6 lg:px-8 pb-20 md:pb-6 max-w-[28rem] md:max-w-3xl lg:max-w-5xl xl:max-w-6xl min-h-screen bg-accent-shade-1">
         {/* Main Content - My Stories Preview */}
         <MyStoriesPreview />
       </div>
@@ -455,11 +511,11 @@ const PenView = () => {
         }}
       >
         <ModalContent>
-          <ModalHeader className="flex items-center justify-between px-6 pt-6 pb-4">
+          <ModalHeader className="flex justify-between items-center px-6 pt-6 pb-4">
             <button onClick={cancelDelete} className="text-primary-colour">
               <ArrowLeft size={20} />
             </button>
-            <h2 className="flex-1 text-center body-text-small-medium-auto text-primary-colour">
+            <h2 className="flex-1 body-text-small-medium-auto text-primary-colour text-center">
               Delete Story
             </h2>
             <button onClick={cancelDelete} className="text-primary-colour">
@@ -468,11 +524,11 @@ const PenView = () => {
           </ModalHeader>
 
           <ModalBody className="px-6 py-8">
-            <p className="text-center body-text-small-medium-auto text-primary-colour">
+            <p className="body-text-small-medium-auto text-primary-colour text-center">
               Are you sure you want to delete &ldquo;{storyToDelete?.title}
               &rdquo;?
             </p>
-            <p className="mt-4 text-center text-sm text-red-600 font-medium">
+            <p className="mt-4 font-medium text-red-600 text-sm text-center">
               This action cannot be undone.
             </p>
           </ModalBody>
@@ -482,13 +538,13 @@ const PenView = () => {
               onPress={confirmDelete}
               isLoading={isDeleting}
               isDisabled={!canDelete || isDeleting}
-              className="flex-1 py-7 text-base rounded-full bg-red-600 hover:bg-red-700 text-white body-text-small-medium-auto disabled:opacity-50 disabled:bg-red-400"
+              className="flex-1 bg-red-600 hover:bg-red-700 disabled:bg-red-400 disabled:opacity-50 py-7 rounded-full body-text-small-medium-auto text-white text-base"
             >
               {canDelete ? "Yes, Delete" : `Yes (${countdownDisplay})`}
             </Button>
             <Button
               onPress={cancelDelete}
-              className="flex-1 py-7 text-base bg-transparent border-2 rounded-full border-primary-colour text-primary-colour body-text-small-medium-auto"
+              className="flex-1 bg-transparent py-7 border-2 border-primary-colour rounded-full body-text-small-medium-auto text-primary-colour text-base"
             >
               No
             </Button>

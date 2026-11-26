@@ -44,6 +44,7 @@ export const StoryContent = React.memo(
     hasNavigation,
     description,
     listenMode = false,
+    onPlayFromSentence,
   }: StoryContentProps) => {
     const { checkFeature } = usePremiumFeatures();
     const readTtsEnabled = checkFeature("ttsEnabled");
@@ -356,7 +357,6 @@ export const StoryContent = React.memo(
 
     const showContextMenu = useCallback(
       (x: number, y: number, index: number) => {
-        if (listenMode) return;
         setContextMenu({
           isOpen: true,
           x: x,
@@ -364,13 +364,12 @@ export const StoryContent = React.memo(
           sentenceIndex: index,
         });
       },
-      [listenMode],
+      [],
     );
 
     // Handle long press for mobile
     const handleTouchStart = useCallback(
       (e: React.TouchEvent, index: number) => {
-        if (listenMode) return;
         const touch = e.touches[0];
         touchStartPos.current = { x: touch.clientX, y: touch.clientY };
 
@@ -378,7 +377,7 @@ export const StoryContent = React.memo(
           showContextMenu(touch.clientX, touch.clientY - 50, index);
         }, 500); // 500ms long press
       },
-      [listenMode, showContextMenu],
+      [showContextMenu],
     );
 
     const handleTouchEnd = useCallback(() => {
@@ -405,9 +404,13 @@ export const StoryContent = React.memo(
     // Handle single click to play (Seeking)
     const handleSegmentClick = useCallback(
       (e: React.MouseEvent, index: number) => {
-        if (listenMode) return;
         e.preventDefault();
         e.stopPropagation();
+
+        if (listenMode && onPlayFromSentence) {
+          onPlayFromSentence(index);
+          return;
+        }
 
         // If we are already playing, just jump there
         seekToSentence(index);
@@ -416,13 +419,12 @@ export const StoryContent = React.memo(
           play();
         }
       },
-      [listenMode, seekToSentence, play, storeIsPlaying],
+      [listenMode, onPlayFromSentence, seekToSentence, play, storeIsPlaying],
     );
 
     // Handle double click for context menu (Desktop alternatives)
     const handleSegmentDoubleClick = useCallback(
       (e: React.MouseEvent, index: number) => {
-        if (listenMode) return;
         e.preventDefault();
         e.stopPropagation();
 
@@ -432,7 +434,7 @@ export const StoryContent = React.memo(
         const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
         showContextMenu(e.clientX, rect.top, index);
       },
-      [listenMode, showContextMenu],
+      [showContextMenu],
     );
 
     const handlePlayFromHere = useCallback(
@@ -440,11 +442,21 @@ export const StoryContent = React.memo(
         e.preventDefault();
         e.stopPropagation();
 
-        seekToSentence(contextMenu.sentenceIndex);
-        play();
+        if (listenMode && onPlayFromSentence) {
+          onPlayFromSentence(contextMenu.sentenceIndex);
+        } else {
+          seekToSentence(contextMenu.sentenceIndex);
+          play();
+        }
         setContextMenu((prev) => ({ ...prev, isOpen: false }));
       },
-      [contextMenu.sentenceIndex, seekToSentence, play],
+      [
+        contextMenu.sentenceIndex,
+        listenMode,
+        onPlayFromSentence,
+        seekToSentence,
+        play,
+      ],
     );
 
     const closeContextMenu = useCallback(() => {

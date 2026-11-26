@@ -280,7 +280,7 @@ export const NavigationBar = React.memo(
                 <span
                   className={`text-xs text-primary-shade-4 ${Magnetik_Regular.className}`}
                 >
-                  {partLabel} {currentIndex + 1} / {total}
+                  {total > 1 ? `${partLabel} ${currentIndex + 1} / ${total}` : "Story Audio"}
                 </span>
               </div>
 

@@ -201,19 +201,30 @@ export const CommentsSection = ({
   const organizedComments = useMemo(() => {
     if (!isThreaded) return allComments;
 
-    const commentMap = new Map<string, Comment>();
+    // Flatten any nested `replies` already returned by the backend so they
+    // are preserved after reload instead of being wiped by `replies: []`.
+    const flattenedMap = new Map<string, Comment>();
+    const enqueue = (item: Comment, fallbackParentId?: string) => {
+      const normalizedParentId = item.parentCommentId ?? fallbackParentId;
+      const existing = flattenedMap.get(item.id);
+      if (!existing || (!existing.id.startsWith("optimistic") && item.isOptimistic === false)) {
+        flattenedMap.set(item.id, {
+          ...item,
+          parentCommentId: normalizedParentId,
+          replies: [],
+        });
+      }
+      if (Array.isArray(item.replies) && item.replies.length > 0) {
+        item.replies.forEach((child) => enqueue(child, item.id));
+      }
+    };
+
+    allComments.forEach((comment) => enqueue(comment));
+
     const rootComments: Comment[] = [];
-
-    // First pass: create map of all comments
-    allComments.forEach((comment) => {
-      commentMap.set(comment.id, { ...comment, replies: [] });
-    });
-
-    // Second pass: organize into tree
-    allComments.forEach((comment) => {
-      const commentWithReplies = commentMap.get(comment.id)!;
-      if (comment.parentCommentId) {
-        const parent = commentMap.get(comment.parentCommentId);
+    flattenedMap.forEach((commentWithReplies) => {
+      if (commentWithReplies.parentCommentId) {
+        const parent = flattenedMap.get(commentWithReplies.parentCommentId);
         if (parent) {
           parent.replies!.push(commentWithReplies);
         } else {

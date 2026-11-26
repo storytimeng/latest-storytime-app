@@ -123,8 +123,9 @@ export function useStoryAudio({
     }
 
     if (currentSegment && totalDurationSeconds) {
+      const adjustedElapsed = Math.max(0, elapsed - 0.8);
       const sentenceEstimate = Math.floor(
-        (elapsed / Math.max(totalDurationSeconds, 1)) *
+        (adjustedElapsed / Math.max(totalDurationSeconds, 1)) *
           Math.max(tts.totalSentences, 1),
       );
       tts.setCurrentSentenceIndex(
@@ -199,21 +200,62 @@ export function useStoryAudio({
       }
 
       segmentIndexRef.current = index;
-      const audio = new Audio(segment.url);
+
+      let audioSrc = segment.url;
+      let objectUrlToRevoke: string | null = null;
+      if (typeof window !== "undefined" && "caches" in window) {
+        try {
+          const cache = await caches.open("story-audio-v1");
+          const cachedResponse = await cache.match(segment.url);
+          if (cachedResponse) {
+            const blob = await cachedResponse.blob();
+            objectUrlToRevoke = URL.createObjectURL(blob);
+            audioSrc = objectUrlToRevoke;
+          } else {
+            void fetch(segment.url, { mode: "cors" })
+              .then((res) => {
+                if (res.ok) return cache.put(segment.url, res);
+              })
+              .catch(() => {});
+          }
+          const nextSegment = segments[index + 1];
+          if (nextSegment?.url) {
+            void cache.match(nextSegment.url).then((hit) => {
+              if (!hit) {
+                return fetch(nextSegment.url, { mode: "cors" })
+                  .then((res) => {
+                    if (res.ok) return cache.put(nextSegment.url, res);
+                  })
+                  .catch(() => {});
+              }
+            });
+          }
+        } catch {
+          // Ignore CacheStorage errors
+        }
+      }
+
+      const audio = new Audio(audioSrc);
       audio.playbackRate = tts.playbackRate;
       audio.volume = tts.volume;
       audioRef.current = audio;
 
       void setMediaSessionPlaybackState("playing");
 
-      await new Promise<void>((resolve, reject) => {
-        audio.onended = () => resolve();
-        audio.onerror = () => reject(new Error("Audio playback failed"));
-        void audio.play().catch(reject);
-      }).catch(() => {
-        stopPlayback();
-        setError("Playback failed. Please try again.");
-      });
+      try {
+        await new Promise<void>((resolve, reject) => {
+          audio.onended = () => resolve();
+          audio.onerror = () => reject(new Error("Audio playback failed"));
+          void audio.play().catch(reject);
+        }).catch(() => {
+          stopPlayback();
+          setError("Playback failed. Please try again.");
+        });
+      } finally {
+        if (objectUrlToRevoke) {
+          URL.revokeObjectURL(objectUrlToRevoke);
+        }
+      }
 
       if (!audioRef.current) return;
 

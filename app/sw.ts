@@ -21,6 +21,28 @@ const staticFontsHandler = new CacheFirst({
   ],
 });
 
+const googleFontsStylesHandler = new CacheFirst({
+  cacheName: "google-fonts-styles-v1",
+  plugins: [
+    new CacheableResponsePlugin({ statuses: [0, 200] }),
+    new ExpirationPlugin({
+      maxEntries: 16,
+      maxAgeSeconds: 30 * 24 * 60 * 60,
+    }),
+  ],
+});
+
+const storyAudioCacheHandler = new CacheFirst({
+  cacheName: "story-audio-v1",
+  plugins: [
+    new CacheableResponsePlugin({ statuses: [0, 200] }),
+    new ExpirationPlugin({
+      maxEntries: 80,
+      maxAgeSeconds: 14 * 24 * 60 * 60,
+    }),
+  ],
+});
+
 const staticStylesHandler = new CacheFirst({
   cacheName: "static-css-v1",
   plugins: [
@@ -98,6 +120,23 @@ const serwist = new Serwist({
       matcher: ({ url }: { url: URL }) =>
         /\/story\/[^/]+\/read$/.test(url.pathname),
       handler: readerShellHandler,
+    },
+    {
+      matcher: ({ url }: { url: URL }) =>
+        url.origin === "https://fonts.googleapis.com",
+      handler: googleFontsStylesHandler,
+    },
+    {
+      matcher: ({ url }: { url: URL }) =>
+        url.origin === "https://fonts.gstatic.com",
+      handler: staticFontsHandler,
+    },
+    {
+      matcher: ({ request, url }: { request: Request; url: URL }) =>
+        request.destination === "audio" ||
+        url.pathname.includes("/story-audio/") ||
+        /\.(?:mp3|wav|ogg|m4a)$/i.test(url.pathname),
+      handler: storyAudioCacheHandler,
     },
     {
       matcher: ({ request, url }: { request: Request; url: URL }) =>

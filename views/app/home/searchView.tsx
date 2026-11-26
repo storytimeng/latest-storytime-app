@@ -5,7 +5,8 @@ import { SearchField } from "@/components/reusables/form";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Search } from "lucide-react";
 import { Link } from "@/components/AppLink";
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useGenres } from "@/src/hooks/useGenres";
 import { useDebounce } from "@/src/hooks/useDebounce";
 import { useSearchStories } from "@/src/hooks/useStoryCategories";
@@ -13,12 +14,40 @@ import { useStories } from "@/src/hooks/useStories";
 import { getStoryCoverSrc } from "@/lib/storyCover";
 
 const SearchView = () => {
-  const [search, setSearch] = useState("");
-  const [activeFilter, setActiveFilter] = useState("All");
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const initialQuery = searchParams?.get("q") || "";
+  const initialGenre = searchParams?.get("genre") || "All";
+
+  const [search, setSearch] = useState(initialQuery);
+  const [activeFilter, setActiveFilter] = useState(initialGenre);
 
   const debouncedSearch = useDebounce(search, 300);
   const selectedGenre = activeFilter !== "All" ? activeFilter : undefined;
   const hasQuery = debouncedSearch.trim().length > 0;
+
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams?.toString() || "");
+    const trimmed = debouncedSearch.trim();
+    if (trimmed) {
+      params.set("q", trimmed);
+    } else {
+      params.delete("q");
+    }
+    if (activeFilter && activeFilter !== "All") {
+      params.set("genre", activeFilter);
+    } else {
+      params.delete("genre");
+    }
+    const nextQs = params.toString();
+    const currentQs = searchParams?.toString() || "";
+    if (nextQs !== currentQs) {
+      router.replace(nextQs ? `${pathname}?${nextQs}` : pathname, {
+        scroll: false,
+      });
+    }
+  }, [debouncedSearch, activeFilter, pathname, router, searchParams]);
 
   const { genres: apiGenres, isLoading: genresLoading } = useGenres();
   const genres = ["All", ...(apiGenres || [])];
@@ -33,6 +62,7 @@ const SearchView = () => {
   } = useStories({
     limit: 20,
     genre: selectedGenre,
+    enabled: !hasQuery,
   });
 
   const {

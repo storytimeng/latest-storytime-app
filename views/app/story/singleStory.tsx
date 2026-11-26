@@ -64,6 +64,8 @@ import PremiumBanner from "@/components/reusables/customUI/PremiumBanner";
 import { canReadExclusiveStory } from "@/src/lib/premiumUpsell";
 import PageHeader from "@/components/reusables/customUI/pageHeader";
 import { usePageInflight } from "@/hooks/usePageInflight";
+import useSWR from "swr";
+import { client } from "@/src/client/client.gen";
 
 interface SingleStoryProps {
   storyId?: string;
@@ -960,50 +962,50 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
 
   if (stillResolving) {
     return (
-      <div className="relative min-h-screen pb-20 bg-accent-shade-1">
+      <div className="relative pb-20 min-h-screen bg-accent-shade-1">
         <div className="relative w-full h-[55vh] min-h-[320px] max-h-[420px] overflow-hidden">
           <Skeleton className="absolute inset-0 w-full h-full" />
-          <div className="absolute inset-0 bg-gradient-to-t from-accent-shade-1 via-accent-shade-1/40 to-transparent" />
-          <div className="absolute top-0 left-0 right-0 z-20 px-4 pt-6">
-            <div className="flex items-center justify-between">
-              <Skeleton className="w-10 h-10 rounded-full" />
+          <div className="absolute inset-0 bg-gradient-to-t to-transparent from-accent-shade-1 via-accent-shade-1/40" />
+          <div className="top-0 right-0 left-0 z-20 absolute px-4 pt-6">
+            <div className="flex justify-between items-center">
+              <Skeleton className="rounded-full w-10 h-10" />
               <div className="flex gap-2">
-                <Skeleton className="w-10 h-10 rounded-full" />
-                <Skeleton className="w-10 h-10 rounded-full" />
+                <Skeleton className="rounded-full w-10 h-10" />
+                <Skeleton className="rounded-full w-10 h-10" />
               </div>
             </div>
           </div>
         </div>
-        <div className="relative z-10 px-4 -mt-16">
+        <div className="z-10 relative -mt-16 px-4">
           <div className="flex gap-2 mb-3">
-            <Skeleton className="w-24 h-6 rounded" />
-            <Skeleton className="w-20 h-6 rounded" />
+            <Skeleton className="rounded w-24 h-6" />
+            <Skeleton className="rounded w-20 h-6" />
           </div>
-          <Skeleton className="w-3/4 h-8 mb-2 rounded-lg" />
-          <Skeleton className="w-full my-4 rounded-full h-14" />
+          <Skeleton className="mb-2 rounded-lg w-3/4 h-8" />
+          <Skeleton className="my-4 rounded-full w-full h-14" />
           <div className="flex gap-2 mb-4">
-            <Skeleton className="w-20 h-6 rounded-md" />
-            <Skeleton className="w-16 h-6 rounded-md" />
-            <Skeleton className="w-16 h-6 rounded-md" />
-            <Skeleton className="w-20 h-6 rounded-md" />
+            <Skeleton className="rounded-md w-20 h-6" />
+            <Skeleton className="rounded-md w-16 h-6" />
+            <Skeleton className="rounded-md w-16 h-6" />
+            <Skeleton className="rounded-md w-20 h-6" />
           </div>
-          <Skeleton className="w-full h-12 mb-4 rounded-md" />
-          <Skeleton className="w-48 h-5 mb-4 rounded-md" />
+          <Skeleton className="mb-4 rounded-md w-full h-12" />
+          <Skeleton className="mb-4 rounded-md w-48 h-5" />
         </div>
-        <div className="flex gap-8 px-4 py-4 border-b border-primary/5">
-          <Skeleton className="w-20 h-6 rounded-md" />
-          <Skeleton className="w-16 h-6 rounded-md" />
-          <Skeleton className="w-16 h-6 rounded-md" />
+        <div className="flex gap-8 px-4 py-4 border-primary/5 border-b">
+          <Skeleton className="rounded-md w-20 h-6" />
+          <Skeleton className="rounded-md w-16 h-6" />
+          <Skeleton className="rounded-md w-16 h-6" />
         </div>
-        <div className="px-4 py-6 space-y-4">
+        <div className="space-y-4 px-4 py-6">
           {[1, 2, 3, 4, 5].map((i) => (
             <div key={i} className="flex items-center gap-4">
-              <Skeleton className="w-10 h-10 rounded-full" />
+              <Skeleton className="rounded-full w-10 h-10" />
               <div className="flex-1 space-y-2">
-                <Skeleton className="w-3/4 h-4 rounded-md" />
-                <Skeleton className="w-1/2 h-3 rounded-md" />
+                <Skeleton className="rounded-md w-3/4 h-4" />
+                <Skeleton className="rounded-md w-1/2 h-3" />
               </div>
-              <Skeleton className="w-8 h-8 rounded-full" />
+              <Skeleton className="rounded-full w-8 h-8" />
             </div>
           ))}
         </div>
@@ -1024,17 +1026,73 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
   const displayImage = getStoryCoverSrc(effectiveStory.imageUrl);
   const status = storyData.storyStatus || "Ongoing";
   const viewCount = storyData.viewCount || 0;
-  const popularityScore = storyData.popularityScore || 0;
-  const starRating =
-    popularityScore === 0 ? 0 : Math.min(Math.max(popularityScore / 20, 0), 5);
+  const { data: ratingData, mutate: mutateRating } = useSWR(
+    storyId && !usingOfflineFallback ? `story-rating-${storyId}` : null,
+    async () => {
+      const res = await client.get({ url: `/stories/${storyId}/rating` });
+      return ((res?.data as any)?.data ?? res?.data) as
+        | {
+            averageRating?: number;
+            ratingCount?: number;
+            totalRatings?: number;
+            userRating?: number | null;
+          }
+        | undefined;
+    },
+    { revalidateOnFocus: false, shouldRetryOnError: false },
+  );
+  const [hoverRating, setHoverRating] = useState<number | null>(null);
+  const [isSubmittingRating, setIsSubmittingRating] = useState(false);
+
+  const starRating = Number(ratingData?.averageRating ?? 0);
+  const totalRatings = Number(
+    ratingData?.ratingCount ?? ratingData?.totalRatings ?? 0,
+  );
+  const userRating = ratingData?.userRating ?? null;
+  const displayedStars = hoverRating ?? userRating ?? starRating;
   const fullStars = Math.floor(starRating);
   const hasHalfStar = starRating % 1 >= 0.5;
+
+  const handleRateStory = async (value: number) => {
+    if (!storyId) return;
+    if (!isAuthenticated()) {
+      openAuthModal("login");
+      return;
+    }
+    if (isSubmittingRating) return;
+    setIsSubmittingRating(true);
+    try {
+      const res = await client.post({
+        url: `/stories/${storyId}/rate`,
+        body: { rating: value },
+        headers: { "Content-Type": "application/json" },
+      });
+      const updated = ((res?.data as any)?.data ?? res?.data) as
+        | {
+            averageRating?: number;
+            ratingCount?: number;
+            totalRatings?: number;
+            userRating?: number | null;
+          }
+        | undefined;
+      if (updated) {
+        await mutateRating(updated, false);
+      } else {
+        await mutateRating();
+      }
+      showToast({ type: "success", message: `Rated ${value} star${value > 1 ? "s" : ""}` });
+    } catch {
+      showToast({ type: "error", message: "Could not save your rating. Please try again." });
+    } finally {
+      setIsSubmittingRating(false);
+    }
+  };
   const collaborators = storyData.collaborate as string[] | null;
 
   return (
-    <div className="relative min-h-screen pb-20 bg-accent-shade-1">
+    <div className="relative pb-20 min-h-screen bg-accent-shade-1">
       {usingOfflineFallback && (
-        <div className="sticky top-0 z-40 flex items-center justify-center gap-2 py-2 text-xs font-medium text-white bg-amber-600">
+        <div className="top-0 z-40 sticky flex justify-center items-center gap-2 bg-amber-600 py-2 font-medium text-white text-xs">
           <WifiOff size={14} />
           <span>
             Showing downloaded version... couldn't reach the server...
@@ -1065,20 +1123,20 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
           className="object-cover"
           priority
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-accent-shade-1 from-0% via-accent-shade-1/70 via-8% to-transparent to-15%" />
+        <div className="absolute inset-0 bg-gradient-to-t from-0% via-8% to-15% to-transparent from-accent-shade-1 via-accent-shade-1/70" />
 
-        <div className="absolute top-0 left-0 right-0 z-20 px-4 pt-6">
-          <div className="flex items-center justify-between">
+        <div className="top-0 right-0 left-0 z-20 absolute px-4 pt-6">
+          <div className="flex justify-between items-center">
             <Link
               href="/home"
-              className="p-2 transition-colors rounded-full bg-black/30 backdrop-blur-md hover:bg-black/40"
+              className="bg-black/30 hover:bg-black/40 backdrop-blur-md p-2 rounded-full transition-colors"
             >
               <ArrowLeft size={24} className="text-white" />
             </Link>
             <div className="flex items-center gap-2">
               {usingOfflineFallback ? (
                 <div
-                  className="p-2 rounded-full bg-black/30 backdrop-blur-md flex items-center justify-center"
+                  className="flex justify-center items-center bg-black/30 backdrop-blur-md p-2 rounded-full"
                   title="Downloaded"
                 >
                   <Check size={24} className="text-green-400" />
@@ -1086,7 +1144,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
               ) : !isSingleStory ? (
                 remainingCount === 0 ? (
                   <div
-                    className="p-2 rounded-full bg-black/30 backdrop-blur-md flex items-center justify-center"
+                    className="flex justify-center items-center bg-black/30 backdrop-blur-md p-2 rounded-full"
                     title="Everything is downloaded"
                   >
                     <Check size={24} className="text-green-400" />
@@ -1094,7 +1152,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
                 ) : (
                   <Dropdown>
                     <DropdownTrigger>
-                      <button className="p-2 transition-colors rounded-full bg-black/30 backdrop-blur-md hover:bg-black/40">
+                      <button className="bg-black/30 hover:bg-black/40 backdrop-blur-md p-2 rounded-full transition-colors">
                         <Download size={24} className="text-white" />
                       </button>
                     </DropdownTrigger>
@@ -1115,10 +1173,10 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
                 <button
                   onClick={isDownloaded ? handleRemoveDownload : handleDownload}
                   disabled={isDownloading}
-                  className="p-2 transition-colors rounded-full bg-black/30 backdrop-blur-md hover:bg-black/40"
+                  className="bg-black/30 hover:bg-black/40 backdrop-blur-md p-2 rounded-full transition-colors"
                 >
                   {isDownloading ? (
-                    <div className="w-6 h-6 border-2 border-white rounded-full border-t-transparent animate-spin" />
+                    <div className="border-2 border-white border-t-transparent rounded-full w-6 h-6 animate-spin" />
                   ) : isDownloaded ? (
                     <Check size={24} className="text-green-400" />
                   ) : (
@@ -1129,7 +1187,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
               <button
                 onClick={toggleLike}
                 disabled={usingOfflineFallback}
-                className="p-2 transition-colors rounded-full bg-black/30 backdrop-blur-md hover:bg-black/40 disabled:opacity-40"
+                className="bg-black/30 hover:bg-black/40 disabled:opacity-40 backdrop-blur-md p-2 rounded-full transition-colors"
               >
                 <Heart
                   size={24}
@@ -1155,7 +1213,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
                       : { message: "Failed to share story", type: "error" },
                   );
                 }}
-                className="p-2 transition-colors rounded-full bg-black/30 backdrop-blur-md hover:bg-black/40"
+                className="bg-black/30 hover:bg-black/40 backdrop-blur-md p-2 rounded-full transition-colors"
               >
                 <Share2 size={24} className="text-white" />
               </button>
@@ -1164,21 +1222,21 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
         </div>
       </div>
 
-      <div className="relative z-10 px-4 -mt-16">
+      <div className="z-10 relative -mt-16 px-4">
         <div className="flex flex-wrap items-center gap-2 mb-3">
           {isExclusive && (
-            <span className="inline-flex items-center bg-complimentary-colour text-white text-[10px] font-bold px-2.5 py-1 rounded uppercase tracking-wider shadow-sm">
+            <span className="inline-flex items-center bg-complimentary-colour shadow-sm px-2.5 py-1 rounded font-bold text-[10px] text-white uppercase tracking-wider">
               Only on Storytime
             </span>
           )}
           {effectiveStory?.trigger && (
-            <span className="inline-flex items-center gap-1 bg-red-600 text-white text-[10px] font-bold px-2.5 py-1 rounded uppercase tracking-wider shadow-sm">
+            <span className="inline-flex items-center gap-1 bg-red-600 shadow-sm px-2.5 py-1 rounded font-bold text-[10px] text-white uppercase tracking-wider">
               18+
             </span>
           )}
           <span
             className={cn(
-              "inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded uppercase tracking-wider",
+              "inline-flex items-center gap-1 px-2.5 py-1 rounded font-bold text-[10px] uppercase tracking-wider",
               status === "complete"
                 ? "bg-green-500/20 text-green-500"
                 : "bg-complimentary-colour/20 text-complimentary-colour",
@@ -1191,7 +1249,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
 
         <h1
           className={cn(
-            "text-primary text-2xl font-bold leading-tight mb-2",
+            "mb-2 font-bold text-primary text-2xl leading-tight",
             Magnetik_Bold.className,
           )}
         >
@@ -1200,7 +1258,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
 
         <button
           onClick={() => handleStartReading()}
-          className="w-full bg-primary hover:bg-primary/90 text-white py-4 rounded-full font-bold text-base flex items-center justify-center gap-2.5 transition-all shadow-lg shadow-primary/25 active:scale-[0.98] my-4"
+          className="flex justify-center items-center gap-2.5 bg-primary hover:bg-primary/90 shadow-lg shadow-primary/25 my-4 py-4 rounded-full w-full font-bold text-white text-base active:scale-[0.98] transition-all"
         >
           <Play size={20} className="fill-current" />
           <span>
@@ -1228,7 +1286,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
           />
         )}
 
-        <div className="flex flex-wrap items-center gap-2 mb-4 text-xs text-primary/70">
+        <div className="flex flex-wrap items-center gap-2 mb-4 text-primary/70 text-xs">
           <div className="flex items-center gap-1.5 bg-white/50 px-2 py-1 rounded-md">
             <Eye size={12} className="text-primary/60" />
             <span className="font-medium text-primary">
@@ -1250,13 +1308,13 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
             </span>
           </div>
           <div className="flex items-center gap-1.5 bg-white/50 px-2 py-1 rounded-md">
-            <Star size={12} className="text-yellow-500 fill-current" />
+            <Star size={12} className="fill-current text-yellow-500" />
             <span className="font-medium text-primary">
               {starRating.toFixed(1)}
             </span>
           </div>
           {effectiveStory.genres?.[0] && (
-            <span className="px-2 py-1 font-medium rounded-md bg-white/50 text-primary">
+            <span className="bg-white/50 px-2 py-1 rounded-md font-medium text-primary">
               {effectiveStory.genres[0]}
             </span>
           )}
@@ -1265,7 +1323,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
         <div className="mb-4">
           <p
             className={cn(
-              "text-sm text-primary/70 leading-relaxed line-clamp-2",
+              "text-primary/70 text-sm line-clamp-2 leading-relaxed",
               Magnetik_Regular.className,
             )}
           >
@@ -1275,7 +1333,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
             effectiveStory.description.length > 100 && (
               <button
                 onClick={() => setActiveTab("details")}
-                className="mt-1 text-sm font-medium text-complimentary-colour"
+                className="mt-1 font-medium text-complimentary-colour text-sm"
               >
                 More
               </button>
@@ -1284,10 +1342,10 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
 
         <button
           onClick={onOpenCollaborators}
-          className="flex items-center gap-2 mb-4 text-xs tracking-wider uppercase transition-colors text-primary/50 hover:text-primary/70"
+          className="flex items-center gap-2 mb-4 text-primary/50 hover:text-primary/70 text-xs uppercase tracking-wider transition-colors"
         >
           <span className="font-medium">Show Writers & Cast</span>
-          <span className="font-bold normal-case text-primary/80">
+          <span className="font-bold text-primary/80 normal-case">
             {author?.penName || author?.name || "Unknown"}
             {collaborators &&
               collaborators.length > 0 &&
@@ -1297,20 +1355,20 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
         </button>
       </div>
 
-      <div className="sticky top-0 z-30 px-4 border-b border-white/5 backdrop-blur-xl bg-accent-shade-1/95">
+      <div className="top-0 z-30 sticky backdrop-blur-xl px-4 border-white/5 border-b bg-accent-shade-1/95">
         <div className="flex items-center gap-8 overflow-x-auto no-scrollbar">
           {!isSingleStory && (
             <button
               onClick={() => setActiveTab("episodes")}
               className={cn(
-                "py-4 text-sm font-medium whitespace-nowrap border-b-2 transition-colors relative",
+                "relative py-4 border-b-2 font-medium text-sm whitespace-nowrap transition-colors",
                 activeTab === "episodes"
                   ? "text-primary border-complimentary-colour"
                   : "text-primary/40 border-transparent hover:text-primary/60",
               )}
             >
               {structure === "chapters" ? "Chapters" : "Episodes"}
-              <span className="ml-1.5 text-[10px] bg-white/10 px-1.5 py-0.5 rounded-full opacity-80">
+              <span className="bg-white/10 opacity-80 ml-1.5 px-1.5 py-0.5 rounded-full text-[10px]">
                 {contentList?.length || 0}
               </span>
             </button>
@@ -1318,7 +1376,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
           <button
             onClick={() => setActiveTab("details")}
             className={cn(
-              "py-4 text-sm font-medium whitespace-nowrap border-b-2 transition-colors",
+              "py-4 border-b-2 font-medium text-sm whitespace-nowrap transition-colors",
               activeTab === "details"
                 ? "text-primary border-complimentary-colour"
                 : "text-primary/40 border-transparent hover:text-primary/60",
@@ -1329,14 +1387,14 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
           <button
             onClick={() => setActiveTab("reviews")}
             className={cn(
-              "py-4 text-sm font-medium whitespace-nowrap border-b-2 transition-colors",
+              "py-4 border-b-2 font-medium text-sm whitespace-nowrap transition-colors",
               activeTab === "reviews"
                 ? "text-primary border-complimentary-colour"
                 : "text-primary/40 border-transparent hover:text-primary/60",
             )}
           >
             Reviews
-            <span className="ml-1.5 text-[10px] bg-white/10 px-1.5 py-0.5 rounded-full opacity-80">
+            <span className="bg-white/10 opacity-80 ml-1.5 px-1.5 py-0.5 rounded-full text-[10px]">
               {displayCommentCount}
             </span>
           </button>
@@ -1347,22 +1405,22 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
         {activeTab === "episodes" && !isSingleStory && (
           <div className="space-y-4">
             {aggregated && aggregated.overallPercentage > 0 && (
-              <div className="p-4 mb-6 border rounded-xl bg-complimentary-colour/5 border-complimentary-colour/20">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium text-primary">
+              <div className="bg-complimentary-colour/5 mb-6 p-4 border border-complimentary-colour/20 rounded-xl">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="font-medium text-primary text-sm">
                     Reading Progress
                   </span>
-                  <span className="text-xs font-bold text-complimentary-colour">
+                  <span className="font-bold text-complimentary-colour text-xs">
                     {Math.round(aggregated.overallPercentage)}%
                   </span>
                 </div>
-                <div className="w-full h-2 overflow-hidden rounded-full bg-white/10">
+                <div className="bg-white/10 rounded-full w-full h-2 overflow-hidden">
                   <div
-                    className="h-full transition-all duration-500 rounded-full bg-complimentary-colour"
+                    className="bg-complimentary-colour rounded-full h-full transition-all duration-500"
                     style={{ width: `${aggregated.overallPercentage}%` }}
                   />
                 </div>
-                <div className="flex items-center justify-between mt-2 text-xs text-primary/60">
+                <div className="flex justify-between items-center mt-2 text-primary/60 text-xs">
                   <span>
                     {structure === "chapters"
                       ? `${aggregated.completedChapters} of ${aggregated.totalChapters} chapters`
@@ -1378,7 +1436,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
                 </div>
                 {(storyProgress?.lastReadChapter ||
                   storyProgress?.lastReadEpisode) && (
-                  <div className="mt-1 text-xs text-primary/50">
+                  <div className="mt-1 text-primary/50 text-xs">
                     Last: {structure === "chapters" ? "Chapter" : "Episode"}{" "}
                     {storyProgress.lastReadChapter ||
                       storyProgress.lastReadEpisode}
@@ -1388,7 +1446,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
             )}
 
             {downloadedContentIds.size > 0 && !usingOfflineFallback && (
-              <div className="flex items-center gap-2 mb-2 text-xs text-primary/50">
+              <div className="flex items-center gap-2 mb-2 text-primary/50 text-xs">
                 <Check size={12} className="text-green-500" />
                 <span>
                   {downloadedContentIds.size} of {contentList?.length || 0}{" "}
@@ -1398,7 +1456,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
               </div>
             )}
 
-            <div className="flex items-center justify-between mb-2 text-xs font-medium tracking-wider uppercase text-primary/40">
+            <div className="flex justify-between items-center mb-2 font-medium text-primary/40 text-xs uppercase tracking-wider">
               <div className="flex items-center gap-4">
                 <span>
                   All {structure === "chapters" ? "Chapters" : "Episodes"}
@@ -1406,7 +1464,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
                 {isSelectionMode && (
                   <button
                     onClick={toggleSelectAll}
-                    className="transition-colors text-primary hover:text-white"
+                    className="text-primary hover:text-white transition-colors"
                   >
                     {selectedContentIds.size === contentList.length
                       ? "Deselect All"
@@ -1417,11 +1475,11 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
               <div className="flex items-center gap-3">
                 <button
                   onClick={toggleSelectionMode}
-                  className="transition-colors text-primary hover:text-white"
+                  className="text-primary hover:text-white transition-colors"
                 >
                   {isSelectionMode ? "Cancel" : "Select"}
                 </button>
-                <button className="transition-colors text-complimentary-colour hover:text-complimentary-colour/80">
+                <button className="text-complimentary-colour hover:text-complimentary-colour/80 transition-colors">
                   Sort: Oldest
                 </button>
               </div>
@@ -1460,7 +1518,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
                 <div
                   key={item.id}
                   className={cn(
-                    "flex items-center gap-4 py-3 px-2 -mx-2 rounded-xl transition-colors relative group select-none",
+                    "group relative flex items-center gap-4 -mx-2 px-2 py-3 rounded-xl transition-colors select-none",
                     isSelected
                       ? "bg-primary/10 border border-primary/20"
                       : "hover:bg-white/5",
@@ -1483,7 +1541,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
                   {isSelectionMode ? (
                     <div
                       className={cn(
-                        "w-6 h-6 rounded-md border-2 flex items-center justify-center transition-colors",
+                        "flex justify-center items-center border-2 rounded-md w-6 h-6 transition-colors",
                         isSelected
                           ? "bg-primary border-primary text-white"
                           : "border-white/20",
@@ -1495,14 +1553,14 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
                     <button
                       type="button"
                       onClick={() => handleStartReading(item.id)}
-                      className="absolute inset-0 z-10"
+                      className="z-10 absolute inset-0"
                       aria-label={`Read ${item.title || "part"}`}
                     />
                   )}
 
                   <div
                     className={cn(
-                      "w-10 h-10 rounded-full flex items-center justify-center transition-all shadow-sm relative",
+                      "relative flex justify-center items-center shadow-sm rounded-full w-10 h-10 transition-all",
                       isCompleted
                         ? "bg-green-500/20 text-green-500"
                         : percentageRead > 0
@@ -1533,17 +1591,17 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <h3 className="text-sm font-medium truncate transition-colors text-primary group-hover:text-complimentary-colour">
+                      <h3 className="font-medium text-primary group-hover:text-complimentary-colour text-sm truncate transition-colors">
                         {item.title ||
                           `${structure === "chapters" ? "Chapter" : "Episode"} ${index + 1}`}
                       </h3>
                       {percentageRead > 0 && !isCompleted && (
-                        <span className="text-xs font-medium text-complimentary-colour">
+                        <span className="font-medium text-complimentary-colour text-xs">
                           {Math.round(percentageRead)}%
                         </span>
                       )}
                     </div>
-                    <div className="flex items-center gap-2 mt-1 text-xs text-primary/40">
+                    <div className="flex items-center gap-2 mt-1 text-primary/40 text-xs">
                       <span>
                         {item.createdAt
                           ? new Date(item.createdAt).toLocaleDateString()
@@ -1570,7 +1628,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
                     <div className="z-20 flex items-center gap-1.5">
                       {isItemDownloaded ? (
                         <>
-                          <div className="flex items-center justify-center w-8 h-8 text-green-500 rounded-full bg-green-500/10">
+                          <div className="flex justify-center items-center bg-green-500/10 rounded-full w-8 h-8 text-green-500">
                             <Check size={16} />
                           </div>
                           <button
@@ -1579,7 +1637,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
                               handleDeleteSingleDownload(item);
                             }}
                             title="Remove download"
-                            className="flex items-center justify-center w-8 h-8 text-red-500/70 transition-colors border rounded-full border-red-500/20 hover:bg-red-500/10 hover:text-red-500"
+                            className="flex justify-center items-center hover:bg-red-500/10 border border-red-500/20 rounded-full w-8 h-8 text-red-500/70 hover:text-red-500 transition-colors"
                           >
                             <Trash2 size={14} />
                           </button>
@@ -1591,7 +1649,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
                             handleSingleDownload(item, index);
                           }}
                           title="Download failed — tap to retry"
-                          className="flex items-center justify-center w-8 h-8 text-red-500 transition-colors border rounded-full border-red-500/30 bg-red-500/10 hover:bg-red-500/20"
+                          className="flex justify-center items-center bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 rounded-full w-8 h-8 text-red-500 transition-colors"
                         >
                           <AlertCircle size={16} />
                         </button>
@@ -1602,7 +1660,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
                             handleSingleDownload(item, index);
                           }}
                           disabled={isItemDownloading}
-                          className="flex items-center justify-center w-8 h-8 transition-colors border rounded-full border-white/10 text-primary/40 hover:text-primary hover:border-primary"
+                          className="flex justify-center items-center border border-white/10 hover:border-primary rounded-full w-8 h-8 text-primary/40 hover:text-primary transition-colors"
                         >
                           {isItemDownloading ? (
                             <svg className="w-5 h-5 -rotate-90">
@@ -1646,7 +1704,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
                         </button>
                       )}
                       {!isSelectionMode && (
-                        <div className="flex items-center justify-center w-8 h-8 transition-colors border rounded-full border-white/10 text-primary/20 group-hover:border-complimentary-colour/50 group-hover:text-complimentary-colour">
+                        <div className="flex justify-center items-center border border-white/10 group-hover:border-complimentary-colour/50 rounded-full w-8 h-8 text-primary/20 group-hover:text-complimentary-colour transition-colors">
                           <Play size={12} className="fill-current" />
                         </div>
                       )}
@@ -1661,32 +1719,32 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
         {activeTab === "details" && (
           <div className="space-y-8">
             {aggregated && (
-              <div className="grid grid-cols-2 gap-4 p-4 border rounded-xl bg-white/5 border-white/10">
+              <div className="gap-4 grid grid-cols-2 bg-white/5 p-4 border border-white/10 rounded-xl">
                 <div className="space-y-1">
-                  <p className="text-xs text-primary/50">Total Words</p>
-                  <p className="text-lg font-bold text-primary">
+                  <p className="text-primary/50 text-xs">Total Words</p>
+                  <p className="font-bold text-primary text-lg">
                     {aggregated.totalWords?.toLocaleString() || 0}
                   </p>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-xs text-primary/50">Reading Time</p>
-                  <p className="text-lg font-bold text-primary">
+                  <p className="text-primary/50 text-xs">Reading Time</p>
+                  <p className="font-bold text-primary text-lg">
                     {formatReadingTime(aggregated.totalReadingTimeSeconds)}
                   </p>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-xs text-primary/50">
+                  <p className="text-primary/50 text-xs">
                     {structure === "chapters" ? "Chapters" : "Episodes"}
                   </p>
-                  <p className="text-lg font-bold text-primary">
+                  <p className="font-bold text-primary text-lg">
                     {structure === "chapters"
                       ? aggregated.totalChapters
                       : aggregated.totalEpisodes}
                   </p>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-xs text-primary/50">Completed</p>
-                  <p className="text-lg font-bold text-primary">
+                  <p className="text-primary/50 text-xs">Completed</p>
+                  <p className="font-bold text-primary text-lg">
                     {structure === "chapters"
                       ? aggregated.completedChapters
                       : aggregated.completedEpisodes}
@@ -1696,21 +1754,21 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
             )}
 
             <div className="space-y-4">
-              <h3 className="text-lg font-bold text-primary">
+              <h3 className="font-bold text-primary text-lg">
                 About the Story
               </h3>
-              <p className="text-sm leading-relaxed whitespace-pre-wrap text-primary/70">
+              <p className="text-primary/70 text-sm leading-relaxed whitespace-pre-wrap">
                 {effectiveStory.description}
               </p>
             </div>
 
             <div className="space-y-3">
-              <h3 className="text-sm font-bold text-primary">Genres</h3>
+              <h3 className="font-bold text-primary text-sm">Genres</h3>
               <div className="flex flex-wrap gap-2">
                 {effectiveStory.genres?.map((genre: string) => (
                   <span
                     key={genre}
-                    className="px-4 py-1.5 rounded-full bg-primary/5 text-primary/70 text-xs font-medium border border-primary/10"
+                    className="bg-primary/5 px-4 py-1.5 border border-primary/10 rounded-full font-medium text-primary/70 text-xs"
                   >
                     {genre}
                   </span>
@@ -1719,10 +1777,10 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
             </div>
 
             {isAuthor && !usingOfflineFallback && (
-              <div className="pt-6 border-t border-primary/10">
+              <div className="pt-6 border-primary/10 border-t">
                 <Link
                   href={`/edit-story/${storyId}`}
-                  className="flex items-center justify-center w-full gap-2 py-4 font-medium transition-colors border rounded-xl border-primary/20 text-primary hover:bg-primary/5"
+                  className="flex justify-center items-center gap-2 hover:bg-primary/5 py-4 border border-primary/20 rounded-xl w-full font-medium text-primary transition-colors"
                 >
                   <Edit size={18} />
                   <span>Edit Story</span>
@@ -1735,14 +1793,14 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
                 onClick={isDownloaded ? handleRemoveDownload : handleDownload}
                 disabled={isDownloading}
                 className={cn(
-                  "flex items-center justify-center gap-2 w-full py-4 rounded-xl border transition-colors font-medium",
+                  "flex justify-center items-center gap-2 py-4 border rounded-xl w-full font-medium transition-colors",
                   isDownloaded
                     ? "border-green-500/30 text-green-500 bg-green-500/5"
                     : "border-primary/20 text-primary hover:bg-primary/5",
                 )}
               >
                 {isDownloading ? (
-                  <div className="w-5 h-5 border-2 border-current rounded-full border-t-transparent animate-spin" />
+                  <div className="border-2 border-current border-t-transparent rounded-full w-5 h-5 animate-spin" />
                 ) : isDownloaded ? (
                   <>
                     <Check size={18} />
@@ -1761,47 +1819,61 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
 
         {activeTab === "reviews" && !usingOfflineFallback && (
           <div className="space-y-8">
-            <div className="flex items-center gap-4 p-6 mb-6 bg-white/5 rounded-2xl">
-              <div className="text-5xl font-bold text-primary">
+            <div className="flex items-center gap-4 bg-white/5 mb-6 p-6 rounded-2xl">
+              <div className="font-bold text-primary text-5xl">
                 {starRating.toFixed(1)}
               </div>
               <div className="space-y-2">
-                <div className="flex gap-1 text-yellow-500">
-                  {[...Array(5)].map((_, index) => {
-                    if (index < fullStars)
-                      return (
-                        <Star key={index} size={20} className="fill-current" />
-                      );
-                    if (index === fullStars && hasHalfStar) {
-                      return (
-                        <div key={index} className="relative">
-                          <Star size={20} className="text-yellow-500/30" />
-                          <div className="absolute inset-0 w-1/2 overflow-hidden">
-                            <Star
-                              size={20}
-                              className="text-yellow-500 fill-current"
-                            />
-                          </div>
-                        </div>
-                      );
-                    }
+                <div
+                  className="flex gap-1 text-yellow-500"
+                  onMouseLeave={() => setHoverRating(null)}
+                >
+                  {[1, 2, 3, 4, 5].map((starValue) => {
+                    const isFilled =
+                      hoverRating !== null || userRating !== null
+                        ? starValue <= displayedStars
+                        : starValue <= fullStars;
+                    const isHalf =
+                      hoverRating === null &&
+                      userRating === null &&
+                      starValue === fullStars + 1 &&
+                      hasHalfStar;
+
                     return (
-                      <Star
-                        key={index}
-                        size={20}
-                        className="text-yellow-500/30"
-                      />
+                      <button
+                        key={starValue}
+                        type="button"
+                        disabled={isSubmittingRating}
+                        onMouseEnter={() => setHoverRating(starValue)}
+                        onClick={() => void handleRateStory(starValue)}
+                        aria-label={`Rate ${starValue} star${starValue > 1 ? "s" : ""}`}
+                        className="relative disabled:opacity-50 p-0.5 hover:scale-110 transition-transform"
+                      >
+                        {isFilled ? (
+                          <Star size={20} className="fill-current text-yellow-500" />
+                        ) : isHalf ? (
+                          <div className="relative">
+                            <Star size={20} className="text-yellow-500/30" />
+                            <div className="absolute inset-0 w-1/2 overflow-hidden">
+                              <Star size={20} className="fill-current text-yellow-500" />
+                            </div>
+                          </div>
+                        ) : (
+                          <Star size={20} className="text-yellow-500/30" />
+                        )}
+                      </button>
                     );
                   })}
                 </div>
-                <p className="text-sm font-medium text-primary/40">
-                  {displayCommentCount} reviews
+                <p className="font-medium text-primary/40 text-sm">
+                  {totalRatings} {totalRatings === 1 ? "rating" : "ratings"} · {displayCommentCount} reviews
+                  {userRating ? ` · Your rating: ${userRating}/5` : " · Tap a star to rate"}
                 </p>
               </div>
             </div>
 
-            <div className="p-6 space-y-4 bg-white/5 rounded-2xl">
-              <h3 className="text-lg font-bold text-primary">Write a Review</h3>
+            <div className="space-y-4 bg-white/5 p-6 rounded-2xl">
+              <h3 className="font-bold text-primary text-lg">Write a Review</h3>
               <textarea
                 value={reviewText}
                 onChange={(e) => setReviewText(e.target.value)}
@@ -1812,13 +1884,13 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
                   }
                 }}
                 placeholder="Share your thoughts about this story..."
-                className="w-full bg-white/10 text-primary rounded-xl p-4 min-h-[120px] resize-none focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm"
+                className="bg-white/10 p-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/50 w-full min-h-[120px] text-primary text-sm resize-none"
                 disabled={isSubmittingReview}
               />
               <button
                 onClick={handleReviewSubmit}
                 disabled={!reviewText.trim() || isSubmittingReview}
-                className="px-6 py-2 text-sm font-medium text-white transition-colors rounded-full bg-primary hover:bg-primary/90 disabled:bg-primary/30 disabled:cursor-not-allowed"
+                className="bg-primary hover:bg-primary/90 disabled:bg-primary/30 px-6 py-2 rounded-full font-medium text-white text-sm transition-colors disabled:cursor-not-allowed"
               >
                 {isSubmittingReview ? "Posting..." : "Post Review"}
               </button>
@@ -1852,9 +1924,9 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
         )}
 
         {activeTab === "reviews" && usingOfflineFallback && (
-          <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">
+          <div className="flex flex-col justify-center items-center gap-2 py-16 text-center">
             <WifiOff size={28} className="text-primary/30" />
-            <p className="text-sm text-primary/50">
+            <p className="text-primary/50 text-sm">
               Reviews aren't available offline
             </p>
           </div>
@@ -1868,14 +1940,14 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
             animate={{ width: 56, opacity: 1, y: 0 }}
             exit={{ width: 200, opacity: 0, y: 50 }}
             transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            className="fixed z-50 overflow-hidden bottom-6 right-6"
+            className="right-6 bottom-6 z-50 fixed overflow-hidden"
           >
             <button
               type="button"
               onClick={() => handleStartReading()}
-              className="flex items-center justify-center text-white rounded-full shadow-lg w-14 h-14 bg-primary hover:bg-primary/90 shadow-primary/30"
+              className="flex justify-center items-center bg-primary hover:bg-primary/90 shadow-lg shadow-primary/30 rounded-full w-14 h-14 text-white"
             >
-              <Play size={24} className="ml-1 fill-current" />
+              <Play size={24} className="fill-current ml-1" />
             </button>
           </motion.div>
         )}
@@ -1887,23 +1959,23 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
             initial={{ y: 100, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 100, opacity: 0 }}
-            className="fixed bottom-0 left-0 right-0 z-40 p-4 pb-8 border-t shadow-2xl bg-accent-shade-1 border-white/10"
+            className="right-0 bottom-0 left-0 z-40 fixed shadow-2xl p-4 pb-8 border-white/10 border-t bg-accent-shade-1"
           >
-            <div className="max-w-[28rem] mx-auto flex items-center justify-between gap-4">
-              <div className="text-sm font-medium text-primary">
+            <div className="flex justify-between items-center gap-4 mx-auto max-w-[28rem]">
+              <div className="font-medium text-primary text-sm">
                 {selectedContentIds.size} selected
               </div>
               <div className="flex items-center gap-3">
                 <button
                   onClick={handleBulkMarkAsRead}
-                  className="flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors rounded-lg bg-complimentary-colour/10 text-complimentary-colour hover:bg-complimentary-colour/20"
+                  className="flex items-center gap-2 bg-complimentary-colour/10 hover:bg-complimentary-colour/20 px-4 py-2 rounded-lg font-medium text-complimentary-colour text-sm transition-colors"
                 >
                   <Check size={16} />
                   <span>Mark Read</span>
                 </button>
                 <button
                   onClick={handleBulkDelete}
-                  className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-500 transition-colors rounded-lg bg-red-500/10 hover:bg-red-500/20"
+                  className="flex items-center gap-2 bg-red-500/10 hover:bg-red-500/20 px-4 py-2 rounded-lg font-medium text-red-500 text-sm transition-colors"
                 >
                   <Trash2 size={16} />
                   <span>Remove</span>
@@ -1911,10 +1983,10 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
                 <button
                   onClick={handleBulkDownload}
                   disabled={isDownloading}
-                  className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white transition-colors rounded-lg shadow-lg bg-primary hover:bg-primary/90 shadow-primary/20"
+                  className="flex items-center gap-2 bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 px-4 py-2 rounded-lg font-medium text-white text-sm transition-colors"
                 >
                   {isDownloading ? (
-                    <div className="w-4 h-4 border-2 border-current rounded-full border-t-transparent animate-spin" />
+                    <div className="border-2 border-current border-t-transparent rounded-full w-4 h-4 animate-spin" />
                   ) : (
                     <Download size={16} />
                   )}
