@@ -1,3 +1,4 @@
+import React, { Suspense } from "react";
 import { Metadata } from "next";
 import PenView from "@/views/app/pen/penView";
 import TabLayout from "@/views/app/TabLayout";
@@ -26,7 +27,9 @@ export const metadata: Metadata = {
 const PenPage = () => {
   return (
     <TabLayout>
-      <PenView />
+      <Suspense fallback={<div className="min-h-screen bg-accent-shade-1" />}>
+        <PenView />
+      </Suspense>
     </TabLayout>
   );
 };

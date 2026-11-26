@@ -1,4 +1,4 @@
-import React from "react";
+import React, { Suspense } from "react";
 import { Metadata } from "next";
 import { searchView as SearchView } from "@/views";
 import { APP_CONFIG } from "@/config/app";
@@ -26,7 +26,9 @@ export const metadata: Metadata = {
 const SearchPage = () => {
   return (
     <div>
-      <SearchView />
+      <Suspense fallback={<div className="min-h-screen bg-accent-shade-1" />}>
+        <SearchView />
+      </Suspense>
     </div>
   );
 };
