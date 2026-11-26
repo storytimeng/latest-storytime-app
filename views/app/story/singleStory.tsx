@@ -321,6 +321,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
     { revalidateOnFocus: false, shouldRetryOnError: false },
   );
   const [hoverRating, setHoverRating] = useState<number | null>(null);
+  const [pendingRating, setPendingRating] = useState<number | null>(null);
   const [isSubmittingRating, setIsSubmittingRating] = useState(false);
 
   const currentUser = (
@@ -972,11 +973,25 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
 
   const handleReviewSubmit = async () => {
     if (!reviewText.trim() || !storyId) return;
+    if (!isAuthenticated()) {
+      openAuthModal("login");
+      return;
+    }
     setIsSubmittingReview(true);
     try {
       await createComment(reviewText);
       setReviewText("");
     } catch (error: any) {
+      if (
+        error?.statusCode === 401 ||
+        error?.status === 401 ||
+        error?.response?.status === 401 ||
+        String(error?.message || "").toLowerCase().includes("authentication") ||
+        String(error?.message || "").toLowerCase().includes("unauthorized")
+      ) {
+        openAuthModal("login");
+        return;
+      }
       showToast({
         type: "error",
         message: error?.message || "Failed to post review",
@@ -1060,7 +1075,8 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
     ratingData?.ratingCount ?? ratingData?.totalRatings ?? 0,
   );
   const userRating = ratingData?.userRating ?? null;
-  const displayedStars = hoverRating ?? userRating ?? starRating;
+  const displayedStars =
+    hoverRating ?? pendingRating ?? userRating ?? starRating;
   const fullStars = Math.floor(starRating);
   const hasHalfStar = starRating % 1 >= 0.5;
 
@@ -1071,6 +1087,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
       return;
     }
     if (isSubmittingRating) return;
+    setPendingRating(value);
     setIsSubmittingRating(true);
     try {
       const res = await client.post({
@@ -1078,17 +1095,50 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
         body: { rating: value },
         headers: { "Content-Type": "application/json" },
       });
+      const status =
+        (res as any)?.response?.status ?? (res as any)?.error?.statusCode;
+      if (status === 401) {
+        setPendingRating(null);
+        openAuthModal("login");
+        return;
+      }
+      if ((res as any)?.error) {
+        throw new Error(
+          (res as any)?.error?.message || "Could not save your rating.",
+        );
+      }
       const updated = ((res?.data as any)?.data ?? res?.data) as
-        | { averageRating?: number; totalRatings?: number; userRating?: number | null }
+        | {
+            averageRating?: number;
+            ratingCount?: number;
+            totalRatings?: number;
+            userRating?: number | null;
+          }
         | undefined;
       if (updated) {
         await mutateRating(updated, false);
       } else {
         await mutateRating();
       }
-      showToast({ type: "success", message: `Rated ${value} star${value > 1 ? "s" : ""}` });
-    } catch {
-      showToast({ type: "error", message: "Could not save your rating. Please try again." });
+      setPendingRating(null);
+      showToast({
+        type: "success",
+        message: `Rated ${value} star${value > 1 ? "s" : ""}`,
+      });
+    } catch (err: any) {
+      setPendingRating(null);
+      if (
+        err?.statusCode === 401 ||
+        err?.status === 401 ||
+        String(err?.message || "").toLowerCase().includes("authentication")
+      ) {
+        openAuthModal("login");
+        return;
+      }
+      showToast({
+        type: "error",
+        message: err?.message || "Could not save your rating. Please try again.",
+      });
     } finally {
       setIsSubmittingRating(false);
     }
@@ -1830,20 +1880,26 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
                 {starRating.toFixed(1)}
               </div>
               <div className="space-y-2">
-                <p className="text-xs font-semibold uppercase tracking-wide text-primary/60">
+                <p className="font-semibold text-primary/60 text-xs uppercase tracking-wide">
                   Rate this story
                 </p>
                 <div
-                  className="flex gap-1 text-yellow-500"
+                  className={cn(
+                    "flex gap-1 text-yellow-500 transition-opacity",
+                    pendingRating !== null ? "opacity-50" : "opacity-100",
+                  )}
                   onMouseLeave={() => setHoverRating(null)}
                 >
                   {[1, 2, 3, 4, 5].map((starValue) => {
                     const isFilled =
-                      hoverRating !== null || userRating !== null
+                      hoverRating !== null ||
+                      pendingRating !== null ||
+                      userRating !== null
                         ? starValue <= displayedStars
                         : starValue <= fullStars;
                     const isHalf =
                       hoverRating === null &&
+                      pendingRating === null &&
                       userRating === null &&
                       starValue === fullStars + 1 &&
                       hasHalfStar;

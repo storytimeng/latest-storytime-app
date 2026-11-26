@@ -7,6 +7,7 @@ import { Textarea } from "@heroui/input";
 import { MessageCircle, ChevronDown, ChevronRight, Edit2, Trash2, X, Check } from "lucide-react";
 import { Magnetik_Medium, Magnetik_Regular } from "@/lib/font";
 import { motion, AnimatePresence } from "framer-motion";
+import { useAuthModalStore } from "@/src/stores/useAuthModalStore";
 
 interface Comment {
   id: string;
@@ -239,7 +240,11 @@ export const CommentsSection = ({
   }, [allComments, isThreaded]);
 
   const handleSubmit = async () => {
-    if (!newComment.trim() || !currentUser) return;
+    if (!newComment.trim()) return;
+    if (!currentUser) {
+      useAuthModalStore.getState().openModal("login");
+      return;
+    }
 
     const optimisticId = `optimistic-${Date.now()}`;
     const optimisticComment: Comment = {
@@ -304,7 +309,11 @@ export const CommentsSection = ({
   };
 
   const handleReply = async (parentId: string) => {
-    if (!replyText.trim() || !currentUser) return;
+    if (!replyText.trim()) return;
+    if (!currentUser) {
+      useAuthModalStore.getState().openModal("login");
+      return;
+    }
 
     const optimisticId = `optimistic-reply-${Date.now()}`;
     const optimisticReply: Comment = {
