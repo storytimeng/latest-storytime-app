@@ -44,7 +44,7 @@ They knew this was the general assembly where Elohim would finally share his upc
   };
 
   return (
-    <div className="min-h-screen bg-accent-shade-1 max-w-[28rem] mx-auto relative">
+    <div className="min-h-screen bg-accent-shade-1 max-w-[28rem] md:max-w-3xl lg:max-w-4xl mx-auto relative">
       {/* Header with Background Image */}
       <div className="relative overflow-hidden h-80">
         <Image

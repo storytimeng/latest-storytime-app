@@ -104,7 +104,7 @@ const PremiumView = () => {
   };
 
   return (
-    <div className="min-h-screen bg-accent-shade-1 max-w-[28rem] mx-auto">
+    <div className="min-h-screen bg-accent-shade-1 max-w-[28rem] md:max-w-2xl lg:max-w-4xl mx-auto px-0 md:px-6">
       <div className="px-4 pt-5 pb-4">
         <div className="flex items-center gap-4">
           <Link href="/home">

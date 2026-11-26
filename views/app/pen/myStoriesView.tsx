@@ -8,7 +8,6 @@ import {
   ModalBody,
   ModalFooter,
 } from "@heroui/modal";
-import { Tabs, Tab } from "@heroui/tabs";
 import { Button } from "@heroui/button";
 import { ArrowLeft, X, BookOpen } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -194,45 +193,55 @@ const MyStoriesView = () => {
 
   return (
     <>
-      <div className="min-h-screen bg-accent-shade-1 max-w-[28rem] mx-auto px-4 pb-6">
+      <div className="min-h-screen bg-accent-shade-1 max-w-[28rem] md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto px-4 md:px-6 lg:px-8 pb-20 md:pb-8">
         {/* Page Header */}
         <PageHeader
           title="My Stories"
           backLink="/pen"
           className="px-0 pt-5 pb-4"
-          titleClassName="text-xl text-primary-colour font-bold"
+          titleClassName="text-xl md:text-2xl text-primary-colour font-bold"
         />
 
         {/* Tabs */}
-        <div className="w-full mb-6">
-          <Tabs
-            selectedKey={selectedTab}
-            onSelectionChange={handleTabChange}
-            variant="underlined"
-            classNames={{
-              tabList:
-                "w-full relative rounded-none p-0 border-b border-divider",
-              cursor: "w-full bg-complimentary-colour",
-              tab: "max-w-fit px-0 h-12",
-              tabContent: `group-data-[selected=true]:text-complimentary-colour ${Magnetik_Medium.className}`,
-            }}
-          >
-            <Tab key="Recent" title="Recent" />
-            <Tab key="Ongoing" title="Ongoing" />
-            <Tab key="Published" title="Published" />
-            <Tab key="Drafts" title="Drafts" />
-          </Tabs>
+        <div className="w-full mb-6 border-b border-primary/10">
+          <div className="flex gap-8 overflow-x-auto no-scrollbar">
+            {(["Recent", "Ongoing", "Published", "Drafts"] as TabKey[]).map(
+              (tab) => {
+                const isActive = selectedTab === tab;
+                return (
+                  <button
+                    key={tab}
+                    type="button"
+                    onClick={() => handleTabChange(tab)}
+                    className={`pb-3 text-sm relative whitespace-nowrap transition-colors ${
+                      isActive
+                        ? `text-complimentary-colour ${Magnetik_Bold.className}`
+                        : `text-primary-shade-3 hover:text-primary-colour ${Magnetik_Regular.className}`
+                    }`}
+                  >
+                    {tab}
+                    {isActive && (
+                      <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-complimentary-colour rounded-full" />
+                    )}
+                  </button>
+                );
+              },
+            )}
+          </div>
         </div>
 
         {/* Stories Grid */}
         {isLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <p className={`text-gray-500 ${Magnetik_Regular.className}`}>
-              Loading stories...
-            </p>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div
+                key={i}
+                className="h-[230px] rounded-xl bg-black/5 animate-pulse"
+              />
+            ))}
           </div>
         ) : filteredStories.length > 0 ? (
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {filteredStories.map((story: ExtendedStory, idx: number) => (
               <StoryCard
                 key={(story as ExtendedStory).id ?? idx}
@@ -265,7 +274,7 @@ const MyStoriesView = () => {
         placement="bottom"
         classNames={{
           backdrop: "bg-black/50",
-          base: "bg-universal-white rounded-t-3xl m-0 mb-0 max-w-[28rem] mx-auto",
+          base: "bg-universal-white rounded-t-3xl md:rounded-3xl m-0 md:m-auto mb-0 max-w-[28rem] mx-auto",
           closeButton: "hidden",
         }}
       >

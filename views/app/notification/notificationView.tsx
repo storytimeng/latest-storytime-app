@@ -110,7 +110,7 @@ const NotificationView = () => {
   };
 
   return (
-    <div className="min-h-screen bg-accent-shade-1 max-w-[28rem] mx-auto px-4 pb-6">
+    <div className="min-h-screen bg-accent-shade-1 max-w-[28rem] md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto px-4 md:px-6 lg:px-8 pb-20 md:pb-8">
       {/* Page Header */}
       <div className="flex items-center justify-between pt-4 mb-6">
         {/**
