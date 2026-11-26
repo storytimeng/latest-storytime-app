@@ -492,6 +492,8 @@ export function useStoryViewLogic({
 
           // Update content if changed (separate from description)
           if (
+            !formData.chapter &&
+            !formData.episodes &&
             formData.content !== initialData?.content &&
             formData.content !== undefined &&
             formData.content !== null

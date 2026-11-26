@@ -831,6 +831,69 @@ const StoryForm: React.FC<StoryFormProps> = ({
     ],
   );
 
+  // Convert a standalone story (no chapters/episodes) into chapters or episodes
+  const convertStandaloneToStructure = useCallback(
+    (target: "chapters" | "episodes", navigateToWriting = false) => {
+      const existingBody = latestContentRef.current || formData.content || "";
+      const isChapters = target === "chapters";
+      setStoryStructure({
+        hasChapters: isChapters,
+        hasEpisodes: !isChapters,
+      });
+      setFormData((prev) => ({
+        ...prev,
+        chapter: isChapters,
+        episodes: !isChapters,
+        content: "",
+      }));
+      latestContentRef.current = "";
+
+      if (isChapters) {
+        setChapters([
+          {
+            id: 1,
+            title: "Chapter 1",
+            body: existingBody,
+            chapterNumber: 1,
+            isDraft: formData.storyStatus === "Draft",
+          },
+        ]);
+        setExpandedChapters(new Set(["chapter-1"]));
+      } else {
+        contentStateHook.setParts([
+          {
+            id: 1,
+            title: "Episode 1",
+            body: existingBody,
+            episodeNumber: 1,
+            isDraft: formData.storyStatus === "Draft",
+          },
+        ]);
+        setExpandedEpisodes(new Set(["episode-1"]));
+      }
+
+      if (navigateToWriting) {
+        setCurrentStep("writing");
+      }
+
+      showToast({
+        type: "success",
+        message: `Story content moved into ${isChapters ? "Chapter 1" : "Episode 1"}. Save or Publish to apply.`,
+      });
+    },
+    [
+      contentStateHook,
+      formData.content,
+      formData.storyStatus,
+      setChapters,
+      setCurrentStep,
+      setExpandedChapters,
+      setExpandedEpisodes,
+      setFormData,
+      setStoryStructure,
+    ],
+  );
+
   // Handle delete modal
   const handleDeleteClick = useCallback(
     (type: "chapter" | "episode", id: number, title: string, uuid?: string) => {
@@ -957,17 +1020,51 @@ const StoryForm: React.FC<StoryFormProps> = ({
         </p>
       )}
 
-      {/* Show Chapters/Episodes in Edit Mode */}
+      {/* Show Chapters/Episodes in Edit Mode (or allow converting standalone story) */}
       {mode === "edit" &&
-        (storyStructure.hasChapters || storyStructure.hasEpisodes) &&
-        ((storyStructure.hasChapters && chapters.length > 0) ||
-          (storyStructure.hasEpisodes && parts.length > 0)) && (
+        !storyStructure.hasChapters &&
+        !storyStructure.hasEpisodes && (
+          <div className="space-y-3 p-4 border border-gray-200 rounded-lg bg-white/60">
+            <label
+              className={`text-primary-colour text-base block ${Magnetik_Medium.className}`}
+            >
+              Add Chapters or Episodes
+            </label>
+            <p className="text-gray-500 text-xs">
+              This story currently has no chapters or episodes. Convert it to
+              add chapters or episodes.
+            </p>
+            <div className="flex gap-2">
+              <Button
+                variant="bordered"
+                size="sm"
+                onPress={() => convertStandaloneToStructure("chapters", true)}
+                className="flex-1 border-complimentary-colour text-complimentary-colour"
+              >
+                + Add Chapters
+              </Button>
+              <Button
+                variant="bordered"
+                size="sm"
+                onPress={() => convertStandaloneToStructure("episodes", true)}
+                className="flex-1 border-complimentary-colour text-complimentary-colour"
+              >
+                + Add Episodes
+              </Button>
+            </div>
+          </div>
+        )}
+
+      {mode === "edit" &&
+        (storyStructure.hasChapters || storyStructure.hasEpisodes) && (
           <div className="space-y-2">
             <label
               className={`text-primary-colour text-base block ${Magnetik_Medium.className}`}
             >
               {storyStructure.hasChapters ? "Chapters" : "Episodes"}
             </label>
+            {((storyStructure.hasChapters && chapters.length > 0) ||
+              (storyStructure.hasEpisodes && parts.length > 0)) && (
             <div className="space-y-2 p-3 border border-gray-200 rounded-lg max-h-[300px] overflow-y-auto">
               {(storyStructure.hasChapters ? chapters : parts)
                 .slice(0, 5)
@@ -1032,13 +1129,16 @@ const StoryForm: React.FC<StoryFormProps> = ({
                 </Button>
               )}
             </div>
+            )}
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setCurrentStep("writing")}
               className="w-full text-complimentary-colour"
             >
-              Edit {storyStructure.hasChapters ? "Chapters" : "Episodes"}
+              {(storyStructure.hasChapters ? chapters.length : parts.length) > 0
+                ? `Edit ${storyStructure.hasChapters ? "Chapters" : "Episodes"}`
+                : `+ Add ${storyStructure.hasChapters ? "Chapters" : "Episodes"}`}
             </Button>
           </div>
         )}
@@ -1738,33 +1838,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
                   variant="bordered"
                   size="sm"
                   className="flex-1 border-complimentary-colour text-complimentary-colour"
-                  onClick={() => {
-                    const existingBody =
-                      latestContentRef.current || formData.content || "";
-                    setStoryStructure({ hasChapters: true, hasEpisodes: false });
-                    setFormData((prev) => ({
-                      ...prev,
-                      chapter: true,
-                      episodes: false,
-                      content: "",
-                    }));
-                    latestContentRef.current = "";
-                    setChapters([
-                      {
-                        id: 1,
-                        title: "Chapter 1",
-                        body: existingBody,
-                        chapterNumber: 1,
-                        isDraft: formData.storyStatus === "Draft",
-                      },
-                    ]);
-                    setExpandedChapters(new Set(["chapter-1"]));
-                    showToast({
-                      type: "success",
-                      message:
-                        "Story content moved into Chapter 1. Save or Publish to apply.",
-                    });
-                  }}
+                  onPress={() => convertStandaloneToStructure("chapters", false)}
                 >
                   Convert to Chapters
                 </Button>
@@ -1772,33 +1846,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
                   variant="bordered"
                   size="sm"
                   className="flex-1 border-complimentary-colour text-complimentary-colour"
-                  onClick={() => {
-                    const existingBody =
-                      latestContentRef.current || formData.content || "";
-                    setStoryStructure({ hasChapters: false, hasEpisodes: true });
-                    setFormData((prev) => ({
-                      ...prev,
-                      chapter: false,
-                      episodes: true,
-                      content: "",
-                    }));
-                    latestContentRef.current = "";
-                    contentStateHook.setParts([
-                      {
-                        id: 1,
-                        title: "Episode 1",
-                        body: existingBody,
-                        episodeNumber: 1,
-                        isDraft: formData.storyStatus === "Draft",
-                      },
-                    ]);
-                    setExpandedEpisodes(new Set(["episode-1"]));
-                    showToast({
-                      type: "success",
-                      message:
-                        "Story content moved into Episode 1. Save or Publish to apply.",
-                    });
-                  }}
+                  onPress={() => convertStandaloneToStructure("episodes", false)}
                 >
                   Convert to Episodes
                 </Button>

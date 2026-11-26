@@ -305,6 +305,24 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
   const { isOpen: isImagePreviewOpen, onOpenChange: onImagePreviewOpenChange } =
     useDisclosure();
 
+  const { data: ratingData, mutate: mutateRating } = useSWR(
+    storyId && !usingOfflineFallback ? `story-rating-${storyId}` : null,
+    async () => {
+      const res = await client.get({ url: `/stories/${storyId}/rating` });
+      return ((res?.data as any)?.data ?? res?.data) as
+        | {
+            averageRating?: number;
+            ratingCount?: number;
+            totalRatings?: number;
+            userRating?: number | null;
+          }
+        | undefined;
+    },
+    { revalidateOnFocus: false, shouldRetryOnError: false },
+  );
+  const [hoverRating, setHoverRating] = useState<number | null>(null);
+  const [isSubmittingRating, setIsSubmittingRating] = useState(false);
+
   const currentUser = (
     storeUser && (storeUser as any).data
       ? (storeUser as any).data?.user
@@ -1026,23 +1044,6 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
   const displayImage = getStoryCoverSrc(effectiveStory.imageUrl);
   const status = storyData.storyStatus || "Ongoing";
   const viewCount = storyData.viewCount || 0;
-  const { data: ratingData, mutate: mutateRating } = useSWR(
-    storyId && !usingOfflineFallback ? `story-rating-${storyId}` : null,
-    async () => {
-      const res = await client.get({ url: `/stories/${storyId}/rating` });
-      return ((res?.data as any)?.data ?? res?.data) as
-        | {
-            averageRating?: number;
-            ratingCount?: number;
-            totalRatings?: number;
-            userRating?: number | null;
-          }
-        | undefined;
-    },
-    { revalidateOnFocus: false, shouldRetryOnError: false },
-  );
-  const [hoverRating, setHoverRating] = useState<number | null>(null);
-  const [isSubmittingRating, setIsSubmittingRating] = useState(false);
 
   const starRating = Number(ratingData?.averageRating ?? 0);
   const totalRatings = Number(
@@ -1068,12 +1069,7 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
         headers: { "Content-Type": "application/json" },
       });
       const updated = ((res?.data as any)?.data ?? res?.data) as
-        | {
-            averageRating?: number;
-            ratingCount?: number;
-            totalRatings?: number;
-            userRating?: number | null;
-          }
+        | { averageRating?: number; totalRatings?: number; userRating?: number | null }
         | undefined;
       if (updated) {
         await mutateRating(updated, false);
