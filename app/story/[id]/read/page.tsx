@@ -1,12 +1,19 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Skeleton } from "@heroui/skeleton";
 import ReadStoryClient from "./client";
+import { buildStoryMetadata } from "@/lib/seo/storyMetadata";
 
 export function generateStaticParams() {
   return [{ id: "index" }];
 }
 
 type Props = { params: Promise<{ id: string }> };
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { id } = await params;
+  return buildStoryMetadata(id ?? "", { isReader: true });
+}
 
 export default async function ReadStoryPage({ params }: Props) {
   const { id } = await params;

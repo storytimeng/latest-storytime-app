@@ -1,6 +1,26 @@
+import type { Metadata } from "next";
 import React, { Suspense, lazy } from "react";
 import { Skeleton } from "@heroui/skeleton";
 import TabLayout from "@/views/app/TabLayout";
+import { APP_CONFIG } from "@/config/app";
+import { IS_ANDROID } from "@/lib/platform";
+
+export const metadata: Metadata = IS_ANDROID
+  ? { title: "Storytime" }
+  : {
+      title: "Discover Stories",
+      description:
+        "Browse trending, popular, and newly published stories across genres on Storytime.",
+      alternates: { canonical: `${APP_CONFIG.url}/home` },
+      openGraph: {
+        title: `Discover Stories | ${APP_CONFIG.name}`,
+        description:
+          "Browse trending, popular, and newly published stories across genres on Storytime.",
+        url: `${APP_CONFIG.url}/home`,
+        siteName: APP_CONFIG.name,
+        type: "website",
+      },
+    };
 
 // Lazy load HomeView directly (avoid @/views barrel bundle)
 const HomeView = lazy(() =>
