@@ -408,7 +408,7 @@ export const CommentsSection = ({
       >
         {/* Vertical line for threading - thicker and more visible like Reddit */}
         {depth > 0 && (
-          <div className="absolute left-3 top-0 bottom-0 w-0.5 bg-divider hover:bg-primary-colour/30 transition-colors" />
+          <div className="top-0 bottom-0 left-3 absolute bg-divider hover:bg-primary-colour/30 w-0.5 transition-colors" />
         )}
 
         <div className={`${depth > 0 ? "ml-6 pl-6" : ""} relative group`}>
@@ -431,7 +431,7 @@ export const CommentsSection = ({
                 >
                   {comment.user.penName}
                 </span>
-                <span className="text-xs text-default-400">
+                <span className="text-default-400 text-xs">
                   {new Date(comment.createdAt).toLocaleDateString()}{" "}
                   {new Date(comment.createdAt).toLocaleTimeString([], {
                     hour: "2-digit",
@@ -441,7 +441,7 @@ export const CommentsSection = ({
               </div>
               
               {editingCommentId === comment.id ? (
-                <div className="mb-2 space-y-2">
+                <div className="space-y-2 mb-2">
                   <Textarea
                     value={editContent}
                     onChange={(e) => setEditContent(e.target.value)}
@@ -490,7 +490,7 @@ export const CommentsSection = ({
                       setReplyingTo(showReplyForm ? null : comment.id)
                     }
                     disabled={comment.id.startsWith("optimistic")}
-                    className="flex items-center gap-1 text-xs font-medium text-default-500 hover:text-primary-500 transition-colors px-2 py-1 rounded hover:bg-default-200 disabled:opacity-30 disabled:cursor-not-allowed"
+                    className="flex items-center gap-1 hover:bg-default-200 disabled:opacity-30 px-2 py-1 rounded font-medium text-default-500 hover:text-primary-500 text-xs transition-colors disabled:cursor-not-allowed"
                   >
                     <MessageCircle size={14} />
                     <span>Reply</span>
@@ -501,7 +501,7 @@ export const CommentsSection = ({
                 {hasReplies && (
                   <button
                     onClick={() => toggleCollapse(comment.id)}
-                    className="flex items-center gap-1 text-xs font-medium text-default-500 hover:text-primary-500 transition-colors px-2 py-1 rounded hover:bg-default-200"
+                    className="flex items-center gap-1 hover:bg-default-200 px-2 py-1 rounded font-medium text-default-500 hover:text-primary-500 text-xs transition-colors"
                   >
                     {isCollapsed ? (
                       <>
@@ -529,7 +529,7 @@ export const CommentsSection = ({
                         setEditContent(comment.content);
                         setReplyingTo(null);
                       }}
-                      className="flex items-center gap-1 text-xs font-medium text-default-500 hover:text-primary-500 transition-colors px-2 py-1 rounded hover:bg-default-200"
+                      className="flex items-center gap-1 hover:bg-default-200 px-2 py-1 rounded font-medium text-default-500 hover:text-primary-500 text-xs transition-colors"
                     >
                       <Edit2 size={12} />
                       <span>Edit</span>
@@ -541,10 +541,10 @@ export const CommentsSection = ({
                         }
                       }}
                       disabled={isDeleting === comment.id}
-                      className="flex items-center gap-1 text-xs font-medium text-red-500/70 hover:text-red-500 transition-colors px-2 py-1 rounded hover:bg-red-500/10 disabled:opacity-50"
+                      className="flex items-center gap-1 hover:bg-red-500/10 disabled:opacity-50 px-2 py-1 rounded font-medium text-red-500/70 hover:text-red-500 text-xs transition-colors"
                     >
                       {isDeleting === comment.id ? (
-                        <div className="w-3 h-3 border-2 border-current border-t-transparent animate-spin rounded-full" />
+                        <div className="border-2 border-current border-t-transparent rounded-full w-3 h-3 animate-spin" />
                       ) : (
                         <Trash2 size={12} />
                       )}
@@ -556,7 +556,7 @@ export const CommentsSection = ({
 
               {/* Reply form */}
               {showReplyForm && (
-                <div className="mt-3 space-y-2 p-3 bg-default-50 rounded-lg border border-divider">
+                <div className="space-y-2 bg-default-50 mt-3 p-3 border border-divider rounded-lg">
                   <Textarea
                     value={replyText}
                     onChange={(e) => setReplyText(e.target.value)}
@@ -647,7 +647,7 @@ export const CommentsSection = ({
       {/* Comments list */}
       <div className="space-y-4">
         {organizedComments.length === 0 ? (
-          <p className="text-center text-primary-shade-3 py-8">
+          <p className="py-8 text-primary-shade-3 text-center">
             No comments yet. Be the first to share your thoughts!
           </p>
         ) : (
