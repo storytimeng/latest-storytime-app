@@ -757,57 +757,87 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
   // a different chapter) — instead of resolving into a dead
   // component and overwriting the next chapter's snapshot.
 
-  const flushProgressToServer = useCallback(async () => {
-    if (!isOnline || !user) return;
+  const lastFlushedReadingTimeRef = useRef(0);
+  const hasFlushedCompletionRef = useRef(false);
 
-    const localState = localProgress.getLocal();
+  const flushProgressToServer = useCallback(
+    async (options?: { abortable?: boolean }) => {
+      if (!isOnline || !user) return;
 
-    // We pull the latest percentage/words straight from the
-    // locally tracked state so a navigation right before the
-    // flush doesn't end up sending the *previous* chapter's
-    // scroll position.
-    const payload = {
-      percentageRead: localState.percentageRead,
-      wordsRead: localState.wordsRead,
-      totalWords: localState.totalWords,
-      readingTimeSeconds: localState.readingTimeSeconds,
-    };
+      const localState = localProgress.getLocal();
+      const deltaReadingTime = Math.max(
+        0,
+        localState.readingTimeSeconds - lastFlushedReadingTimeRef.current,
+      );
 
-    await runAbortable(async ({ signal }) => {
-      try {
-        if (hasChapters && selectedChapterId) {
-          await updateChapterProgress(payload, { signal });
-        } else if (hasEpisodes && selectedChapterId) {
-          await updateEpisodeProgress(payload, { signal });
-        } else {
-          await updateStoryProgress(payload, { signal });
+      // We pull the latest percentage/words straight from the
+      // locally tracked state so a navigation right before the
+      // flush doesn't end up sending the *previous* chapter's
+      // scroll position.
+      const payload = {
+        percentageRead: localState.percentageRead,
+        wordsRead: localState.wordsRead,
+        totalWords: localState.totalWords,
+        readingTimeSeconds: deltaReadingTime,
+      };
+      const chapterEpisodePayload = {
+        ...payload,
+        ...(localState.percentageRead >= 95 ? { isCompleted: true } : {}),
+      };
+
+      const executeFlush = async (signal?: AbortSignal) => {
+        try {
+          if (hasChapters && selectedChapterId) {
+            await updateChapterProgress(
+              chapterEpisodePayload,
+              signal ? { signal } : undefined,
+            );
+          } else if (hasEpisodes && selectedChapterId) {
+            await updateEpisodeProgress(
+              chapterEpisodePayload,
+              signal ? { signal } : undefined,
+            );
+          } else {
+            await updateStoryProgress(payload, signal ? { signal } : undefined);
+          }
+          lastFlushedReadingTimeRef.current = localState.readingTimeSeconds;
+        } catch (error) {
+          // Aborted requests are no-ops; the unmount path will
+          // try again next time.
+          if (
+            error &&
+            typeof error === "object" &&
+            "name" in error &&
+            (error as { name?: string }).name === "AbortError"
+          ) {
+            return;
+          }
+          console.error("Failed to update reading progress:", error);
         }
-      } catch (error) {
-        // Aborted requests are no-ops; the unmount path will
-        // try again next time.
-        if (
-          error &&
-          typeof error === "object" &&
-          "name" in error &&
-          (error as { name?: string }).name === "AbortError"
-        ) {
-          return;
-        }
-        console.error("Failed to update reading progress:", error);
+      };
+
+      if (options?.abortable === false) {
+        await executeFlush();
+        return;
       }
-    });
-  }, [
-    isOnline,
-    user,
-    localProgress,
-    hasChapters,
-    hasEpisodes,
-    selectedChapterId,
-    updateChapterProgress,
-    updateEpisodeProgress,
-    updateStoryProgress,
-    runAbortable,
-  ]);
+
+      await runAbortable(async ({ signal }) => {
+        await executeFlush(signal);
+      });
+    },
+    [
+      isOnline,
+      user,
+      localProgress,
+      hasChapters,
+      hasEpisodes,
+      selectedChapterId,
+      updateChapterProgress,
+      updateEpisodeProgress,
+      updateStoryProgress,
+      runAbortable,
+    ],
+  );
 
   // The locally-tracked progress is updated on every "tick".
   // We keep this cheap (no server I/O) and run on a short
@@ -818,7 +848,16 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
     const measured = calculateProgress();
     if (!measured) return;
     localProgress.updateLocal(measured);
-  }, [isOnline, calculateProgress, localProgress]);
+
+    if (
+      user &&
+      measured.percentageRead >= 95 &&
+      !hasFlushedCompletionRef.current
+    ) {
+      hasFlushedCompletionRef.current = true;
+      void flushProgressRef.current({ abortable: false });
+    }
+  }, [isOnline, user, calculateProgress, localProgress]);
 
   // Initialize the local accumulator from the server's last-known
   // reading time once, and keep that value stable for the session.
@@ -829,6 +868,8 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
 
     const existingReadingTime =
       (currentProgress as any)?.readingTimeSeconds || 0;
+
+    lastFlushedReadingTimeRef.current = existingReadingTime;
 
     const latest = localProgress.getLocal();
     localProgress.updateLocal({
@@ -902,6 +943,14 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
   // ghost requests land in the backend's logs after the page
   // has gone away.
 
+  const flushProgressRef = useRef(flushProgressToServer);
+  flushProgressRef.current = flushProgressToServer;
+  const cleanupFlushRef = useRef(flushProgressToServer);
+
+  useEffect(() => {
+    cleanupFlushRef.current = flushProgressToServer;
+  }, [flushProgressToServer]);
+
   useEffect(() => {
     if (!isOnline || !user) return;
 
@@ -911,23 +960,25 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
     );
 
     const serverInterval = setInterval(() => {
-      flushProgressToServer();
+      void flushProgressRef.current();
     }, flushEvery);
 
     return () => {
       clearInterval(serverInterval);
-      // Final flush on unmount. We don't await — the
-      // `runAbortable` cleanup on unmount will cancel the
-      // request anyway, but firing the flush is what records
-      // the user's last-known reading time on the server.
-      flushProgressToServer();
+      // Final non-abortable flush on unmount or chapter/episode switch.
+      // Using `cleanupFlushRef` ensures switching chapters/episodes flushes
+      // the outgoing item rather than the newly rendered one.
+      void cleanupFlushRef.current({ abortable: false });
     };
-  }, [isOnline, user, flushProgressToServer, localProgress]);
+  }, [isOnline, user, localProgress.flushIntervalMs, selectedChapterId]);
 
   // Reset when chapter/episode changes
 
   useEffect(() => {
     hasRestoredScrollRef.current = false;
+    isTimeInitializedRef.current = false;
+    lastFlushedReadingTimeRef.current = 0;
+    hasFlushedCompletionRef.current = false;
   }, [selectedChapterId]);
 
   // Loading state — keep the skeleton up until BOTH the network fetch
@@ -940,12 +991,12 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
     (!offlineCheckDone && !story)
   ) {
     return (
-      <div className="min-h-screen p-4 space-y-4 bg-accent-shade-1">
+      <div className="space-y-4 p-4 min-h-screen bg-accent-shade-1">
         <PageHeader backLink={`/story?id=${storyId}`} showBackButton />
 
-        <Skeleton className="w-full h-12 rounded-lg" />
+        <Skeleton className="rounded-lg w-full h-12" />
 
-        <Skeleton className="w-full rounded-lg h-96" />
+        <Skeleton className="rounded-lg w-full h-96" />
       </div>
     );
   }
@@ -1022,7 +1073,7 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
     <TTSProvider>
       <div
         ref={contentContainerRef}
-        className="min-h-screen bg-accent-shade-1 relative max-w-[28rem] md:max-w-3xl lg:max-w-5xl xl:max-w-6xl mx-auto"
+        className="relative mx-auto max-w-[28rem] md:max-w-3xl lg:max-w-5xl xl:max-w-6xl min-h-screen bg-accent-shade-1"
       >
         {/* Story Header */}
 
@@ -1059,28 +1110,30 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
         {/* Story Content */}
 
         {isContentLoading && !currentContent ? (
-          <div className="px-4 py-8">
-            <Skeleton className="w-full rounded-lg h-96" />
+          <div className={`px-4 ${hasNavigation ? "pt-44" : "pt-32"} pb-8`}>
+            <Skeleton className="rounded-lg w-full h-96" />
           </div>
         ) : isPartLoading && !currentContent ? (
-          <div className="px-4 py-8 space-y-4">
-            <div className="w-full h-1 overflow-hidden rounded-full bg-light-grey-2">
-              <div className="w-1/3 h-full rounded-full animate-pulse bg-complimentary-colour" />
+          <div
+            className={`px-4 ${hasNavigation ? "pt-44" : "pt-32"} pb-8 space-y-4`}
+          >
+            <div className="bg-light-grey-2 rounded-full w-full h-1 overflow-hidden">
+              <div className="bg-complimentary-colour rounded-full w-1/3 h-full animate-pulse" />
             </div>
 
-            <Skeleton className="w-full h-64 rounded-lg" />
+            <Skeleton className="rounded-lg w-full h-64" />
           </div>
         ) : (
-          currentContent && (
-            <React.Fragment>
-              {isPartLoading ? (
-                <div className="sticky z-30 px-4 top-28">
-                  <div className="w-full h-1 overflow-hidden rounded-full bg-light-grey-2">
-                    <div className="w-1/3 h-full rounded-full animate-pulse bg-complimentary-colour" />
-                  </div>
+          <React.Fragment>
+            {isPartLoading ? (
+              <div className="top-28 z-30 sticky px-4">
+                <div className="bg-light-grey-2 rounded-full w-full h-1 overflow-hidden">
+                  <div className="bg-complimentary-colour rounded-full w-1/3 h-full animate-pulse" />
                 </div>
-              ) : null}
+              </div>
+            ) : null}
 
+            {currentContent ? (
               <div ref={storyContentRef}>
                 <StoryContent
                   content={currentContent}
@@ -1095,6 +1148,16 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
                   listenMode={readingMode === "listen"}
                 />
               </div>
+            ) : (
+              <div
+                className={`px-4 ${hasNavigation ? "pt-44" : "pt-32"} pb-12 text-center md:px-12 lg:px-24 xl:px-32`}
+              >
+                <p className="text-primary-colour/60 text-sm">
+                  No content available for this{" "}
+                  {hasNavigation ? partLabel.toLowerCase() : "story"} yet.
+                </p>
+              </div>
+            )}
 
               {hasNavigation ? (
                 <StoryPartFooter
@@ -1112,7 +1175,7 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
               {/* Interaction Section (only when online) */}
 
               {isOnline && (
-                <div className="px-4 pb-6 md:px-12 lg:px-24 xl:px-32">
+                <div className="px-4 md:px-12 lg:px-24 xl:px-32 pb-6">
                   <InteractionSection
                     likeCount={displayLikeCount}
                     commentCount={displayCommentCount}
@@ -1128,7 +1191,7 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
                     <Suspense
                       fallback={
                         <div className="py-4">
-                          <Skeleton className="w-full h-20 rounded-lg" />
+                          <Skeleton className="rounded-lg w-full h-20" />
                         </div>
                       }
                     >
@@ -1196,7 +1259,6 @@ export const ReadStoryView = ({ storyId }: ReadStoryViewProps) => {
                 />
               )}
             </React.Fragment>
-          )
         )}
       </div>
 

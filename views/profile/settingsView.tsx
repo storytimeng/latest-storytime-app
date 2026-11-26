@@ -27,6 +27,9 @@ import { usePremiumFeatures } from "@/src/hooks/usePremiumFeatures";
 import { useAuthStore } from "@/src/stores/useAuthStore";
 import { fetchPaymentHistory } from "@/src/lib/subscriptions";
 import { showToast } from "@/lib/showNotification";
+import { usePushSubscription } from "@/src/hooks/usePushSubscription";
+import { ensureValidToken } from "@/src/lib/tokenManager";
+import { getApiBaseUrl } from "@/src/lib/apiBase";
 
 const SettingsView = () => {
   const { isOpen, activeModal, openModal, closeModal } = useModalNavigation();
@@ -40,6 +43,12 @@ const SettingsView = () => {
   } = usePremiumFeatures();
 
   const isLoggedIn = isAuthenticated();
+  const {
+    isSubscribed: isPushSubscribed,
+    permission: pushPermission,
+    subscribe: subscribePush,
+    unsubscribe: unsubscribePush,
+  } = usePushSubscription();
 
   const { data: paymentHistory } = useSWR(
     isLoggedIn ? "subscription-history" : null,
@@ -49,17 +58,63 @@ const SettingsView = () => {
 
   const hasPaymentHistory = (paymentHistory?.payments?.length ?? 0) > 0;
 
+  const handleToggleNotifications = React.useCallback(
+    async (enabled: boolean) => {
+      try {
+        if (enabled) {
+          if (pushPermission !== "unsupported") {
+            await subscribePush();
+          }
+        } else if (isPushSubscribed) {
+          await unsubscribePush();
+        }
+        const token = await ensureValidToken();
+        if (token) {
+          await fetch(`${getApiBaseUrl()}/users/preferences`, {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ pushNotificationsEnabled: enabled }),
+          });
+        }
+        showToast({
+          type: "success",
+          message: enabled
+            ? "Push notifications enabled"
+            : "Push notifications disabled",
+        });
+      } catch (err: any) {
+        showToast({
+          type: "error",
+          message: err?.message || "Could not update notification settings",
+        });
+      }
+    },
+    [pushPermission, isPushSubscribed, subscribePush, unsubscribePush],
+  );
+
   const settingsOptions = useMemo(() => {
     const showSubscription =
       isLoggedIn &&
       !premiumLoading &&
       (isPremium || isSubscriptionCancelled || hasPaymentHistory);
 
+    const options = SETTINGS_OPTIONS.map((opt) =>
+      opt.id === "notifications"
+        ? {
+            ...opt,
+            isEnabled: isPushSubscribed || pushPermission === "granted",
+            onToggle: handleToggleNotifications,
+          }
+        : opt,
+    );
+
     if (!showSubscription) {
-      return SETTINGS_OPTIONS;
+      return options;
     }
 
-    const options = [...SETTINGS_OPTIONS];
     const securityIndex = options.findIndex((opt) => opt.id === "security");
     const insertAt = securityIndex >= 0 ? securityIndex + 1 : 1;
     options.splice(insertAt, 0, SUBSCRIPTION_SETTING_OPTION);
@@ -70,6 +125,9 @@ const SettingsView = () => {
     isPremium,
     isSubscriptionCancelled,
     hasPaymentHistory,
+    isPushSubscribed,
+    pushPermission,
+    handleToggleNotifications,
   ]);
 
   const handleOptionClick = (id: string) => {

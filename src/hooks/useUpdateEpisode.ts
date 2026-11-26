@@ -37,6 +37,7 @@ export function useUpdateEpisode(): UseUpdateEpisodeReturn {
         const response = await storiesControllerUpdateEpisode({
           path: { episodeId },
           body: payload,
+          throwOnError: true,
         });
 
         if (response.data) {
@@ -106,6 +107,7 @@ export function useUpdateMultipleEpisodes() {
             const response = await storiesControllerUpdateEpisode({
               path: { episodeId: episode.uuid },
               body: payload,
+              throwOnError: true,
             });
 
             if (response.data) {

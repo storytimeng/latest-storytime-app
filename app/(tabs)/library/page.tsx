@@ -1,10 +1,12 @@
 import { Suspense, lazy } from "react";
 import { Skeleton } from "@heroui/skeleton";
-import { TabLayout } from "@/views";
+import TabLayout from "@/views/app/TabLayout";
 
-// Lazy load library view
+// Lazy load library view directly (avoid @/views barrel bundle)
 const NewLibraryView = lazy(() =>
-  import("@/views").then((mod) => ({ default: mod.NewLibraryView }))
+  import("@/views/app/library/newLibraryView").then((mod) => ({
+    default: mod.default,
+  })),
 );
 
 const LibraryPage = () => {

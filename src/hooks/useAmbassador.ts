@@ -3,17 +3,18 @@ import useSWR from "swr";
 import { fetchAmbassadorOverview } from "@/src/lib/ambassadors";
 import { dataStateCache, getCachedValue } from "@/src/stores/useDataStateCache";
 import { APP_CACHE_KEYS } from "@/src/stores/dataCacheKeys";
+import { useAuthStore } from "@/src/stores/useAuthStore";
 
 export function useAmbassadorOverview() {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)();
   const { data, error, isLoading, mutate } = useSWR(
-    "ambassador-overview",
+    isAuthenticated ? "ambassador-overview" : null,
     fetchAmbassadorOverview,
     {
-      revalidateOnFocus: true,
-      // Warm-start with the previous session's overview so the
-      // profile screen renders instantly on cold mount.
-      fallbackData:
-        getCachedValue<any>(APP_CACHE_KEYS.ambassadorOverview) ?? undefined,
+      revalidateOnFocus: false,
+      fallbackData: isAuthenticated
+        ? (getCachedValue<any>(APP_CACHE_KEYS.ambassadorOverview) ?? undefined)
+        : undefined,
     },
   );
 

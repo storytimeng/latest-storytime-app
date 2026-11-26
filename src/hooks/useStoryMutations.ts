@@ -14,6 +14,20 @@ import { getApiErrorMessage } from "@/lib/apiError";
 import { showToast } from "@/lib/showNotification";
 import type { CreateStoryDto, UpdateStoryDto } from "@/src/client/types.gen";
 
+function extractApiErrorMessage(err: any, fallback: string): string {
+  const msg =
+    err?.response?.data?.message ??
+    err?.message ??
+    err?.error;
+  if (Array.isArray(msg)) {
+    return msg.filter(Boolean).join(", ") || fallback;
+  }
+  if (typeof msg === "string" && msg.trim().length > 0) {
+    return msg;
+  }
+  return fallback;
+}
+
 export function useDeleteStory() {
   const [isDeleting, setIsDeleting] = React.useState(false);
   const [error, setError] = React.useState<Error | null>(null);
@@ -66,21 +80,8 @@ export function useCreateStory() {
     try {
       const response = await storiesControllerCreate({
         body: storyData,
+        throwOnError: true,
       });
-
-      if (response.error) {
-        const message = getApiErrorMessage(
-          response.error,
-          "Failed to create story. Please try again.",
-        );
-        const error = new Error(message);
-        setError(error);
-        showToast({
-          type: "error",
-          message,
-        });
-        return { success: false, message };
-      }
 
       const result = (response?.data as any)?.data || response?.data;
       const id = result?.id || result?._id;
@@ -131,23 +132,11 @@ export function useUpdateStory() {
     setError(null);
 
     try {
-      const response = await storiesControllerUpdate({
+      await storiesControllerUpdate({
         path: { id: storyId },
         body: storyData,
+        throwOnError: true,
       });
-
-      if (response.error) {
-        const message = getApiErrorMessage(
-          response.error,
-          "Failed to update story. Please try again.",
-        );
-        setError(new Error(message));
-        showToast({
-          type: "error",
-          message,
-        });
-        return false;
-      }
 
       // Revalidate all SWR caches that contain this story so the UI reflects
       // the update immediately without requiring a page refresh.
@@ -234,6 +223,7 @@ export function useCreateChapter() {
           storyId,
           ...chapterData,
         },
+        throwOnError: true,
       });
 
       const result = (response?.data as any)?.data || response?.data;
@@ -293,6 +283,7 @@ export function useCreateMultipleChapters() {
             isDraft: ch.isDraft ?? true,
           })),
         },
+        throwOnError: true,
       });
 
       await Promise.all([
@@ -353,6 +344,7 @@ export function useCreateEpisode() {
 
       const response = await storiesControllerCreateEpisode({
         body,
+        throwOnError: true,
       });
 
       const result = (response?.data as any)?.data || response?.data;
@@ -412,6 +404,7 @@ export function useCreateMultipleEpisodes() {
             isDraft: ep.isDraft ?? true,
           })),
         },
+        throwOnError: true,
       });
 
       await Promise.all([

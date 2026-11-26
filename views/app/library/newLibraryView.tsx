@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import useSWR from "swr";
 import { MessageCircle, HardDrive, Trash2 } from "lucide-react";
 import { Magnetik_Bold, Magnetik_Medium, Magnetik_Regular } from "@/lib/font";
 import { StoryCard, OfflineAwareStoryCard } from "@/components/reusables";
@@ -10,64 +11,85 @@ import { formatBytes } from "@/lib/offline/db";
 import { usersControllerGetAllReadingProgress } from "@/src/client/sdk.gen";
 import { useSearchParams } from "next/navigation";
 import { useOnlineStatus } from "@/src/hooks/useOnlineStatus";
+import { useAuthGate } from "@/src/hooks/useAuthGate";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
+import { ensureValidToken } from "@/src/lib/tokenManager";
+import { getApiBaseUrl } from "@/src/lib/apiBase";
+
+type LibraryTab = "library" | "liked" | "downloads";
+
+function resolveTabParam(tabParam: string | null): LibraryTab {
+  const normalized = tabParam?.trim().toLowerCase();
+  if (normalized === "downloads") return "downloads";
+  if (normalized === "liked") return "liked";
+  return "library";
+}
 
 const NewLibraryView = () => {
+  useAuthGate(true);
   const isOnline = useOnlineStatus();
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
 
-  const [activeTab, setActiveTab] = useState<"library" | "downloads">(
-    tabParam === "downloads" ? "downloads" : "library",
+  const [activeTab, setActiveTab] = useState<LibraryTab>(() =>
+    resolveTabParam(tabParam),
   );
   const [page, setPage] = useState(1);
-  const [readingProgress, setReadingProgress] = useState<
-    Record<string, number>
-  >({});
   const observerTarget = useRef<HTMLDivElement>(null);
 
   // Update tab if URL param changes
   useEffect(() => {
-    if (tabParam === "downloads") {
-      setActiveTab("downloads");
-    }
+    setActiveTab(resolveTabParam(tabParam));
   }, [tabParam]);
 
   // Fetch reading history with pagination
   const { history, isLoading, totalPages } = useReadingHistory(page, 20);
 
-  // Fetch reading progress for all stories
-  useEffect(() => {
-    const fetchProgress = async () => {
-      try {
-        const response = await usersControllerGetAllReadingProgress({
-          query: { page: 1, limit: 100 },
-        });
-
-        if (!response.error && response.data) {
-          // @ts-ignore
-          const progressData = response.data?.data || response.data;
-          const progressMap: Record<string, number> = {};
-
-          if (Array.isArray(progressData)) {
-            progressData.forEach((item: any) => {
-              if (item.storyId && item.percentageRead !== undefined) {
-                progressMap[item.storyId] = item.percentageRead;
-              }
-            });
+  // Fetch reading progress once via SWR (deduped) and unwrap { progress: [...] }
+  const { data: readingProgress = {} } = useSWR<Record<string, number>>(
+    activeTab === "library" && isOnline ? "/users/reading-progress?limit=100" : null,
+    async () => {
+      const response = await usersControllerGetAllReadingProgress({
+        query: { page: 1, limit: 100 },
+      });
+      if (response.error || !response.data) return {};
+      const raw = response.data as any;
+      const list =
+        raw?.data?.progress ??
+        raw?.progress ??
+        (Array.isArray(raw?.data) ? raw.data : Array.isArray(raw) ? raw : []);
+      const map: Record<string, number> = {};
+      if (Array.isArray(list)) {
+        for (const item of list) {
+          if (item?.storyId && item?.percentageRead !== undefined) {
+            map[item.storyId] = Number(item.percentageRead) || 0;
           }
-
-          setReadingProgress(progressMap);
         }
-      } catch (error) {
-        console.error("Error fetching reading progress:", error);
       }
-    };
+      return map;
+    },
+    { revalidateOnFocus: false },
+  );
 
-    if (activeTab === "library" && history.length > 0) {
-      fetchProgress();
-    }
-  }, [activeTab, history]);
+  // Fetch liked stories when Liked tab is active
+  const { data: likedStoriesData = [], isLoading: isLoadingLiked } = useSWR<any[]>(
+    activeTab === "liked" && isOnline ? "/users/liked-stories" : null,
+    async () => {
+      const token = await ensureValidToken();
+      if (!token) return [];
+      const res = await fetch(
+        `${getApiBaseUrl()}/users/liked-stories?page=1&limit=50`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+      if (!res.ok) return [];
+      const json = await res.json();
+      const stories = json?.data?.stories ?? json?.stories ?? [];
+      return Array.isArray(stories) ? stories : [];
+    },
+    { revalidateOnFocus: false },
+  );
 
   // Fetch downloaded stories from IndexedDB
   const {
@@ -125,8 +147,28 @@ const NewLibraryView = () => {
     ...offline.metadata,
   }));
 
+  const likedStories = useMemo(
+    () =>
+      likedStoriesData.map((story: any) => ({
+        id: story.id,
+        title: story.title,
+        description: story.description,
+        imageUrl: story.imageUrl,
+        coverImage: story.imageUrl,
+        author: story.author,
+        genres: story.genres || [],
+        status: story.storyStatus,
+        progress: readingProgress[story.id] || 0,
+      })),
+    [likedStoriesData, readingProgress],
+  );
+
   const currentStories =
-    activeTab === "library" ? libraryStories : downloadedStories;
+    activeTab === "library"
+      ? libraryStories
+      : activeTab === "liked"
+        ? likedStories
+        : downloadedStories;
 
   // Infinite scroll handler
   const handleObserver = useCallback(
@@ -152,7 +194,7 @@ const NewLibraryView = () => {
   }, [handleObserver]);
 
   return (
-    <div className="min-h-screen bg-accent-shade-1 pb-20 md:pb-6">
+    <div className="pb-20 md:pb-6 min-h-screen bg-accent-shade-1">
       {/* Tabs */}
       <div className="px-4 md:px-6 lg:px-8 pt-5 pb-4">
         <div className="flex gap-8">
@@ -166,7 +208,20 @@ const NewLibraryView = () => {
           >
             My Library
             {activeTab === "library" && (
-              <div className="absolute bottom-0 left-0 right-0 h-1 bg-complimentary-colour rounded-full" />
+              <div className="right-0 bottom-0 left-0 absolute bg-complimentary-colour rounded-full h-1" />
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab("liked")}
+            className={`pb-3 text-sm relative ${
+              activeTab === "liked"
+                ? `text-complimentary-colour ${Magnetik_Bold.className}`
+                : `text-primary-shade-3 ${Magnetik_Regular.className}`
+            }`}
+          >
+            Liked
+            {activeTab === "liked" && (
+              <div className="right-0 bottom-0 left-0 absolute bg-complimentary-colour rounded-full h-1" />
             )}
           </button>
           <button
@@ -179,14 +234,14 @@ const NewLibraryView = () => {
           >
             My Downloads
             {activeTab === "downloads" && (
-              <div className="absolute bottom-0 left-0 right-0 h-1 bg-complimentary-colour rounded-full" />
+              <div className="right-0 bottom-0 left-0 absolute bg-complimentary-colour rounded-full h-1" />
             )}
           </button>
         </div>
       </div>
 
-      {/* Offline Indicator for Library Tab */}
-      {activeTab === "library" && !isOnline && (
+      {/* Offline Indicator for Library / Liked Tabs */}
+      {(activeTab === "library" || activeTab === "liked") && !isOnline && (
         <div className="px-4">
           <OfflineIndicator />
         </div>
@@ -194,14 +249,15 @@ const NewLibraryView = () => {
 
       {/* Loading State */}
       {((isLoading && activeTab === "library" && page === 1 && isOnline) ||
+        (isLoadingLiked && activeTab === "liked" && isOnline) ||
         (isLoadingOffline && activeTab === "downloads")) && (
         <div className="px-4">
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          <div className="gap-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
             {[...Array(6)].map((_, i) => (
               <div key={i} className="space-y-2">
-                <div className="h-48 w-full bg-accent-colour animate-pulse rounded-lg" />
-                <div className="h-4 w-3/4 bg-accent-colour animate-pulse rounded" />
-                <div className="h-3 w-1/2 bg-accent-colour animate-pulse rounded" />
+                <div className="rounded-lg w-full h-48 animate-pulse bg-accent-colour" />
+                <div className="rounded w-3/4 h-4 animate-pulse bg-accent-colour" />
+                <div className="rounded w-1/2 h-3 animate-pulse bg-accent-colour" />
               </div>
             ))}
           </div>
@@ -213,7 +269,7 @@ const NewLibraryView = () => {
         !isLoadingOffline &&
         downloadedStories.length > 0 && (
           <div className="px-4 pb-4">
-            <div className="bg-accent-colour/50 rounded-lg p-4 flex items-center gap-3">
+            <div className="flex items-center gap-3 p-4 rounded-lg bg-accent-colour/50">
               <HardDrive className="w-5 h-5 text-complimentary-colour" />
               <div className="flex-1">
                 <p
@@ -246,13 +302,14 @@ const NewLibraryView = () => {
         )}
 
       {/* Stories Grid */}
-      {/* Show grid when: (library tab + online + not loading) OR (downloads tab + not loading offline) */}
+      {/* Show grid when: (library/liked tab + online + not loading) OR (downloads tab + not loading offline) */}
       {((activeTab === "library" && isOnline && !(isLoading && page === 1)) ||
+        (activeTab === "liked" && isOnline && !isLoadingLiked) ||
         (activeTab === "downloads" && !isLoadingOffline)) && (
         <div className="px-4">
           {currentStories.length > 0 ? (
             <>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              <div className="gap-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
                 {currentStories.map((story: any) => (
                   <div key={story.id} className="relative">
                     <OfflineAwareStoryCard
@@ -267,7 +324,7 @@ const NewLibraryView = () => {
                           e.stopPropagation();
                           await deleteOfflineStory(story.id);
                         }}
-                        className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full shadow-lg hover:bg-red-600 transition-colors z-10"
+                        className="top-2 right-2 z-10 absolute bg-red-500 hover:bg-red-600 shadow-lg p-2 rounded-full text-white transition-colors"
                         title="Remove download"
                       >
                         <Trash2 size={14} />
@@ -279,14 +336,14 @@ const NewLibraryView = () => {
 
               {/* Infinite scroll trigger */}
               {activeTab === "library" && page < totalPages && (
-                <div ref={observerTarget} className="py-4 flex justify-center">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-complimentary-colour"></div>
+                <div ref={observerTarget} className="flex justify-center py-4">
+                  <div className="border-complimentary-colour border-b-2 rounded-full w-6 h-6 animate-spin"></div>
                 </div>
               )}
             </>
           ) : (
-            <div className="flex flex-col items-center justify-center py-16 px-4">
-              <div className="w-20 h-20 bg-complimentary-colour/10 rounded-full flex items-center justify-center mb-4">
+            <div className="flex flex-col justify-center items-center px-4 py-16">
+              <div className="flex justify-center items-center bg-complimentary-colour/10 mb-4 rounded-full w-20 h-20">
                 <MessageCircle className="w-10 h-10 text-complimentary-colour" />
               </div>
               <h3
@@ -294,14 +351,18 @@ const NewLibraryView = () => {
               >
                 {activeTab === "library"
                   ? "No stories in library"
-                  : "No downloaded stories"}
+                  : activeTab === "liked"
+                    ? "No liked stories yet"
+                    : "No downloaded stories"}
               </h3>
               <p
                 className={`text-xs text-primary-shade-4 text-center mb-6 ${Magnetik_Regular.className}`}
               >
                 {activeTab === "library"
                   ? "Start reading stories to build your library!"
-                  : "Download stories to read them offline anytime!"}
+                  : activeTab === "liked"
+                    ? "Stories you like will appear here!"
+                    : "Download stories to read them offline anytime!"}
               </p>
             </div>
           )}

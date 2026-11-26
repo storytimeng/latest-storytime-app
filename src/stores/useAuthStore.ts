@@ -88,11 +88,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   // Refresh token is stored in httpOnly cookie set by the server - never accessible here
   token:
     typeof window !== "undefined" ? Cookies.get(AUTH_TOKEN_KEY) : undefined,
-  refreshToken: undefined, // Never stored in JS; server manages via httpOnly cookie
+  refreshToken:
+    typeof window !== "undefined" ? Cookies.get(REFRESH_TOKEN_KEY) : undefined,
   resetEmail: undefined,
   resetOtp: undefined,
-  setToken: (token, _refreshToken) => {
-    // _refreshToken is ignored - the server already set it as an httpOnly cookie.
+  setToken: (token, refreshToken) => {
     if (token) {
       Cookies.set(AUTH_TOKEN_KEY, token, getStorageCookieOptions(token));
 
@@ -105,16 +105,33 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         );
       }
 
+      if (refreshToken && getRememberMePreference()) {
+        Cookies.set(REFRESH_TOKEN_KEY, refreshToken, {
+          ...baseCookieOptions(),
+          expires: PERSISTENT_LOGIN_DAYS,
+        });
+      } else if (!getRememberMePreference()) {
+        Cookies.remove(REFRESH_TOKEN_KEY);
+      }
+
       // Non-sensitive flag so isAuthenticated() knows a server session exists
       // even when the access token cookie has expired and not yet refreshed.
       Cookies.set(SESSION_FLAG_KEY, "1", getStorageCookieOptions(token));
     } else {
       Cookies.remove(AUTH_TOKEN_KEY);
+      Cookies.remove(REFRESH_TOKEN_KEY);
       Cookies.remove(TOKEN_EXPIRY_KEY);
       Cookies.remove(SESSION_FLAG_KEY);
     }
 
-    set(() => ({ token, refreshToken: undefined }));
+    const persistRefresh = getRememberMePreference();
+    set((state) => ({
+      token,
+      refreshToken:
+        token && persistRefresh
+          ? (refreshToken ?? state.refreshToken)
+          : undefined,
+    }));
   },
   setReset: (email?: string, otp?: string) => {
     set(() => ({ resetEmail: email, resetOtp: otp }));
@@ -141,9 +158,10 @@ export const getAuthToken = () => {
 };
 
 export const getRefreshToken = () => {
-  // Refresh token is httpOnly - not accessible from JS.
-  // This returns undefined intentionally.
-  return undefined;
+  return (
+    useAuthStore.getState().refreshToken ||
+    (typeof window !== "undefined" ? Cookies.get(REFRESH_TOKEN_KEY) : undefined)
+  );
 };
 
 export const setAuthToken = (token?: string, refreshToken?: string) => {

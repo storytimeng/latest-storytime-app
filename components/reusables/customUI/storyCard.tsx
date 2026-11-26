@@ -276,4 +276,4 @@ function getInitials(name: string) {
     .toUpperCase();
 }
 
-export default StoryCard;
+export default React.memo(StoryCard);

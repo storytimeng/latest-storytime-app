@@ -18,18 +18,22 @@ export const ReadingModal = () => {
   const { updateProfile, isUpdating } = useUpdateProfile();
   const { user } = useUserProfile();
 
-  // Initialize from user profile
+  // Initialize from user profile (supports 24h "HH:mm" and legacy "h:mm am/pm")
   useEffect(() => {
     if (user?.timeToRead) {
-      // Expected format: "8:00 pm"
-      const [timePart, periodPart] = user.timeToRead.split(" ");
-      if (timePart && periodPart) {
-        const [h, m] = timePart.split(":").map(Number);
-        setTime({
-          hour: h,
-          minute: m,
-          period: periodPart.toUpperCase() as "AM" | "PM",
-        });
+      const raw = user.timeToRead.trim();
+      const match = raw.match(/^(\d{1,2}):(\d{2})(?:\s*(am|pm))?$/i);
+      if (match) {
+        let h = parseInt(match[1], 10);
+        const m = parseInt(match[2], 10);
+        const periodPart = match[3]?.toUpperCase() as "AM" | "PM" | undefined;
+        if (periodPart) {
+          setTime({ hour: h === 0 ? 12 : h, minute: m, period: periodPart });
+        } else {
+          const period: "AM" | "PM" = h >= 12 ? "PM" : "AM";
+          const hour12 = h % 12 === 0 ? 12 : h % 12;
+          setTime({ hour: hour12, minute: m, period });
+        }
       }
     }
   }, [user]);
@@ -44,15 +48,21 @@ export const ReadingModal = () => {
     return `${t.hour}:${String(t.minute).padStart(2, "0")} ${t.period}`;
   };
 
+  const to24Hour = (t: typeof time) => {
+    let h = t.hour % 12;
+    if (t.period === "PM") h += 12;
+    return `${String(h).padStart(2, "0")}:${String(t.minute).padStart(2, "0")}`;
+  };
+
   const handleSave = async () => {
-    const formattedTime = `${time.hour}:${time.minute.toString().padStart(2, "0")} ${time.period.toLowerCase()}`;
+    const formattedTime = to24Hour(time);
     const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
     const success = await updateProfile({
       timeToRead: formattedTime,
-      reminder: "daily",
+      readingReminder: "daily",
       timezone,
-    });
+    } as any);
 
     if (success) {
       setShowPicker(false);

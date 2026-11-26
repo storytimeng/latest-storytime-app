@@ -558,6 +558,13 @@ export function useStoryViewLogic({
             updatePayload.storyStatus = apiStatus as any;
           }
 
+          if (formData.chapter !== initialData?.chapter) {
+            (updatePayload as any).chapter = formData.chapter;
+          }
+          if (formData.episodes !== initialData?.episodes) {
+            (updatePayload as any).episodes = formData.episodes;
+          }
+
           // Update story metadata (excludes chapters/episodes)
           let storyUpdateSuccess = true;
           if (Object.keys(updatePayload).length > 0) {
@@ -798,12 +805,12 @@ export function useStoryViewLogic({
             : [];
 
           const apiStatus =
-            formData.storyStatus === "Published" ||
             formData.storyStatus === "Completed"
               ? hasChapters || hasEpisodes
                 ? "ongoing"
                 : "complete"
-              : formData.storyStatus === "In Progress" ||
+              : formData.storyStatus === "Published" ||
+                  formData.storyStatus === "In Progress" ||
                   formData.storyStatus === "On Hold"
                 ? "ongoing"
                 : "drafts";
@@ -821,7 +828,7 @@ export function useStoryViewLogic({
             onlyOnStorytime: formData.onlyOnStorytime,
             trigger: formData.trigger,
             copyright: formData.copyright,
-            imageUrl: formData.coverImage,
+            imageUrl: formData.coverImage || undefined,
             // API requires chapter and episodes flags to be present
             chapter: hasChapters,
             episodes: hasEpisodes,

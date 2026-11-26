@@ -1,10 +1,10 @@
 {
-  "name": "next-app-template",
+  "name": "Storytime",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "generate:client": "node scripts/generate-client.js",
-    "dev": "npm run generate:client && node scripts/dev.mjs",
+    "dev": "node scripts/dev.mjs",
     "build": "next build",
     "build:android": "node scripts/android-build.mjs",
     "build:android:release": "node scripts/android-build.mjs --release",
@@ -26,6 +26,7 @@
     "@capacitor/android": "^8.4.1",
     "@capacitor/app": "^8.1.0",
     "@capacitor/core": "^8.4.1",
+    "@capacitor/splash-screen": "^8.0.2",
     "@capgo/capacitor-media-session": "^8.0.28",
     "@capgo/capacitor-updater": "^8.50.2",
     "@heroui/accordion": "2.2.24",

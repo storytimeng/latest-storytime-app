@@ -4,6 +4,7 @@ import { Skeleton } from "@heroui/skeleton";
 import { useBillingMode } from "@/hooks/useBillingMode";
 import { AndroidPricingNotice } from "@/components/premium/AndroidPricingNotice";
 import { PlayBillingPlans } from "@/components/premium/PlayBillingPlans";
+import { PremiumView } from "@/views";
 
 /**
  * /pricing — the route used by the Android tab bar.
@@ -29,8 +30,8 @@ export default function PricingPageBody() {
     );
   }
 
-  // Web users: no Android billing components apply here.
-  if (source === "web") return null;
+  // Web users get the full web Paystack pricing/checkout view.
+  if (source === "web") return <PremiumView />;
 
   // Android: Play Billing UI once the reveal date has passed (or admin forced it).
   if (mode === "playbilling" && revealPassed) {

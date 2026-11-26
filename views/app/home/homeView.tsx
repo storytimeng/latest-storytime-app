@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Link } from "@/components/AppLink";
-import { useMemo, useEffect } from "react";
+import { useMemo, useEffect, useState } from "react";
 import {
   GenreButton,
   StoryGroup,
@@ -45,6 +45,11 @@ const HomeView = () => {
   const { user } = useUserStore();
   const isOnline = useOnlineStatus();
   const { selectedGenres, toggleGenre } = useStoriesFilterStore();
+  const [hasMounted, setHasMounted] = useState(false);
+
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
 
   // Warm-start caches — they may already have data from a prior
   // session, in which case the view can render without waiting on
@@ -74,19 +79,14 @@ const HomeView = () => {
     if (apiGenres && apiGenres.length > 0) genresCache.writeBack(apiGenres);
   }, [apiGenres, genresCache]);
   const genres = useMemo(
-    () => apiGenres ?? genresCache.cachedValue ?? [],
-    [apiGenres, genresCache.cachedValue],
+    () => apiGenres ?? (hasMounted ? genresCache.cachedValue : undefined) ?? [],
+    [apiGenres, hasMounted, genresCache.cachedValue],
   );
 
   // Clear filters on mount/reload
   useEffect(() => {
     useStoriesFilterStore.getState().clearGenres();
   }, []);
-
-  // Show offline indicator when offline
-  if (!isOnline) {
-    return <OfflineIndicator />;
-  }
 
   // Sort genres: selected ones first, then alphabetical
   const sortedGenres = useMemo(() => {
@@ -100,10 +100,11 @@ const HomeView = () => {
     });
   }, [genres, selectedGenres]);
 
-  // Get filtered stories when genres are selected (using existing useStories hook)
+  // Get filtered stories only when genres are selected
   const { stories: filteredStories, isLoading: filteredLoading } = useStories({
     limit: 50,
     genre: selectedGenres.length > 0 ? selectedGenres[0] : undefined,
+    enabled: selectedGenres.length > 0,
   });
 
   // Fetch stories by category using dedicated endpoints
@@ -127,10 +128,12 @@ const HomeView = () => {
   }, [rawExclusiveStories, exclusiveCache]);
   const exclusiveStories = useMemo(
     () =>
-      (rawExclusiveStories ?? exclusiveCache.cachedValue ?? []).filter(
-        (s: any) => s.onlyOnStorytime === true,
-      ),
-    [rawExclusiveStories, exclusiveCache.cachedValue],
+      (
+        rawExclusiveStories ??
+        (hasMounted ? exclusiveCache.cachedValue : undefined) ??
+        []
+      ).filter((s: any) => s.onlyOnStorytime === true),
+    [rawExclusiveStories, hasMounted, exclusiveCache.cachedValue],
   );
   const {
     stories: recentStories,
@@ -177,12 +180,15 @@ const HomeView = () => {
 
   // Sort popular stories by popularityScore descending
   const popularStories = useMemo(() => {
-    const source = popularStoriesData ?? popularCache.cachedValue ?? [];
+    const source =
+      popularStoriesData ??
+      (hasMounted ? popularCache.cachedValue : undefined) ??
+      [];
     if (!source.length) return [];
     return [...source].sort(
       (a: any, b: any) => (b.popularityScore || 0) - (a.popularityScore || 0),
     );
-  }, [popularStoriesData, popularCache.cachedValue]);
+  }, [popularStoriesData, hasMounted, popularCache.cachedValue]);
 
   // Loading state — only show the skeleton on a TRULY cold start
   // (no cache, no data). If we have cached data, render it and let
@@ -202,10 +208,10 @@ const HomeView = () => {
   // Effective lists: live data preferred, cached fallback otherwise.
   const effectiveRecent = recentStories.length
     ? recentStories
-    : (recentCache.cachedValue ?? []);
+    : ((hasMounted ? recentCache.cachedValue : undefined) ?? []);
   const effectiveTrending = trendingStories.length
     ? trendingStories
-    : (trendingCache.cachedValue ?? []);
+    : ((hasMounted ? trendingCache.cachedValue : undefined) ?? []);
 
   // Memoize story sections to prevent whole view re-render
   const RecentStoriesSection = useMemo(() => {
@@ -254,6 +260,10 @@ const HomeView = () => {
       />
     );
   }, [popularStories, hasMorePopular, isLoadingMorePopular, loadMorePopular]);
+
+  if (!isOnline) {
+    return <OfflineIndicator />;
+  }
 
   return (
     <div className="min-h-screen px-4 md:px-6 lg:px-8 pt-4 space-y-4 bg-accent-shade-1 relative">

@@ -55,12 +55,56 @@ const PROD = args.includes("--prod");
 const VERBOSE = args.includes("--verbose");
 
 const CHANNEL = process.env.CAPGO_CHANNEL || (PROD ? "production" : "dev");
-const BUNDLE =
-  process.env.CAPGO_BUNDLE ||
-  `0.0.1-${new Date()
+
+// ── version resolution ────────────────────────────────────────────────────
+// Try, in order:
+//   1. CAPGO_BUNDLE env var (explicit pin)
+//   2. Latest git tag matching `v*` (e.g. v0.1.0)
+//   3. package.json version field
+//   4. Fallback: 0.0.0 + timestamp
+function resolveBundleVersion() {
+  if (process.env.CAPGO_BUNDLE) return process.env.CAPGO_BUNDLE;
+
+  const stamp = new Date()
     .toISOString()
     .replace(/[-:.TZ]/g, "")
-    .slice(0, 14)}`;
+    .slice(0, 14);
+
+  // 2. latest semver-like git tag
+  try {
+    const r = spawnSync("git", ["tag", "-l", "v*.*.*", "--sort=-v:refname"], {
+      encoding: "utf8",
+      cwd: ROOT,
+    });
+    const tags = (r.stdout || "")
+      .split(/\r?\n/)
+      .map((t) => t.trim())
+      .filter(Boolean);
+    if (tags.length > 0) {
+      const base = tags[0].replace(/^v/, "");
+      return PROD ? base : `${base}-${stamp}`;
+    }
+  } catch {
+    /* ignore — fall through */
+  }
+
+  // 3. package.json
+  try {
+    const pkg = JSON.parse(
+      readFileSync(path.join(ROOT, "package.json"), "utf8"),
+    );
+    if (pkg.version) {
+      return PROD ? pkg.version : `${pkg.version}-${stamp}`;
+    }
+  } catch {
+    /* ignore — fall through */
+  }
+
+  // 4. timestamp fallback
+  return `0.0.0-${stamp}`;
+}
+
+const BUNDLE = resolveBundleVersion();
 
 // ── helpers ───────────────────────────────────────────────────────────────
 function run(cmd, opts = {}) {

@@ -80,9 +80,7 @@ export function useStoryFormState({
     if (mode === "edit" && initialData) {
       return {
         hasChapters: initialData.chapter === true,
-        hasEpisodes:
-          Array.isArray(initialData.episodes) &&
-          initialData.episodes.length > 0,
+        hasEpisodes: initialData.episodes === true,
       };
     }
     // For create mode, default to no structure (user will select in structure step)
@@ -99,8 +97,7 @@ export function useStoryFormState({
       setFormData(getInitialFormData(initialData));
       // Update story structure based on actual data
       const hasChapters = initialData.chapter === true;
-      const hasEpisodes =
-        Array.isArray(initialData.episodes) && initialData.episodes.length > 0;
+      const hasEpisodes = initialData.episodes === true;
 
       setStoryStructure({
         hasChapters,

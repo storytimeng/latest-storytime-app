@@ -35,31 +35,36 @@ export const WritingModal = () => {
   const { updateProfile, isUpdating } = useUpdateProfile();
   const { user } = useUserProfile();
 
-  // Initialize from user profile
+  // Initialize from user profile (supports 24h "HH:mm" and legacy "h:mm am/pm")
   useEffect(() => {
     if (user?.timeToWrite) {
-      // Expected format: "6:00 am"
-      const [timePart, periodPart] = user.timeToWrite.split(" ");
-      if (timePart && periodPart) {
-        const [h, m] = timePart.split(":").map(Number);
-        setTime({
-          hour: h,
-          minute: m,
-          period: periodPart.toUpperCase() as "AM" | "PM",
-        });
+      const raw = user.timeToWrite.trim();
+      const match = raw.match(/^(\d{1,2}):(\d{2})(?:\s*(am|pm))?$/i);
+      if (match) {
+        const h = parseInt(match[1], 10);
+        const m = parseInt(match[2], 10);
+        const periodPart = match[3]?.toUpperCase() as "AM" | "PM" | undefined;
+        if (periodPart) {
+          setTime({ hour: h === 0 ? 12 : h, minute: m, period: periodPart });
+        } else {
+          const period: "AM" | "PM" = h >= 12 ? "PM" : "AM";
+          const hour12 = h % 12 === 0 ? 12 : h % 12;
+          setTime({ hour: hour12, minute: m, period });
+        }
       }
     }
-    if (user?.reminder) {
-      const isReminderDaily = user.reminder === "daily";
+    const activeReminder = (user as any)?.writingReminder || user?.reminder;
+    if (activeReminder) {
+      const isReminderDaily = activeReminder === "daily";
       setIsDaily(isReminderDaily);
       if (!isReminderDaily) {
-        const storedDays = user.reminder.split(",").map((d) => d.trim()).filter(Boolean);
+        const storedDays = activeReminder.split(",").map((d: string) => d.trim()).filter(Boolean);
         if (storedDays.length > 0) {
           setSelectedDays(storedDays);
           const weekdays = ["mon", "tue", "wed", "thu", "fri"];
           const isWeekdayPreset =
             storedDays.length === 5 &&
-            weekdays.every((d) => storedDays.includes(d));
+            weekdays.every((d: string) => storedDays.includes(d));
           setDayPreset(isWeekdayPreset ? "monToFri" : "custom");
         }
       }
@@ -114,16 +119,23 @@ export const WritingModal = () => {
     }
   };
 
+  const to24Hour = (t: typeof time) => {
+    let h = t.hour % 12;
+    if (t.period === "PM") h += 12;
+    return `${String(h).padStart(2, "0")}:${String(t.minute).padStart(2, "0")}`;
+  };
+
   const handleSave = async () => {
-    const formattedTime = `${time.hour}:${time.minute.toString().padStart(2, "0")} ${time.period.toLowerCase()}`;
+    const formattedTime = to24Hour(time);
     const reminder = isDaily ? "daily" : selectedDays.join(",");
     const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
     const success = await updateProfile({
       timeToWrite: formattedTime,
+      writingReminder: reminder,
       reminder,
       timezone,
-    });
+    } as any);
 
     if (success) {
       setViewMode("summary");

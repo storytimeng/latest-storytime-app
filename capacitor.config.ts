@@ -41,6 +41,7 @@ const config: CapacitorConfig = {
       autoUpdate: true,
       defaultChannel: "dev",
       directUpdate: "atInstall",
+      autoSplashscreen: true,
     },
   },
 };

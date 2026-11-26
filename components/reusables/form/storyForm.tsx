@@ -86,9 +86,9 @@ const StoryBriefModal: React.FC<StoryBriefModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50">
-      <div className="bg-universal-white rounded-t-2xl w-full max-w-[28rem] md:max-w-xl p-6 space-y-6">
-        <div className="flex items-center justify-between">
+    <div className="z-50 fixed inset-0 flex justify-center items-end bg-black/50">
+      <div className="space-y-6 bg-universal-white p-6 rounded-t-2xl w-full max-w-[28rem] md:max-w-xl">
+        <div className="flex justify-between items-center">
           <h2
             className={`text-xl text-primary-colour ${Magnetik_Bold.className}`}
           >
@@ -172,7 +172,7 @@ const StoryBriefModal: React.FC<StoryBriefModalProps> = ({
             </div>
           </div>
 
-          <div className="p-4 rounded-lg bg-complimentary-colour/10">
+          <div className="bg-complimentary-colour/10 p-4 rounded-lg">
             <p
               className={`text-complimentary-colour text-sm ${Magnetik_Regular.className}`}
             >
@@ -207,9 +207,9 @@ const AdditionalInfoModal: React.FC<AdditionalInfoModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50">
-      <div className="bg-universal-white rounded-t-2xl w-full max-w-[28rem] md:max-w-xl p-6 space-y-6">
-        <div className="flex items-center justify-between">
+    <div className="z-50 fixed inset-0 flex justify-center items-end bg-black/50">
+      <div className="space-y-6 bg-universal-white p-6 rounded-t-2xl w-full max-w-[28rem] md:max-w-xl">
+        <div className="flex justify-between items-center">
           <h2
             className={`text-xl text-primary-colour ${Magnetik_Bold.className}`}
           >
@@ -891,7 +891,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
 
   // Render form fields
   const renderFormFields = () => (
-    <div className="space-y-6 ">
+    <div className="space-y-6">
       {/* Cover Image */}
       {renderCoverImage()}
 
@@ -952,7 +952,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
         isRichText={true}
       />
       {!storyStructure.hasChapters && !storyStructure.hasEpisodes && (
-        <p className="-mt-4 text-xs text-gray-500">
+        <p className="-mt-4 text-gray-500 text-xs">
           Content is required when your story doesn't have chapters or episodes.
         </p>
       )}
@@ -968,7 +968,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
             >
               {storyStructure.hasChapters ? "Chapters" : "Episodes"}
             </label>
-            <div className="max-h-[300px] overflow-y-auto space-y-2 border border-gray-200 rounded-lg p-3">
+            <div className="space-y-2 p-3 border border-gray-200 rounded-lg max-h-[300px] overflow-y-auto">
               {(storyStructure.hasChapters ? chapters : parts)
                 .slice(0, 5)
                 .map((item, sliceIndex) => {
@@ -995,7 +995,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
                         }
                         setCurrentStep("writing");
                       }}
-                      className="flex items-center justify-between w-full p-3 transition-colors bg-white border border-gray-200 rounded-lg hover:bg-gray-50"
+                      className="flex justify-between items-center bg-white hover:bg-gray-50 p-3 border border-gray-200 rounded-lg w-full transition-colors"
                     >
                       <div className="text-left">
                         <p
@@ -1005,7 +1005,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
                             ? `Chapter ${actualIndex + 1}`
                             : `Episode ${actualIndex + 1}`}
                         </p>
-                        <p className="text-gray-500 text-xs truncate max-w-[250px]">
+                        <p className="max-w-[250px] text-gray-500 text-xs truncate">
                           {item.title || "Untitled"}
                         </p>
                       </div>
@@ -1019,7 +1019,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
                   variant="light"
                   size="sm"
                   onClick={() => setCurrentStep("writing")}
-                  className="w-full py-2 text-xs text-gray-600 hover:text-primary-colour"
+                  className="py-2 w-full text-gray-600 hover:text-primary-colour text-xs"
                 >
                   <span className={Magnetik_Regular.className}>
                     +
@@ -1052,16 +1052,16 @@ const StoryForm: React.FC<StoryFormProps> = ({
           {formErrors.selectedGenres && <span className="text-red-500">*</span>}
         </label>
         {isLoadingGenres ? (
-          <div className="grid grid-cols-3 gap-3">
+          <div className="gap-3 grid grid-cols-3">
             {[...Array(6)].map((_, i) => (
               <div
                 key={i}
-                className="h-8 bg-gray-200 rounded-lg animate-pulse"
+                className="bg-gray-200 rounded-lg h-8 animate-pulse"
               />
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-3 gap-3">
+          <div className="gap-3 grid grid-cols-3">
             {genres.map((genre: string) => {
               const isSelected = formData.selectedGenres.includes(genre);
               return (
@@ -1070,7 +1070,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
                   onClick={() => handleGenreToggle(genre)}
                   disabled={!isSelected && formData.selectedGenres.length >= 3}
                   className={cn(
-                    "relative whitespace-nowrap flex-shrink-0 transition-all duration-200 ease-in-out",
+                    "relative flex-shrink-0 whitespace-nowrap transition-all duration-200 ease-in-out",
                     "px-2 py-1 rounded-lg min-w-[70px] text-center text-xs",
                     Magnetik_Regular.className,
                     isSelected ? "shadow-lg" : "",
@@ -1093,7 +1093,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
                   {/* check-in-circle top-right */}
                   {isSelected && (
                     <span
-                      className="absolute flex items-center justify-center w-4 h-4 bg-white rounded-full -top-1 -right-1"
+                      className="-top-1 -right-1 absolute flex justify-center items-center bg-white rounded-full w-4 h-4"
                       style={{ border: "2px solid #f28a20" }}
                     >
                       <svg
@@ -1114,14 +1114,14 @@ const StoryForm: React.FC<StoryFormProps> = ({
                       </svg>
                     </span>
                   )}
-                  <span className="relative z-10">{genre}</span>
+                  <span className="z-10 relative">{genre}</span>
                 </button>
               );
             })}
           </div>
         )}
         {formErrors.selectedGenres && (
-          <p className="mt-1 text-xs text-red-500">
+          <p className="mt-1 text-red-500 text-xs">
             {formErrors.selectedGenres}
           </p>
         )}
@@ -1173,7 +1173,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
           { key: "trigger", label: "18+ Content" },
           { key: "copyright", label: "Copyright" },
         ].map(({ key, label }) => (
-          <div key={key} className="flex items-center justify-between">
+          <div key={key} className="flex justify-between items-center">
             <span
               className={`text-primary-colour ${Magnetik_Regular.className}`}
             >
@@ -1202,7 +1202,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
         >
           Story Status
         </label>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="gap-2 grid grid-cols-2">
           {STATUSES.slice(0, 4).map((status) => (
             <Button
               key={status}
@@ -1236,7 +1236,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
             <Button
               size="sm"
               variant="light"
-              className="mb-2 text-sm text-gray-600 hover:text-primary-colour"
+              className="mb-2 text-gray-600 hover:text-primary-colour text-sm"
               onClick={() => setCurrentStep("writing")}
             >
               <span className={Magnetik_Regular.className}>
@@ -1270,25 +1270,25 @@ const StoryForm: React.FC<StoryFormProps> = ({
                   key={chapter.uuid || `chapter-${chapter.id}`}
                   aria-label={`Chapter ${chapter.id}`}
                   title={
-                    <div className="flex items-center justify-between w-full pr-2">
-                      <div className="flex flex-col gap-0.5 flex-1">
+                    <div className="flex justify-between items-center pr-2 w-full">
+                      <div className="flex flex-col flex-1 gap-0.5">
                         <div className="flex items-center gap-2">
-                          <span className="text-sm text-gray-600">Chapter</span>
+                          <span className="text-gray-600 text-sm">Chapter</span>
                           <input
                             type="number"
-                            min="0"
-                            step="0.1"
+                            min="1"
+                            step="1"
                             value={chapter.chapterNumber ?? chapter.id}
                             onChange={(e) => {
                               e.stopPropagation();
-                              const num = parseFloat(e.target.value);
-                              if (!isNaN(num) && num >= 0) {
+                              const num = parseInt(e.target.value, 10);
+                              if (!isNaN(num) && num >= 1) {
                                 updateChapter(chapter.id, "chapterNumber", num);
                               }
                             }}
                             onClick={(e) => e.stopPropagation()}
                             className={cn(
-                              "w-16 px-2 py-1 text-sm border rounded",
+                              "px-2 py-1 border rounded w-16 text-sm",
                               isDeleted && "opacity-50",
                             )}
                             disabled={isDeleted}
@@ -1302,7 +1302,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
                           </span>
                         </div>
                         {(chapter.createdAt || chapter.updatedAt) && (
-                          <span className="text-xs text-gray-500">
+                          <span className="text-gray-500 text-xs">
                             {chapter.createdAt && (
                               <span>
                                 Created: {formatTimestamp(chapter.createdAt)}
@@ -1329,7 +1329,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
                           }
                         }}
                         className={cn(
-                          "px-2 py-0.5 rounded-full text-xs font-medium transition-colors mr-2",
+                          "mr-2 px-2 py-0.5 rounded-full font-medium text-xs transition-colors",
                           isDeleted && "opacity-40 pointer-events-none",
                           chapter.isDraft !== false
                             ? "bg-amber-100 text-amber-700 hover:bg-amber-200"
@@ -1370,7 +1370,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
                         title={isDeleted ? "Restore chapter" : "Delete chapter"}
                       >
                         {isDeleted ? (
-                          <span className="text-sm font-medium">Restore</span>
+                          <span className="font-medium text-sm">Restore</span>
                         ) : (
                           <Trash2 size={18} />
                         )}
@@ -1438,9 +1438,9 @@ const StoryForm: React.FC<StoryFormProps> = ({
                         isRichText={true}
                       />
                       {chapter.uuid && loadingChapterIds.has(chapter.uuid) && (
-                        <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-white/80">
+                        <div className="absolute inset-0 flex justify-center items-center bg-white/80 rounded-lg">
                           <div className="flex flex-col items-center gap-2">
-                            <div className="w-8 h-8 border-b-2 rounded-full animate-spin border-complimentary-colour"></div>
+                            <div className="border-complimentary-colour border-b-2 rounded-full w-8 h-8 animate-spin"></div>
                             <p
                               className={`text-sm text-gray-500 ${Magnetik_Regular.className}`}
                             >
@@ -1460,14 +1460,14 @@ const StoryForm: React.FC<StoryFormProps> = ({
           <div className="flex gap-3">
             <Button
               variant="ghost"
-              className="flex items-center flex-1 gap-2 border border-dashed text-complimentary-colour border-complimentary-colour"
+              className="flex flex-1 items-center gap-2 border border-complimentary-colour border-dashed text-complimentary-colour"
               onClick={addChapter}
             >
               <span className={Magnetik_Medium.className}>+ Add Chapter</span>
             </Button>
             <Button
               variant="ghost"
-              className="flex items-center gap-2 border border-dashed text-primary-colour border-primary-colour"
+              className="flex items-center gap-2 border border-primary-colour border-dashed text-primary-colour"
               onClick={() => {
                 renumberChapters();
                 // Reset expanded state to first chapter after renumbering
@@ -1488,7 +1488,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
             <Button
               size="sm"
               variant="light"
-              className="mb-2 text-sm text-gray-600 hover:text-primary-colour"
+              className="mb-2 text-gray-600 hover:text-primary-colour text-sm"
               onClick={() => setCurrentStep("writing")}
             >
               <span className={Magnetik_Regular.className}>
@@ -1522,25 +1522,25 @@ const StoryForm: React.FC<StoryFormProps> = ({
                   key={part.uuid || `episode-${part.id}`}
                   aria-label={`Episode ${part.id}`}
                   title={
-                    <div className="flex items-center justify-between w-full pr-2">
-                      <div className="flex flex-col gap-0.5 flex-1">
+                    <div className="flex justify-between items-center pr-2 w-full">
+                      <div className="flex flex-col flex-1 gap-0.5">
                         <div className="flex items-center gap-2">
-                          <span className="text-sm text-gray-600">Episode</span>
+                          <span className="text-gray-600 text-sm">Episode</span>
                           <input
                             type="number"
-                            min="0"
-                            step="0.1"
+                            min="1"
+                            step="1"
                             value={part.episodeNumber ?? part.id}
                             onChange={(e) => {
                               e.stopPropagation();
-                              const num = parseFloat(e.target.value);
-                              if (!isNaN(num) && num >= 0) {
+                              const num = parseInt(e.target.value, 10);
+                              if (!isNaN(num) && num >= 1) {
                                 updatePart(part.id, "episodeNumber", num);
                               }
                             }}
                             onClick={(e) => e.stopPropagation()}
                             className={cn(
-                              "w-16 px-2 py-1 text-sm border rounded",
+                              "px-2 py-1 border rounded w-16 text-sm",
                               isDeleted && "opacity-50",
                             )}
                             disabled={isDeleted}
@@ -1554,7 +1554,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
                           </span>
                         </div>
                         {(part.createdAt || part.updatedAt) && (
-                          <span className="text-xs text-gray-500">
+                          <span className="text-gray-500 text-xs">
                             {part.createdAt && (
                               <span>
                                 Created: {formatTimestamp(part.createdAt)}
@@ -1581,7 +1581,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
                           }
                         }}
                         className={cn(
-                          "px-2 py-0.5 rounded-full text-xs font-medium transition-colors mr-2",
+                          "mr-2 px-2 py-0.5 rounded-full font-medium text-xs transition-colors",
                           isDeleted && "opacity-40 pointer-events-none",
                           part.isDraft !== false
                             ? "bg-amber-100 text-amber-700 hover:bg-amber-200"
@@ -1622,7 +1622,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
                         title={isDeleted ? "Restore episode" : "Delete episode"}
                       >
                         {isDeleted ? (
-                          <span className="text-sm font-medium">Restore</span>
+                          <span className="font-medium text-sm">Restore</span>
                         ) : (
                           <Trash2 size={18} />
                         )}
@@ -1661,9 +1661,9 @@ const StoryForm: React.FC<StoryFormProps> = ({
                         isRichText={true}
                       />
                       {part.uuid && loadingPartIds.has(part.uuid) && (
-                        <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-white/80">
+                        <div className="absolute inset-0 flex justify-center items-center bg-white/80 rounded-lg">
                           <div className="flex flex-col items-center gap-2">
-                            <div className="w-8 h-8 border-b-2 rounded-full animate-spin border-complimentary-colour"></div>
+                            <div className="border-complimentary-colour border-b-2 rounded-full w-8 h-8 animate-spin"></div>
                             <p
                               className={`text-sm text-gray-500 ${Magnetik_Regular.className}`}
                             >
@@ -1683,14 +1683,14 @@ const StoryForm: React.FC<StoryFormProps> = ({
           <div className="flex gap-3">
             <Button
               variant="ghost"
-              className="flex items-center flex-1 gap-2 border border-dashed text-complimentary-colour border-complimentary-colour"
+              className="flex flex-1 items-center gap-2 border border-complimentary-colour border-dashed text-complimentary-colour"
               onClick={addPart}
             >
               <span className={Magnetik_Medium.className}>+ Add Episode</span>
             </Button>
             <Button
               variant="ghost"
-              className="flex items-center gap-2 border border-dashed text-primary-colour border-primary-colour"
+              className="flex items-center gap-2 border border-primary-colour border-dashed text-primary-colour"
               onClick={() => {
                 renumberParts();
                 // Reset expanded state to first episode after renumbering
@@ -1722,11 +1722,89 @@ const StoryForm: React.FC<StoryFormProps> = ({
             rows={20}
             isRichText={true}
           />
-          <p className="text-xs text-gray-500">
+          <p className="text-gray-500 text-xs">
             This is your story body — write the full narrative here. The blurb
             you wrote earlier is just a short summary shown on the story card;
             your readers will see this content when they open the story.
           </p>
+          {mode === "edit" && (
+            <div className="space-y-2 pt-2 border-gray-200 border-t">
+              <p className={`text-xs text-gray-600 ${Magnetik_Medium.className}`}>
+                Want to split this story into chapters or episodes? Your current
+                content will be moved into the first chapter/episode.
+              </p>
+              <div className="flex gap-3">
+                <Button
+                  variant="bordered"
+                  size="sm"
+                  className="flex-1 border-complimentary-colour text-complimentary-colour"
+                  onClick={() => {
+                    const existingBody =
+                      latestContentRef.current || formData.content || "";
+                    setStoryStructure({ hasChapters: true, hasEpisodes: false });
+                    setFormData((prev) => ({
+                      ...prev,
+                      chapter: true,
+                      episodes: false,
+                      content: "",
+                    }));
+                    latestContentRef.current = "";
+                    setChapters([
+                      {
+                        id: 1,
+                        title: "Chapter 1",
+                        body: existingBody,
+                        chapterNumber: 1,
+                        isDraft: formData.storyStatus === "Draft",
+                      },
+                    ]);
+                    setExpandedChapters(new Set(["chapter-1"]));
+                    showToast({
+                      type: "success",
+                      message:
+                        "Story content moved into Chapter 1. Save or Publish to apply.",
+                    });
+                  }}
+                >
+                  Convert to Chapters
+                </Button>
+                <Button
+                  variant="bordered"
+                  size="sm"
+                  className="flex-1 border-complimentary-colour text-complimentary-colour"
+                  onClick={() => {
+                    const existingBody =
+                      latestContentRef.current || formData.content || "";
+                    setStoryStructure({ hasChapters: false, hasEpisodes: true });
+                    setFormData((prev) => ({
+                      ...prev,
+                      chapter: false,
+                      episodes: true,
+                      content: "",
+                    }));
+                    latestContentRef.current = "";
+                    contentStateHook.setParts([
+                      {
+                        id: 1,
+                        title: "Episode 1",
+                        body: existingBody,
+                        episodeNumber: 1,
+                        isDraft: formData.storyStatus === "Draft",
+                      },
+                    ]);
+                    setExpandedEpisodes(new Set(["episode-1"]));
+                    showToast({
+                      type: "success",
+                      message:
+                        "Story content moved into Episode 1. Save or Publish to apply.",
+                    });
+                  }}
+                >
+                  Convert to Episodes
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -1882,7 +1960,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
   console.log("episodes", parts);
   console.log("chapters", chapters);
   return (
-    <div className="pb-24 space-y-6">
+    <div className="space-y-6 pb-24">
       {/* Main Form Content */}
       {currentStep === "form" && renderFormFields()}
       {currentStep === "writing" && renderWritingInterface()}
@@ -1941,7 +2019,7 @@ const StoryForm: React.FC<StoryFormProps> = ({
         }}
       >
         <ModalContent>
-          <ModalHeader className="flex items-center justify-between px-6 pt-6 pb-4">
+          <ModalHeader className="flex justify-between items-center px-6 pt-6 pb-4">
             <button
               onClick={handleDeleteCancel}
               className="text-primary-colour"

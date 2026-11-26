@@ -8,10 +8,11 @@ interface UseStoriesOptions {
   search?: string;
   genre?: string;
   status?: string;
+  enabled?: boolean;
 }
 
 export function useStories(options: UseStoriesOptions = {}) {
-  const { limit = 20, search, genre, status } = options;
+  const { limit = 20, search, genre, status, enabled = true } = options;
   const [currentPage, setCurrentPage] = React.useState(options.page || 1);
   const [allStories, setAllStories] = React.useState<any[]>([]);
   const [hasMore, setHasMore] = React.useState(true);
@@ -29,7 +30,7 @@ export function useStories(options: UseStoriesOptions = {}) {
   }, [genre, limit, status, search]);
 
   const { data, error, isLoading, mutate } = useSWR(
-    cacheKey,
+    enabled ? cacheKey : null,
     async () => {
       console.log("🔍 useStories: Calling storiesControllerFindAll with:", {
         page: currentPage,

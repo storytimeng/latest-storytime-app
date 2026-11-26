@@ -9,7 +9,12 @@ import { z } from "zod";
 import { showToast } from "@/lib/showNotification";
 import { useLogin } from "@/src/hooks/useAuth";
 import { useLoadingStore } from "@/src/stores/useLoadingStore";
-import { getRememberMePreference } from "@/src/stores/useAuthStore";
+import {
+  getRememberMePreference,
+  setRememberMePreference,
+  setAuthToken,
+} from "@/src/stores/useAuthStore";
+import { getApiBaseUrl } from "@/src/lib/apiBase";
 
 interface LoginFormData {
   email: string;
@@ -38,6 +43,8 @@ export default function LoginView({ onSuccess, onSwitchView }: LoginViewProps) {
     rememberMe: false,
   });
   const [errors, setErrors] = useState<Partial<LoginFormData>>({});
+  const [twoFactorEmail, setTwoFactorEmail] = useState<string | null>(null);
+  const [twoFactorOtp, setTwoFactorOtp] = useState("");
 
   useEffect(() => {
     router.prefetch("/home");
@@ -106,55 +113,100 @@ export default function LoginView({ onSuccess, onSwitchView }: LoginViewProps) {
     error: loginError,
   } = useLogin();
 
+  const completeLoginSession = async () => {
+    try {
+      const { usersControllerGetProfile } = await import(
+        "@/src/client/sdk.gen"
+      );
+      const { useUserStore } = await import("@/src/stores/useUserStore");
+      const profileResponse = await usersControllerGetProfile();
+      if (profileResponse.data) {
+        const payload = profileResponse.data as any;
+        const user = payload?.user ?? payload?.data?.user;
+        if (user) {
+          useUserStore.getState().setUser(user);
+        }
+      }
+    } catch (profileError) {
+      console.error("Failed to fetch profile:", profileError);
+    }
+
+    showToast({ type: "success", message: "Signed in", duration: 1500 });
+    if (onSuccess) {
+      onSuccess();
+    } else {
+      router.push("/home");
+    }
+  };
+
+  const handleVerifyTwoFactor = async () => {
+    if (!twoFactorEmail || !twoFactorOtp.trim()) {
+      showToast({ type: "error", message: "Enter the 6-digit code sent to your email" });
+      return;
+    }
+
+    showLoading("Verifying code...", {
+      cancellable: true,
+      onCancel: () => hideLoading(),
+    });
+    try {
+      const res = await fetch(`${getApiBaseUrl()}/auth/verify-2fa`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          email: twoFactorEmail,
+          otp: twoFactorOtp.trim(),
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json?.message || "Invalid verification code");
+      }
+      const payload = json?.data ?? json;
+      if (payload?.accessToken) {
+        setRememberMePreference(Boolean(formData.rememberMe));
+        setAuthToken(payload.accessToken, payload.refreshToken);
+      }
+      await completeLoginSession();
+    } catch (err: any) {
+      showToast({
+        type: "error",
+        message: err?.message || "Verification failed",
+        duration: 3000,
+      });
+    } finally {
+      hideLoading();
+    }
+  };
+
   const handleSubmit = async () => {
     const isValid = validateForm();
     if (!isValid) return;
 
-    showLoading("Logging you in...");
+    showLoading("Logging you in...", {
+      cancellable: true,
+      onCancel: () => hideLoading(),
+    });
     try {
-      const data = await loginTrigger({
+      const data: any = await loginTrigger({
         emailOrPenName: formData.email,
         password: formData.password,
         remember: formData.rememberMe,
       });
 
-      // Fetch and store user profile
-      try {
-        const { usersControllerGetProfile } = await import(
-          "@/src/client/sdk.gen"
-        );
-        const { useUserStore } = await import("@/src/stores/useUserStore");
-        console.log("Fetching user profile...");
-        const profileResponse = await usersControllerGetProfile();
-        console.log("Profile response:", profileResponse);
-
-        if (profileResponse.data) {
-          // Extract the actual user object from the nested response structure
-          // API returns: { data: { data: { user: {...} } } }
-          const payload = profileResponse.data as any;
-          const user = payload?.user ?? payload?.data?.user;
-
-          if (user) {
-            console.log("Setting user profile in store:", user);
-            useUserStore.getState().setUser(user);
-          } else {
-            console.warn("Could not extract user from profile response");
-          }
-        } else {
-          console.warn("Profile response has no data");
-        }
-      } catch (profileError) {
-        console.error("Failed to fetch profile:", profileError);
-        // Continue to home even if profile fetch fails,
-        // the useUserProfile hook will try again later
+      const payload = data?.data ?? data;
+      if (payload?.requiresTwoFactor && payload?.email) {
+        setTwoFactorEmail(payload.email);
+        showToast({
+          type: "info",
+          message: "Enter the 6-digit verification code sent to your email",
+          duration: 4000,
+        });
+        return;
       }
 
-      showToast({ type: "success", message: "Signed in", duration: 1500 });
-      if (onSuccess) {
-        onSuccess();
-      } else {
-        router.push("/home");
-      }
+      await completeLoginSession();
     } catch (err: any) {
       hideLoading();
 
@@ -170,9 +222,46 @@ export default function LoginView({ onSuccess, onSwitchView }: LoginViewProps) {
     }
   };
 
+  if (twoFactorEmail) {
+    return (
+      <div className="space-y-6 mx-auto w-full max-w-md">
+        <div className="body-text-big-bold-auto text-primary-colour text-center">
+          Two-Factor Verification
+        </div>
+        <p className="text-grey-2 text-sm text-center">
+          Enter the 6-digit code sent to <span className="font-medium text-primary-colour">{twoFactorEmail}</span>
+        </p>
+        <FormField
+          label="Verification Code"
+          type="text"
+          id="twoFactorOtp"
+          name="twoFactorOtp"
+          size="lg"
+          value={twoFactorOtp}
+          onValueChange={(value: string) => setTwoFactorOtp(value)}
+          placeholder="123456"
+          isRequired={true}
+        />
+        <Button variant="large" onPress={handleVerifyTwoFactor} type="button">
+          Verify & Continue
+        </Button>
+        <button
+          type="button"
+          onClick={() => {
+            setTwoFactorEmail(null);
+            setTwoFactorOtp("");
+          }}
+          className="w-full text-primary-colour text-sm text-center hover:underline"
+        >
+          Back to Login
+        </button>
+      </div>
+    );
+  }
+
   return (
-    <div className="w-full max-w-md mx-auto">
-      <div className="text-center text-primary-colour body-text-big-bold-auto mb-[4.125rem]">
+    <div className="mx-auto w-full max-w-md">
+      <div className="mb-[4.125rem] body-text-big-bold-auto text-primary-colour text-center">
         Login to continue to Storytime
       </div>
       {/* Form */}
@@ -213,7 +302,7 @@ export default function LoginView({ onSuccess, onSwitchView }: LoginViewProps) {
         </div>
 
         {/* Remember Me and Forgot Password */}
-        <div className="flex items-center justify-between mt-2.5">
+        <div className="flex justify-between items-center mt-2.5">
           <div className="flex items-center space-x-2">
             <input
               type="checkbox"
@@ -222,7 +311,7 @@ export default function LoginView({ onSuccess, onSwitchView }: LoginViewProps) {
               onChange={(e) =>
                 handleInputChange("rememberMe", e.target.checked)
               }
-              className="w-4 h-4 rounded text-primary-colour checked:bg-primary-colour bg-universal-white border-light-grey-2 focus:ring-primary-colour focus:ring-2"
+              className="bg-universal-white checked:bg-primary-colour border-light-grey-2 rounded focus:ring-2 focus:ring-primary-colour w-4 h-4 text-primary-colour"
             />
             <label
               htmlFor="rememberMe"
@@ -235,14 +324,14 @@ export default function LoginView({ onSuccess, onSwitchView }: LoginViewProps) {
             <button
               type="button"
               onClick={() => onSwitchView("forgot-password")}
-              className="text-sm hover:text-grey-1 body-text-small-medium-auto transition-transform-colors text-primary-colour hover:underline"
+              className="body-text-small-medium-auto text-primary-colour hover:text-grey-1 text-sm hover:underline transition-transform-colors"
             >
               Forgot password?
             </button>
           ) : (
             <Link
               href="/auth/forgot-password"
-              className="text-sm hover:text-grey-1 body-text-small-medium-auto transition-transform-colors text-primary-colour hover:underline"
+              className="body-text-small-medium-auto text-primary-colour hover:text-grey-1 text-sm hover:underline transition-transform-colors"
             >
               Forgot password?
             </Link>
@@ -250,18 +339,18 @@ export default function LoginView({ onSuccess, onSwitchView }: LoginViewProps) {
         </div>
       </form>
 
-      <div className="flex items-center invisible my-5">
-        <div className="flex-1 border-t border-accent-color"></div>
-        <div className="px-4 body-text-small-regular text-[#708090] body-text-small-auto-regular">
+      <div className="invisible flex items-center my-5">
+        <div className="flex-1 border-accent-color border-t"></div>
+        <div className="px-4 body-text-small-auto-regular body-text-small-regular text-[#708090]">
           or
         </div>
-        <div className="flex-1 border-t border-accent-color"></div>
+        <div className="flex-1 border-accent-color border-t"></div>
       </div>
 
       <div className="space-y-3">
         <Button
           variant="google"
-          startContent={<div className="w-5 h-5 rounded bg-grey-1"></div>}
+          startContent={<div className="bg-grey-1 rounded w-5 h-5"></div>}
           className="invisible"
         >
           Continue with Google
@@ -282,19 +371,19 @@ export default function LoginView({ onSuccess, onSwitchView }: LoginViewProps) {
 
       {/* Signup Link */}
       <div className="mt-4 text-center">
-        <p className="body-text-small-medium-auto ">
+        <p className="body-text-small-medium-auto">
           Have an account?{" "}
           {onSwitchView ? (
             <button
               onClick={() => onSwitchView("signup")}
-              className="font-medium text-primary-colour hover:underline body-text-small-regular-auto"
+              className="font-medium body-text-small-regular-auto text-primary-colour hover:underline"
             >
               Sign Up
             </button>
           ) : (
             <Link
               href="/auth/signup"
-              className="font-medium text-primary-colour hover:underline body-text-small-regular-auto"
+              className="font-medium body-text-small-regular-auto text-primary-colour hover:underline"
             >
               Sign Up
             </Link>
@@ -303,21 +392,21 @@ export default function LoginView({ onSuccess, onSwitchView }: LoginViewProps) {
       </div>
 
       {/* Terms and Privacy Footer */}
-      <div className="mt-8 flex items-center justify-center gap-4 text-[10px] text-primary-colour/40">
+      <div className="flex justify-center items-center gap-4 mt-8 text-[10px] text-primary-colour/40">
         <Link
           href="/terms"
           target="_blank"
           rel="noopener noreferrer"
-          className="hover:text-primary-colour transition-colors underline-offset-2 hover:underline"
+          className="hover:text-primary-colour hover:underline underline-offset-2 transition-colors"
         >
           Terms of Service
         </Link>
-        <div className="w-1 h-1 rounded-full bg-primary-colour/20" />
+        <div className="bg-primary-colour/20 rounded-full w-1 h-1" />
         <Link
           href="/privacy"
           target="_blank"
           rel="noopener noreferrer"
-          className="hover:text-primary-colour transition-colors underline-offset-2 hover:underline"
+          className="hover:text-primary-colour hover:underline underline-offset-2 transition-colors"
         >
           Privacy Policy
         </Link>

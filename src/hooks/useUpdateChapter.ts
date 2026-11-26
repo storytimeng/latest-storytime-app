@@ -37,6 +37,7 @@ export function useUpdateChapter(): UseUpdateChapterReturn {
         const response = await storiesControllerUpdateChapter({
           path: { chapterId },
           body: payload,
+          throwOnError: true,
         });
 
         if (response.data) {
@@ -106,6 +107,7 @@ export function useUpdateMultipleChapters() {
             const response = await storiesControllerUpdateChapter({
               path: { chapterId: chapter.uuid },
               body: payload,
+              throwOnError: true,
             });
 
             if (response.data) {

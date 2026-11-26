@@ -1,5 +1,10 @@
 import Cookies from "js-cookie";
-import { useAuthStore } from "../stores/useAuthStore";
+import {
+  getRefreshToken,
+  getRememberMePreference,
+  useAuthStore,
+} from "../stores/useAuthStore";
+import { getApiBaseUrl } from "./apiBase";
 
 // Singleton: prevent concurrent refresh races
 let _refreshPromise: Promise<{
@@ -60,6 +65,11 @@ export async function refreshTokens(): Promise<{
   token?: string;
   refreshToken?: string;
 } | null> {
+  // Auto-refresh is only enabled when "Keep me logged in" (rememberMe) was checked
+  if (!getRememberMePreference()) {
+    return null;
+  }
+
   if (_refreshPromise) {
     return _refreshPromise;
   }
@@ -78,18 +88,16 @@ async function _doRefresh(): Promise<{
     // The httpOnly refresh token cookie is sent automatically by the browser.
     // We POST to /auth/refresh with credentials: 'include' so the cookie is included.
     // Use the same base URL logic as heyapi-runtime so proxy mode is respected.
-    const baseUrl =
-      process.env.NEXT_PUBLIC_PROXY === "true"
-        ? "/api/proxy"
-        : process.env.NEXT_PUBLIC_API_URL ||
-          process.env.NEXT_PUBLIC_BACKEND_URL ||
-          "";
+    const baseUrl = getApiBaseUrl();
 
+    const storedRefreshToken = getRefreshToken();
     const res = await fetch(`${baseUrl}/auth/refresh`, {
       method: "POST",
       credentials: "include", // sends the httpOnly refreshToken cookie
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({}), // body required by DTO validation; cookie carries the token
+      body: JSON.stringify(
+        storedRefreshToken ? { refreshToken: storedRefreshToken } : {},
+      ),
     });
 
     if (!res.ok) {
@@ -106,16 +114,17 @@ async function _doRefresh(): Promise<{
     }
 
     const token = payload?.accessToken;
+    const rotatedRefresh = payload?.refreshToken;
 
     if (!token) {
       console.error("No access token in refresh response");
       return null;
     }
 
-    // Store new access token; refresh token is managed server-side via httpOnly cookie
-    useAuthStore.getState().setToken(token, undefined);
+    // Store new access token and rotated refresh token
+    useAuthStore.getState().setToken(token, rotatedRefresh);
 
-    return { token };
+    return { token, refreshToken: rotatedRefresh };
   } catch (e) {
     console.error("❌ Token refresh failed", e);
     return null;
@@ -131,8 +140,13 @@ export async function ensureValidToken(): Promise<string | null> {
     useAuthStore.getState().token || Cookies.get(AUTH_TOKEN_KEY);
 
   if (!currentToken) {
-    // No access token - attempt silent refresh using the httpOnly cookie
-    // (browser sends it automatically with credentials: 'include')
+    if (!getRememberMePreference()) return null;
+    // Only attempt silent refresh if a session flag or refresh token exists;
+    // otherwise guest page loads would fire unnecessary 400 /auth/refresh calls.
+    const hasSession = Boolean(
+      Cookies.get("hasSession") || getRefreshToken(),
+    );
+    if (!hasSession) return null;
     const result = await refreshTokens();
     return result?.token ?? null;
   }
@@ -140,6 +154,10 @@ export async function ensureValidToken(): Promise<string | null> {
   // Check if token needs refresh
   if (!shouldRefreshToken()) {
     return currentToken;
+  }
+
+  if (!getRememberMePreference()) {
+    return null;
   }
 
   console.log(

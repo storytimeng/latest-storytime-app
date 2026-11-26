@@ -1,6 +1,11 @@
 import { create } from "zustand";
 
-export type AuthViewType = "login" | "signup" | "forgot-password" | "otp";
+export type AuthViewType =
+  | "choice"
+  | "login"
+  | "signup"
+  | "forgot-password"
+  | "otp";
 
 interface AuthModalStore {
   isOpen: boolean;
@@ -12,8 +17,8 @@ interface AuthModalStore {
 
 export const useAuthModalStore = create<AuthModalStore>((set) => ({
   isOpen: false,
-  view: "login",
-  openModal: (view = "login") => set({ isOpen: true, view }),
+  view: "choice",
+  openModal: (view = "choice") => set({ isOpen: true, view }),
   closeModal: () => set({ isOpen: false }),
   setView: (view) => set({ view }),
 }));

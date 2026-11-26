@@ -6,10 +6,22 @@ interface LoadingState {
   autoHide: boolean;
   duration: number;
   timerId: NodeJS.Timeout | null;
+  cancellable: boolean;
+  cancelLabel: string;
+  onCancel: (() => void) | null;
 }
 
 interface LoadingActions {
-  show: (message?: string, options?: { autoHide?: boolean; duration?: number }) => void;
+  show: (
+    message?: string,
+    options?: {
+      autoHide?: boolean;
+      duration?: number;
+      cancellable?: boolean;
+      cancelLabel?: string;
+      onCancel?: () => void;
+    },
+  ) => void;
   hide: () => void;
   setMessage: (message: string) => void;
 }
@@ -23,10 +35,19 @@ export const useLoadingStore = create<LoadingStore>((set, get) => ({
   autoHide: false,
   duration: 3000, // Default 3 seconds
   timerId: null,
+  cancellable: true,
+  cancelLabel: "Cancel",
+  onCancel: null,
 
   // Actions
   show: (message = "Please wait...", options = {}) => {
-    const { autoHide = false, duration = 3000 } = options;
+    const {
+      autoHide = false,
+      duration = 3000,
+      cancellable = true,
+      cancelLabel = "Cancel",
+      onCancel = null,
+    } = options;
     
     // Clear any existing timer
     const currentTimerId = get().timerId;
@@ -48,6 +69,9 @@ export const useLoadingStore = create<LoadingStore>((set, get) => ({
       autoHide,
       duration,
       timerId: newTimerId,
+      cancellable,
+      cancelLabel,
+      onCancel,
     });
   },
 
@@ -60,6 +84,7 @@ export const useLoadingStore = create<LoadingStore>((set, get) => ({
     set({
       isVisible: false,
       timerId: null,
+      onCancel: null,
     });
   },
 
