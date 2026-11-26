@@ -192,7 +192,8 @@ const SettingsView = () => {
 
   return (
     <div className="min-h-screen bg-accent-shade-1">
-      <div className="px-4 pt-4 pb-6">
+      <div className="max-w-3xl mx-auto">
+      <div className="px-4 md:px-6 pt-4 pb-6">
         <PageHeader
           title="Settings"
           backLink="/profile"
@@ -215,14 +216,16 @@ const SettingsView = () => {
         options={settingsOptions}
         onOptionClick={handleOptionClick}
       />
+      </div>
 
       <Modal
         isOpen={isOpen}
         onClose={closeModal}
+        scrollBehavior="inside"
         className="m-0"
         classNames={{
-          wrapper: "items-end",
-          base: "m-0 max-h-[85vh]",
+          wrapper: "items-end md:items-center",
+          base: "m-0 md:m-auto max-h-[85vh] rounded-t-3xl md:rounded-2xl max-w-lg w-full",
           backdrop: "bg-black/50",
         }}
       >

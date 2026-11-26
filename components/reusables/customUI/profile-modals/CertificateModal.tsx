@@ -96,20 +96,29 @@ export const CertificateModal = () => {
   const { certificates, isLoading } = useUserAchievements();
   const [selectedCertificate, setSelectedCertificate] = useState<any>(null);
 
-  // Parse certificate data
+  // Parse & deduplicate certificate data (strip Postgres `{...}` braces if present)
   const parseCertificate = (cert: any) => {
-    const parts = cert.id.split('_');
+    const cleanId = String(cert.id || "").replace(/[{}]/g, "");
+    const parts = cleanId.split("_");
     const count = parts[0];
-    const unit = parts.slice(1).join(' ').toUpperCase();
+    const unit = parts.slice(1).join(" ").toUpperCase();
     return {
       ...cert,
+      id: cleanId,
       count,
       unit,
-      name: `${count} ${parts.slice(1).join(' ').replace(/_/g, ' ')}`.replace(/\b\w/g, l => l.toUpperCase())
+      name: `${count} ${parts.slice(1).join(" ").replace(/_/g, " ")}`.replace(
+        /\b\w/g,
+        (l) => l.toUpperCase(),
+      ),
     };
   };
 
-  const earnedCertificates = certificates.map(parseCertificate);
+  const earnedCertificates = Array.from(
+    new Map(
+      certificates.map(parseCertificate).map((c) => [c.id, c]),
+    ).values(),
+  );
   
   // Mock pending certificates (these would come from API in real implementation)
   const pendingCertificates = [
@@ -150,7 +159,7 @@ export const CertificateModal = () => {
             isIconOnly
             variant="light"
             size="sm"
-            onClick={() => setSelectedCertificate(null)}
+            onPress={() => setSelectedCertificate(null)}
           >
             <ChevronLeft size={20} />
           </Button>
@@ -158,7 +167,7 @@ export const CertificateModal = () => {
             Celebrating {selectedCertificate.name}
           </h2>
         </ModalHeader>
-        <ModalBody className="pb-6">
+        <ModalBody className="pb-6 overflow-y-auto max-h-[68vh]">
           <div className="space-y-6">
             {/* Large Certificate */}
             <div className={`relative border-8 rounded-sm overflow-hidden aspect-[3/2] flex flex-col ${!selectedCertificate.imageUrl ? 'bg-gradient-to-br from-amber-100 to-amber-50 border-amber-900 p-6' : 'border-amber-900 shadow-xl'}`}>
@@ -219,15 +228,19 @@ export const CertificateModal = () => {
               <Button
                 variant="bordered"
                 className="flex-1 border-2 border-primary-colour"
-                onClick={() => setSelectedCertificate(null)}
+                onPress={() => setSelectedCertificate(null)}
               >
                 <span className={Magnetik_Medium.className}>Cancel</span>
               </Button>
               <Button
                 className="flex-1 bg-primary-colour text-white"
-                onClick={() => {
+                onPress={() => {
                   if (selectedCertificate.imageUrl) {
-                    window.open(selectedCertificate.imageUrl, "_blank");
+                    window.open(
+                      selectedCertificate.imageUrl,
+                      "_blank",
+                      "noopener,noreferrer",
+                    );
                   }
                 }}
               >
@@ -246,7 +259,7 @@ export const CertificateModal = () => {
       <ModalHeader className="flex flex-col gap-1">
         <h2 className={`text-xl ${Magnetik_Bold.className}`}>Certificates</h2>
       </ModalHeader>
-      <ModalBody className="pb-6">
+      <ModalBody className="pb-6 overflow-y-auto max-h-[68vh]">
         <div className="space-y-6">
           {/* Earned Certificates */}
           {earnedCertificates.length > 0 && (
@@ -276,8 +289,8 @@ export const CertificateModal = () => {
                 />
               ))}
               
-              {/* Fill up to about 50 locked achievement skeletons */}
-              {[...Array(50)].map((_, i) => (
+              {/* Locked mystery certificates */}
+              {[...Array(12)].map((_, i) => (
                 <CertificateCard
                   key={`locked-cert-${i}`}
                   certificate={{ name: "Secret Certificate", category: "locked" }}

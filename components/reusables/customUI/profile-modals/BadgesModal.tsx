@@ -139,7 +139,7 @@ export const BadgesModal = () => {
             isIconOnly
             variant="light"
             size="sm"
-            onClick={() => setSelectedBadge(null)}
+            onPress={() => setSelectedBadge(null)}
           >
             <ChevronLeft size={20} />
           </Button>
@@ -147,7 +147,7 @@ export const BadgesModal = () => {
             {design.name}
           </h2>
         </ModalHeader>
-        <ModalBody className="pb-6">
+        <ModalBody className="pb-6 overflow-y-auto max-h-[68vh]">
           <div className="space-y-6">
             {/* Large Badge */}
             <div className="flex justify-center">
@@ -199,15 +199,20 @@ export const BadgesModal = () => {
               <Button
                 variant="bordered"
                 className="flex-1 border-2 border-primary-colour"
-                onClick={() => setSelectedBadge(null)}
+                onPress={() => setSelectedBadge(null)}
               >
                 <span className={Magnetik_Medium.className}>Cancel</span>
               </Button>
-              <Button
-                className="flex-1 bg-primary-colour text-white"
-              >
-                <span className={Magnetik_Medium.className}>Download</span>
-              </Button>
+              {selectedBadge.imageUrl && (
+                <Button
+                  className="flex-1 bg-primary-colour text-white"
+                  onPress={() => {
+                    window.open(selectedBadge.imageUrl, "_blank", "noopener,noreferrer");
+                  }}
+                >
+                  <span className={Magnetik_Medium.className}>Download</span>
+                </Button>
+              )}
             </div>
           </div>
         </ModalBody>
@@ -221,7 +226,7 @@ export const BadgesModal = () => {
       <ModalHeader className="flex flex-col gap-1">
         <h2 className={`text-xl ${Magnetik_Bold.className}`}>Badges</h2>
       </ModalHeader>
-      <ModalBody className="pb-6">
+      <ModalBody className="pb-6 overflow-y-auto max-h-[68vh]">
         <div className="space-y-6">
           {/* Earned Badges */}
           {earnedBadges.length > 0 && (
@@ -251,8 +256,8 @@ export const BadgesModal = () => {
                 />
               ))}
               
-              {/* Fill up to about 50 locked achievement skeletons */}
-              {[...Array(50)].map((_, i) => (
+              {/* Locked mystery achievements */}
+              {[...Array(12)].map((_, i) => (
                 <BadgeCard
                   key={`locked-${i}`}
                   badge={{ name: "Secret Achievement", category: "locked" }}

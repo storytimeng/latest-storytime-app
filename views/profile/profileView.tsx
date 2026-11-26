@@ -259,7 +259,8 @@ const ProfileView = () => {
     <>
       <div className="min-h-screen bg-primary-colour">
         {/* Header */}
-        <div className="px-4 pt-4 pb-6 text-white bg-primary-colour">
+        <div className="px-4 md:px-6 pt-4 pb-6 text-white bg-primary-colour">
+          <div className="max-w-3xl mx-auto">
           <PageHeader
             title="Profile"
             backLink="/home"
@@ -322,11 +323,12 @@ const ProfileView = () => {
               </div>
             </div>
           </div>
+          </div>
         </div>
 
         {/* Content Section - Background visible behind bleeding card */}
         <div className="min-h-screen bg-accent-shade-1 pb-10">
-          <div className="px-4 pt-20">
+          <div className="px-4 md:px-6 pt-20 max-w-3xl mx-auto">
             {/* Added top padding to accommodate bleeding card */}
             {/* Genre Section */}
             <div className="pb-10">
@@ -400,14 +402,15 @@ const ProfileView = () => {
         </div>
       </div>
 
-      {/* Bottom Sheet Modal */}
+      {/* Bottom Sheet / Responsive Modal */}
       <Modal
         isOpen={!!activeModal}
         onClose={handleModalClose}
+        scrollBehavior="inside"
         className="m-0"
         classNames={{
-          wrapper: "items-end",
-          base: "m-0  max-h-[80vh]",
+          wrapper: "items-end md:items-center",
+          base: "m-0 md:m-auto max-h-[85vh] rounded-t-3xl md:rounded-2xl max-w-lg w-full",
           backdrop: "bg-black/50",
         }}
       >
@@ -418,10 +421,11 @@ const ProfileView = () => {
       <Modal
         isOpen={showLogoutModal}
         onClose={() => setShowLogoutModal(false)}
+        scrollBehavior="inside"
         className="m-0"
         classNames={{
-          wrapper: "items-end",
-          base: "m-0 max-h-[85vh]",
+          wrapper: "items-end md:items-center",
+          base: "m-0 md:m-auto max-h-[85vh] rounded-t-3xl md:rounded-2xl max-w-md w-full",
           backdrop: "bg-black/50",
         }}
       >
