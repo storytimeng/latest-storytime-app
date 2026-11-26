@@ -1,15 +1,17 @@
 import useSWRMutation from "swr/mutation";
 import { uploadControllerUploadImage } from "../client/sdk.gen";
 import { showToast } from "@/lib/showNotification";
+import { compressImageFile } from "../lib/compressImage";
 
 export function useImageUpload(folder?: string) {
   const { trigger, isMutating } = useSWRMutation(
     "upload-image",
     async (_key: string, { arg: file }: { arg: File }) => {
+      const compressedFile = await compressImageFile(file);
       const response = await uploadControllerUploadImage({
         query: folder ? { folder } : undefined,
         body: {
-            file: file
+            file: compressedFile
         }
       });
 

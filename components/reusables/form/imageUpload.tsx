@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import FormField from "./formField";
 import { showToast } from "@/lib/showNotification";
 import { useImageUpload } from "@/src/hooks/useImageUpload";
+import { compressImageFile } from "@/src/lib/compressImage";
 
 interface ImageUploadProps {
   value?: string;
@@ -97,42 +98,49 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
 
   // Handle file upload
   const handleFileSelect = useCallback(
-    (event: React.ChangeEvent<HTMLInputElement>) => {
+    async (event: React.ChangeEvent<HTMLInputElement>) => {
       const file = event.target.files?.[0];
-      if (file) {
-        // Check if file is an image
-        if (!file.type.startsWith("image/")) {
-          showToast({
-            type: "error",
-            message: "Please select an image file",
-            duration: 3000,
-          });
-          return;
-        }
+      if (!file) return;
 
-        const MAX_IMAGE_SIZE_BYTES = 2 * 1024 * 1024;
-        if (file.size > MAX_IMAGE_SIZE_BYTES) {
+      if (!file.type.startsWith("image/")) {
+        showToast({
+          type: "error",
+          message: "Please select an image file",
+          duration: 3000,
+        });
+        return;
+      }
+
+      let readyFile = file;
+      if (file.size > 2 * 1024 * 1024) {
+        try {
+          setIsLoading(true);
+          readyFile = await compressImageFile(file);
+        } catch (err: any) {
           showToast({
             type: "error",
-            message: "Image size must be 2MB or less.",
+            message: err?.message || "Image size must be 2MB or less.",
             duration: 4000,
           });
           event.target.value = "";
+          setIsLoading(false);
           return;
+        } finally {
+          setIsLoading(false);
         }
-
-        setSelectedFile(file);
-
-        // Create preview URL
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const result = e.target?.result as string;
-          setPreviewUrl(result);
-          setImageUrl(""); // Clear URL input if user switches to file
-          setIsValidUrl(true);
-        };
-        reader.readAsDataURL(file);
       }
+
+      setSelectedFile(readyFile);
+
+      // Create preview URL
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const result = e.target?.result as string;
+        setPreviewUrl(result);
+        setImageUrl(""); // Clear URL input if user switches to file
+        setIsValidUrl(true);
+      };
+      reader.readAsDataURL(readyFile);
     },
     []
   );
