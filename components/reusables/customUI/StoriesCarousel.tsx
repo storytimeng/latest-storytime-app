@@ -119,11 +119,10 @@ export function StoriesCarousel({
                   <StoryCoverImage
                     src={story.imageUrl}
                     alt={story.title}
-                    className="w-full h-full object-cover rounded-xl"
-                    width={400}
-                    height={208}
+                    fill
+                    className="object-cover rounded-xl"
                     priority={story.id === currentStory.id}
-                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                    sizes="(max-width: 768px) 100vw, 1200px"
                   />
 
                   {/* Genre Badge */}
