@@ -110,6 +110,17 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
           return;
         }
 
+        const MAX_IMAGE_SIZE_BYTES = 2 * 1024 * 1024;
+        if (file.size > MAX_IMAGE_SIZE_BYTES) {
+          showToast({
+            type: "error",
+            message: "Image size must be 2MB or less.",
+            duration: 4000,
+          });
+          event.target.value = "";
+          return;
+        }
+
         setSelectedFile(file);
 
         // Create preview URL
