@@ -335,8 +335,18 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
   const isAuthor =
     currentAuthorId && storyAuthorId && currentAuthorId === storyAuthorId;
 
-  const displayLikeCount = storyData?.likeCount ?? likeCount ?? 0;
-  const displayCommentCount = storyData?.commentCount ?? commentCount ?? 0;
+  const displayLikeCount = likeCount || storyData?.likeCount || 0;
+  const loadedCommentsCount = Array.isArray(comments)
+    ? comments.reduce(
+        (sum: number, c: any) =>
+          sum + 1 + (Array.isArray(c.replies) ? c.replies.length : 0),
+        0,
+      )
+    : undefined;
+  const displayCommentCount =
+    loadedCommentsCount !== undefined
+      ? Math.max(commentCount || 0, loadedCommentsCount)
+      : (storyData?.commentCount ?? commentCount ?? 0);
 
   const hasEpisodes = storyData?.episodes && storyData.episodes.length > 0;
   const hasChapters = storyData?.chapter === true;
@@ -1820,6 +1830,9 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
                 {starRating.toFixed(1)}
               </div>
               <div className="space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-primary/60">
+                  Rate this story
+                </p>
                 <div
                   className="flex gap-1 text-yellow-500"
                   onMouseLeave={() => setHoverRating(null)}
@@ -1843,27 +1856,29 @@ const SingleStory = ({ storyId }: SingleStoryProps) => {
                         onMouseEnter={() => setHoverRating(starValue)}
                         onClick={() => void handleRateStory(starValue)}
                         aria-label={`Rate ${starValue} star${starValue > 1 ? "s" : ""}`}
-                        className="relative disabled:opacity-50 p-0.5 hover:scale-110 transition-transform"
+                        className="relative disabled:opacity-50 p-0.5 hover:scale-110 transition-transform cursor-pointer"
                       >
                         {isFilled ? (
-                          <Star size={20} className="fill-current text-yellow-500" />
+                          <Star size={22} className="fill-current text-yellow-500" />
                         ) : isHalf ? (
                           <div className="relative">
-                            <Star size={20} className="text-yellow-500/30" />
+                            <Star size={22} className="text-yellow-500/30" />
                             <div className="absolute inset-0 w-1/2 overflow-hidden">
-                              <Star size={20} className="fill-current text-yellow-500" />
+                              <Star size={22} className="fill-current text-yellow-500" />
                             </div>
                           </div>
                         ) : (
-                          <Star size={20} className="text-yellow-500/30" />
+                          <Star size={22} className="text-yellow-500/30" />
                         )}
                       </button>
                     );
                   })}
                 </div>
-                <p className="font-medium text-primary/40 text-sm">
+                <p className="font-medium text-primary/50 text-sm">
                   {totalRatings} {totalRatings === 1 ? "rating" : "ratings"} · {displayCommentCount} reviews
-                  {userRating ? ` · Your rating: ${userRating}/5` : " · Tap a star to rate"}
+                  {userRating
+                    ? ` · Your rating: ${userRating}/5 (tap a star to update)`
+                    : " · Tap a star to rate"}
                 </p>
               </div>
             </div>
