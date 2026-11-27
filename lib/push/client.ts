@@ -23,21 +23,25 @@ function resolveApiBase(apiBase?: string): string {
   return (apiBase || getApiBaseUrl()).replace(/\/+$/, "");
 }
 
-/** Read the public VAPID key from env or fetch it from the backend. */
+/** Fetch the live VAPID public key from the backend first, falling back to env. */
 export async function getVapidPublicKey(apiBase?: string): Promise<string | null> {
-  const key = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-  if (key && key.length > 0) return key;
-
   try {
     const res = await fetch(
       `${resolveApiBase(apiBase)}/notifications/push/vapid-public`,
     );
-    if (!res.ok) return null;
-    const json = await res.json();
-    return json?.data?.publicKey || json?.publicKey || null;
+    if (res.ok) {
+      const json = await res.json();
+      const serverKey = json?.data?.publicKey || json?.publicKey;
+      if (serverKey && typeof serverKey === "string" && serverKey.length > 0) {
+        return serverKey;
+      }
+    }
   } catch {
-    return null;
+    // Fall back to build-time env var if offline
   }
+
+  const key = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+  return key && key.length > 0 ? key : null;
 }
 
 /** Convert a base64url string to a Uint8Array (required by `applicationServerKey`). */

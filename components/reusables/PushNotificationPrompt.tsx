@@ -30,7 +30,7 @@ export const PushNotificationPrompt: React.FC<PushNotificationPromptProps> = ({
   className = "",
 }) => {
   const { isAuthenticated } = useAuthStore();
-  const { permission, isSubscribed, isLoading, subscribe } =
+  const { permission, isSubscribed, isHydrating, isLoading, subscribe } =
     usePushSubscription();
   const [dismissed, setDismissed] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -49,7 +49,7 @@ export const PushNotificationPrompt: React.FC<PushNotificationPromptProps> = ({
     }
   }, [forceShow]);
 
-  if (!mounted || !isAuthenticated()) return null;
+  if (!mounted || isHydrating || !isAuthenticated()) return null;
   if (permission === "unsupported") return null;
   if (permission === "granted" && isSubscribed) return null;
   if (!forceShow && (dismissed || permission === "denied")) return null;

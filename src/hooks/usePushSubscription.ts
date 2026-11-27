@@ -14,6 +14,8 @@ export interface UsePushSubscriptionResult {
   permission: PushPermissionState;
   /** True if a push subscription currently exists. */
   isSubscribed: boolean;
+  /** True while initial subscription state is being hydrated from ServiceWorker. */
+  isHydrating: boolean;
   /** True while a subscribe/unsubscribe is in flight. */
   isLoading: boolean;
   /** Last error message, if any. */
@@ -37,6 +39,7 @@ export function usePushSubscription(
 ): UsePushSubscriptionResult {
   const [permission, setPermission] = useState<PushPermissionState>("default");
   const [isSubscribed, setIsSubscribed] = useState(false);
+  const [isHydrating, setIsHydrating] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -44,12 +47,24 @@ export function usePushSubscription(
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      setPermission(getPermissionState());
+      const perm = getPermissionState();
+      setPermission(perm);
       try {
         const sub = await getExistingSubscription();
         if (!cancelled) setIsSubscribed(!!sub);
+        // If browser permission is already granted, ensure backend has the active subscription synced
+        if (!cancelled && perm === "granted" && !sub) {
+          try {
+            await subscribeToPush(opts);
+            if (!cancelled) setIsSubscribed(true);
+          } catch {
+            // Silent background sync
+          }
+        }
       } catch {
         // Ignore - permission/subscription not available.
+      } finally {
+        if (!cancelled) setIsHydrating(false);
       }
     })();
     return () => {
@@ -87,5 +102,13 @@ export function usePushSubscription(
     }
   }, [opts]);
 
-  return { permission, isSubscribed, isLoading, error, subscribe, unsubscribe };
+  return {
+    permission,
+    isSubscribed,
+    isHydrating,
+    isLoading,
+    error,
+    subscribe,
+    unsubscribe,
+  };
 }
